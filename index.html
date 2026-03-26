@@ -2,28 +2,94 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Telegram Mini App</title>
+    <title>Bobr Up</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #1a5f7a 0%, #0e3b4a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 40px;
+            padding: 40px 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        
+        h2 {
+            color: white;
+            font-size: 28px;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .roll-btn {
+            background: linear-gradient(135deg, #ffcc00 0%, #ffaa00 100%);
+            border: none;
+            color: #2c3e2f;
+            font-size: 32px;
+            font-weight: bold;
+            padding: 20px 50px;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 6px 0 #aa6f00;
+            font-family: inherit;
+        }
+        
+        .roll-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #aa6f00;
+        }
+        
+        .roll-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #aa6f00;
+        }
+        
+        /* Адаптация для мобильных */
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h2 {
+                font-size: 24px;
+            }
+            
+            .roll-btn {
+                font-size: 28px;
+                padding: 15px 40px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h2 id="user"></h2>
+        <button class="roll-btn" onclick="roll()">🎲 Roll</button>
+    </div>
 
-<h2 id="user"></h2>
-<button onclick="roll()">🎲 Roll</button>
-
-<script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-
-    const user = tg.initDataUnsafe.user;
-
-    document.getElementById("user").innerText =
-        "Привет, " + user.first_name;
-
-    function roll() {
-        const result = Math.floor(Math.random() * 100) + 1;
-        tg.showAlert("🎲 Выпало: " + result);
-    }
-</script>
-
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        
+        const user = tg.initDataUnsafe.user;
+        document.getElementById("user").innerText = "Привет, " + user.first_name + "!";
+        
+        function roll() {
+            const result = Math.floor(Math.random() * 100) + 1;
+            tg.showAlert("🎲 Выиграли: " + result);
+        }
+    </script>
 </body>
 </html>
