@@ -1,95 +1,193 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Bobr Up</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #1a5f7a 0%, #0e3b4a 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-        }
-        
-        .container {
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 40px;
-            padding: 40px 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        }
-        
-        h2 {
-            color: white;
-            font-size: 28px;
-            margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        
-        .roll-btn {
-            background: linear-gradient(135deg, #ffcc00 0%, #ffaa00 100%);
-            border: none;
-            color: #2c3e2f;
-            font-size: 32px;
-            font-weight: bold;
-            padding: 20px 50px;
-            border-radius: 60px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 6px 0 #aa6f00;
-            font-family: inherit;
-        }
-        
-        .roll-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 0 #aa6f00;
-        }
-        
-        .roll-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #aa6f00;
-        }
-        
-        /* Адаптация для мобильных */
-        @media (max-width: 480px) {
-            .container {
-                padding: 30px 20px;
-            }
-            
-            h2 {
-                font-size: 24px;
-            }
-            
-            .roll-btn {
-                font-size: 28px;
-                padding: 15px 40px;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Beaver Run</title>
+<style>
+body {
+    margin: 0;
+    text-align: center;
+    background: #87CEEB;
+}
+#menu {
+    position: absolute;
+    width: 100%;
+    top: 30%;
+}
+button {
+    padding: 15px 30px;
+    font-size: 18px;
+    margin: 10px;
+}
+canvas {
+    display: none;
+    margin: auto;
+    background: lightgreen;
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h2 id="user"></h2>
-        <button class="roll-btn" onclick="roll()">🎲 Roll</button>
-    </div>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        
-        const user = tg.initDataUnsafe.user;
-        document.getElementById("user").innerText = "Привет, " + user.first_name + "!";
-        
-        function roll() {
-            const result = Math.floor(Math.random() * 100) + 1;
-            tg.showAlert("🎲 Выиграли: " + result);
+<div id="menu">
+    <h1> BobrUp</h1>
+    <button onclick="startGame()">Играть</button>
+</div>
+
+<canvas id="game" width="400" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const menu = document.getElementById("menu");
+
+let beaver = { x: 100, y: 500, vy: 0 };
+let gravity = 0.6;
+let gameOver = false;
+
+let obstacles = [];
+let speed = 5;
+
+let score = 0;
+let bestScore = localStorage.getItem("bestScore") || 0;
+
+// картинки
+let bg = new Image();
+let beaverImg = new Image();
+let logImg = new Image();
+
+bg.src = "bg.png";
+beaverImg.src = "beaver.png";
+logImg.src = "log.png";
+
+// запуск
+function startGame() {
+    menu.style.display = "none";
+    canvas.style.display = "block";
+
+    score = 0;
+    speed = 5;
+    gameOver = false;
+    obstacles = [];
+    beaver.y = 500;
+
+    document.addEventListener("click", jump);
+    spawnObstacle();
+    update();
+}
+
+// прыжок
+function jump() {
+    if (beaver.y >= 500 && !gameOver) {
+        beaver.vy = -12;
+    }
+
+    if (gameOver) {
+        location.reload();
+    }
+}
+
+// препятствия
+function spawnObstacle() {
+    if (gameOver) return;
+
+    obstacles.push({
+        x: canvas.width,
+        y: 520,
+        w: 50,
+        h: 50,
+        passed: false
+    });
+
+    setTimeout(spawnObstacle, 1400);
+}
+
+// столкновение
+function collision(a, b) {
+    return a.x < b.x + b.w &&
+           a.x + 40 > b.x &&
+           a.y < b.y + b.h &&
+           a.y + 40 > b.y;
+}
+
+// игра
+function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // фон
+    if (bg.complete) {
+        ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+    }
+
+    // физика
+    beaver.vy += gravity;
+    beaver.y += beaver.vy;
+
+    if (beaver.y > 500) {
+        beaver.y = 500;
+        beaver.vy = 0;
+    }
+
+    // бобёр
+    if (beaverImg.complete) {
+        ctx.drawImage(beaverImg, beaver.x, beaver.y, 50, 50);
+    } else {
+        ctx.fillStyle = "brown";
+        ctx.fillRect(beaver.x, beaver.y, 40, 40);
+    }
+
+    // препятствия
+    obstacles.forEach((o, i) => {
+        o.x -= speed;
+
+        // считаем очки
+        if (!o.passed && o.x + o.w < beaver.x) {
+            score++;
+            o.passed = true;
         }
-    </script>
+
+        // рисуем бревно
+        if (logImg.complete) {
+            ctx.drawImage(logImg, o.x, o.y, o.w, o.h);
+        } else {
+            ctx.fillStyle = "green";
+            ctx.fillRect(o.x, o.y, o.w, o.h);
+        }
+
+        // столкновение
+        if (collision(beaver, o)) {
+            gameOver = true;
+
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem("bestScore", bestScore);
+            }
+        }
+
+        if (o.x < -50) obstacles.splice(i, 1);
+    });
+
+    // ускорение
+    speed += 0.002;
+
+    // текст
+    ctx.fillStyle = "black";
+    ctx.font = "20px Arial";
+    ctx.fillText("Счёт: " + score, 10, 30);
+    ctx.fillText("Рекорд: " + bestScore, 10, 60);
+
+    // проигрыш
+    if (gameOver) {
+        ctx.fillStyle = "red";
+        ctx.font = "30px Arial";
+        ctx.fillText("Ты проиграл", 100, 250);
+        ctx.font = "16px Arial";
+        ctx.fillText("Нажми чтобы начать заново", 70, 300);
+        return;
+    }
+
+    requestAnimationFrame(update);
+}
+</script>
+
 </body>
 </html>
