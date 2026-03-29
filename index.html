@@ -90,6 +90,46 @@ body {
   display: none; /* скрыт пока не играем */
   background: #87CEEB;
 }
+/* ========================
+   Стили модалки таблицы
+======================== */
+#leaderboardModal {
+  display: none;               /* изначально скрыта */
+  position: fixed;
+  top: 60px;                   /* под верхней панелью с ником */
+  left: 20px;
+  right: 20px;
+  bottom: 100px;               /* над нижней панелью кнопок */
+  background: rgba(0,0,0,0.9);
+  color: white;
+  padding: 20px;
+  border-radius: 15px;
+  z-index: 9999;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.leaderboardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.leaderboardHeader h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.closeBtn {
+  cursor: pointer;
+  font-size: 22px;
+}
+
+#leaderboardContent {
+  font-size: 18px;
+  line-height: 1.5;
+}
 </style>
 </head>
 
@@ -102,7 +142,7 @@ body {
     <div class="settings" onclick="openSettings()">⚙️</div>
   </div>
 
-  <div class="main">Beaver Runner 🦫</div>
+  <div class="main">BobrUp</div>
 
   <div class="bottom-bar">
     <div class="bottom-btn" onclick="openLeaderboard()">📊 Таблица</div>
@@ -113,6 +153,15 @@ body {
 
 <!-- Canvas для игры -->
 <canvas id="game" style="display: none;"></canvas>
+
+<!-- Таблица лидеров (модалка) -->
+<div id="leaderboardModal">
+  <div class="leaderboardHeader">
+    <h2>🏆 Таблица лидеров</h2>
+    <span class="closeBtn" onclick="closeLeaderboard()">✖️</span>
+  </div>
+  <div id="leaderboardContent"></div>
+</div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
@@ -138,9 +187,53 @@ function startGame() {
 }
 
 function openLeaderboard() {
-  alert("Таблица лидеров");
+  let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+
+  const contentDiv = document.getElementById("leaderboardContent");
+  contentDiv.innerHTML = ""; // очищаем перед заполнением
+
+  if (leaderboard.length === 0) {
+    contentDiv.innerHTML = "<p>Пока нет рекордов</p>";
+  } else {
+    leaderboard.slice(0, 10).forEach((p, index) => {
+      const row = document.createElement("div");
+      row.textContent = `${index + 1}. ${p.name} — ${p.score}`;
+      contentDiv.appendChild(row);
+    });
+  }
+
+  document.getElementById("leaderboardModal").style.display = "block";
 }
 
+function closeLeaderboard() {
+  document.getElementById("leaderboardModal").style.display = "none";
+}
+
+function saveBestScore(score) {
+  const name = document.getElementById("nickname").innerText;
+
+  let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+
+  let player = leaderboard.find(p => p.name === name);
+
+  if (player) {
+    if (score > player.score) {
+      player.score = score;
+    }
+  } else {
+    leaderboard.push({ name: name, score: score });
+  }
+
+  leaderboard.sort((a, b) => b.score - a.score);
+
+  localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+
+  // Если таблица открыта — обновляем её автоматически
+  if (document.getElementById("leaderboardModal").style.display === "block") {
+    openLeaderboard();
+  }
+}
+  
 function openSkins() {
   alert("Скины");
 }
@@ -189,7 +282,6 @@ function initGame() {
     jump: -15,
     grounded: true,
     gameOver: false,
-    isWatching: false,
     gameOverText: "Ты врезался!"
   };
 
@@ -203,29 +295,41 @@ function initGame() {
   player.x = lane2 - player.width / 2;
 
   // Препятствия
-  let obstacles1 = [];
-  let obstacles2 = [];
-  let obstacles3 = [];
-  let gameSpeed = 0.008;
+let obstacles1 = [];
+let obstacles2 = [];
+let obstacles3 = [];
+let gameSpeed = 0.008; 
+let score = 0;
+// Флаги для каждой полосы (кто в режиме наблюдателя)
+let isWatching1 = false;  // левая полоса
+let isWatching2 = false;  // средняя полоса (игрок)
+let isWatching3 = false;  // правая полоса
+  
+  // Для хранения бревна, в которое врезался игрок
+let frozenObstacle = null;
   
   // Кнопки для Game Over
   let exitBtn = {x: 0, y: 0, w: 0, h: 0};
   let watchBtn = {x: 0, y: 0, w: 0, h: 0};
 
+    // Кнопка выхода в правом нижнем углу (для наблюдателя)
+  let exitToMenuBtn = {x: 0, y: 0, w: 0, h: 0};
+  let showExitButton = false;
+
   function spawnObstacle1() {
-    if (!player.isWatching) obstacles1.push({ x: lane1, z: 1 });
-  }
-  
-  function spawnObstacle2() {
-    if (!player.isWatching) obstacles2.push({ x: lane2, z: 1 });
-  }
-  
-  function spawnObstacle3() {
-    if (!player.isWatching) obstacles3.push({ x: lane3, z: 1 });
-  }
+  if (!isWatching1) obstacles1.push({ x: lane1, z: 1 });
+}
+
+function spawnObstacle2() {
+  if (!isWatching2) obstacles2.push({ x: lane2, z: 1, passed: false });
+}
+
+function spawnObstacle3() {
+  if (!isWatching3) obstacles3.push({ x: lane3, z: 1 });
+}
 
   function jump() {
-    if (player.grounded && !player.gameOver && !player.isWatching) {
+    if (player.grounded && !player.gameOver) {
       player.dy = player.jump;
       player.grounded = false;
     }
@@ -237,14 +341,27 @@ function initGame() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    if (showExitButton && 
+      x > exitToMenuBtn.x && x < exitToMenuBtn.x + exitToMenuBtn.w &&
+      y > exitToMenuBtn.y && y < exitToMenuBtn.y + exitToMenuBtn.h) {
+    document.getElementById("menu").style.display = "flex";
+    document.getElementById("game").style.display = "none";
+    return;
+  }
     if (player.gameOver) {
       // кнопка СМОТРЕТЬ
       if (x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
     y > watchBtn.y && y < watchBtn.y + watchBtn.h) {
-  player.isWatching = true;
+  isWatching2 = true;  // Останавливаем ТОЛЬКО среднюю полосу
   player.gameOver = false;
-  player.dy = 0;  // Останавливаем падение/прыжок
-  player.grounded = true;  // Фиксируем на земле
+  player.dy = 0;
+  player.grounded = true;
+        
+        if (player.frozenX !== undefined) {
+    player.x = player.frozenX;
+    player.y = player.frozenY;
+  }
+        showExitButton = true;
 }
       // кнопка ВЫЙТИ
       if (x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
@@ -257,30 +374,44 @@ function initGame() {
   });
   
   canvas.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+    
+    if (showExitButton && 
+      x > exitToMenuBtn.x && x < exitToMenuBtn.x + exitToMenuBtn.w &&
+      y > exitToMenuBtn.y && y < exitToMenuBtn.y + exitToMenuBtn.h) {
+    document.getElementById("menu").style.display = "flex";
+    document.getElementById("game").style.display = "none";
+    return;
+  }
 
-    if (player.gameOver) {
-      if (x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
-          y > watchBtn.y && y < watchBtn.y + watchBtn.h) {
-        player.isWatching = true;
-        player.gameOver = false;
-      }
-      if (x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
-          y > exitBtn.y && y < exitBtn.y + exitBtn.h) {
-        location.reload();
-      }
-      return;
+  if (player.gameOver) {
+    // кнопка СМОТРЕТЬ
+    if (x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
+        y > watchBtn.y && y < watchBtn.y + watchBtn.h) {
+      isWatching2 = true;  // Останавливаем ТОЛЬКО среднюю полосу
+      player.gameOver = false;
+      player.dy = 0;
+      player.grounded = true;
+      showExitButton = true
+      // obstacles2 уже очищен при столкновении, так что ничего не делаем
     }
-    jump();
-  });
+    // кнопка ВЫЙТИ
+    if (x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
+        y > exitBtn.y && y < exitBtn.y + exitBtn.h) {
+      location.reload();
+    }
+    return;
+  }
+  jump();
+});
 
   function updatePlayer() {
   // ЕСЛИ ИГРОК НАБЛЮДАЕТ - НЕ ОБНОВЛЯЕМ ЕГО ФИЗИКУ
-  if (!player.gameOver && !player.isWatching) {
+  if (!player.gameOver) {
     player.dy += player.gravity;
     player.y += player.dy;
   }
@@ -293,8 +424,7 @@ function initGame() {
 }
 
   function updateObstacles1() {
-  // ЕСЛИ ИГРОК СМОТРИТ - НЕ ОБНОВЛЯЕМ ПРЕПЯТСТВИЯ НА ЕГО ПОЛОСЕ
-  if (!player.isWatching) {
+  if (!isWatching1) {
     obstacles1.forEach(o => {
       o.z -= gameSpeed + (1 - o.z) * 0.015;
     });
@@ -302,23 +432,21 @@ function initGame() {
   }
 }
 
-  function updateObstacles2() {
-  // ЕСЛИ ИГРОК СМОТРИТ - НЕ ОБНОВЛЯЕМ ПРЕПЯТСТВИЯ НА ЕГО ПОЛОСЕ
-  if (!player.isWatching) {
-    obstacles2.forEach(o => {    // ✅ ПРАВИЛЬНО: использует obstacles2
+function updateObstacles2() {
+  if (!isWatching2) {
+    obstacles2.forEach(o => {
       o.z -= gameSpeed + (1 - o.z) * 0.015;
     });
-    obstacles2 = obstacles2.filter(o => o.z > 0);  // ✅ ПРАВИЛЬНО
+    obstacles2 = obstacles2.filter(o => o.z > 0);
   }
 }
 
 function updateObstacles3() {
-  // ЕСЛИ ИГРОК СМОТРИТ - НЕ ОБНОВЛЯЕМ ПРЕПЯТСТВИЯ НА ЕГО ПОЛОСЕ
-  if (!player.isWatching) {
-    obstacles3.forEach(o => {    // ✅ ПРАВИЛЬНО: использует obstacles3
+  if (!isWatching3) {
+    obstacles3.forEach(o => {
       o.z -= gameSpeed + (1 - o.z) * 0.015;
     });
-    obstacles3 = obstacles3.filter(o => o.z > 0);  // ✅ ПРАВИЛЬНО
+    obstacles3 = obstacles3.filter(o => o.z > 0);
   }
 }
 
@@ -342,7 +470,7 @@ function updateObstacles3() {
 
       ctx.drawImage(log, x, y, size, size);
       
-      if (!player.gameOver && !player.isWatching && scale > 0.85 &&
+      if (!player.gameOver && scale > 0.85 &&
           player.x < x + size && player.x + player.width > x &&
           player.y < y + size && player.y + player.height > y) {
         player.gameOver = true;
@@ -351,6 +479,14 @@ function updateObstacles3() {
   }
 
   function drawObstacles2() {
+  // Рисуем замороженное бревно (если есть) - ВСЕГДА рисуем
+  if (frozenObstacle) {
+    console.log("Рисую frozenObstacle:", frozenObstacle);
+    ctx.drawImage(log, frozenObstacle.x, frozenObstacle.y, frozenObstacle.size, frozenObstacle.size);
+  }
+  
+  // Рисуем движущиеся бревна только если игрок не в Game Over И не в режиме наблюдателя
+  if (!player.gameOver && !isWatching2) {
     obstacles2.forEach(o => {
       let scale = 1 - o.z;
       let size = 60 * scale;
@@ -358,14 +494,35 @@ function updateObstacles3() {
       let y = 100 + (canvas.height - 200) * scale;
 
       ctx.drawImage(log, x, y, size, size);
-
-      if (!player.gameOver && !player.isWatching && scale > 0.85 &&
+      
+if (!o.passed && o.z < 0.2) {
+  o.passed = true;
+  score++;
+}
+      // Проверка столкновения
+      if (scale > 0.85 &&
           player.x < x + size && player.x + player.width > x &&
           player.y < y + size && player.y + player.height > y) {
+        
+        // Сохраняем бревно с ТОЧНЫМИ координатами
+        frozenObstacle = {
+          x: x,
+          y: y,
+          size: size,
+          scale: scale
+        };
+
+         player.frozenX = player.x;  // запоминаем позицию игрока
+  player.frozenY = player.y;  // запоминаем позицию игрока
+        obstacles2 = [];  // Очищаем все бревна
+        player.gameOverText = "Ты врезался! Счёт: " + score;
+saveBestScore(score);
+        if (score <= 0) return;
         player.gameOver = true;
       }
     });
   }
+}
 
   function drawObstacles3() {
     obstacles3.forEach(o => {
@@ -376,7 +533,7 @@ function updateObstacles3() {
 
       ctx.drawImage(log, x, y, size, size);
       
-      if (!player.gameOver && !player.isWatching && scale > 0.85 &&
+      if (!player.gameOver && scale > 0.85 &&
           player.x < x + size && player.x + player.width > x &&
           player.y < y + size && player.y + player.height > y) {
         player.gameOver = true;
@@ -385,13 +542,42 @@ function updateObstacles3() {
   }
 
   function drawPlayer() {
+  // Если есть замороженное бревно и игрок в режиме наблюдателя - рисуем на замороженной позиции
+  if (frozenObstacle && isWatching2) {
+    ctx.drawImage(beaver, player.frozenX || player.x, player.frozenY || player.y, player.width, player.height);
+  } else {
     ctx.drawImage(beaver, player.x, player.y, player.width, player.height);
   }
+}
+// Сначала функция drawExitButton (отдельно)
+function drawExitButton() {
+  if (!showExitButton) return;
+  
+  const btnWidth = 100;
+  const btnHeight = 45;
+  const padding = 20;
+  
+  const btnX = canvas.width - btnWidth - padding;
+  const btnY = canvas.height - btnHeight - padding;
+  
+  exitToMenuBtn = { x: btnX, y: btnY, w: btnWidth, h: btnHeight };
+  
+  ctx.fillStyle = "#dc3545";
+  ctx.beginPath();
+  ctx.roundRect(btnX, btnY, btnWidth, btnHeight, 10);
+  ctx.fill();
+  
+  ctx.fillStyle = "#fff";
+  ctx.font = "bold 16px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("Выйти", btnX + btnWidth/2, btnY + btnHeight/2 + 5);
+}
 
-  function drawGameOver() {
-    // Фон (затемнение экрана)
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+// Потом функция drawGameOver (отдельно)
+function drawGameOver() {
+  // Фон (затемнение экрана)
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // ОВАЛЬНОЕ ОКНО
     const boxWidth = 300;
@@ -460,10 +646,15 @@ function updateObstacles3() {
     drawObstacles2();
     drawObstacles3();
     drawPlayer();
+    ctx.fillStyle = "#fff";
+ctx.font = "20px Arial";
+ctx.fillText("Score: " + score, 20, 40);
     
     if (player.gameOver) {
       drawGameOver();
     }
+    
+    drawExitButton();
     
     gameSpeed += 0.00001;
     requestAnimationFrame(loop);
@@ -479,81 +670,6 @@ function updateObstacles3() {
 }
 </script>
 
-<style>
-  #menu {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #2c3e50, #1a472a);
-    display: flex;
-    flex-direction: column;
-    z-index: 10;
-  }
-  
-  .top-bar {
-    display: flex;
-    justify-content: space-between;
-    padding: 20px;
-    background: rgba(0,0,0,0.3);
-    color: white;
-    font-size: 20px;
-  }
-  
-  .settings {
-    cursor: pointer;
-    font-size: 24px;
-  }
-  
-  .main {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 48px;
-    font-weight: bold;
-    color: white;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-  }
-  
-  .bottom-bar {
-    display: flex;
-    justify-content: space-around;
-    padding: 20px;
-    background: rgba(0,0,0,0.3);
-  }
-  
-  .bottom-btn {
-    background: #ffa500;
-    padding: 15px 30px;
-    border-radius: 25px;
-    cursor: pointer;
-    color: white;
-    font-weight: bold;
-    transition: transform 0.2s;
-  }
-  
-  .bottom-btn.play {
-    background: #4caf50;
-    transform: scale(1.1);
-  }
-  
-  .bottom-btn:hover {
-    transform: scale(1.05);
-  }
-  
-  #game {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #87CEEB;
-    z-index: 5;
-  }
-</style>
-</script>
 
 </body>
 </html>
