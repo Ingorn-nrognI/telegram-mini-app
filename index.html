@@ -1,192 +1,558 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Beaver Run</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Menu + Game</title>
+
 <style>
 body {
-    margin: 0;
-    text-align: center;
-    background: #87CEEB;
+  margin: 0;
+  font-family: Arial;
+  background: #87CEEB;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
-#menu {
-    position: absolute;
-    width: 100%;
-    top: 30%;
+
+/* Верхняя панель */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  color: white;
+  font-size: 18px;
 }
-button {
-    padding: 15px 30px;
-    font-size: 18px;
-    margin: 10px;
+
+.settings {
+  cursor: pointer;
 }
-canvas {
-    display: none;
-    margin: auto;
-    background: lightgreen;
+
+/* Центр */
+.main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  color: white;
+}
+
+/* Нижнее меню */
+.bottom-bar {
+  position: fixed;
+  bottom: 20px;           /* чуть выше края экрана */
+  left: 50%;              /* центрируем по горизонтали */
+  transform: translateX(-50%); /* сдвигаем в центр */
+  width: 90%;             /* чуть меньше полной ширины */
+  max-width: 600px;       /* ограничиваем для больших экранов */
+  display: flex;
+  justify-content: space-around; /* равномерно распределяем кнопки */
+  background: rgba(0, 0, 0, 0.6); /* полупрозрачный черный */
+  padding: 15px 20px;
+  border-radius: 50px;     /* делает панель овальной */
+  box-sizing: border-box;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* небольшая тень */
+}
+
+.bottom-btn {
+  flex: 1;
+  margin: 0 10px;          /* отступ между кнопками */
+  padding: 12px 0;
+  text-align: center;
+  color: white;
+  cursor: pointer;
+  border-radius: 25px;      /* овальные кнопки */
+  background: #444;         /* базовый цвет */
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.bottom-btn.play {
+  background: #28a745;      /* зеленая кнопка Играть */
+}
+
+.bottom-btn:hover {
+  background: #555;
+}
+
+.bottom-btn:last-child {
+  border-right: none;
+}
+
+.play {
+  background: #28a745;
+  font-weight: bold;
+}
+
+/* Canvas для игры */
+#game {
+  display: none; /* скрыт пока не играем */
+  background: #87CEEB;
 }
 </style>
 </head>
+
 <body>
 
+<!-- МЕНЮ -->
 <div id="menu">
-    <h1> BobrUp</h1>
-    <button onclick="startGame()">Играть</button>
+  <div class="top-bar">
+    <div id="nickname">Игрок</div>
+    <div class="settings" onclick="openSettings()">⚙️</div>
+  </div>
+
+  <div class="main">Beaver Runner 🦫</div>
+
+  <div class="bottom-bar">
+    <div class="bottom-btn" onclick="openLeaderboard()">📊 Таблица</div>
+    <div class="bottom-btn play" onclick="startGame()">▶ Играть</div>
+    <div class="bottom-btn" onclick="openSkins()">🎨 Скины</div>
+  </div>
 </div>
 
-<canvas id="game" width="600" height="800"></canvas>
+<!-- Canvas для игры -->
+<canvas id="game" style="display: none;"></canvas>
 
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const menu = document.getElementById("menu");
+// Получаем ник из Telegram
+if (window.Telegram && Telegram.WebApp) {
+  const user = Telegram.WebApp.initDataUnsafe.user;
+  if (user) {
+    document.getElementById("nickname").innerText =
+      user.username || user.first_name;
+  }
+}
 
-let beaver = { x: 100, y: 500, vy: 0 };
-let gravity = 0.6;
-let gameOver = false;
+// ========================
+// КНОПКИ МЕНЮ
+// ========================
 
-let obstacles = [];
-let speed = 5;
-
-let score = 0;
-let bestScore = localStorage.getItem("bestScore") || 0;
-
-// картинки
-let bg = new Image();
-let beaverImg = new Image();
-let logImg = new Image();
-
-bg.src = "bg.png";
-beaverImg.src = "beaver.png";
-logImg.src = "log.png";
-
-// запуск
 function startGame() {
-    menu.style.display = "none";
-    canvas.style.display = "block";
-
-    score = 0;
-    speed = 5;
-    gameOver = false;
-    obstacles = [];
-    beaver.y = 500;
-
-    document.addEventListener("click", jump);
-    spawnObstacle();
-    update();
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("game").style.display = "block";
+  
+  // Запуск игры
+  initGame();
 }
 
-// прыжок
-function jump() {
-    if (beaver.y >= 500 && !gameOver) {
-        beaver.vy = -12;
-    }
+function openLeaderboard() {
+  alert("Таблица лидеров");
+}
 
-    if (gameOver) {
+function openSkins() {
+  alert("Скины");
+}
+
+function openSettings() {
+  let lang = prompt("Выбери язык: ru / en");
+  if (lang === "en") {
+    alert("Language switched to English");
+  } else {
+    alert("Язык: Русский");
+  }
+}
+
+// ========================
+// ИГРА
+// ========================
+function initGame() {
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+
+  // === НАСТРОЙКИ ДОРОГИ ===
+  const roadLeft = 0.15;   // левый край дороги
+  const roadRight = 0.85;  // правый край дороги
+  const laneOffset = 0.2;  // расстояние от центра до боковых полос
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  // Картинки
+  const beaver = new Image();
+  beaver.src = "beaver.png";
+  beaver.onerror = () => console.log("Ошибка загрузки beaver.png");
+
+  const log = new Image();
+  log.src = "log.png";
+  log.onerror = () => console.log("Ошибка загрузки log.png");
+
+  // Игрок
+  let player = {
+    x: canvas.width / 2 - 30,
+    y: canvas.height - 150,
+    width: 60,
+    height: 60,
+    dy: 0,
+    gravity: 0.8,
+    jump: -15,
+    grounded: true,
+    gameOver: false,
+    isWatching: false,
+    gameOverText: "Ты врезался!"
+  };
+
+  // Полосы на дороге
+  const roadCenter = (roadLeft + roadRight) / 2;
+  const lane1 = canvas.width * (roadCenter - laneOffset);
+  const lane2 = canvas.width * roadCenter;
+  const lane3 = canvas.width * (roadCenter + laneOffset);
+
+  // Устанавливаем текущему игроку среднюю полосу
+  player.x = lane2 - player.width / 2;
+
+  // Препятствия
+  let obstacles1 = [];
+  let obstacles2 = [];
+  let obstacles3 = [];
+  let gameSpeed = 0.008;
+  
+  // Кнопки для Game Over
+  let exitBtn = {x: 0, y: 0, w: 0, h: 0};
+  let watchBtn = {x: 0, y: 0, w: 0, h: 0};
+
+  function spawnObstacle1() {
+    if (!player.isWatching) obstacles1.push({ x: lane1, z: 1 });
+  }
+  
+  function spawnObstacle2() {
+    if (!player.isWatching) obstacles2.push({ x: lane2, z: 1 });
+  }
+  
+  function spawnObstacle3() {
+    if (!player.isWatching) obstacles3.push({ x: lane3, z: 1 });
+  }
+
+  function jump() {
+    if (player.grounded && !player.gameOver && !player.isWatching) {
+      player.dy = player.jump;
+      player.grounded = false;
+    }
+  }
+
+  // Обработчики событий
+  canvas.addEventListener("click", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (player.gameOver) {
+      // кнопка СМОТРЕТЬ
+      if (x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
+    y > watchBtn.y && y < watchBtn.y + watchBtn.h) {
+  player.isWatching = true;
+  player.gameOver = false;
+  player.dy = 0;  // Останавливаем падение/прыжок
+  player.grounded = true;  // Фиксируем на земле
+}
+      // кнопка ВЫЙТИ
+      if (x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
+          y > exitBtn.y && y < exitBtn.y + exitBtn.h) {
         location.reload();
+      }
+      return;
     }
+    jump();
+  });
+  
+  canvas.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    if (player.gameOver) {
+      if (x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
+          y > watchBtn.y && y < watchBtn.y + watchBtn.h) {
+        player.isWatching = true;
+        player.gameOver = false;
+      }
+      if (x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
+          y > exitBtn.y && y < exitBtn.y + exitBtn.h) {
+        location.reload();
+      }
+      return;
+    }
+    jump();
+  });
+
+  function updatePlayer() {
+  // ЕСЛИ ИГРОК НАБЛЮДАЕТ - НЕ ОБНОВЛЯЕМ ЕГО ФИЗИКУ
+  if (!player.gameOver && !player.isWatching) {
+    player.dy += player.gravity;
+    player.y += player.dy;
+  }
+  
+  if (player.y >= canvas.height - 150) {
+    player.y = canvas.height - 150;
+    player.dy = 0;
+    player.grounded = true;
+  }
 }
 
-// препятствия
-function spawnObstacle() {
-    if (gameOver) return;
-
-    obstacles.push({
-        x: canvas.width,
-        y: 520,
-        w: 50,
-        h: 50,
-        passed: false
+  function updateObstacles1() {
+  // ЕСЛИ ИГРОК СМОТРИТ - НЕ ОБНОВЛЯЕМ ПРЕПЯТСТВИЯ НА ЕГО ПОЛОСЕ
+  if (!player.isWatching) {
+    obstacles1.forEach(o => {
+      o.z -= gameSpeed + (1 - o.z) * 0.015;
     });
-
-    setTimeout(spawnObstacle, 1400);
+    obstacles1 = obstacles1.filter(o => o.z > 0);
+  }
 }
 
-// столкновение
-function collision(a, b) {
-    return a.x < b.x + b.w &&
-           a.x + 40 > b.x &&
-           a.y < b.y + b.h &&
-           a.y + 40 > b.y;
+  function updateObstacles2() {
+  // ЕСЛИ ИГРОК СМОТРИТ - НЕ ОБНОВЛЯЕМ ПРЕПЯТСТВИЯ НА ЕГО ПОЛОСЕ
+  if (!player.isWatching) {
+    obstacles1.forEach(o => {
+      o.z -= gameSpeed + (1 - o.z) * 0.015;
+    });
+    obstacles1 = obstacles1.filter(o => o.z > 0);
+  }
 }
 
-// игра
-function update() {
+  function updateObstacles3() {
+  // ЕСЛИ ИГРОК СМОТРИТ - НЕ ОБНОВЛЯЕМ ПРЕПЯТСТВИЯ НА ЕГО ПОЛОСЕ
+  if (!player.isWatching) {
+    obstacles1.forEach(o => {
+      o.z -= gameSpeed + (1 - o.z) * 0.015;
+    });
+    obstacles1 = obstacles1.filter(o => o.z > 0);
+  }
+}
+
+  function drawRoad() {
+    ctx.fillStyle = "#555";
+    ctx.beginPath();
+    ctx.moveTo(canvas.width * roadLeft, canvas.height);
+    ctx.lineTo(canvas.width * roadRight, canvas.height);
+    ctx.lineTo(canvas.width * (roadRight - 0.2), 0);
+    ctx.lineTo(canvas.width * (roadLeft + 0.2), 0);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawObstacles1() {
+    obstacles1.forEach(o => {
+      let scale = 1 - o.z;
+      let size = 60 * scale;
+      let x = canvas.width / 2 + (lane1 - canvas.width / 2) * scale - size/2;
+      let y = 100 + (canvas.height - 200) * scale;
+
+      ctx.drawImage(log, x, y, size, size);
+      
+      if (!player.gameOver && !player.isWatching && scale > 0.85 &&
+          player.x < x + size && player.x + player.width > x &&
+          player.y < y + size && player.y + player.height > y) {
+        player.gameOver = true;
+      }
+    });
+  }
+
+  function drawObstacles2() {
+    obstacles2.forEach(o => {
+      let scale = 1 - o.z;
+      let size = 60 * scale;
+      let x = canvas.width / 2 + (lane2 - canvas.width / 2) * scale - size/2;
+      let y = 100 + (canvas.height - 200) * scale;
+
+      ctx.drawImage(log, x, y, size, size);
+
+      if (!player.gameOver && !player.isWatching && scale > 0.85 &&
+          player.x < x + size && player.x + player.width > x &&
+          player.y < y + size && player.y + player.height > y) {
+        player.gameOver = true;
+      }
+    });
+  }
+
+  function drawObstacles3() {
+    obstacles3.forEach(o => {
+      let scale = 1 - o.z;
+      let size = 60 * scale;
+      let x = canvas.width / 2 + (lane3 - canvas.width / 2) * scale - size/2;
+      let y = 100 + (canvas.height - 200) * scale;
+
+      ctx.drawImage(log, x, y, size, size);
+      
+      if (!player.gameOver && !player.isWatching && scale > 0.85 &&
+          player.x < x + size && player.x + player.width > x &&
+          player.y < y + size && player.y + player.height > y) {
+        player.gameOver = true;
+      }
+    });
+  }
+
+  function drawPlayer() {
+    ctx.drawImage(beaver, player.x, player.y, player.width, player.height);
+  }
+
+  function drawGameOver() {
+    // Фон (затемнение экрана)
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // ОВАЛЬНОЕ ОКНО
+    const boxWidth = 300;
+    const boxHeight = 180;
+    const boxX = canvas.width / 2 - boxWidth / 2;
+    const boxY = canvas.height / 2 - boxHeight / 2;
+
+    // функция рисования закругленного прямоугольника
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // рисуем окно
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    roundRect(boxX, boxY, boxWidth, boxHeight, 25);
+
+    // ТЕКСТ
+    ctx.fillStyle = "#fff";
+    ctx.font = "22px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(player.gameOverText, canvas.width/2, boxY + 50);
+
+    // КНОПКИ
+    const btnWidth = 110;
+    const btnHeight = 40;
+
+    const watchX = boxX + 20;
+    const watchY = boxY + 100;
+    watchBtn = { x: watchX, y: watchY, w: btnWidth, h: btnHeight };
+
+    ctx.fillStyle = "#28a745";
+    roundRect(watchX, watchY, btnWidth, btnHeight, 15);
+    ctx.fillStyle = "#fff";
+    ctx.font = "16px Arial";
+    ctx.fillText("Смотреть", watchX + btnWidth/2, watchY + 25);
+
+    const exitX = boxX + boxWidth - btnWidth - 20;
+    const exitY = watchY;
+    exitBtn = { x: exitX, y: exitY, w: btnWidth, h: btnHeight };
+
+    ctx.fillStyle = "#dc3545";
+    roundRect(exitX, exitY, btnWidth, btnHeight, 15);
+    ctx.fillStyle = "#fff";
+    ctx.fillText("Выйти", exitX + btnWidth/2, exitY + 25);
+  }
+
+  function loop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // фон
-    if (bg.complete) {
-        ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+    drawRoad();
+    updatePlayer();
+    updateObstacles1();
+    updateObstacles2();
+    updateObstacles3();
+    drawObstacles1();
+    drawObstacles2();
+    drawObstacles3();
+    drawPlayer();
+    
+    if (player.gameOver) {
+      drawGameOver();
     }
+    
+    gameSpeed += 0.00001;
+    requestAnimationFrame(loop);
+  }
 
-    // физика
-    beaver.vy += gravity;
-    beaver.y += beaver.vy;
-
-    if (beaver.y > 500) {
-        beaver.y = 500;
-        beaver.vy = 0;
-    }
-
-    // бобёр
-    if (beaverImg.complete) {
-        ctx.drawImage(beaverImg, beaver.x, beaver.y, 50, 50);
-    } else {
-        ctx.fillStyle = "brown";
-        ctx.fillRect(beaver.x, beaver.y, 40, 40);
-    }
-
-    // препятствия
-    obstacles.forEach((o, i) => {
-        o.x -= speed;
-
-        // считаем очки
-        if (!o.passed && o.x + o.w < beaver.x) {
-            score++;
-            o.passed = true;
-        }
-
-        // рисуем бревно
-        if (logImg.complete) {
-            ctx.drawImage(logImg, o.x, o.y, o.w, o.h);
-        } else {
-            ctx.fillStyle = "green";
-            ctx.fillRect(o.x, o.y, o.w, o.h);
-        }
-
-        // столкновение
-        if (collision(beaver, o)) {
-            gameOver = true;
-
-            if (score > bestScore) {
-                bestScore = score;
-                localStorage.setItem("bestScore", bestScore);
-            }
-        }
-
-        if (o.x < -50) obstacles.splice(i, 1);
-    });
-
-    // ускорение
-    speed += 0.002;
-
-    // текст
-    ctx.fillStyle = "white";
-    ctx.font = "27px Arial";
-    ctx.fillText("Счёт: " + score, 10, 30);
-    ctx.fillText("Рекорд: " + bestScore, 10, 60);
-
-    // проигрыш
-    if (gameOver) {
-        ctx.fillStyle = "red";
-        ctx.font = "30px Arial";
-        ctx.fillText("Ты проиграл", 100, 250);
-        ctx.font = "16px Arial";
-        ctx.fillText("Нажми чтобы начать заново", 70, 300);
-        return;
-    }
-
-    requestAnimationFrame(update);
+  // Запуск спавна препятствий
+  setInterval(spawnObstacle1, 1200);
+  setInterval(spawnObstacle2, 1500);
+  setInterval(spawnObstacle3, 1800);
+  
+  // Запуск игрового цикла
+  loop();
 }
+</script>
+
+<style>
+  #menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #2c3e50, #1a472a);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+  }
+  
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+    background: rgba(0,0,0,0.3);
+    color: white;
+    font-size: 20px;
+  }
+  
+  .settings {
+    cursor: pointer;
+    font-size: 24px;
+  }
+  
+  .main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  }
+  
+  .bottom-bar {
+    display: flex;
+    justify-content: space-around;
+    padding: 20px;
+    background: rgba(0,0,0,0.3);
+  }
+  
+  .bottom-btn {
+    background: #ffa500;
+    padding: 15px 30px;
+    border-radius: 25px;
+    cursor: pointer;
+    color: white;
+    font-weight: bold;
+    transition: transform 0.2s;
+  }
+  
+  .bottom-btn.play {
+    background: #4caf50;
+    transform: scale(1.1);
+  }
+  
+  .bottom-btn:hover {
+    transform: scale(1.05);
+  }
+  
+  #game {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #87CEEB;
+    z-index: 5;
+  }
+</style>
 </script>
 
 </body>
