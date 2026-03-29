@@ -305,20 +305,20 @@ function initGame() {
   function updateObstacles2() {
   // ЕСЛИ ИГРОК СМОТРИТ - НЕ ОБНОВЛЯЕМ ПРЕПЯТСТВИЯ НА ЕГО ПОЛОСЕ
   if (!player.isWatching) {
-    obstacles1.forEach(o => {
+    obstacles2.forEach(o => {    // ✅ ПРАВИЛЬНО: использует obstacles2
       o.z -= gameSpeed + (1 - o.z) * 0.015;
     });
-    obstacles1 = obstacles1.filter(o => o.z > 0);
+    obstacles2 = obstacles2.filter(o => o.z > 0);  // ✅ ПРАВИЛЬНО
   }
 }
 
-  function updateObstacles3() {
+function updateObstacles3() {
   // ЕСЛИ ИГРОК СМОТРИТ - НЕ ОБНОВЛЯЕМ ПРЕПЯТСТВИЯ НА ЕГО ПОЛОСЕ
   if (!player.isWatching) {
-    obstacles1.forEach(o => {
+    obstacles3.forEach(o => {    // ✅ ПРАВИЛЬНО: использует obstacles3
       o.z -= gameSpeed + (1 - o.z) * 0.015;
     });
-    obstacles1 = obstacles1.filter(o => o.z > 0);
+    obstacles3 = obstacles3.filter(o => o.z > 0);  // ✅ ПРАВИЛЬНО
   }
 }
 
