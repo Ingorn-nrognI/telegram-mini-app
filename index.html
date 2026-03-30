@@ -34,46 +34,46 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 64px;                       /* увеличиваем размер */
+  font-size: 64px;
   font-weight: bold;
-  font-family: 'Arial Black', sans-serif; /* красивый жирный шрифт */
-  color: #FFD700;                         /* золотой цвет */
-  text-shadow: 3px 3px 8px rgba(0,0,0,0.6); /* красивое свечение */
-  letter-spacing: 2px;                     /* расстояние между буквами */
+  font-family: 'Arial Black', sans-serif;
+  color: #FFD700;
+  text-shadow: 3px 3px 8px rgba(0,0,0,0.6);
+  letter-spacing: 2px;
 }
 
 /* Нижнее меню */
 .bottom-bar {
   position: fixed;
-  bottom: 20px;           /* чуть выше края экрана */
-  left: 50%;              /* центрируем по горизонтали */
-  transform: translateX(-50%); /* сдвигаем в центр */
-  width: 90%;             /* чуть меньше полной ширины */
-  max-width: 600px;       /* ограничиваем для больших экранов */
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 600px;
   display: flex;
-  justify-content: space-around; /* равномерно распределяем кнопки */
-  background: rgba(0, 0, 0, 0.6); /* полупрозрачный черный */
+  justify-content: space-around;
+  background: rgba(0, 0, 0, 0.6);
   padding: 15px 20px;
-  border-radius: 50px;     /* делает панель овальной */
+  border-radius: 50px;
   box-sizing: border-box;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* небольшая тень */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
 .bottom-btn {
   flex: 1;
-  margin: 0 10px;          /* отступ между кнопками */
+  margin: 0 10px;
   padding: 12px 0;
   text-align: center;
   color: white;
   cursor: pointer;
-  border-radius: 25px;      /* овальные кнопки */
-  background: #444;         /* базовый цвет */
+  border-radius: 25px;
+  background: #444;
   font-weight: bold;
   transition: 0.2s;
 }
 
 .bottom-btn.play {
-  background: #28a745;      /* зеленая кнопка Играть */
+  background: #28a745;
 }
 
 .bottom-btn:hover {
@@ -91,19 +91,26 @@ body {
 
 /* Canvas для игры */
 #game {
-  display: none; /* скрыт пока не играем */
+  display: none;
   background: #87CEEB;
 }
-/* ========================
-   Стили модалки таблицы
-======================== */
+
+#menu {
+  background: linear-gradient(135deg, #2c3e50, #1a472a);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  z-index: 10;
+}
+
+/* Стили модалки таблицы */
 #leaderboardModal {
-  display: none;               /* изначально скрыта */
+  display: none;
   position: fixed;
-  top: 60px;                   /* под верхней панелью с ником */
+  top: 60px;
   left: 20px;
   right: 20px;
-  bottom: 100px;               /* над нижней панелью кнопок */
+  bottom: 100px;
   background: rgba(0,0,0,0.9);
   color: white;
   padding: 20px;
