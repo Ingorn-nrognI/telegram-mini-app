@@ -6,6 +6,14 @@
 <title>Menu + Game</title>
 
 <style>
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   font-family: Arial;
@@ -13,19 +21,27 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 /* Верхняя панель */
 .top-bar {
   display: flex;
   justify-content: space-between;
-  padding: 15px;
+  padding: 20px;
+  background: rgba(0,0,0,0.3);
   color: white;
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .settings {
   cursor: pointer;
+  font-size: 24px;
 }
 
 /* Центр */
@@ -79,28 +95,29 @@ body {
 .bottom-btn:hover {
   background: #555;
 }
-
-.bottom-btn:last-child {
-  border-right: none;
-}
-
-.play {
-  background: #28a745;
-  font-weight: bold;
-}
-
-/* Canvas для игры */
-#game {
-  display: none;
-  background: #87CEEB;
-}
-
+/* Меню */
 #menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, #2c3e50, #1a472a);
   display: flex;
   flex-direction: column;
-  height: 100vh;
   z-index: 10;
+  overflow-y: auto;
+}
+/* Canvas для игры */
+#game {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #87CEEB;
+  z-index: 5;
 }
 
 /* Стили модалки таблицы */
@@ -141,6 +158,36 @@ body {
   font-size: 18px;
   line-height: 1.5;
 }
+
+/* Принудительное восстановление меню */
+.menu-reset {
+  background: linear-gradient(135deg, #2c3e50, #1a472a) !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  z-index: 10 !important;
+}
+
+.menu-reset .main {
+  font-size: 24px !important;
+  color: white !important;
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.menu-reset .top-bar {
+  display: flex !important;
+  justify-content: space-between !important;
+  padding: 15px !important;
+  color: white !important;
+  font-size: 18px !important;
+}
 </style>
 </head>
 
@@ -175,7 +222,22 @@ body {
 </div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
+  const firebaseConfig = {
+  apiKey: "AIzaSyCxJb69UOCu38RvSbJVnf6jtD8VYDVHPD4",
+  authDomain: "web3-bobrup.firebaseapp.com",
+  projectId: "web3-bobrup",
+  storageBucket: "web3-bobrup.firebasestorage.app",
+  messagingSenderId: "947085067200",
+  appId: "1:947085067200:web:35299668725de1c965be25",
+  measurementId: "G-HPXPGC87TB"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+  
 // Получаем ник из Telegram
 if (window.Telegram && Telegram.WebApp) {
   const user = Telegram.WebApp.initDataUnsafe.user;
@@ -197,20 +259,33 @@ function startGame() {
   initGame();
 }
 
-function openLeaderboard() {
-  let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
-
+async function openLeaderboard() {
   const contentDiv = document.getElementById("leaderboardContent");
-  contentDiv.innerHTML = ""; // очищаем перед заполнением
+  contentDiv.innerHTML = "Загрузка...";
 
-  if (leaderboard.length === 0) {
-    contentDiv.innerHTML = "<p>Пока нет рекордов</p>";
-  } else {
-    leaderboard.slice(0, 10).forEach((p, index) => {
+  try {
+    const leaderboardRef = db.collection("leaderboard");
+    const snapshot = await leaderboardRef.orderBy("score", "desc").limit(10).get();
+
+    contentDiv.innerHTML = "";
+
+    if (snapshot.empty) {
+      contentDiv.innerHTML = "<p>Пока нет рекордов</p>";
+      return;
+    }
+
+    let index = 1;
+    snapshot.forEach((doc) => {
+      const p = doc.data();
       const row = document.createElement("div");
-      row.textContent = `${index + 1}. ${p.name} — ${p.score}`;
+      row.textContent = `${index}. ${p.name} — ${p.score}`;
       contentDiv.appendChild(row);
+      index++;
     });
+
+  } catch (e) {
+    contentDiv.innerHTML = "Ошибка загрузки";
+    console.error(e);
   }
 
   document.getElementById("leaderboardModal").style.display = "block";
@@ -220,28 +295,33 @@ function closeLeaderboard() {
   document.getElementById("leaderboardModal").style.display = "none";
 }
 
-function saveBestScore(score) {
+async function saveBestScore(score) {
   const name = document.getElementById("nickname").innerText;
 
-  let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+  try {
+    // Сначала ищем игрока по имени
+    const snapshot = await db.collection("leaderboard")
+                             .where("name", "==", name)
+                             .get();
 
-  let player = leaderboard.find(p => p.name === name);
-
-  if (player) {
-    if (score > player.score) {
-      player.score = score;
+    if (!snapshot.empty) {
+      // Игрок уже есть, проверяем рекорд
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (score > data.score) {
+          doc.ref.update({ score: score, date: Date.now() });
+        }
+      });
+    } else {
+      // Игрока нет → создаем запись
+      await db.collection("leaderboard").add({
+        name: name,
+        score: score,
+        date: Date.now()
+      });
     }
-  } else {
-    leaderboard.push({ name: name, score: score });
-  }
-
-  leaderboard.sort((a, b) => b.score - a.score);
-
-  localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-
-  // Если таблица открыта — обновляем её автоматически
-  if (document.getElementById("leaderboardModal").style.display === "block") {
-    openLeaderboard();
+  } catch (e) {
+    console.error("Ошибка записи:", e);
   }
 }
   
@@ -262,6 +342,42 @@ function openSettings() {
 // ИГРА
 // ========================
 function initGame() {
+  
+  function fullResetMenu() {
+  // Полностью очищаем inline-стили
+  document.body.removeAttribute("style");
+  
+  const menu = document.getElementById("menu");
+  menu.removeAttribute("style");
+  
+  const topBar = document.querySelector(".top-bar");
+  if (topBar) topBar.removeAttribute("style");
+  
+  const mainDiv = document.querySelector(".main");
+  if (mainDiv) mainDiv.removeAttribute("style");
+  
+  const bottomBar = document.querySelector(".bottom-bar");
+  if (bottomBar) bottomBar.removeAttribute("style");
+  
+  const btns = document.querySelectorAll(".bottom-btn");
+  btns.forEach(btn => btn.removeAttribute("style"));
+  
+  // Восстанавливаем display
+  menu.style.display = "flex";
+  document.getElementById("game").style.display = "none";
+  
+  // Принудительно применяем CSS класс для восстановления
+  menu.classList.add("menu-reset");
+  
+  // Минимальная задержка (один кадр) - незаметно для пользователя
+  requestAnimationFrame(() => {
+    menu.classList.remove("menu-reset");
+  });
+}
+  // Защита от повторного запуска
+  if (window.gameInitialized) return;
+  window.gameInitialized = true;
+  
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
 
@@ -289,8 +405,8 @@ function initGame() {
     width: 60,
     height: 60,
     dy: 0,
-    gravity: 0.8,
-    jump: -15,
+    gravity: 0.6,
+jump: -13,
     grounded: true,
     gameOver: false,
     gameOverText: "Ты врезался!"
@@ -304,6 +420,25 @@ function initGame() {
 
   // Устанавливаем текущему игроку среднюю полосу
   player.x = lane2 - player.width / 2;
+
+ // Обработчик изменения размера экрана
+  window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    // Пересчитываем координаты полос
+    const newLane2 = canvas.width * roadCenter;
+    
+    // Обновляем позицию игрока
+    player.x = newLane2 - player.width / 2;
+    
+    // Если меню видимо, принудительно восстанавливаем размер
+    const menu = document.getElementById("menu");
+    if (menu.style.display === "flex") {
+      menu.style.width = "100%";
+      menu.style.height = "100%";
+    }
+  });
 
   // Препятствия
 let obstacles1 = [];
@@ -343,42 +478,53 @@ function spawnObstacle2() {
 function spawnObstacle3() {
   if (!isWatching3) obstacles3.push({ x: lane3, z: 1 });
 }
-
-  function jump() {
-    if (player.grounded && !player.gameOver) {
+function jump() {
+  console.log("jump called, grounded:", player.grounded, "gameOver:", player.gameOver, "gameStarted:", gameStarted);
+  
+  if (player.grounded && !player.gameOver) {
       player.dy = player.jump;
       player.grounded = false;
+      console.log("jump executed!");
     }
   }
-
-  // Обработчики событий
-  canvas.addEventListener("click", (e) => {
+    // Обработчики событий
+    canvas.addEventListener("click", (e) => {
+    console.log("click detected");
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
     if (showExitButton && 
-      x > exitToMenuBtn.x && x < exitToMenuBtn.x + exitToMenuBtn.w &&
-      y > exitToMenuBtn.y && y < exitToMenuBtn.y + exitToMenuBtn.h) {
-    document.getElementById("menu").style.display = "flex";
-    document.getElementById("game").style.display = "none";
-    return;
-  }
+        x > exitToMenuBtn.x && x < exitToMenuBtn.x + exitToMenuBtn.w &&
+        y > exitToMenuBtn.y && y < exitToMenuBtn.y + exitToMenuBtn.h) {
+      // Очищаем интервалы
+      clearInterval(spawnInterval1);
+      clearInterval(spawnInterval2);
+      clearInterval(spawnInterval3);
+      window.gameInitialized = false;
+      
+      // Полный сброс стилей меню
+      fullResetMenu();
+      
+      return;
+    }
+    console.log("click detected, player.gameOver:", player.gameOver, "gameStarted:", gameStarted);
+    
     if (player.gameOver) {
       // кнопка СМОТРЕТЬ
       if (x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
-    y > watchBtn.y && y < watchBtn.y + watchBtn.h) {
-  isWatching2 = true;  // Останавливаем ТОЛЬКО среднюю полосу
-  player.gameOver = false;
-  player.dy = 0;
-  player.grounded = true;
+          y > watchBtn.y && y < watchBtn.y + watchBtn.h) {
+        isWatching2 = true;
+        player.gameOver = false;
+        player.dy = 0;
+        player.grounded = true;
         
         if (player.frozenX !== undefined) {
-    player.x = player.frozenX;
-    player.y = player.frozenY;
-  }
+          player.x = player.frozenX;
+          player.y = player.frozenY;
+        }
         showExitButton = true;
-}
+      }
       // кнопка ВЫЙТИ
       if (x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
           y > exitBtn.y && y < exitBtn.y + exitBtn.h) {
@@ -388,48 +534,48 @@ function spawnObstacle3() {
     }
     jump();
   });
-  
-  canvas.addEventListener("touchstart", (e) => {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  const x = touch.clientX - rect.left;
-  const y = touch.clientY - rect.top;
-    
-    if (showExitButton && 
-      x > exitToMenuBtn.x && x < exitToMenuBtn.x + exitToMenuBtn.w &&
-      y > exitToMenuBtn.y && y < exitToMenuBtn.y + exitToMenuBtn.h) {
-    document.getElementById("menu").style.display = "flex";
-    document.getElementById("game").style.display = "none";
-    return;
-  }
 
-  if (player.gameOver) {
-    // кнопка СМОТРЕТЬ
-    if (x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
-        y > watchBtn.y && y < watchBtn.y + watchBtn.h) {
-      isWatching2 = true;  // Останавливаем ТОЛЬКО среднюю полосу
-      player.gameOver = false;
-      player.dy = 0;
-      player.grounded = true;
-      showExitButton = true
-      // obstacles2 уже очищен при столкновении, так что ничего не делаем
+  canvas.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    if (showExitButton && 
+        x > exitToMenuBtn.x && x < exitToMenuBtn.x + exitToMenuBtn.w &&
+        y > exitToMenuBtn.y && y < exitToMenuBtn.y + exitToMenuBtn.h) {
+      clearInterval(spawnInterval1);
+      clearInterval(spawnInterval2);
+      clearInterval(spawnInterval3);
+      window.gameInitialized = false;
+      fullResetMenu();
+      return;
     }
-    // кнопка ВЫЙТИ
-    if (x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
-        y > exitBtn.y && y < exitBtn.y + exitBtn.h) {
-      location.reload();
+
+    if (player.gameOver) {
+      if (x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
+          y > watchBtn.y && y < watchBtn.y + watchBtn.h) {
+        isWatching2 = true;
+        player.gameOver = false;
+        player.dy = 0;
+        player.grounded = true;
+        showExitButton = true;
+      }
+      if (x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
+          y > exitBtn.y && y < exitBtn.y + exitBtn.h) {
+        location.reload();
+      }
+      return;
     }
-    return;
-  }
-  jump();
-});
+    jump();
+  });
 
   function updatePlayer() {
   // ЕСЛИ ИГРОК НАБЛЮДАЕТ - НЕ ОБНОВЛЯЕМ ЕГО ФИЗИКУ
   if (!player.gameOver && gameStarted) {
-    player.dy += player.gravity;
-    player.y += player.dy;
+    player.dy += player.gravity * deltaTime;
+player.y += player.dy * deltaTime;
   }
   
   if (player.y >= canvas.height - 150) {
@@ -501,7 +647,8 @@ function updateObstacles3() {
   }
   
   if (!player.gameOver && !isWatching2) {
-    obstacles2.forEach(o => {
+    for (let i = 0; i < obstacles2.length; i++) {
+      let o = obstacles2[i];
       let scale = 1 - o.z;
       let size = 60 * scale;
       let x = canvas.width / 2 + (lane2 - canvas.width / 2) * scale - size/2;
@@ -509,37 +656,34 @@ function updateObstacles3() {
 
       ctx.drawImage(log, x, y, size, size);
       
-      // ❗ 1. СНАЧАЛА проверка столкновения
+      // ПРОВЕРКА СТОЛКНОВЕНИЯ (СНАЧАЛА!)
       if (scale > 0.85 &&
           player.x < x + size && player.x + player.width > x &&
           player.y < y + size && player.y + player.height > y) {
-
-        frozenObstacle = { x, y, size };
-
+        
+        frozenObstacle = { x: x, y: y, size: size };
         player.frozenX = player.x;
         player.frozenY = player.y;
-
         obstacles2 = [];
         player.gameOverText = "Ты врезался! Счёт: " + score;
         saveBestScore(score);
-
         player.gameOver = true;
-        return;
+        return; // Выходим, очки за это бревно НЕ начисляем
       }
-
-      // ❗ 2. ОЧКИ ТОЛЬКО ЕСЛИ ПЕРЕПРЫГНУЛ
-      if (!o.passed && o.z < 0.2) {
+      
+      // НАЧИСЛЕНИЕ ОЧКОВ (только если не врезался)
+      if (!o.passed && o.z < 0.2 && !player.gameOver) {
         o.passed = true;
-
-        // 👇 ключевая логика
-        if (!player.grounded && !player.gameOver) {
+        
+        // Очки только когда игрок в воздухе (перепрыгнул)
+        if (!player.grounded) {
           score++;
         }
       }
-    });
+    }
   }
 }
-
+  
   function drawObstacles3() {
     obstacles3.forEach(o => {
       let scale = 1 - o.z;
@@ -565,6 +709,20 @@ function updateObstacles3() {
     ctx.drawImage(beaver, player.x, player.y, player.width, player.height);
   }
 }
+  function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fill();
+}
 // Сначала функция drawExitButton (отдельно)
 function drawExitButton() {
   if (!showExitButton) return;
@@ -580,7 +738,16 @@ function drawExitButton() {
   
   ctx.fillStyle = "#dc3545";
   ctx.beginPath();
-  ctx.roundRect(btnX, btnY, btnWidth, btnHeight, 10);
+  ctx.moveTo(btnX + 10, btnY);
+  ctx.lineTo(btnX + btnWidth - 10, btnY);
+  ctx.quadraticCurveTo(btnX + btnWidth, btnY, btnX + btnWidth, btnY + 10);
+  ctx.lineTo(btnX + btnWidth, btnY + btnHeight - 10);
+  ctx.quadraticCurveTo(btnX + btnWidth, btnY + btnHeight, btnX + btnWidth - 10, btnY + btnHeight);
+  ctx.lineTo(btnX + 10, btnY + btnHeight);
+  ctx.quadraticCurveTo(btnX, btnY + btnHeight, btnX, btnY + btnHeight - 10);
+  ctx.lineTo(btnX, btnY + 10);
+  ctx.quadraticCurveTo(btnX, btnY, btnX + 10, btnY);
+  ctx.closePath();
   ctx.fill();
   
   ctx.fillStyle = "#fff";
@@ -601,25 +768,9 @@ function drawGameOver() {
     const boxX = canvas.width / 2 - boxWidth / 2;
     const boxY = canvas.height / 2 - boxHeight / 2;
 
-    // функция рисования закругленного прямоугольника
-    function roundRect(x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.lineTo(x + w - r, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-      ctx.lineTo(x + w, y + h - r);
-      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-      ctx.lineTo(x + r, y + h);
-      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-      ctx.lineTo(x, y + r);
-      ctx.quadraticCurveTo(x, y, x + r, y);
-      ctx.closePath();
-      ctx.fill();
-    }
-
     // рисуем окно
     ctx.fillStyle = "rgba(0,0,0,0.7)";
-    roundRect(boxX, boxY, boxWidth, boxHeight, 25);
+    roundRect(ctx, boxX, boxY, boxWidth, boxHeight, 25);
 
     // ТЕКСТ
     ctx.fillStyle = "#fff";
@@ -636,7 +787,7 @@ function drawGameOver() {
     watchBtn = { x: watchX, y: watchY, w: btnWidth, h: btnHeight };
 
     ctx.fillStyle = "#28a745";
-    roundRect(watchX, watchY, btnWidth, btnHeight, 15);
+    roundRect(ctx, watchX, watchY, btnWidth, btnHeight, 15);
     ctx.fillStyle = "#fff";
     ctx.font = "16px Arial";
     ctx.fillText("Смотреть", watchX + btnWidth/2, watchY + 25);
@@ -646,7 +797,7 @@ function drawGameOver() {
     exitBtn = { x: exitX, y: exitY, w: btnWidth, h: btnHeight };
 
     ctx.fillStyle = "#dc3545";
-    roundRect(exitX, exitY, btnWidth, btnHeight, 15);
+    roundRect(ctx, exitX, exitY, btnWidth, btnHeight, 15);
     ctx.fillStyle = "#fff";
     ctx.fillText("Выйти", exitX + btnWidth/2, exitY + 25);
   }
@@ -669,8 +820,8 @@ function drawGameOver() {
   function loop(currentTime) {
   deltaTime = (currentTime - lastTime) / 16.67; // нормализация под 60 FPS
 
-// защита от скачков FPS
-if (deltaTime > 3) deltaTime = 1;
+// Защита от скачков FPS (и слишком маленьких, и слишком больших)
+deltaTime = Math.min(2, Math.max(0.5, deltaTime));
 
   lastTime = currentTime;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -705,30 +856,26 @@ ctx.fillText("Score: " + score, 20, 40);
   }
 
   // Запуск спавна препятствий
-  setInterval(spawnObstacle1, 1200);
-  setInterval(spawnObstacle2, 1500);
-  setInterval(spawnObstacle3, 1800);
+  let spawnInterval1 = setInterval(spawnObstacle1, 1200);
+  let spawnInterval2 = setInterval(spawnObstacle2, 1500);
+  let spawnInterval3 = setInterval(spawnObstacle3, 1800);
 
-  // Таймер перед стартом (ТОЛЬКО 1 РАЗ!)
-let countdown = setInterval(() => {
-  startTimer--;
-
-  if (startTimer < 0) {
-    showStartText = true;
-  }
-
-  if (startTimer < -1) {
-  clearInterval(countdown);
-
-  // 🔥 ОЧИЩАЕМ ВСЕ БРЕВНА
-  obstacles1 = [];
-  obstacles2 = [];
-  obstacles3 = [];
-
-  gameStarted = true;
-  showStartText = false;
-}
-}, 1000);
+    // Таймер перед стартом
+  let countdown = setInterval(() => {
+    startTimer--;
+    
+    if (startTimer < 0) {
+      clearInterval(countdown);
+      
+      // ОЧИЩАЕМ ВСЕ БРЕВНА
+      obstacles1 = [];
+      obstacles2 = [];
+      obstacles3 = [];
+      
+      gameStarted = true;
+      showStartText = false;
+    }
+  }, 1000);
   
   // Запуск игрового цикла
   requestAnimationFrame(loop);
@@ -738,3 +885,4 @@ let countdown = setInterval(() => {
 
 </body>
 </html>
+
