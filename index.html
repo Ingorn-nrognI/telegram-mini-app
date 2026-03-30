@@ -32,10 +32,14 @@ body {
 .main {
   flex: 1;
   display: flex;
-  justify-content: center;
   align-items: center;
-  font-size: 24px;
-  color: white;
+  justify-content: center;
+  font-size: 64px;                       /* увеличиваем размер */
+  font-weight: bold;
+  font-family: 'Arial Black', sans-serif; /* красивый жирный шрифт */
+  color: #FFD700;                         /* золотой цвет */
+  text-shadow: 3px 3px 8px rgba(0,0,0,0.6); /* красивое свечение */
+  letter-spacing: 2px;                     /* расстояние между буквами */
 }
 
 /* Нижнее меню */
@@ -298,8 +302,13 @@ function initGame() {
 let obstacles1 = [];
 let obstacles2 = [];
 let obstacles3 = [];
-let gameSpeed = 0.008; 
+let gameSpeed = 0.008;
+let lastTime = performance.now();
+let deltaTime = 1; // 👈 ДОБАВИТЬ ЭТО
 let score = 0;
+let gameStarted = false;   // игра ещё не началась
+let startTimer = 3;        // таймер
+let showStartText = true;  // показывать ли START
 // Флаги для каждой полосы (кто в режиме наблюдателя)
 let isWatching1 = false;  // левая полоса
 let isWatching2 = false;  // средняя полоса (игрок)
@@ -411,7 +420,7 @@ function spawnObstacle3() {
 
   function updatePlayer() {
   // ЕСЛИ ИГРОК НАБЛЮДАЕТ - НЕ ОБНОВЛЯЕМ ЕГО ФИЗИКУ
-  if (!player.gameOver) {
+  if (!player.gameOver && gameStarted) {
     player.dy += player.gravity;
     player.y += player.dy;
   }
@@ -424,27 +433,27 @@ function spawnObstacle3() {
 }
 
   function updateObstacles1() {
-  if (!isWatching1) {
+  if (!isWatching1 && gameStarted) {
     obstacles1.forEach(o => {
-      o.z -= gameSpeed + (1 - o.z) * 0.015;
+      o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
     });
     obstacles1 = obstacles1.filter(o => o.z > 0);
   }
 }
 
 function updateObstacles2() {
-  if (!isWatching2) {
+  if (!isWatching2 && gameStarted) {
     obstacles2.forEach(o => {
-      o.z -= gameSpeed + (1 - o.z) * 0.015;
+      o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
     });
     obstacles2 = obstacles2.filter(o => o.z > 0);
   }
 }
 
 function updateObstacles3() {
-  if (!isWatching3) {
+  if (!isWatching3 && gameStarted) {
     obstacles3.forEach(o => {
-      o.z -= gameSpeed + (1 - o.z) * 0.015;
+      o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
     });
     obstacles3 = obstacles3.filter(o => o.z > 0);
   }
@@ -479,13 +488,11 @@ function updateObstacles3() {
   }
 
   function drawObstacles2() {
-  // Рисуем замороженное бревно (если есть) - ВСЕГДА рисуем
+  // Рисуем замороженное бревно
   if (frozenObstacle) {
-    console.log("Рисую frozenObstacle:", frozenObstacle);
     ctx.drawImage(log, frozenObstacle.x, frozenObstacle.y, frozenObstacle.size, frozenObstacle.size);
   }
   
-  // Рисуем движущиеся бревна только если игрок не в Game Over И не в режиме наблюдателя
   if (!player.gameOver && !isWatching2) {
     obstacles2.forEach(o => {
       let scale = 1 - o.z;
@@ -495,30 +502,32 @@ function updateObstacles3() {
 
       ctx.drawImage(log, x, y, size, size);
       
-if (!o.passed && o.z < 0.2) {
-  o.passed = true;
-  score++;
-}
-      // Проверка столкновения
+      // ❗ 1. СНАЧАЛА проверка столкновения
       if (scale > 0.85 &&
           player.x < x + size && player.x + player.width > x &&
           player.y < y + size && player.y + player.height > y) {
-        
-        // Сохраняем бревно с ТОЧНЫМИ координатами
-        frozenObstacle = {
-          x: x,
-          y: y,
-          size: size,
-          scale: scale
-        };
 
-         player.frozenX = player.x;  // запоминаем позицию игрока
-  player.frozenY = player.y;  // запоминаем позицию игрока
-        obstacles2 = [];  // Очищаем все бревна
+        frozenObstacle = { x, y, size };
+
+        player.frozenX = player.x;
+        player.frozenY = player.y;
+
+        obstacles2 = [];
         player.gameOverText = "Ты врезался! Счёт: " + score;
-saveBestScore(score);
-        if (score <= 0) return;
+        saveBestScore(score);
+
         player.gameOver = true;
+        return;
+      }
+
+      // ❗ 2. ОЧКИ ТОЛЬКО ЕСЛИ ПЕРЕПРЫГНУЛ
+      if (!o.passed && o.z < 0.2) {
+        o.passed = true;
+
+        // 👇 ключевая логика
+        if (!player.grounded && !player.gameOver) {
+          score++;
+        }
       }
     });
   }
@@ -635,7 +644,28 @@ function drawGameOver() {
     ctx.fillText("Выйти", exitX + btnWidth/2, exitY + 25);
   }
 
-  function loop() {
+  function drawStartTimer() {
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#fff";
+  ctx.textAlign = "center";
+
+  if (startTimer > 0) {
+    ctx.font = "bold 80px Arial";
+    ctx.fillText(startTimer, canvas.width / 2, canvas.height / 2);
+  } else if (showStartText) {
+    ctx.font = "bold 60px Arial";
+    ctx.fillText("START", canvas.width / 2, canvas.height / 2);
+  }
+}
+  function loop(currentTime) {
+  deltaTime = (currentTime - lastTime) / 16.67; // нормализация под 60 FPS
+
+// защита от скачков FPS
+if (deltaTime > 3) deltaTime = 1;
+
+  lastTime = currentTime;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawRoad();
     updatePlayer();
@@ -646,8 +676,12 @@ function drawGameOver() {
     drawObstacles2();
     drawObstacles3();
     drawPlayer();
+    if (!gameStarted) {
+  drawStartTimer();
+}
     ctx.fillStyle = "#fff";
 ctx.font = "20px Arial";
+ctx.textAlign = "left";   // 👈 ВАЖНО: фикс выравнивания
 ctx.fillText("Score: " + score, 20, 40);
     
     if (player.gameOver) {
@@ -656,7 +690,10 @@ ctx.fillText("Score: " + score, 20, 40);
     
     drawExitButton();
     
-    gameSpeed += 0.00001;
+    if (gameStarted) {
+  gameSpeed += 0.00001 * deltaTime;
+}
+    
     requestAnimationFrame(loop);
   }
 
@@ -664,9 +701,30 @@ ctx.fillText("Score: " + score, 20, 40);
   setInterval(spawnObstacle1, 1200);
   setInterval(spawnObstacle2, 1500);
   setInterval(spawnObstacle3, 1800);
+
+  // Таймер перед стартом (ТОЛЬКО 1 РАЗ!)
+let countdown = setInterval(() => {
+  startTimer--;
+
+  if (startTimer < 0) {
+    showStartText = true;
+  }
+
+  if (startTimer < -1) {
+  clearInterval(countdown);
+
+  // 🔥 ОЧИЩАЕМ ВСЕ БРЕВНА
+  obstacles1 = [];
+  obstacles2 = [];
+  obstacles3 = [];
+
+  gameStarted = true;
+  showStartText = false;
+}
+}, 1000);
   
   // Запуск игрового цикла
-  loop();
+  requestAnimationFrame(loop);
 }
 </script>
 
