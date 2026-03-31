@@ -284,7 +284,20 @@ let currentRoomId = null;
 let winnerProcessing = false;
 
 let roomCountdownInterval = null;
+let roomHostCountdownInterval = null;
 let multiplayerGameStarted = false;
+
+function stopRoomCountdown() {
+  if (roomCountdownInterval) {
+    clearInterval(roomCountdownInterval);
+    roomCountdownInterval = null;
+  }
+
+  if (roomHostCountdownInterval) {
+    clearInterval(roomHostCountdownInterval);
+    roomHostCountdownInterval = null;
+  }
+}
 
 function getRoomTimeMs(value) {
   if (!value) return null;
@@ -300,13 +313,6 @@ function getRoomTimeMs(value) {
   }
 
   return null;
-}
-
-function stopRoomCountdown() {
-  if (roomCountdownInterval) {
-    clearInterval(roomCountdownInterval);
-    roomCountdownInterval = null;
-  }
 }
   
   const firebaseConfig = {
@@ -485,6 +491,7 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
   created: firebase.firestore.FieldValue.serverTimestamp(),
   updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   startAt: null,
+  countdownLeft: null,
   gameState: {
     started: false,
     finished: false,
@@ -557,8 +564,9 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
 
       // Ровно в момент, когда стало 2 игрока, запускаем таймер
       if (players.length >= 2 && !room.startAt && !room.gameState?.started) {
-        updateData.startAt = firebase.firestore.FieldValue.serverTimestamp();
-      }
+  updateData.startAt = firebase.firestore.FieldValue.serverTimestamp();
+  updateData.countdownLeft = 120;
+}
 
       transaction.update(roomRef, updateData);
     });
@@ -600,8 +608,7 @@ async function tryStartRoom(roomId) {
       if (room.gameState?.started || room.status === "finished") return;
 
       const playersCount = room.players.length;
-      const startAtMs = getRoomTimeMs(room.startAt);
-      const now = Date.now();
+      const countdownLeft = typeof room.countdownLeft === "number" ? room.countdownLeft : null;
 
       // 3 игрока — старт сразу
       if (playersCount >= 3) {
@@ -613,28 +620,31 @@ async function tryStartRoom(roomId) {
         return;
       }
 
-      // меньше 2 игроков — таймер сбрасываем
+      // меньше 2 игроков — сбрасываем таймер
       if (playersCount < 2) {
-        if (room.startAt) {
-          transaction.update(roomRef, {
-            startAt: null,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
+        const updateData = {
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (room.startAt) updateData.startAt = null;
+        if (room.countdownLeft !== null) updateData.countdownLeft = null;
+
+        transaction.update(roomRef, updateData);
         return;
       }
 
-      // если 2+ игрока, но таймера нет — создаём
-      if (playersCount >= 2 && !room.startAt) {
+      // 2+ игрока, но таймер ещё не создан
+      if (playersCount >= 2 && room.countdownLeft == null) {
         transaction.update(roomRef, {
           startAt: firebase.firestore.FieldValue.serverTimestamp(),
+          countdownLeft: 120,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         return;
       }
 
-      // если 2+ игрока и 120 сек прошли — стартуем
-      if (playersCount >= 2 && startAtMs && (now - startAtMs >= 120000)) {
+      // если таймер дошёл до 0 — стартуем
+      if (playersCount >= 2 && countdownLeft !== null && countdownLeft <= 0) {
         transaction.update(roomRef, {
           status: "playing",
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -645,6 +655,58 @@ async function tryStartRoom(roomId) {
   } catch (e) {
     console.error("Ошибка tryStartRoom:", e);
   }
+}
+
+function startSharedRoomCountdown(roomId) {
+  const roomRef = db.collection("rooms").doc(roomId);
+  const myName = document.getElementById("nickname").innerText;
+
+  if (roomHostCountdownInterval) {
+    clearInterval(roomHostCountdownInterval);
+    roomHostCountdownInterval = null;
+  }
+
+  roomHostCountdownInterval = setInterval(async () => {
+    try {
+      const doc = await roomRef.get();
+      if (!doc.exists) {
+        stopRoomCountdown();
+        return;
+      }
+
+      const room = doc.data();
+      if (!room || !Array.isArray(room.players)) return;
+      if (room.gameState?.started || room.status === "playing" || room.status === "finished") {
+        stopRoomCountdown();
+        return;
+      }
+
+      // Таймер уменьшает только первый игрок в списке
+      const hostName = room.players[0];
+      if (hostName !== myName) return;
+
+      if (room.players.length >= 3) {
+        await tryStartRoom(roomId);
+        return;
+      }
+
+      if (room.players.length < 2) return;
+
+      const currentLeft = typeof room.countdownLeft === "number" ? room.countdownLeft : 120;
+      const nextLeft = Math.max(0, currentLeft - 1);
+
+      await roomRef.update({
+        countdownLeft: nextLeft,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      if (nextLeft <= 0) {
+        await tryStartRoom(roomId);
+      }
+    } catch (e) {
+      console.error("Ошибка общего таймера комнаты:", e);
+    }
+  }, 1000);
 }
   
   function openRoomScreen(roomId) {
@@ -692,17 +754,10 @@ async function tryStartRoom(roomId) {
 
     let timerText = "";
 
-    if (!room.gameState?.started && room.players.length >= 2) {
-      const startAtMs = getRoomTimeMs(room.startAt);
-
-      if (startAtMs) {
-        const leftMs = Math.max(0, 120000 - (Date.now() - startAtMs));
-        const leftSec = Math.ceil(leftMs / 1000);
-        timerText = `<br>Старт через: ${leftSec} сек`;
-      } else {
-        timerText = `<br>Старт через: 120 сек`;
-      }
-    }
+if (!room.gameState?.started && room.players.length >= 2) {
+  const leftSec = typeof room.countdownLeft === "number" ? room.countdownLeft : 120;
+  timerText = `<br>Старт через: ${leftSec} сек`;
+}
 
     list.innerHTML = `
       Игроки: ${room.players.length}/3 <br><br>
@@ -726,6 +781,16 @@ async function tryStartRoom(roomId) {
 
     latestRoom = doc.data();
     renderRoom(latestRoom);
+
+    if (
+  latestRoom &&
+  Array.isArray(latestRoom.players) &&
+  latestRoom.players.length >= 2 &&
+  !latestRoom.gameState?.started &&
+  latestRoom.status !== "playing"
+) {
+  startSharedRoomCountdown(roomId);
+}
 
     if (
       latestRoom?.gameState?.started === true ||
@@ -763,20 +828,16 @@ async function tryStartRoom(roomId) {
     }
 
     const playersCount = Array.isArray(latestRoom.players) ? latestRoom.players.length : 0;
-    const startAtMs = getRoomTimeMs(latestRoom.startAt);
+const countdownLeft = typeof latestRoom.countdownLeft === "number" ? latestRoom.countdownLeft : null;
 
-    if (playersCount >= 3) {
-      await tryStartRoom(roomId);
-      return;
-    }
+if (playersCount >= 3) {
+  await tryStartRoom(roomId);
+  return;
+}
 
-    if (playersCount >= 2 && startAtMs) {
-      const leftMs = 120000 - (Date.now() - startAtMs);
-
-      if (leftMs <= 0) {
-        await tryStartRoom(roomId);
-      }
-    }
+if (playersCount >= 2 && countdownLeft !== null && countdownLeft <= 0) {
+  await tryStartRoom(roomId);
+}
   }, 1000);
 }
   async function leaveRoom(roomId) {
@@ -836,8 +897,9 @@ multiplayerGameStarted = false;
 
       // если после выхода осталось меньше 2 игроков — сбрасываем таймер
       if (newPlayers.length < 2) {
-        updateData.startAt = null;
-      }
+  updateData.startAt = null;
+  updateData.countdownLeft = null;
+}
 
       // удаляем данные вышедшего игрока из playersData
       if (room.gameState?.playersData?.[name]) {
@@ -1576,8 +1638,9 @@ async function leaveAfterLoss() {
 };
 
     if (newPlayers.length < 2) {
-      updateData.startAt = null;
-    }
+  updateData.startAt = null;
+  updateData.countdownLeft = null;
+}
 
     await roomRef.update(updateData);
   }
