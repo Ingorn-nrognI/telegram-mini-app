@@ -587,7 +587,15 @@ async function tryStartRoom(roomId, room) {
 
   createBtn.style.display = "none";
 
-  if (currentRoomListener) currentRoomListener();
+  if (roomsListener) {
+    roomsListener();
+    roomsListener = null;
+  }
+
+  if (currentRoomListener) {
+    currentRoomListener();
+    currentRoomListener = null;
+  }
 
   const roomRef = db.collection("rooms").doc(roomId);
 
@@ -737,8 +745,9 @@ async function openLeaderboard() {
   const modal = document.getElementById("leaderboardModal");
   const contentDiv = document.getElementById("leaderboardContent");
 
+  // открываем окно сразу
   modal.style.display = "block";
-  contentDiv.innerHTML = "Загрузка...";
+  contentDiv.innerHTML = "<p>Загрузка...</p>";
 
   try {
     const snapshot = await db
@@ -756,7 +765,7 @@ async function openLeaderboard() {
 
     let index = 1;
     snapshot.forEach((doc) => {
-      const p = doc.data();
+      const p = doc.data() || {};
       const row = document.createElement("div");
       row.textContent = `${index}. ${p.name || "Игрок"} — ${p.score || 0}`;
       contentDiv.appendChild(row);
