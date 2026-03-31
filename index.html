@@ -281,7 +281,33 @@ body {
   let roomsListener = null;
 let currentRoomListener = null;
 let currentRoomId = null;
-  let winnerProcessing = false;
+let winnerProcessing = false;
+
+let roomCountdownInterval = null;
+let multiplayerGameStarted = false;
+
+function getRoomTimeMs(value) {
+  if (!value) return null;
+
+  // Firestore Timestamp
+  if (typeof value.toMillis === "function") {
+    return value.toMillis();
+  }
+
+  // обычное число
+  if (typeof value === "number") {
+    return value;
+  }
+
+  return null;
+}
+
+function stopRoomCountdown() {
+  if (roomCountdownInterval) {
+    clearInterval(roomCountdownInterval);
+    roomCountdownInterval = null;
+  }
+}
   
   const firebaseConfig = {
   apiKey: "AIzaSyCxJb69UOCu38RvSbJVnf6jtD8VYDVHPD4",
@@ -349,8 +375,8 @@ async function cleanupRooms() {
       }
 
       const players = Array.isArray(room.players) ? room.players.filter(Boolean) : [];
-      const created = room.created || 0;
-      const updatedAt = room.updatedAt || room.created || 0;
+      const created = getRoomTimeMs(room.created) || 0;
+const updatedAt = getRoomTimeMs(room.updatedAt) || getRoomTimeMs(room.created) || 0;
 
       const isFinished = room.status === "finished" || room.gameState?.finished === true;
       const isStarted = room.status === "playing" || room.gameState?.started === true;
@@ -412,8 +438,8 @@ for (const doc of snapshot.docs) {
   }
 
   const players = room.players.filter(Boolean);
-  const created = room.created || 0;
-const updatedAt = room.updatedAt || room.created || 0;
+  const created = getRoomTimeMs(room.created) || 0;
+const updatedAt = getRoomTimeMs(room.updatedAt) || getRoomTimeMs(room.created) || 0;
 const isFinished = room.status === "finished" || room.gameState?.finished === true;
 const isStarted = room.status === "playing" || room.gameState?.started === true;
 
@@ -454,25 +480,25 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
   const name = document.getElementById("nickname").innerText;
 
   const room = {
-    players: [name],
-    status: "waiting",
-    created: Date.now(),
-    updatedAt: Date.now(),
-    startAt: null, // таймер ожидания старта
-    gameState: {
-      started: false,
-      finished: false,
-      winner: null,
-      playersData: {
-        [name]: {
-          alive: true,
-          lost: false,
-          leftRoom: false,
-          position: 0
-        }
+  players: [name],
+  status: "waiting",
+  created: firebase.firestore.FieldValue.serverTimestamp(),
+  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  startAt: null,
+  gameState: {
+    started: false,
+    finished: false,
+    winner: null,
+    playersData: {
+      [name]: {
+        alive: true,
+        lost: false,
+        leftRoom: false,
+        position: 0
       }
     }
-  };
+  }
+};
 
   const docRef = await db.collection("rooms").add(room);
   joinRoom(docRef.id);
@@ -481,111 +507,153 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
   const name = document.getElementById("nickname").innerText;
   const roomRef = db.collection("rooms").doc(roomId);
 
-  const doc = await roomRef.get();
+  try {
+    await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(roomRef);
 
-  if (!doc.exists) {
-    alert("Комната уже удалена");
+      if (!doc.exists) {
+        throw new Error("ROOM_DELETED");
+      }
+
+      const room = doc.data();
+
+      if (!room || !Array.isArray(room.players)) {
+        throw new Error("ROOM_DATA_ERROR");
+      }
+
+      const now = Date.now();
+      const lastActivity = getRoomTimeMs(room.updatedAt) || getRoomTimeMs(room.created) || 0;
+      const maxRoomIdleAge = 3 * 60 * 1000;
+
+      if (lastActivity && (now - lastActivity > maxRoomIdleAge)) {
+        transaction.delete(roomRef);
+        throw new Error("ROOM_EXPIRED");
+      }
+
+      if (room.status === "finished") {
+        throw new Error("ROOM_FINISHED");
+      }
+
+      if (room.players.length >= 3 && !room.players.includes(name)) {
+        throw new Error("ROOM_FULL");
+      }
+
+      const players = Array.isArray(room.players) ? [...room.players] : [];
+
+      if (!players.includes(name)) {
+        players.push(name);
+      }
+
+      const updateData = {
+        players,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        [`gameState.playersData.${name}`]: {
+          alive: true,
+          lost: false,
+          leftRoom: false,
+          position: 0
+        }
+      };
+
+      // Ровно в момент, когда стало 2 игрока, запускаем таймер
+      if (players.length >= 2 && !room.startAt && !room.gameState?.started) {
+        updateData.startAt = firebase.firestore.FieldValue.serverTimestamp();
+      }
+
+      transaction.update(roomRef, updateData);
+    });
+
+    currentRoomId = roomId;
+    multiplayerGameStarted = false;
+    openRoomScreen(roomId);
+
+  } catch (e) {
+    if (e.message === "ROOM_DELETED") {
+      alert("Комната уже удалена");
+    } else if (e.message === "ROOM_DATA_ERROR") {
+      alert("Ошибка данных комнаты");
+    } else if (e.message === "ROOM_EXPIRED") {
+      alert("Комната устарела и была удалена");
+    } else if (e.message === "ROOM_FINISHED") {
+      alert("Игра в комнате уже закончена");
+    } else if (e.message === "ROOM_FULL") {
+      alert("Комната заполнена");
+    } else {
+      console.error("Ошибка joinRoom:", e);
+      alert("Ошибка входа в комнату");
+    }
+
     loadRooms();
-    return;
   }
-
-  const room = doc.data();
-
-if (!room || !Array.isArray(room.players)) {
-  alert("Ошибка данных комнаты");
-  loadRooms();
-  return;
 }
 
-const now = Date.now();
-const lastActivity = room.updatedAt || room.created || 0;
-const maxRoomIdleAge = 3 * 60 * 1000; // 3 минуты без активности
-
-if (lastActivity && (now - lastActivity > maxRoomIdleAge)) {
-  await roomRef.delete();
-  alert("Комната устарела и была удалена");
-  loadRooms();
-  return;
-}
-
-  if (room.status === "finished") {
-    alert("Игра в комнате уже закончена");
-    loadRooms();
-    return;
-  }
-
-  if (room.players.length >= 3 && !room.players.includes(name)) {
-    alert("Комната заполнена");
-    return;
-  }
-
-  if (!room.players.includes(name)) {
-    room.players.push(name);
-  }
-
-  const updateData = {
-  players: room.players,
-  updatedAt: Date.now(),
-  [`gameState.playersData.${name}`]: {
-    alive: true,
-    lost: false,
-    leftRoom: false,
-    position: 0
-  }
-};
-
-  // Если стало 2 игрока и игра ещё не началась — запускаем 2-минутный таймер
-  if (room.players.length === 2 && !room.startAt && !room.gameState?.started) {
-    updateData.startAt = Date.now();
-  }
-
-  await roomRef.update(updateData);
-
-  currentRoomId = roomId;
-  openRoomScreen(roomId);
-}
-
-async function tryStartRoom(roomId, room) {
-  if (!room || room.gameState?.started || room.status === "finished") return;
-
+async function tryStartRoom(roomId) {
   const roomRef = db.collection("rooms").doc(roomId);
-  const now = Date.now();
-  const playersCount = room.players.length;
 
-  // Если собралось 3 игрока — старт сразу
-  if (playersCount === 3) {
-    await roomRef.update({
-  status: "playing",
-  updatedAt: Date.now(),
-  "gameState.started": true
-});
-    return;
-  }
+  try {
+    await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(roomRef);
+      if (!doc.exists) return;
 
-  // Если есть 2 игрока и прошло 2 минуты — стартуем
-  if (playersCount >= 2 && room.startAt && (now - room.startAt >= 120000)) {
-    await roomRef.update({
-  status: "playing",
-  updatedAt: Date.now(),
-  "gameState.started": true
-});
-    return;
-  }
+      const room = doc.data();
+      if (!room || !Array.isArray(room.players)) return;
+      if (room.gameState?.started || room.status === "finished") return;
 
-  // Если осталось меньше 2 игроков — сбрасываем таймер
-  if (playersCount < 2 && room.startAt) {
-    await roomRef.update({
-  startAt: null,
-  updatedAt: Date.now()
-});
+      const playersCount = room.players.length;
+      const startAtMs = getRoomTimeMs(room.startAt);
+      const now = Date.now();
+
+      // 3 игрока — старт сразу
+      if (playersCount >= 3) {
+        transaction.update(roomRef, {
+          status: "playing",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          "gameState.started": true
+        });
+        return;
+      }
+
+      // меньше 2 игроков — таймер сбрасываем
+      if (playersCount < 2) {
+        if (room.startAt) {
+          transaction.update(roomRef, {
+            startAt: null,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        return;
+      }
+
+      // если 2+ игрока, но таймера нет — создаём
+      if (playersCount >= 2 && !room.startAt) {
+        transaction.update(roomRef, {
+          startAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return;
+      }
+
+      // если 2+ игрока и 120 сек прошли — стартуем
+      if (playersCount >= 2 && startAtMs && (now - startAtMs >= 120000)) {
+        transaction.update(roomRef, {
+          status: "playing",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          "gameState.started": true
+        });
+      }
+    });
+  } catch (e) {
+    console.error("Ошибка tryStartRoom:", e);
   }
 }
   
   function openRoomScreen(roomId) {
   const list = document.getElementById("roomsList");
   const createBtn = document.getElementById("createRoomBtn");
+  const roomRef = db.collection("rooms").doc(roomId);
 
   createBtn.style.display = "none";
+  multiplayerGameStarted = false;
 
   if (roomsListener) {
     roomsListener();
@@ -597,42 +665,43 @@ async function tryStartRoom(roomId, room) {
     currentRoomListener = null;
   }
 
-  const roomRef = db.collection("rooms").doc(roomId);
+  stopRoomCountdown();
 
-  currentRoomListener = roomRef.onSnapshot(async doc => {
-    if (!doc.exists) {
-      list.innerHTML = "Комната была удалена";
+  let latestRoom = null;
+
+  function renderRoom(room) {
+    if (!room || !Array.isArray(room.players)) {
+      list.innerHTML = "Ошибка данных комнаты";
       createBtn.style.display = "block";
       currentRoomId = null;
+      stopRoomCountdown();
       return;
     }
 
-    const room = doc.data();
+    const now = Date.now();
+    const lastActivity = getRoomTimeMs(room.updatedAt) || getRoomTimeMs(room.created) || 0;
+    const maxRoomIdleAge = 3 * 60 * 1000;
 
-if (!room || !Array.isArray(room.players)) {
-  list.innerHTML = "Ошибка данных комнаты";
-  createBtn.style.display = "block";
-  currentRoomId = null;
-  return;
-}
-
-const now = Date.now();
-const lastActivity = room.updatedAt || room.created || 0;
-const maxRoomIdleAge = 3 * 60 * 1000;
-
-if (lastActivity && (now - lastActivity > maxRoomIdleAge)) {
-  await roomRef.delete();
-  list.innerHTML = "Комната устарела и была удалена";
-  createBtn.style.display = "block";
-  currentRoomId = null;
-  return;
-}
+    if (lastActivity && (now - lastActivity > maxRoomIdleAge)) {
+      list.innerHTML = "Комната устарела и была удалена";
+      createBtn.style.display = "block";
+      currentRoomId = null;
+      stopRoomCountdown();
+      return;
+    }
 
     let timerText = "";
-    if (!room.gameState?.started && room.startAt && room.players.length >= 2) {
-      const leftMs = Math.max(0, 120000 - (Date.now() - room.startAt));
-      const leftSec = Math.ceil(leftMs / 1000);
-      timerText = `<br>Старт через: ${leftSec} сек`;
+
+    if (!room.gameState?.started && room.players.length >= 2) {
+      const startAtMs = getRoomTimeMs(room.startAt);
+
+      if (startAtMs) {
+        const leftMs = Math.max(0, 120000 - (Date.now() - startAtMs));
+        const leftSec = Math.ceil(leftMs / 1000);
+        timerText = `<br>Старт через: ${leftSec} сек`;
+      } else {
+        timerText = `<br>Старт через: 120 сек`;
+      }
     }
 
     list.innerHTML = `
@@ -644,22 +713,71 @@ if (lastActivity && (now - lastActivity > maxRoomIdleAge)) {
         Выйти из комнаты
       </div>
     `;
+  }
 
-    const playersData = room.gameState?.playersData || {};
-console.log(playersData);
+  currentRoomListener = roomRef.onSnapshot(async (doc) => {
+    if (!doc.exists) {
+      list.innerHTML = "Комната была удалена";
+      createBtn.style.display = "block";
+      currentRoomId = null;
+      stopRoomCountdown();
+      return;
+    }
 
-await tryStartRoom(roomId, room);
+    latestRoom = doc.data();
+    renderRoom(latestRoom);
 
-// если игра уже была запущена в этом или прошлом обновлении — стартуем локально
-if (
-  room.gameState?.started === true ||
-  room.status === "playing" ||
-  (room.players.length === 3) ||
-  (room.players.length >= 2 && room.startAt && (Date.now() - room.startAt >= 120000))
-) {
-  startMultiplayerGame(roomId);
-}
+    if (
+      latestRoom?.gameState?.started === true ||
+      latestRoom?.status === "playing"
+    ) {
+      stopRoomCountdown();
+
+      if (!multiplayerGameStarted) {
+        multiplayerGameStarted = true;
+        startMultiplayerGame(roomId);
+      }
+      return;
+    }
+
+    await tryStartRoom(roomId);
   });
+
+  // Локальное обновление таймера каждую секунду
+  roomCountdownInterval = setInterval(async () => {
+    if (!latestRoom) return;
+
+    renderRoom(latestRoom);
+
+    if (
+      latestRoom?.gameState?.started === true ||
+      latestRoom?.status === "playing"
+    ) {
+      stopRoomCountdown();
+
+      if (!multiplayerGameStarted) {
+        multiplayerGameStarted = true;
+        startMultiplayerGame(roomId);
+      }
+      return;
+    }
+
+    const playersCount = Array.isArray(latestRoom.players) ? latestRoom.players.length : 0;
+    const startAtMs = getRoomTimeMs(latestRoom.startAt);
+
+    if (playersCount >= 3) {
+      await tryStartRoom(roomId);
+      return;
+    }
+
+    if (playersCount >= 2 && startAtMs) {
+      const leftMs = 120000 - (Date.now() - startAtMs);
+
+      if (leftMs <= 0) {
+        await tryStartRoom(roomId);
+      }
+    }
+  }, 1000);
 }
   async function leaveRoom(roomId) {
   const name = document.getElementById("nickname").innerText;
@@ -674,6 +792,10 @@ if (
         currentRoomListener();
         currentRoomListener = null;
       }
+      
+      stopRoomCountdown();
+multiplayerGameStarted = false;
+      
       document.getElementById("createRoomBtn").style.display = "block";
       loadRooms();
       return;
@@ -687,6 +809,10 @@ if (
         currentRoomListener();
         currentRoomListener = null;
       }
+      
+      stopRoomCountdown();
+multiplayerGameStarted = false;
+      
       document.getElementById("createRoomBtn").style.display = "block";
       loadRooms();
       return;
@@ -705,7 +831,7 @@ if (
     } else {
       const updateData = {
   players: newPlayers,
-  updatedAt: Date.now()
+  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 };
 
       // если после выхода осталось меньше 2 игроков — сбрасываем таймер
@@ -728,6 +854,9 @@ if (
       currentRoomListener = null;
     }
 
+    stopRoomCountdown();
+multiplayerGameStarted = false;
+
     document.getElementById("createRoomBtn").style.display = "block";
     loadRooms();
 
@@ -737,6 +866,13 @@ if (
 }
   
  async function startMultiplayerGame(roomId) {
+  stopRoomCountdown();
+
+  if (currentRoomListener) {
+    currentRoomListener();
+    currentRoomListener = null;
+  }
+
   closeRooms();
   startGame();
 }
@@ -959,7 +1095,7 @@ if (currentRoomId) {
   const roomRef = db.collection("rooms").doc(currentRoomId);
 
   roomRef.update({
-    updatedAt: Date.now(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     [`gameState.playersData.${name}.position`]: playerState.position,
     [`gameState.playersData.${name}.alive`]: playerState.alive
   }).catch(err => console.error("Ошибка начальной записи игрока:", err));
@@ -968,7 +1104,7 @@ if (currentRoomId) {
     if (!currentRoomId) return;
 
     roomRef.update({
-      updatedAt: Date.now(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       [`gameState.playersData.${name}.position`]: playerState.position,
       [`gameState.playersData.${name}.alive`]: playerState.alive
     }).catch(err => console.error("Ошибка обновления позиции:", err));
@@ -1398,7 +1534,7 @@ canvas.addEventListener("touchstart", (e) => {
 
   try {
     await roomRef.update({
-  updatedAt: Date.now(),
+  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   [`gameState.playersData.${name}.alive`]: false,
   [`gameState.playersData.${name}.lost`]: true
 });
@@ -1435,7 +1571,7 @@ async function leaveAfterLoss() {
   } else {
     const updateData = {
   players: newPlayers,
-  updatedAt: Date.now(),
+  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   [`gameState.playersData.${name}`]: firebase.firestore.FieldValue.delete()
 };
 
@@ -1457,6 +1593,9 @@ async function leaveAfterLoss() {
     currentRoomListener = null;
   }
 
+  stopRoomCountdown();
+multiplayerGameStarted = false;
+  
   clearInterval(spawnInterval1);
   clearInterval(spawnInterval2);
   clearInterval(spawnInterval3);
@@ -1494,12 +1633,12 @@ async function leaveAfterLoss() {
       const winnerName = alivePlayers[0][0];
 
       await roomRef.update({
-        status: "finished",
-        updatedAt: Date.now(),
-        "gameState.finished": true,
-        "gameState.started": false,
-        "gameState.winner": winnerName
-      });
+  status: "finished",
+  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  "gameState.finished": true,
+  "gameState.started": false,
+  "gameState.winner": winnerName
+});
 
       if (winnerName === name) {
         await saveBestScore(score);
