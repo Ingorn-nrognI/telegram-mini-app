@@ -228,6 +228,74 @@ body {
   border-radius: 10px;
   cursor: pointer;
 }
+
+  /* ===== ФИНАЛЬНОЕ ОКНО ===== */
+#endGameModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.endGameBox {
+  width: 100%;
+  max-width: 420px;
+  background: #111;
+  color: white;
+  border-radius: 20px;
+  padding: 24px 20px;
+  box-sizing: border-box;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+.endGameTitle {
+  font-size: 30px;
+  font-weight: bold;
+  margin-bottom: 14px;
+}
+
+.endGameWinnerName {
+  font-size: 24px;
+  color: #FFD700;
+  font-weight: bold;
+  margin-bottom: 24px;
+}
+
+.endGamePlaces {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 22px;
+}
+
+.endGamePlaces th,
+.endGamePlaces td {
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  padding: 10px 6px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.endGamePlaces th {
+  color: #FFD700;
+}
+
+.endGameExitBtn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: #dc3545;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+}
 </style>
 </head>
 
@@ -273,11 +341,33 @@ body {
   ➕ Создать комнату
 </div>
 </div>
+
+  <!-- Финальное окно -->
+<div id="endGameModal">
+  <div class="endGameBox">
+    <div class="endGameTitle">Победитель</div>
+    <div id="endGameWinnerName" class="endGameWinnerName">—</div>
+
+    <table class="endGamePlaces">
+      <thead>
+        <tr>
+          <th>Место</th>
+          <th>Игрок</th>
+          <th>Счёт</th>
+        </tr>
+      </thead>
+      <tbody id="endGamePlacesBody"></tbody>
+    </table>
+
+    <button class="endGameExitBtn" onclick="closeEndGameAndExit()">Выйти</button>
+  </div>
+</div>
   
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
+  
   let roomsListener = null;
 let currentRoomListener = null;
 let currentRoomId = null;
@@ -286,6 +376,16 @@ let winnerProcessing = false;
 let roomCountdownInterval = null;
 let roomHostCountdownInterval = null;
 let multiplayerGameStarted = false;
+
+let endGameWatcher = null;
+let endGameShown = false;
+let openEndGameForCurrentMatch = null;
+let exitEndGameForCurrentMatch = null;
+
+let gameResizeHandler = null;
+let gameBeforeUnloadHandler = null;
+let gameCanvasClickHandler = null;
+let gameCanvasTouchHandler = null;
 
 function stopRoomCountdown() {
   if (roomCountdownInterval) {
@@ -351,6 +451,96 @@ function startGame() {
   // Запуск игры
   initGame();
 }
+
+  function buildEndGamePlaces(results) {
+  if (!Array.isArray(results)) return [];
+
+  return results
+    .slice()
+    .sort((a, b) => Number(a.place) - Number(b.place))
+    .map(item => ({
+      place: item.place,
+      name: item.name || "Игрок",
+      score: Number(item.score || 0)
+    }));
+}
+
+function showEndGameModal(resultData) {
+  if (!resultData || endGameShown) return;
+
+  const modal = document.getElementById("endGameModal");
+  const winnerNameEl = document.getElementById("endGameWinnerName");
+  const placesBody = document.getElementById("endGamePlacesBody");
+
+  if (!modal || !winnerNameEl || !placesBody) return;
+
+  winnerNameEl.textContent = resultData.winner || "—";
+  placesBody.innerHTML = "";
+
+  const places = buildEndGamePlaces(resultData.results);
+
+  places.forEach(item => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${item.place}</td>
+      <td>${item.name}</td>
+      <td>${item.score}</td>
+    `;
+    placesBody.appendChild(tr);
+  });
+
+  modal.style.display = "flex";
+  endGameShown = true;
+}
+
+function hideEndGameModal() {
+  const modal = document.getElementById("endGameModal");
+  if (modal) modal.style.display = "none";
+}
+
+function stopEndGameWatcher() {
+  if (endGameWatcher) {
+    endGameWatcher();
+    endGameWatcher = null;
+  }
+}
+
+function startRoomFinishWatcher(roomId) {
+  stopEndGameWatcher();
+
+  const roomRef = db.collection("rooms").doc(roomId);
+
+  endGameWatcher = roomRef.onSnapshot((doc) => {
+    if (!doc.exists) return;
+
+    const room = doc.data();
+    if (!room || !room.gameState) return;
+
+    if (room.gameState.finished === true && room.gameState.winner && room.gameState.results) {
+      const resultData = {
+        winner: room.gameState.winner,
+        results: room.gameState.results
+      };
+
+      if (typeof openEndGameForCurrentMatch === "function") {
+        openEndGameForCurrentMatch(resultData);
+      } else {
+        showEndGameModal(resultData);
+      }
+    }
+  });
+}
+
+async function closeEndGameAndExit() {
+  if (typeof exitEndGameForCurrentMatch === "function") {
+    await exitEndGameForCurrentMatch();
+    return;
+  }
+
+  hideEndGameModal();
+  stopEndGameWatcher();
+  endGameShown = false;
+}
   
 function openRooms() {
   document.getElementById("roomsModal").style.display = "block";
@@ -362,57 +552,7 @@ function closeRooms() {
 }
 
 async function cleanupRooms() {
-  try {
-    const snapshot = await db.collection("rooms").get();
-    const now = Date.now();
-
-    const maxWaitingRoomAge = 10 * 60 * 1000;   // waiting: 10 минут
-    const maxFinishedRoomAge = 2 * 60 * 1000;   // finished: 2 минуты
-    const maxPlayingRoomAge = 3 * 60 * 1000;    // playing без активности: 3 минуты
-
-    const promises = [];
-
-    snapshot.forEach(doc => {
-      const room = doc.data();
-
-      if (!room) {
-        promises.push(doc.ref.delete());
-        return;
-      }
-
-      const players = Array.isArray(room.players) ? room.players.filter(Boolean) : [];
-      const created = getRoomTimeMs(room.created) || 0;
-const updatedAt = getRoomTimeMs(room.updatedAt) || getRoomTimeMs(room.created) || 0;
-
-      const isFinished = room.status === "finished" || room.gameState?.finished === true;
-      const isStarted = room.status === "playing" || room.gameState?.started === true;
-
-      const waitingTooOld =
-        !isStarted &&
-        !isFinished &&
-        created &&
-        (now - created > maxWaitingRoomAge);
-
-      const finishedTooOld =
-        isFinished &&
-        updatedAt &&
-        (now - updatedAt > maxFinishedRoomAge);
-
-      const playingTooOld =
-        isStarted &&
-        !isFinished &&
-        updatedAt &&
-        (now - updatedAt > maxPlayingRoomAge);
-
-      if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
-        promises.push(doc.ref.delete());
-      }
-    });
-
-    await Promise.all(promises);
-  } catch (e) {
-    console.error("Ошибка cleanupRooms:", e);
-  }
+  return;
 }
 
 async function loadRooms() {
@@ -420,9 +560,9 @@ async function loadRooms() {
 
   if (roomsListener) roomsListener();
 
-  await cleanupRooms();
-
-  roomsListener = db.collection("rooms").onSnapshot(async snapshot => {
+  roomsListener = db.collection("rooms")
+  .where("status", "==", "waiting")
+  .onSnapshot(async snapshot => {
     list.innerHTML = "";
 
     if (snapshot.empty) {
@@ -439,9 +579,8 @@ for (const doc of snapshot.docs) {
   const room = doc.data();
 
   if (!room || !Array.isArray(room.players)) {
-    await doc.ref.delete();
-    continue;
-  }
+  continue;
+}
 
   const players = room.players.filter(Boolean);
   const created = getRoomTimeMs(room.created) || 0;
@@ -459,7 +598,6 @@ const playingTooOld =
   isStarted && !isFinished && updatedAt && (now - updatedAt > 3 * 60 * 1000);
 
 if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
-  await doc.ref.delete();
   continue;
 }
 
@@ -486,31 +624,43 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
   const name = document.getElementById("nickname").innerText;
 
   const room = {
-  players: [name],
-  status: "waiting",
-  created: firebase.firestore.FieldValue.serverTimestamp(),
-  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  startAt: null,
-  countdownLeft: null,
-  gameState: {
-    started: false,
-    finished: false,
-    winner: null,
-    playersData: {
-      [name]: {
-        alive: true,
-        lost: false,
-        leftRoom: false,
-        position: 0
+    players: [name],
+    status: "waiting",
+    created: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    startAt: null,
+    countdownLeft: null,
+    gameState: {
+      started: false,
+      finished: false,
+      winner: null,
+      playersData: {
+        [name]: {
+          alive: true,
+          lost: false,
+          leftRoom: false,
+          position: 0,
+          score: 0,
+          firstObstacleResolved: false
+        }
       }
     }
-  }
-};
+  };
 
-  const docRef = await db.collection("rooms").add(room);
-  joinRoom(docRef.id);
+  try {
+    const docRef = await db.collection("rooms").add(room);
+
+    currentRoomId = docRef.id;
+    multiplayerGameStarted = false;
+    openRoomScreen(docRef.id);
+  } catch (e) {
+    console.error("Ошибка createRoom:", e);
+    alert("Ошибка создания комнаты");
+    loadRooms();
+  }
 }
-  async function joinRoom(roomId) {
+
+async function joinRoom(roomId) {
   const name = document.getElementById("nickname").innerText;
   const roomRef = db.collection("rooms").doc(roomId);
 
@@ -533,7 +683,6 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
       const maxRoomIdleAge = 3 * 60 * 1000;
 
       if (lastActivity && (now - lastActivity > maxRoomIdleAge)) {
-        transaction.delete(roomRef);
         throw new Error("ROOM_EXPIRED");
       }
 
@@ -558,15 +707,16 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
           alive: true,
           lost: false,
           leftRoom: false,
-          position: 0
+          position: 0,
+          score: 0,
+          firstObstacleResolved: false
         }
       };
 
-      // Ровно в момент, когда стало 2 игрока, запускаем таймер
       if (players.length >= 2 && !room.startAt && !room.gameState?.started) {
-  updateData.startAt = firebase.firestore.FieldValue.serverTimestamp();
-  updateData.countdownLeft = 120;
-}
+        updateData.startAt = firebase.firestore.FieldValue.serverTimestamp();
+        updateData.countdownLeft = 120;
+      }
 
       transaction.update(roomRef, updateData);
     });
@@ -594,7 +744,7 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
     loadRooms();
   }
 }
-
+  
 async function tryStartRoom(roomId) {
   const roomRef = db.collection("rooms").doc(roomId);
 
@@ -696,9 +846,8 @@ function startSharedRoomCountdown(roomId) {
       const nextLeft = Math.max(0, currentLeft - 1);
 
       await roomRef.update({
-        countdownLeft: nextLeft,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+  countdownLeft: nextLeft
+});
 
       if (nextLeft <= 0) {
         await tryStartRoom(roomId);
@@ -935,6 +1084,9 @@ multiplayerGameStarted = false;
     currentRoomListener = null;
   }
 
+  endGameShown = false;
+  startRoomFinishWatcher(roomId);
+
   closeRooms();
   startGame();
 }
@@ -1137,18 +1289,25 @@ canvas.height = canvas.clientHeight || window.innerHeight;
   // Устанавливаем текущему игроку среднюю полосу
   player.x = lane2 - player.width / 2;
 
-window.addEventListener("resize", () => {
-  // Если очень не хочется, чтобы приложение перескакивало при каждом ресайзе,
-  // можно вообще не трогать menu
-  canvas.width = canvas.clientWidth || window.innerWidth;
-  canvas.height = canvas.clientHeight || window.innerHeight;
+if (gameResizeHandler) {
+  window.removeEventListener("resize", gameResizeHandler);
+}
 
-  // Пересчитываем координаты полос
-  const newLane2 = canvas.width * roadCenter;
+gameResizeHandler = () => {};
+window.addEventListener("resize", gameResizeHandler);
 
-  // Обновляем позицию игрока
-  player.x = newLane2 - player.width / 2;
-});
+  // Препятствия
+let obstacles1 = [];
+let obstacles2 = [];
+let obstacles3 = [];
+let gameSpeed = 0.008;
+let lastTime = performance.now();
+let deltaTime = 1;
+let score = 0;
+let firstObstacleResolved = false;
+let gameStarted = false;   // игра ещё не началась
+let startTimer = 3;        // таймер
+let showStartText = true;  // показывать ли START
 
   // 🔹 Периодическое обновление данных игрока в Firebase
 let syncInterval = null;
@@ -1157,43 +1316,40 @@ if (currentRoomId) {
   const roomRef = db.collection("rooms").doc(currentRoomId);
 
   roomRef.update({
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     [`gameState.playersData.${name}.position`]: playerState.position,
-    [`gameState.playersData.${name}.alive`]: playerState.alive
+    [`gameState.playersData.${name}.alive`]: playerState.alive,
+    [`gameState.playersData.${name}.score`]: score,
+    [`gameState.playersData.${name}.firstObstacleResolved`]: firstObstacleResolved
   }).catch(err => console.error("Ошибка начальной записи игрока:", err));
 
   syncInterval = setInterval(() => {
-    if (!currentRoomId) return;
+  if (!currentRoomId) return;
 
-    roomRef.update({
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      [`gameState.playersData.${name}.position`]: playerState.position,
-      [`gameState.playersData.${name}.alive`]: playerState.alive
-    }).catch(err => console.error("Ошибка обновления позиции:", err));
-  }, 150);
+  roomRef.update({
+    [`gameState.playersData.${name}.position`]: playerState.position,
+    [`gameState.playersData.${name}.alive`]: playerState.alive,
+    [`gameState.playersData.${name}.score`]: score,
+    [`gameState.playersData.${name}.firstObstacleResolved`]: firstObstacleResolved
+  }).catch(err => console.error("Ошибка обновления позиции:", err));
+}, 800);
 }
 
   // ❗ При выходе из игры или комнаты нужно очищать интервал
-  window.addEventListener("beforeunload", () => {
-    if (syncInterval) clearInterval(syncInterval);
-  });
+  if (gameBeforeUnloadHandler) {
+  window.removeEventListener("beforeunload", gameBeforeUnloadHandler);
+}
 
-  // Препятствия
-  let obstacles1 = [];
-  let obstacles2 = [];
-  let obstacles3 = [];
-  let gameSpeed = 0.008;
-  let lastTime = performance.now();
-  let deltaTime = 1;
-  let score = 0;
-  let gameStarted = false;   // игра ещё не началась
-  let startTimer = 3;        // таймер
-  let showStartText = true;  // показывать ли START
+gameBeforeUnloadHandler = () => {
+  if (syncInterval) clearInterval(syncInterval);
+};
+
+window.addEventListener("beforeunload", gameBeforeUnloadHandler);
 
   // Флаги для каждой полосы (кто в режиме наблюдателя)
   let isWatching1 = false;  // левая полоса
   let isWatching2 = false;  // средняя полоса (игрок)
   let isWatching3 = false;  // правая полоса
+  let playerLost = false;
   
   // Для хранения бревна, в которое врезался игрок
   let frozenObstacle = null;
@@ -1205,6 +1361,41 @@ if (currentRoomId) {
   // Кнопка выхода в правом нижнем углу (для наблюдателя)
   let exitToMenuBtn = {x: 0, y: 0, w: 0, h: 0};
   let showExitButton = false;
+
+  openEndGameForCurrentMatch = function(resultData) {
+  player.gameOver = false;
+  showExitButton = false;
+  isWatching2 = true;
+  frozenObstacle = null;
+
+  showEndGameModal(resultData);
+};
+
+exitEndGameForCurrentMatch = async function() {
+  const roomId = currentRoomId;
+
+  hideEndGameModal();
+  stopEndGameWatcher();
+  endGameShown = false;
+
+  try {
+    if (roomId) {
+      const roomRef = db.collection("rooms").doc(roomId);
+      const doc = await roomRef.get();
+
+      if (doc.exists) {
+        const room = doc.data();
+        if (room?.gameState?.finished) {
+          await roomRef.delete();
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Ошибка удаления завершённой комнаты:", e);
+  }
+
+  await leaveAfterLoss();
+};
 
   function spawnObstacle1() {
     if (!isWatching1) obstacles1.push({ x: lane1, z: 1 });
@@ -1229,13 +1420,16 @@ if (currentRoomId) {
 }
 
 // Обработчики событий
-canvas.addEventListener("click", (e) => {
+if (gameCanvasClickHandler) {
+  canvas.removeEventListener("click", gameCanvasClickHandler);
+}
+
+gameCanvasClickHandler = (e) => {
   console.log("click detected");
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
 
-  // нижняя кнопка "Выйти" после режима "Смотреть"
   if (
     showExitButton &&
     x > exitToMenuBtn.x && x < exitToMenuBtn.x + exitToMenuBtn.w &&
@@ -1248,7 +1442,6 @@ canvas.addEventListener("click", (e) => {
   console.log("click detected, player.gameOver:", player.gameOver, "gameStarted:", gameStarted);
 
   if (player.gameOver) {
-    // кнопка СМОТРЕТЬ
     if (
       x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
       y > watchBtn.y && y < watchBtn.y + watchBtn.h
@@ -1267,7 +1460,6 @@ canvas.addEventListener("click", (e) => {
       return;
     }
 
-    // кнопка ВЫЙТИ после проигрыша
     if (
       x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
       y > exitBtn.y && y < exitBtn.y + exitBtn.h
@@ -1280,9 +1472,15 @@ canvas.addEventListener("click", (e) => {
   }
 
   jump();
-});
+};
 
-canvas.addEventListener("touchstart", (e) => {
+canvas.addEventListener("click", gameCanvasClickHandler);
+
+if (gameCanvasTouchHandler) {
+  canvas.removeEventListener("touchstart", gameCanvasTouchHandler);
+}
+
+gameCanvasTouchHandler = (e) => {
   e.preventDefault();
 
   const touch = e.touches[0];
@@ -1290,7 +1488,6 @@ canvas.addEventListener("touchstart", (e) => {
   const x = touch.clientX - rect.left;
   const y = touch.clientY - rect.top;
 
-  // нижняя кнопка "Выйти" после режима "Смотреть"
   if (
     showExitButton &&
     x > exitToMenuBtn.x && x < exitToMenuBtn.x + exitToMenuBtn.w &&
@@ -1301,7 +1498,6 @@ canvas.addEventListener("touchstart", (e) => {
   }
 
   if (player.gameOver) {
-    // кнопка СМОТРЕТЬ
     if (
       x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
       y > watchBtn.y && y < watchBtn.y + watchBtn.h
@@ -1320,7 +1516,6 @@ canvas.addEventListener("touchstart", (e) => {
       return;
     }
 
-    // кнопка ВЫЙТИ после проигрыша
     if (
       x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
       y > exitBtn.y && y < exitBtn.y + exitBtn.h
@@ -1333,7 +1528,9 @@ canvas.addEventListener("touchstart", (e) => {
   }
 
   jump();
-});
+};
+
+canvas.addEventListener("touchstart", gameCanvasTouchHandler);
   
   function updatePlayer() {
     // ЕСЛИ ИГРОК НАБЛЮДАЕТ - НЕ ОБНОВЛЯЕМ ЕГО ФИЗИКУ
@@ -1350,7 +1547,7 @@ canvas.addEventListener("touchstart", (e) => {
 
     // 🔹 Обновляем данные игрока для Firebase
     playerState.position = player.y;
-    playerState.alive = !player.gameOver;
+playerState.alive = !playerLost;
   }
 
   function updateObstacles1() {
@@ -1434,21 +1631,26 @@ canvas.addEventListener("touchstart", (e) => {
   player.frozenY = player.y;
   obstacles2 = [];
   player.gameOverText = "Ты врезался! Счёт: " + score;
-  saveBestScore(score);
-  player.gameOver = true;
-  playerState.alive = false;
-  markPlayerAsLost();
-  return;
+saveBestScore(score);
+player.gameOver = true;
+playerLost = true;
+playerState.alive = false;
+firstObstacleResolved = true;
+markPlayerAsLost();
+return;
 }     
-        // НАЧИСЛЕНИЕ ОЧКОВ (только если не врезался)
-        if (!o.passed && o.z < 0.2 && !player.gameOver) {
-          o.passed = true;
-          
-          // Очки только когда игрок в воздухе (перепрыгнул)
-          if (!player.grounded) {
-            score++;
-          }
-        }
+       if (!o.passed && o.z < 0.2 && !player.gameOver) {
+  o.passed = true;
+
+  if (!firstObstacleResolved) {
+    firstObstacleResolved = true;
+  }
+  
+  // Очки только когда игрок в воздухе (перепрыгнул)
+  if (!player.grounded) {
+    score++;
+  }
+}
       }
     }
   }
@@ -1596,16 +1798,22 @@ canvas.addEventListener("touchstart", (e) => {
 
   try {
     await roomRef.update({
-  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  [`gameState.playersData.${name}.alive`]: false,
-  [`gameState.playersData.${name}.lost`]: true
-});
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      [`gameState.playersData.${name}.alive`]: false,
+      [`gameState.playersData.${name}.lost`]: true,
+      [`gameState.playersData.${name}.score`]: score,
+      [`gameState.playersData.${name}.lostAt`]: Date.now()
+    });
   } catch (e) {
     console.error("Ошибка отметки поражения:", e);
   }
 }
 
 async function leaveAfterLoss() {
+    hideEndGameModal();
+  stopEndGameWatcher();
+  endGameShown = false;
+  
   if (!currentRoomId) {
     clearInterval(spawnInterval1);
     clearInterval(spawnInterval2);
@@ -1634,7 +1842,7 @@ async function leaveAfterLoss() {
     const updateData = {
   players: newPlayers,
   updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  [`gameState.playersData.${name}`]: firebase.firestore.FieldValue.delete()
+  [`gameState.playersData.${name}.leftRoom`]: true
 };
 
     if (newPlayers.length < 2) {
@@ -1665,13 +1873,36 @@ multiplayerGameStarted = false;
   if (syncInterval) clearInterval(syncInterval);
 
   window.gameInitialized = false;
-  showExitButton = false;
-  fullResetMenu();
-  document.getElementById("createRoomBtn").style.display = "block";
-  loadRooms();
+showExitButton = false;
+openEndGameForCurrentMatch = null;
+exitEndGameForCurrentMatch = null;
+
+if (gameResizeHandler) {
+  window.removeEventListener("resize", gameResizeHandler);
+  gameResizeHandler = null;
 }
-  
-  async function checkWinner() {
+
+if (gameBeforeUnloadHandler) {
+  window.removeEventListener("beforeunload", gameBeforeUnloadHandler);
+  gameBeforeUnloadHandler = null;
+}
+
+if (gameCanvasClickHandler) {
+  canvas.removeEventListener("click", gameCanvasClickHandler);
+  gameCanvasClickHandler = null;
+}
+
+if (gameCanvasTouchHandler) {
+  canvas.removeEventListener("touchstart", gameCanvasTouchHandler);
+  gameCanvasTouchHandler = null;
+}
+
+fullResetMenu();
+document.getElementById("createRoomBtn").style.display = "block";
+loadRooms();
+}
+
+async function checkWinner() {
   if (!currentRoomId || winnerProcessing) return;
 
   const roomRef = db.collection("rooms").doc(currentRoomId);
@@ -1690,34 +1921,147 @@ multiplayerGameStarted = false;
       return p && p.alive === true;
     });
 
+    const allLosersSorted = Object.entries(playersData)
+      .filter(([_, p]) => p && p.lost === true)
+      .sort((a, b) => Number(b[1].lostAt || 0) - Number(a[1].lostAt || 0));
+
+    // =========================
+    // ВАРИАНТ 1: остался 1 живой
+    // =========================
     if (alivePlayers.length === 1) {
-      winnerProcessing = true;
-
       const winnerName = alivePlayers[0][0];
+      const winnerData = playersData[winnerName] || {};
 
-      await roomRef.update({
-  status: "finished",
-  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  "gameState.finished": true,
-  "gameState.started": false,
-  "gameState.winner": winnerName
-});
+      const loserEntries = allLosersSorted.filter(([playerName]) => playerName !== winnerName);
 
-      if (winnerName === name) {
-        await saveBestScore(score);
-        alert("Ты победил!");
-      } else {
-        alert(`Победитель: ${winnerName}`);
+      const maxLoserScore = loserEntries.length
+        ? Math.max(...loserEntries.map(([_, p]) => Number(p.score || 0)))
+        : -1;
+
+      // Победитель должен УЖЕ обогнать лучший счёт проигравших
+      if (Number(winnerData.score || 0) <= maxLoserScore) {
+        return;
       }
 
-      await roomRef.delete();
+      winnerProcessing = true;
+
+      const winnerScore = winnerName === name ? score : Number(winnerData.score || 0);
+
+      if (winnerName === name) {
+        await saveBestScore(winnerScore);
+      }
+
+      const finalResults = [
+        {
+          place: 1,
+          name: winnerName,
+          score: winnerScore
+        }
+      ];
+
+      if (loserEntries[0]) {
+        finalResults.push({
+          place: 2,
+          name: loserEntries[0][0],
+          score: Number(loserEntries[0][1].score || 0)
+        });
+      }
+
+      if (loserEntries[1]) {
+        finalResults.push({
+          place: 3,
+          name: loserEntries[1][0],
+          score: Number(loserEntries[1][1].score || 0)
+        });
+      }
+
+      await roomRef.update({
+        status: "finished",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        "gameState.finished": true,
+        "gameState.started": false,
+        "gameState.winner": winnerName,
+        "gameState.results": finalResults,
+        [`gameState.playersData.${winnerName}.score`]: winnerScore
+      });
+
+      showEndGameModal({
+        winner: winnerName,
+        results: finalResults
+      });
+
+      return;
+    }
+
+    // =========================
+    // ВАРИАНТ 2: живых не осталось
+    // =========================
+    if (alivePlayers.length === 0 && allLosersSorted.length > 0) {
+      // Последний проигравший = фактический победитель
+      const winnerName = allLosersSorted[0][0];
+      const winnerData = allLosersSorted[0][1] || {};
+
+      const otherLosers = allLosersSorted.slice(1);
+
+      const maxOtherScore = otherLosers.length
+        ? Math.max(...otherLosers.map(([_, p]) => Number(p.score || 0)))
+        : -1;
+
+      // Даём +1 очко за последнее разыгранное бревно
+      const winnerScore = Math.max(
+        Number(winnerData.score || 0),
+        maxOtherScore + 1
+      );
+
+      winnerProcessing = true;
+
+      if (winnerName === name) {
+        await saveBestScore(winnerScore);
+      }
+
+      const finalResults = [
+        {
+          place: 1,
+          name: winnerName,
+          score: winnerScore
+        }
+      ];
+
+      if (otherLosers[0]) {
+        finalResults.push({
+          place: 2,
+          name: otherLosers[0][0],
+          score: Number(otherLosers[0][1].score || 0)
+        });
+      }
+
+      if (otherLosers[1]) {
+        finalResults.push({
+          place: 3,
+          name: otherLosers[1][0],
+          score: Number(otherLosers[1][1].score || 0)
+        });
+      }
+
+      await roomRef.update({
+        status: "finished",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        "gameState.finished": true,
+        "gameState.started": false,
+        "gameState.winner": winnerName,
+        "gameState.results": finalResults,
+        [`gameState.playersData.${winnerName}.score`]: winnerScore
+      });
+
+      showEndGameModal({
+        winner: winnerName,
+        results: finalResults
+      });
     }
   } catch (e) {
     console.error("Ошибка checkWinner:", e);
   }
-}
-
-  function loop(currentTime) {
+}function loop(currentTime) {
     deltaTime = (currentTime - lastTime) / 16.67; // нормализация под 60 FPS
 
     // Защита от скачков FPS (и слишком маленьких, и слишком больших)
@@ -1745,11 +2089,13 @@ multiplayerGameStarted = false;
     ctx.textAlign = "left";   // 👈 ВАЖНО: фикс выравнивания
     ctx.fillText("Score: " + score, 20, 40);
     
-    if (player.gameOver) {
-      drawGameOver();
-    }
-    
-    drawExitButton();
+    if (player.gameOver && !endGameShown) {
+  drawGameOver();
+}
+
+if (!endGameShown) {
+  drawExitButton();
+}
     
     if (gameStarted) {
       gameSpeed += 0.00001 * deltaTime;
