@@ -387,6 +387,7 @@ let gameBeforeUnloadHandler = null;
 let gameCanvasClickHandler = null;
 let gameCanvasTouchHandler = null;
 let isCreatingRoom = false;
+  let isJoiningRoom = false;
 
 function stopRoomCountdown() {
   if (roomCountdownInterval) {
@@ -674,20 +675,22 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
     }
 
     const docRef = await db.collection("rooms").add(room);
-    const savedDoc = await db.collection("rooms").doc(docRef.id).get();
-
-    if (!savedDoc.exists) {
-      throw new Error("ROOM_NOT_SAVED");
-    }
 
     currentRoomId = docRef.id;
     multiplayerGameStarted = false;
-    openRoomScreen(docRef.id);
+
+    // Сразу открываем экран комнаты без лишнего .get()
+    openRoomScreen(docRef.id, {
+      ...room,
+      created: Date.now(),
+      updatedAt: Date.now()
+    });
+
   } catch (e) {
     console.error("Ошибка createRoom:", e);
 
-    if (e.code === "resource-exhausted" || e.message === "ROOM_NOT_SAVED") {
-      alert("Firebase перегружен или превышен лимит. Комната не сохранилась.");
+    if (e.code === "resource-exhausted") {
+      alert("Firebase перегружен или превышен лимит. Попробуй позже.");
     } else {
       alert("Ошибка создания комнаты");
     }
@@ -704,10 +707,22 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
     }
   }
 }
-
+  
 async function joinRoom(roomId) {
+  if (isJoiningRoom) return;
+  isJoiningRoom = true;
+
   const { id, name } = getCurrentPlayer();
   const roomRef = db.collection("rooms").doc(roomId);
+  const list = document.getElementById("roomsList");
+  const createBtn = document.getElementById("createRoomBtn");
+
+  // Только визуально показываем, что идёт подключение
+  createBtn.style.display = "none";
+  list.innerHTML = `
+    Подключение к комнате...<br><br>
+    Игрок: ${name}
+  `;
 
   try {
     await db.runTransaction(async (transaction) => {
@@ -772,9 +787,43 @@ async function joinRoom(roomId) {
 
     currentRoomId = roomId;
     multiplayerGameStarted = false;
-    openRoomScreen(roomId);
+
+    // Вот только тут уже открываем реальный экран комнаты
+    openRoomScreen(roomId, {
+      hostId: null,
+      playerIds: [id],
+      playerNames: { [id]: name },
+      status: "waiting",
+      created: Date.now(),
+      updatedAt: Date.now(),
+      startAt: null,
+      gameState: {
+        started: false,
+        finished: false,
+        winner: null,
+        playersData: {
+          [id]: {
+            name,
+            alive: true,
+            lost: false,
+            leftRoom: false,
+            position: 0,
+            score: 0,
+            firstObstacleResolved: false
+          }
+        }
+      }
+    });
 
   } catch (e) {
+    if (currentRoomListener) {
+      currentRoomListener();
+      currentRoomListener = null;
+    }
+
+    stopRoomCountdown();
+    document.getElementById("createRoomBtn").style.display = "block";
+
     if (e.message === "ROOM_DELETED") {
       alert("Комната уже удалена");
     } else if (e.message === "ROOM_DATA_ERROR") {
@@ -792,7 +841,10 @@ async function joinRoom(roomId) {
       alert("Ошибка входа в комнату");
     }
 
+    currentRoomId = null;
     loadRooms();
+  } finally {
+    isJoiningRoom = false;
   }
 }
   
@@ -867,13 +919,14 @@ function startSharedRoomCountdown(roomId) {
   }
 }
 
-  function openRoomScreen(roomId) {
+  function openRoomScreen(roomId, optimisticRoom = null) {
   const list = document.getElementById("roomsList");
   const createBtn = document.getElementById("createRoomBtn");
   const roomRef = db.collection("rooms").doc(roomId);
 
   createBtn.style.display = "none";
   multiplayerGameStarted = false;
+  currentRoomId = roomId;
 
   if (roomsListener) {
     roomsListener();
@@ -887,14 +940,11 @@ function startSharedRoomCountdown(roomId) {
 
   stopRoomCountdown();
 
-  let latestRoom = null;
+  let latestRoom = optimisticRoom;
 
   function renderRoom(room) {
     if (!room || !Array.isArray(room.playerIds)) {
-      list.innerHTML = "Ошибка данных комнаты";
-      createBtn.style.display = "block";
-      currentRoomId = null;
-      stopRoomCountdown();
+      list.innerHTML = "Подключение к комнате...";
       return;
     }
 
@@ -912,20 +962,20 @@ function startSharedRoomCountdown(roomId) {
 
     let timerText = "";
 
-if (!room.gameState?.started && room.playerIds.length >= 2) {
-  const startAtMs = getRoomTimeMs(room.startAt);
-  const leftSec = startAtMs
-    ? Math.max(0, 120 - Math.floor((Date.now() - startAtMs) / 1000))
-    : 120;
+    if (!room.gameState?.started && room.playerIds.length >= 2) {
+      const startAtMs = getRoomTimeMs(room.startAt);
+      const leftSec = startAtMs
+        ? Math.max(0, 120 - Math.floor((Date.now() - startAtMs) / 1000))
+        : 120;
 
-  timerText = `<br>Старт через: ${leftSec} сек`;
-}
+      timerText = `<br>Старт через: ${leftSec} сек`;
+    }
 
     const playersNames = (room.playerIds || []).map(pid => {
-  return room.playerNames?.[pid] || room.gameState?.playersData?.[pid]?.name || "Игрок";
-});
+      return room.playerNames?.[pid] || room.gameState?.playersData?.[pid]?.name || "Игрок";
+    });
 
-list.innerHTML = `
+    list.innerHTML = `
       Игроки: ${room.playerIds.length}/3 <br><br>
       ${playersNames.join("<br>")}
       ${timerText}
@@ -935,6 +985,29 @@ list.innerHTML = `
       </div>
     `;
   }
+
+  // Мгновенный рендер
+  if (optimisticRoom) {
+    renderRoom(optimisticRoom);
+  } else {
+    list.innerHTML = "Подключение к комнате...";
+  }
+
+  // Быстрый одноразовый get, чтобы не ждать onSnapshot
+  roomRef.get().then((doc) => {
+    if (!doc.exists) {
+      list.innerHTML = "Комната была удалена";
+      createBtn.style.display = "block";
+      currentRoomId = null;
+      stopRoomCountdown();
+      return;
+    }
+
+    latestRoom = doc.data();
+    renderRoom(latestRoom);
+  }).catch((e) => {
+    console.error("Ошибка загрузки комнаты:", e);
+  });
 
   currentRoomListener = roomRef.onSnapshot(async (doc) => {
     if (!doc.exists) {
@@ -949,14 +1022,14 @@ list.innerHTML = `
     renderRoom(latestRoom);
 
     if (
-  latestRoom &&
-  Array.isArray(latestRoom.playerIds) &&
-latestRoom.playerIds.length >= 2 &&
-  !latestRoom.gameState?.started &&
-  latestRoom.status !== "playing"
-) {
-  startSharedRoomCountdown(roomId);
-}
+      latestRoom &&
+      Array.isArray(latestRoom.playerIds) &&
+      latestRoom.playerIds.length >= 2 &&
+      !latestRoom.gameState?.started &&
+      latestRoom.status !== "playing"
+    ) {
+      startSharedRoomCountdown(roomId);
+    }
 
     if (
       latestRoom?.gameState?.started === true ||
@@ -974,7 +1047,6 @@ latestRoom.playerIds.length >= 2 &&
     await tryStartRoom(roomId);
   });
 
-  // Локальное обновление таймера каждую секунду
   roomCountdownInterval = setInterval(async () => {
     if (!latestRoom) return;
 
@@ -994,21 +1066,22 @@ latestRoom.playerIds.length >= 2 &&
     }
 
     const playersCount = Array.isArray(latestRoom.playerIds) ? latestRoom.playerIds.length : 0;
-const startAtMs = getRoomTimeMs(latestRoom.startAt);
+    const startAtMs = getRoomTimeMs(latestRoom.startAt);
 
-if (playersCount >= 3) {
-  await tryStartRoom(roomId);
-  return;
-}
+    if (playersCount >= 3) {
+      await tryStartRoom(roomId);
+      return;
+    }
 
-if (playersCount >= 2 && startAtMs) {
-  const leftSec = Math.max(0, 120 - Math.floor((Date.now() - startAtMs) / 1000));
-  if (leftSec <= 0) {
-    await tryStartRoom(roomId);
-  }
-}
+    if (playersCount >= 2 && startAtMs) {
+      const leftSec = Math.max(0, 120 - Math.floor((Date.now() - startAtMs) / 1000));
+      if (leftSec <= 0) {
+        await tryStartRoom(roomId);
+      }
+    }
   }, 1000);
 }
+  
   async function leaveRoom(roomId) {
   const { id } = getCurrentPlayer();
   const roomRef = db.collection("rooms").doc(roomId);
