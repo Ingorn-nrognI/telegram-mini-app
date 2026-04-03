@@ -387,7 +387,18 @@ let gameBeforeUnloadHandler = null;
 let gameCanvasClickHandler = null;
 let gameCanvasTouchHandler = null;
 let isCreatingRoom = false;
-  let isJoiningRoom = false;
+let isJoiningRoom = false;
+
+let roomPresenceInterval = null;
+let roomPresenceClickHandler = null;
+let roomPresenceTouchHandler = null;
+let roomVisibilityHandler = null;
+let roomPageHideHandler = null;
+
+const ROOM_OFFLINE_GRACE_MS = 60 * 1000;              // 1 минута на возврат
+const ROOM_PRESENCE_PING_MS = 15000;                  // heartbeat раз в 15 сек
+const ROOM_ACTION_PING_THROTTLE_MS = 5000;            // не спамить записями
+const ROOM_MAX_WAITING_LIFETIME_MS = 10 * 60 * 1000;  // максимум 10 минут на старт комнаты
 
 function stopRoomCountdown() {
   if (roomCountdownInterval) {
@@ -415,6 +426,241 @@ function getRoomTimeMs(value) {
   }
 
   return null;
+}
+
+function stopRoomPresence() {
+  if (roomPresenceInterval) {
+    clearInterval(roomPresenceInterval);
+    roomPresenceInterval = null;
+  }
+
+  if (roomPresenceClickHandler) {
+    document.removeEventListener("click", roomPresenceClickHandler, true);
+    roomPresenceClickHandler = null;
+  }
+
+  if (roomPresenceTouchHandler) {
+    document.removeEventListener("touchstart", roomPresenceTouchHandler, true);
+    roomPresenceTouchHandler = null;
+  }
+
+  if (roomVisibilityHandler) {
+    document.removeEventListener("visibilitychange", roomVisibilityHandler);
+    roomVisibilityHandler = null;
+  }
+
+  if (roomPageHideHandler) {
+    window.removeEventListener("pagehide", roomPageHideHandler);
+    window.removeEventListener("beforeunload", roomPageHideHandler);
+    roomPageHideHandler = null;
+  }
+}
+
+async function touchRoomPresence(roomId, { markAction = false } = {}) {
+  if (!roomId || currentRoomId !== roomId) return;
+
+  const { id, name } = getCurrentPlayer();
+  const now = Date.now();
+  const roomRef = db.collection("rooms").doc(roomId);
+
+  const updateData = {
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    [`gameState.playersData.${id}.name`]: name,
+    [`gameState.playersData.${id}.online`]: true,
+    [`gameState.playersData.${id}.leftRoom`]: false,
+    [`gameState.playersData.${id}.lastSeen`]: now,
+    [`gameState.playersData.${id}.closedAt`]: null
+  };
+
+  if (markAction) {
+    updateData[`gameState.playersData.${id}.lastActionAt`] = now;
+  }
+
+  try {
+    await roomRef.update(updateData);
+  } catch (e) {
+    console.log("touchRoomPresence skip:", e?.message || e);
+  }
+}
+
+async function markRoomOffline(roomId) {
+  if (!roomId) return;
+
+  const { id } = getCurrentPlayer();
+  const now = Date.now();
+  const roomRef = db.collection("rooms").doc(roomId);
+
+  try {
+    await roomRef.update({
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      [`gameState.playersData.${id}.online`]: false,
+      [`gameState.playersData.${id}.closedAt`]: now,
+      [`gameState.playersData.${id}.lastSeen`]: now
+    });
+  } catch (e) {
+    console.log("markRoomOffline skip:", e?.message || e);
+  }
+}
+
+async function cleanupInactivePlayers(roomId) {
+  if (!roomId) return;
+
+  const roomRef = db.collection("rooms").doc(roomId);
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(roomRef);
+      if (!doc.exists) return;
+
+      const room = doc.data();
+      if (!room || !Array.isArray(room.playerIds)) return;
+
+      const now = Date.now();
+      const playerIds = [...room.playerIds];
+      const playerNames = { ...(room.playerNames || {}) };
+      const playersData = room.gameState?.playersData || {};
+
+      const createdAt = getRoomTimeMs(room.created) || 0;
+      const updatedAt = getRoomTimeMs(room.updatedAt) || createdAt || 0;
+
+      const isStarted =
+        room.status === "playing" ||
+        room.gameState?.started === true;
+
+      const isFinished =
+        room.status === "finished" ||
+        room.gameState?.finished === true;
+
+      // 1) waiting-комната не стартовала за 10 минут -> удалить целиком
+      const shouldDeleteForMaxWaitingLifetime =
+        !isStarted &&
+        !isFinished &&
+        createdAt > 0 &&
+        (now - createdAt > ROOM_MAX_WAITING_LIFETIME_MS);
+
+      if (shouldDeleteForMaxWaitingLifetime) {
+        transaction.delete(roomRef);
+        return;
+      }
+
+            // 2) игрок закрыл приложение / пропал и не вернулся за 1 минуту
+      // Удаляем его ТОЛЬКО ДО СТАРТА МАТЧА
+      const stalePlayerIds = (!isStarted && !isFinished)
+        ? playerIds.filter((pid) => {
+            const p = playersData[pid] || {};
+            const lastSeen = Number(p.lastSeen || 0) || updatedAt || createdAt || 0;
+            const closedAt = Number(p.closedAt || 0) || 0;
+            const online = p.online === true;
+
+            // если клиент сам успел пометить offline/closedAt — считаем это сильным сигналом
+            const definitelyOffline =
+              closedAt > 0 && (now - closedAt > ROOM_OFFLINE_GRACE_MS);
+
+            // если клиент просто пропал (инет, завис Telegram, сел телефон) —
+            // даём ту же 1 минуту на возврат ДО старта матча
+            const silentlyMissing =
+              !online &&
+              lastSeen > 0 &&
+              (now - lastSeen > ROOM_OFFLINE_GRACE_MS);
+
+            const fallbackMissing =
+              lastSeen > 0 &&
+              (now - lastSeen > ROOM_OFFLINE_GRACE_MS);
+
+            return definitelyOffline || silentlyMissing || fallbackMissing;
+          })
+        : [];
+
+      if (stalePlayerIds.length === 0) {
+        return;
+      }
+
+      const newPlayerIds = playerIds.filter(pid => !stalePlayerIds.includes(pid));
+
+      if (newPlayerIds.length === 0) {
+        transaction.delete(roomRef);
+        return;
+      }
+
+      stalePlayerIds.forEach((pid) => {
+        delete playerNames[pid];
+      });
+
+      const updateData = {
+        playerIds: newPlayerIds,
+        playerNames,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        hostId: newPlayerIds.includes(room.hostId) ? room.hostId : newPlayerIds[0]
+      };
+
+      if (!isStarted && newPlayerIds.length < 2) {
+        updateData.startAt = null;
+      }
+
+      stalePlayerIds.forEach((pid) => {
+        updateData[`gameState.playersData.${pid}`] = firebase.firestore.FieldValue.delete();
+      });
+
+      transaction.update(roomRef, updateData);
+    });
+  } catch (e) {
+    console.error("Ошибка cleanupInactivePlayers:", e);
+  }
+}
+
+function startRoomPresence(roomId) {
+  stopRoomPresence();
+
+  let lastActionPingAt = 0;
+
+  touchRoomPresence(roomId, { markAction: true });
+
+  roomPresenceInterval = setInterval(() => {
+    if (currentRoomId !== roomId) return;
+    touchRoomPresence(roomId, { markAction: false });
+    cleanupInactivePlayers(roomId);
+  }, ROOM_PRESENCE_PING_MS);
+
+  roomPresenceClickHandler = () => {
+    if (currentRoomId !== roomId) return;
+
+    const now = Date.now();
+    if (now - lastActionPingAt < ROOM_ACTION_PING_THROTTLE_MS) return;
+
+    lastActionPingAt = now;
+    touchRoomPresence(roomId, { markAction: true });
+  };
+
+  roomPresenceTouchHandler = () => {
+    if (currentRoomId !== roomId) return;
+
+    const now = Date.now();
+    if (now - lastActionPingAt < ROOM_ACTION_PING_THROTTLE_MS) return;
+
+    lastActionPingAt = now;
+    touchRoomPresence(roomId, { markAction: true });
+  };
+
+  roomVisibilityHandler = () => {
+    if (currentRoomId !== roomId) return;
+
+    if (document.hidden) {
+      markRoomOffline(roomId);
+    } else {
+      touchRoomPresence(roomId, { markAction: true });
+      cleanupInactivePlayers(roomId);
+    }
+  };
+
+  roomPageHideHandler = () => {
+    markRoomOffline(roomId);
+  };
+
+  document.addEventListener("click", roomPresenceClickHandler, true);
+  document.addEventListener("touchstart", roomPresenceTouchHandler, true);
+  document.addEventListener("visibilitychange", roomVisibilityHandler);
+  window.addEventListener("pagehide", roomPageHideHandler);
+  window.addEventListener("beforeunload", roomPageHideHandler);
 }
   
   const firebaseConfig = {
@@ -576,8 +822,6 @@ async function loadRooms() {
   roomsListener = db.collection("rooms")
     .where("status", "==", "waiting")
     .onSnapshot(async snapshot => {
-      // Если уже открыта/создаётся/подключается комната —
-      // не даём списку комнат перерисовать UI поверх неё
       if (currentRoomId || isCreatingRoom || isJoiningRoom) {
         return;
       }
@@ -590,8 +834,6 @@ async function loadRooms() {
       }
 
       const now = Date.now();
-      const maxWaitingRoomAge = 10 * 60 * 1000;
-      const maxFinishedRoomAge = 2 * 60 * 1000;
       let visibleRooms = 0;
 
       for (const doc of snapshot.docs) {
@@ -600,25 +842,36 @@ async function loadRooms() {
         if (!room || !Array.isArray(room.playerIds)) continue;
 
         const players = room.playerIds.filter(Boolean);
-        const created = getRoomTimeMs(room.created) || 0;
-        const updatedAt = getRoomTimeMs(room.updatedAt) || getRoomTimeMs(room.created) || 0;
+        const createdAt = getRoomTimeMs(room.created) || 0;
+        const updatedAt = getRoomTimeMs(room.updatedAt) || createdAt || 0;
         const isFinished = room.status === "finished" || room.gameState?.finished === true;
         const isStarted = room.status === "playing" || room.gameState?.started === true;
+        const playersData = room.gameState?.playersData || {};
 
-        const waitingTooOld =
-          !isStarted && !isFinished && created && (now - created > maxWaitingRoomAge);
+        const hasOfflineExpiredPlayer = players.some((pid) => {
+          const p = playersData[pid] || {};
+          const lastSeen = Number(p.lastSeen || 0) || updatedAt || createdAt || 0;
+          return lastSeen > 0 && (now - lastSeen > ROOM_OFFLINE_GRACE_MS);
+        });
 
-        const finishedTooOld =
-          isFinished && updatedAt && (now - updatedAt > maxFinishedRoomAge);
+        const roomWaitingTooLong =
+          !isStarted &&
+          !isFinished &&
+          createdAt > 0 &&
+          (now - createdAt > ROOM_MAX_WAITING_LIFETIME_MS);
 
-        const playingTooOld =
-          isStarted && !isFinished && updatedAt && (now - updatedAt > 3 * 60 * 1000);
-
-        if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
+        if (
+          players.length === 0 ||
+          hasOfflineExpiredPlayer ||
+          roomWaitingTooLong
+        ) {
+          cleanupInactivePlayers(doc.id);
           continue;
         }
 
-        if (isFinished) continue;
+        if (isFinished) {
+          continue;
+        }
 
         const div = document.createElement("div");
         div.className = "roomItem";
@@ -634,12 +887,13 @@ async function loadRooms() {
       }
     });
 }
- async function createRoom() {
+async function createRoom() {
   if (isCreatingRoom || isJoiningRoom || currentRoomId) return;
 
   const { id, name } = getCurrentPlayer();
   const createBtn = document.getElementById("createRoomBtn");
   const list = document.getElementById("roomsList");
+  const now = Date.now();
 
   const roomRef = db.collection("rooms").doc();
 
@@ -666,7 +920,11 @@ async function loadRooms() {
           leftRoom: false,
           position: 0,
           score: 0,
-          firstObstacleResolved: false
+          firstObstacleResolved: false,
+          online: true,
+          lastSeen: now,
+          lastActionAt: now,
+          closedAt: null
         }
       }
     }
@@ -675,7 +933,6 @@ async function loadRooms() {
   try {
     isCreatingRoom = true;
 
-    // Сразу убиваем слушатель списка, чтобы он не перерисовал UI назад
     if (roomsListener) {
       roomsListener();
       roomsListener = null;
@@ -706,8 +963,8 @@ async function loadRooms() {
 
     openRoomScreen(roomRef.id, {
       ...room,
-      created: Date.now(),
-      updatedAt: Date.now()
+      created: now,
+      updatedAt: now
     });
 
   } catch (e) {
@@ -746,7 +1003,6 @@ async function joinRoom(roomId) {
   const list = document.getElementById("roomsList");
   const createBtn = document.getElementById("createRoomBtn");
 
-  // Только визуально показываем, что идёт подключение
   createBtn.style.display = "none";
   list.innerHTML = `
     Подключение к комнате...<br><br>
@@ -754,6 +1010,8 @@ async function joinRoom(roomId) {
   `;
 
   try {
+    await cleanupInactivePlayers(roomId);
+
     await db.runTransaction(async (transaction) => {
       const doc = await transaction.get(roomRef);
 
@@ -765,14 +1023,6 @@ async function joinRoom(roomId) {
 
       if (!room || !Array.isArray(room.playerIds)) {
         throw new Error("ROOM_DATA_ERROR");
-      }
-
-      const now = Date.now();
-      const lastActivity = getRoomTimeMs(room.updatedAt) || getRoomTimeMs(room.created) || 0;
-      const maxRoomIdleAge = 3 * 60 * 1000;
-
-      if (lastActivity && (now - lastActivity > maxRoomIdleAge)) {
-        throw new Error("ROOM_EXPIRED");
       }
 
       if (room.status === "finished") {
@@ -792,18 +1042,24 @@ async function joinRoom(roomId) {
 
       playerNames[id] = name;
 
+      const now = Date.now();
+
       const updateData = {
         playerIds,
         playerNames,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         [`gameState.playersData.${id}`]: {
-          name: name,
+          name,
           alive: true,
           lost: false,
           leftRoom: false,
           position: 0,
           score: 0,
-          firstObstacleResolved: false
+          firstObstacleResolved: false,
+          online: true,
+          lastSeen: now,
+          lastActionAt: now,
+          closedAt: null
         }
       };
 
@@ -817,14 +1073,15 @@ async function joinRoom(roomId) {
     currentRoomId = roomId;
     multiplayerGameStarted = false;
 
-    // Вот только тут уже открываем реальный экран комнаты
+    const now = Date.now();
+
     openRoomScreen(roomId, {
       hostId: null,
       playerIds: [id],
       playerNames: { [id]: name },
       status: "waiting",
-      created: Date.now(),
-      updatedAt: Date.now(),
+      created: now,
+      updatedAt: now,
       startAt: null,
       gameState: {
         started: false,
@@ -838,7 +1095,11 @@ async function joinRoom(roomId) {
             leftRoom: false,
             position: 0,
             score: 0,
-            firstObstacleResolved: false
+            firstObstacleResolved: false,
+            online: true,
+            lastSeen: now,
+            lastActionAt: now,
+            closedAt: null
           }
         }
       }
@@ -851,14 +1112,13 @@ async function joinRoom(roomId) {
     }
 
     stopRoomCountdown();
+    stopRoomPresence();
     document.getElementById("createRoomBtn").style.display = "block";
-
+    
     if (e.message === "ROOM_DELETED") {
       alert("Комната уже удалена");
     } else if (e.message === "ROOM_DATA_ERROR") {
       alert("Ошибка данных комнаты");
-    } else if (e.message === "ROOM_EXPIRED") {
-      alert("Комната устарела и была удалена");
     } else if (e.message === "ROOM_FINISHED") {
       alert("Игра в комнате уже закончена");
     } else if (e.message === "ROOM_FULL") {
@@ -971,6 +1231,8 @@ function startSharedRoomCountdown(roomId) {
   }
 
   stopRoomCountdown();
+  startRoomPresence(roomId);
+  cleanupInactivePlayers(roomId);
 
   let latestRoom = optimisticRoom;
 
@@ -983,14 +1245,21 @@ function startSharedRoomCountdown(roomId) {
     }
 
     const now = Date.now();
-    const lastActivity = getRoomTimeMs(room.updatedAt) || getRoomTimeMs(room.created) || 0;
-    const maxRoomIdleAge = 3 * 60 * 1000;
+    const createdAt = getRoomTimeMs(room.created) || 0;
+    const isStarted = room.status === "playing" || room.gameState?.started === true;
+    const isFinished = room.status === "finished" || room.gameState?.finished === true;
 
-    if (lastActivity && (now - lastActivity > maxRoomIdleAge)) {
+    if (
+      !isStarted &&
+      !isFinished &&
+      createdAt > 0 &&
+      (now - createdAt > ROOM_MAX_WAITING_LIFETIME_MS)
+    ) {
       list.innerHTML = "Комната устарела и была удалена";
       createBtn.style.display = "block";
       currentRoomId = null;
       stopRoomCountdown();
+      stopRoomPresence();
       return;
     }
 
@@ -1020,14 +1289,12 @@ function startSharedRoomCountdown(roomId) {
     `;
   }
 
-  // Мгновенный рендер
   if (optimisticRoom) {
     renderRoom(optimisticRoom);
   } else {
     list.innerHTML = "Подключение к комнате...";
   }
 
-  // Быстрый одноразовый get, чтобы не ждать onSnapshot
   roomRef.get().then((doc) => {
     if (currentRoomId !== screenRoomId) return;
 
@@ -1036,6 +1303,7 @@ function startSharedRoomCountdown(roomId) {
       createBtn.style.display = "block";
       currentRoomId = null;
       stopRoomCountdown();
+      stopRoomPresence();
       return;
     }
 
@@ -1053,11 +1321,30 @@ function startSharedRoomCountdown(roomId) {
       createBtn.style.display = "block";
       currentRoomId = null;
       stopRoomCountdown();
+      stopRoomPresence();
       return;
     }
 
     latestRoom = doc.data();
     renderRoom(latestRoom);
+
+    const roomCreatedAt = getRoomTimeMs(latestRoom.created) || 0;
+    const roomStarted =
+      latestRoom?.gameState?.started === true ||
+      latestRoom?.status === "playing";
+    const roomFinished =
+      latestRoom?.gameState?.finished === true ||
+      latestRoom?.status === "finished";
+
+    if (
+      !roomStarted &&
+      !roomFinished &&
+      roomCreatedAt > 0 &&
+      (Date.now() - roomCreatedAt > ROOM_MAX_WAITING_LIFETIME_MS)
+    ) {
+      await cleanupInactivePlayers(roomId);
+      return;
+    }
 
     if (
       latestRoom &&
@@ -1082,12 +1369,31 @@ function startSharedRoomCountdown(roomId) {
       return;
     }
 
+    await cleanupInactivePlayers(roomId);
     await tryStartRoom(roomId);
   });
 
   roomCountdownInterval = setInterval(async () => {
     if (currentRoomId !== screenRoomId) return;
     if (!latestRoom) return;
+
+    const roomCreatedAt = getRoomTimeMs(latestRoom.created) || 0;
+    const roomStarted =
+      latestRoom?.gameState?.started === true ||
+      latestRoom?.status === "playing";
+    const roomFinished =
+      latestRoom?.gameState?.finished === true ||
+      latestRoom?.status === "finished";
+
+    if (
+      !roomStarted &&
+      !roomFinished &&
+      roomCreatedAt > 0 &&
+      (Date.now() - roomCreatedAt > ROOM_MAX_WAITING_LIFETIME_MS)
+    ) {
+      await cleanupInactivePlayers(roomId);
+      return;
+    }
 
     renderRoom(latestRoom);
 
@@ -1103,6 +1409,8 @@ function startSharedRoomCountdown(roomId) {
       }
       return;
     }
+
+    await cleanupInactivePlayers(roomId);
 
     const playersCount = Array.isArray(latestRoom.playerIds) ? latestRoom.playerIds.length : 0;
     const startAtMs = getRoomTimeMs(latestRoom.startAt);
@@ -1136,6 +1444,7 @@ function startSharedRoomCountdown(roomId) {
       }
 
       stopRoomCountdown();
+      stopRoomPresence();
       multiplayerGameStarted = false;
 
       document.getElementById("createRoomBtn").style.display = "block";
@@ -1153,6 +1462,7 @@ function startSharedRoomCountdown(roomId) {
       }
 
       stopRoomCountdown();
+      stopRoomPresence();
       multiplayerGameStarted = false;
 
       document.getElementById("createRoomBtn").style.display = "block";
@@ -1198,8 +1508,9 @@ function startSharedRoomCountdown(roomId) {
     }
 
     stopRoomCountdown();
+    stopRoomPresence();
     multiplayerGameStarted = false;
-
+    
     document.getElementById("createRoomBtn").style.display = "block";
     loadRooms();
 
@@ -1208,8 +1519,9 @@ function startSharedRoomCountdown(roomId) {
   }
 }
   
- async function startMultiplayerGame(roomId) {
+  async function startMultiplayerGame(roomId) {
   stopRoomCountdown();
+  stopRoomPresence();
 
   if (currentRoomListener) {
     currentRoomListener();
@@ -1980,11 +2292,12 @@ async function leaveAfterLoss() {
   stopEndGameWatcher();
   endGameShown = false;
   
-  if (!currentRoomId) {
+    if (!currentRoomId) {
     clearInterval(spawnInterval1);
     clearInterval(spawnInterval2);
     clearInterval(spawnInterval3);
     if (syncInterval) clearInterval(syncInterval);
+    stopRoomPresence();
     window.gameInitialized = false;
     fullResetMenu();
     loadRooms();
@@ -2035,7 +2348,8 @@ async function leaveAfterLoss() {
   }
 
   stopRoomCountdown();
-multiplayerGameStarted = false;
+  stopRoomPresence();
+  multiplayerGameStarted = false;
   
   clearInterval(spawnInterval1);
   clearInterval(spawnInterval2);
