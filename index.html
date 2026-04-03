@@ -1820,11 +1820,8 @@ if (gameResizeHandler) {
 gameResizeHandler = () => {};
 window.addEventListener("resize", gameResizeHandler);
 
-  // Препятствия
-let obstacles1 = [];
-let obstacles2 = [];
-let obstacles3 = [];
-let gameSpeed = 0.008;
+
+  // СИНХРОНИЗИРОВАННОЕ СОСТОЯНИЕ МАТЧА
 let lastTime = performance.now();
 let deltaTime = 1;
 let score = 0;
@@ -1832,6 +1829,117 @@ let firstObstacleResolved = false;
 let gameStarted = false;   // игра ещё не началась
 let startTimer = 3;        // таймер
 let showStartText = true;  // показывать ли START
+
+const MATCH_READY_COUNTDOWN_MS = 4000;
+const MATCH_SPEED_START = 0.008;
+const MATCH_SPEED_GROWTH_PER_SEC = 0.0006;
+
+// Все игроки видят один и тот же таймлайн препятствий.
+// Бревна больше НЕ создаются локальными setInterval — они рассчитываются
+// из общего времени старта матча.
+const OBSTACLE_LANES = {
+  lane1: { x: lane1, intervalMs: 1200, travelMs: 2600, seedShift: 137 },
+  lane2: { x: lane2, intervalMs: 1500, travelMs: 2800, seedShift: 271 },
+  lane3: { x: lane3, intervalMs: 1800, travelMs: 3000, seedShift: 389 }
+};
+
+const passedObstacleIds = new Set();
+let roomSeed = 0;
+
+function hashRoomSeed(value) {
+  const str = String(value || "offline_room");
+  let hash = 0;
+
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+
+  return Math.abs(hash);
+}
+
+roomSeed = hashRoomSeed(currentRoomId || "offline_room");
+
+function getSyncedNowMs() {
+  return Date.now();
+}
+
+function getCountdownStartMs() {
+  return syncedCountdownStartedAtMs || null;
+}
+
+function getMatchStartMs() {
+  const countdownStartMs = getCountdownStartMs();
+  if (!countdownStartMs) return null;
+  return countdownStartMs + MATCH_READY_COUNTDOWN_MS;
+}
+
+function getElapsedGameMs(nowMs = getSyncedNowMs()) {
+  const matchStartMs = getMatchStartMs();
+  if (!matchStartMs) return 0;
+  return Math.max(0, nowMs - matchStartMs);
+}
+
+function getCurrentGameSpeed(nowMs = getSyncedNowMs()) {
+  const elapsedSec = getElapsedGameMs(nowMs) / 1000;
+  return MATCH_SPEED_START + (elapsedSec * MATCH_SPEED_GROWTH_PER_SEC);
+}
+
+function getLaneSpawnOffsetMs(laneKey) {
+  const lane = OBSTACLE_LANES[laneKey];
+  if (!lane) return 0;
+  return (roomSeed + lane.seedShift) % lane.intervalMs;
+}
+
+function getObstacleMetrics(laneX, z) {
+  const scale = 1 - z;
+  const size = 60 * scale;
+  const x = canvas.width / 2 + (laneX - canvas.width / 2) * scale - size / 2;
+  const y = 100 + (canvas.height - 200) * scale;
+
+  return { scale, size, x, y };
+}
+
+function buildVisibleObstacles(laneKey, nowMs = getSyncedNowMs()) {
+  const lane = OBSTACLE_LANES[laneKey];
+  const matchStartMs = getMatchStartMs();
+
+  if (!lane || !matchStartMs || nowMs < matchStartMs) {
+    return [];
+  }
+
+  const firstSpawnAt = matchStartMs + getLaneSpawnOffsetMs(laneKey);
+  const visibleFromMs = nowMs - lane.travelMs;
+  const startIndex = Math.max(0, Math.floor((visibleFromMs - firstSpawnAt) / lane.intervalMs));
+  const endIndex = Math.max(0, Math.floor((nowMs - firstSpawnAt) / lane.intervalMs));
+
+  const result = [];
+
+  for (let i = startIndex; i <= endIndex; i++) {
+    const spawnAt = firstSpawnAt + (i * lane.intervalMs);
+    const secondsFromMatchStart = Math.max(0, (spawnAt - matchStartMs) / 1000);
+    const speedMultiplier = 1 + (secondsFromMatchStart * 0.05);
+    const effectiveTravelMs = Math.max(1100, lane.travelMs / speedMultiplier);
+    const elapsed = nowMs - spawnAt;
+
+    if (elapsed < 0 || elapsed > effectiveTravelMs) continue;
+
+    const progress = elapsed / effectiveTravelMs;
+    const z = 1 - progress;
+
+    if (z <= 0 || z >= 1) continue;
+
+    result.push({
+      id: `${laneKey}_${i}`,
+      laneKey,
+      laneX: lane.x,
+      z,
+      spawnAt
+    });
+  }
+
+  return result;
+}
 
   // 🔹 Периодическое обновление данных игрока в Firebase
 let syncInterval = null;
@@ -1954,27 +2062,6 @@ exitEndGameForCurrentMatch = async function() {
 
   await leaveAfterLoss();
 };
-
-  function spawnObstacle1() {
-  if (!gameStarted) return;
-  if (!isWatching1) {
-    obstacles1.push({ x: lane1, z: 1 });
-  }
-}
-
-function spawnObstacle2() {
-  if (!gameStarted) return;
-  if (!isWatching2) {
-    obstacles2.push({ x: lane2, z: 1, passed: false });
-  }
-}
-
-function spawnObstacle3() {
-  if (!gameStarted) return;
-  if (!isWatching3) {
-    obstacles3.push({ x: lane3, z: 1 });
-  }
-}
 
     async function prepareGameAssets() {
     await Promise.all([
@@ -2124,31 +2211,17 @@ canvas.addEventListener("touchstart", gameCanvasTouchHandler);
 playerState.alive = !playerLost;
   }
 
+
   function updateObstacles1() {
-    if (!isWatching1 && gameStarted) {
-      obstacles1.forEach(o => {
-        o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
-      });
-      obstacles1 = obstacles1.filter(o => o.z > 0);
-    }
+    return;
   }
 
   function updateObstacles2() {
-    if (!isWatching2 && gameStarted) {
-      obstacles2.forEach(o => {
-        o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
-      });
-      obstacles2 = obstacles2.filter(o => o.z > 0);
-    }
+    return;
   }
 
   function updateObstacles3() {
-    if (!isWatching3 && gameStarted) {
-      obstacles3.forEach(o => {
-        o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
-      });
-      obstacles3 = obstacles3.filter(o => o.z > 0);
-    }
+    return;
   }
 
   function drawRoad() {
@@ -2162,135 +2235,128 @@ playerState.alive = !playerLost;
     ctx.fill();
   }
 
-  function drawObstacles1() {
-    obstacles1.forEach(o => {
-      let scale = 1 - o.z;
-      let size = 60 * scale;
-      let x = canvas.width / 2 + (lane1 - canvas.width / 2) * scale - size/2;
-      let y = 100 + (canvas.height - 200) * scale;
+  function drawObstacleLane(laneKey, { disableDraw = false, allowCollision = false, allowScore = false } = {}) {
+    const obstacles = buildVisibleObstacles(laneKey, getSyncedNowMs());
 
-      ctx.drawImage(log, x, y, size, size);
-      
-      if (!player.gameOver && scale > 0.85 &&
-          player.x < x + size && player.x + player.width > x &&
-          player.y < y + size && player.y + player.height > y) {
-        player.gameOver = true;
+    for (const o of obstacles) {
+      const { scale, size, x, y } = getObstacleMetrics(o.laneX, o.z);
+
+      if (!disableDraw) {
+        ctx.drawImage(log, x, y, size, size);
       }
-    });
+
+      if (!allowCollision && !allowScore) {
+        continue;
+      }
+
+      if (player.gameOver || isWatching2) {
+        continue;
+      }
+
+      if (
+        allowCollision &&
+        scale > 0.85 &&
+        player.x < x + size &&
+        player.x + player.width > x &&
+        player.y < y + size &&
+        player.y + player.height > y
+      ) {
+        frozenObstacle = { x, y, size };
+        player.frozenX = player.x;
+        player.frozenY = player.y;
+        player.gameOverText = "Ты врезался! Счёт: " + score;
+
+        saveBestScore(score);
+
+        player.gameOver = true;
+        playerLost = true;
+        playerState.alive = false;
+        firstObstacleResolved = true;
+
+        (async () => {
+          await markPlayerAsLost();
+          await markPendingDuelFinish();
+        })();
+
+        return;
+      }
+
+      if (
+        allowScore &&
+        !passedObstacleIds.has(o.id) &&
+        o.z < 0.2 &&
+        !player.gameOver
+      ) {
+        passedObstacleIds.add(o.id);
+
+        if (!firstObstacleResolved) {
+          firstObstacleResolved = true;
+        }
+
+        if (!player.grounded) {
+          score++;
+
+          if (currentRoomId) {
+            const roomRef = db.collection("rooms").doc(currentRoomId);
+
+            roomRef.get().then(async (doc) => {
+              if (!doc.exists) return;
+
+              const room = doc.data();
+              const pendingFinish = room?.gameState?.pendingFinish;
+
+              if (
+                pendingFinish?.active === true &&
+                pendingFinish.winnerId === playerId &&
+                pendingFinish.resolved !== true
+              ) {
+                await roomRef.update({
+                  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                  [`gameState.playersData.${playerId}.score`]: score,
+                  [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
+                  "gameState.pendingFinish.resolved": true,
+                  "gameState.pendingFinish.resolvedAt": Date.now(),
+                  "gameState.pendingFinish.finalWinnerScore": score
+                });
+
+                await checkWinner();
+                return;
+              }
+
+              await roomRef.update({
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                [`gameState.playersData.${playerId}.score`]: score,
+                [`gameState.playersData.${playerId}.firstObstacleResolved`]: true
+              });
+            }).catch(err => console.error("Ошибка обновления счёта:", err));
+          }
+        }
+      }
+    }
+  }
+
+  function drawObstacles1() {
+    drawObstacleLane("lane1", { disableDraw: isWatching1 });
   }
 
   function drawObstacles2() {
-    // Рисуем замороженное бревно
     if (frozenObstacle) {
       ctx.drawImage(log, frozenObstacle.x, frozenObstacle.y, frozenObstacle.size, frozenObstacle.size);
     }
-    
-    if (!player.gameOver && !isWatching2) {
-      for (let i = 0; i < obstacles2.length; i++) {
-        let o = obstacles2[i];
-        let scale = 1 - o.z;
-        let size = 60 * scale;
-        let x = canvas.width / 2 + (lane2 - canvas.width / 2) * scale - size/2;
-        let y = 100 + (canvas.height - 200) * scale;
 
-        ctx.drawImage(log, x, y, size, size);
-        
-        // ПРОВЕРКА СТОЛКНОВЕНИЯ (СНАЧАЛА!)
-        if (scale > 0.85 &&
-    player.x < x + size && player.x + player.width > x &&
-    player.y < y + size && player.y + player.height > y) {
-  
-  frozenObstacle = { x: x, y: y, size: size };
-  player.frozenX = player.x;
-  player.frozenY = player.y;
-  obstacles2 = [];
-  player.gameOverText = "Ты врезался! Счёт: " + score;
-
-  saveBestScore(score);
-
-  player.gameOver = true;
-  playerLost = true;
-  playerState.alive = false;
-  firstObstacleResolved = true;
-
-  (async () => {
-    await markPlayerAsLost();
-    await markPendingDuelFinish();
-  })();
-
-  return;
-}
-        
- if (!o.passed && o.z < 0.2 && !player.gameOver) {
-  o.passed = true;
-
-  if (!firstObstacleResolved) {
-    firstObstacleResolved = true;
-  }
-
-  // Очко добавляется именно в игре
-  if (!player.grounded) {
-    score++;
-
-    if (currentRoomId) {
-      const roomRef = db.collection("rooms").doc(currentRoomId);
-
-      roomRef.get().then(async (doc) => {
-        if (!doc.exists) return;
-
-        const room = doc.data();
-        const pendingFinish = room?.gameState?.pendingFinish;
-
-        // если это тот самый последний прыжок после смерти второго игрока
-        if (
-          pendingFinish?.active === true &&
-          pendingFinish.winnerId === playerId &&
-          pendingFinish.resolved !== true
-        ) {
-          // записываем актуальный счёт матча для финального окна
-          await roomRef.update({
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            [`gameState.playersData.${playerId}.score`]: score,
-            [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
-            "gameState.pendingFinish.resolved": true,
-            "gameState.pendingFinish.resolvedAt": Date.now(),
-            "gameState.pendingFinish.finalWinnerScore": score
-          });
-
-          // leaderboard отдельно здесь НЕ трогаем
-          await checkWinner();
-          return;
-        }
-
-        // обычное обновление счёта в процессе матча
-        await roomRef.update({
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          [`gameState.playersData.${playerId}.score`]: score,
-          [`gameState.playersData.${playerId}.firstObstacleResolved`]: true
-        });
-      }).catch(err => console.error("Ошибка обновления счёта:", err));
+    if (player.gameOver || isWatching2) {
+      return;
     }
-  }
-}
-      }
-    }
+
+    drawObstacleLane("lane2", {
+      disableDraw: false,
+      allowCollision: true,
+      allowScore: true
+    });
   }
 
   function drawObstacles3() {
-    obstacles3.forEach(o => {
-      let scale = 1 - o.z;
-      let size = 60 * scale;
-      let x = canvas.width / 2 + (lane3 - canvas.width / 2) * scale - size/2;
-      let y = 100 + (canvas.height - 200) * scale;
-
-      ctx.drawImage(log, x, y, size, size);
-      
-      if (!player.gameOver && scale > 0.85 &&
-          player.x < x + size && player.x + player.width > x &&
-          player.y < y + size && player.y + player.height > y) {
-        player.gameOver = true;
-      }
-    });
+    drawObstacleLane("lane3", { disableDraw: isWatching3 });
   }
 
   function drawPlayer() {
@@ -2870,7 +2936,8 @@ if (!endGameShown) {
     requestAnimationFrame(loop);
   }
 
-  // Запуск спавна препятствий
+  
+// Запуск спавна препятствий
 let spawnInterval1 = null;
 let spawnInterval2 = null;
 let spawnInterval3 = null;
@@ -2879,19 +2946,9 @@ let syncedCountdownStartedAtMs = null;
 let spawnStarted = false;
 
 function startSpawnIfNeeded() {
-  if (spawnStarted) return;
   spawnStarted = true;
-
-  // первое бревно создаём сразу после старта игры
-  spawnObstacle1();
-  spawnObstacle2();
-  spawnObstacle3();
-
-  spawnInterval1 = setInterval(spawnObstacle1, 1200);
-  spawnInterval2 = setInterval(spawnObstacle2, 1500);
-  spawnInterval3 = setInterval(spawnObstacle3, 1800);
 }
-  
+
 async function startGameFlow() {
   await prepareGameAssets();
 
@@ -2934,25 +2991,24 @@ loop = function(currentTime) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (syncedCountdownStartedAtMs) {
-    const elapsed = Math.floor((Date.now() - syncedCountdownStartedAtMs) / 1000);
+    const nowMs = getSyncedNowMs();
+    const countdownElapsedMs = nowMs - syncedCountdownStartedAtMs;
 
-    if (elapsed <= 2) {
-      startTimer = 3 - elapsed;
+    if (countdownElapsedMs < 3000) {
+      startTimer = 3 - Math.floor(countdownElapsedMs / 1000);
       showStartText = true;
       gameStarted = false;
-    } else if (elapsed === 3) {
+    } else if (countdownElapsedMs < MATCH_READY_COUNTDOWN_MS) {
       startTimer = 0;
       showStartText = true;
       gameStarted = false;
-   } else if (!gameStarted) {
-  obstacles1 = [];
-  obstacles2 = [];
-  obstacles3 = [];
-  gameStarted = true;
-  showStartText = false;
-
-  startSpawnIfNeeded();
-}
+    } else if (!gameStarted) {
+      passedObstacleIds.clear();
+      frozenObstacle = null;
+      gameStarted = true;
+      showStartText = false;
+      startSpawnIfNeeded();
+    }
   }
 
   drawRoad();
@@ -2983,7 +3039,11 @@ loop = function(currentTime) {
   }
 
   if (gameStarted) {
-    gameSpeed += 0.00001 * deltaTime;
+    const nowMs = getSyncedNowMs();
+    const syncedSpeed = getCurrentGameSpeed(nowMs);
+    if (!Number.isFinite(syncedSpeed)) {
+      console.log("Некорректная скорость игры");
+    }
   }
 
   requestAnimationFrame(loop);
