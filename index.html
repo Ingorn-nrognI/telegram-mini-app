@@ -394,7 +394,8 @@ let roomPresenceClickHandler = null;
 let roomPresenceTouchHandler = null;
 let roomVisibilityHandler = null;
 let roomPageHideHandler = null;
-
+let roomReadyPollInterval = null;
+  
 const ROOM_OFFLINE_GRACE_MS = 60 * 1000;              // 1 минута на возврат
 const ROOM_PRESENCE_PING_MS = 15000;                  // heartbeat раз в 15 сек
 const ROOM_ACTION_PING_THROTTLE_MS = 5000;            // не спамить записями
@@ -456,6 +457,13 @@ function stopRoomPresence() {
   }
 }
 
+function stopRoomReadyPoll() {
+  if (roomReadyPollInterval) {
+    clearInterval(roomReadyPollInterval);
+    roomReadyPollInterval = null;
+  }
+}
+  
 async function touchRoomPresence(roomId, { markAction = false } = {}) {
   if (!roomId || currentRoomId !== roomId) return;
 
@@ -597,8 +605,9 @@ async function cleanupInactivePlayers(roomId) {
         updateData.startAt = null;
       }
 
-      stalePlayerIds.forEach((pid) => {
+        stalePlayerIds.forEach((pid) => {
         updateData[`gameState.playersData.${pid}`] = firebase.firestore.FieldValue.delete();
+        updateData[`gameState.playersReady.${pid}`] = firebase.firestore.FieldValue.delete();
       });
 
       transaction.update(roomRef, updateData);
@@ -684,6 +693,57 @@ if (window.Telegram && Telegram.WebApp) {
   tgUser = Telegram.WebApp.initDataUnsafe.user;
 }
 
+async function markPlayerReadyForGame(roomId) {
+  if (!roomId || currentRoomId !== roomId) return;
+
+  const { id } = getCurrentPlayer();
+  const roomRef = db.collection("rooms").doc(roomId);
+
+  try {
+    await roomRef.update({
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      [`gameState.playersReady.${id}`]: true
+    });
+  } catch (e) {
+    console.error("Ошибка markPlayerReadyForGame:", e);
+  }
+}
+
+async function tryStartSyncedCountdown(roomId) {
+  if (!roomId || currentRoomId !== roomId) return;
+
+  const roomRef = db.collection("rooms").doc(roomId);
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(roomRef);
+      if (!doc.exists) return;
+
+      const room = doc.data();
+      if (!room || !Array.isArray(room.playerIds)) return;
+      if (room.status !== "playing" && room.gameState?.started !== true) return;
+
+      const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
+      if (countdownStartedAt) return;
+
+      const playerIds = room.playerIds.filter(Boolean);
+      if (playerIds.length === 0) return;
+
+      const playersReady = room.gameState?.playersReady || {};
+      const allReady = playerIds.every(pid => playersReady[pid] === true);
+
+      if (!allReady) return;
+
+      transaction.update(roomRef, {
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        "gameState.countdownStartedAt": firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+  } catch (e) {
+    console.error("Ошибка tryStartSyncedCountdown:", e);
+  }
+}
+  
 function getCurrentPlayer() {
   const fallbackName = document.getElementById("nickname").innerText.trim() || "Игрок";
   const id = tgUser?.id ? String(tgUser.id) : "guest_" + fallbackName;
@@ -912,6 +972,10 @@ async function createRoom() {
       started: false,
       finished: false,
       winner: null,
+      countdownStartedAt: null,
+      playersReady: {
+        [id]: false
+      },
       playersData: {
         [id]: {
           name,
@@ -1048,6 +1112,7 @@ async function joinRoom(roomId) {
         playerIds,
         playerNames,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        [`gameState.playersReady.${id}`]: false,
         [`gameState.playersData.${id}`]: {
           name,
           alive: true,
@@ -1083,10 +1148,14 @@ async function joinRoom(roomId) {
       created: now,
       updatedAt: now,
       startAt: null,
-      gameState: {
+        gameState: {
         started: false,
         finished: false,
         winner: null,
+        countdownStartedAt: null,
+        playersReady: {
+          [id]: false
+        },
         playersData: {
           [id]: {
             name,
@@ -1497,6 +1566,10 @@ function startSharedRoomCountdown(roomId) {
         updateData[`gameState.playersData.${id}`] = firebase.firestore.FieldValue.delete();
       }
 
+      if (room.gameState?.playersReady?.[id] !== undefined) {
+        updateData[`gameState.playersReady.${id}`] = firebase.firestore.FieldValue.delete();
+      }
+
       await roomRef.update(updateData);
     }
 
@@ -1522,6 +1595,7 @@ function startSharedRoomCountdown(roomId) {
   async function startMultiplayerGame(roomId) {
   stopRoomCountdown();
   stopRoomPresence();
+  stopRoomReadyPoll();
 
   if (currentRoomListener) {
     currentRoomListener();
@@ -1702,13 +1776,19 @@ canvas.height = canvas.clientHeight || window.innerHeight;
   const { id: playerId, name } = getCurrentPlayer();
   
   // Картинки
-  const beaver = new Image();
-  beaver.src = "beaver.png";
-  beaver.onerror = () => console.log("Ошибка загрузки beaver.png");
-
+    const beaver = new Image();
   const log = new Image();
-  log.src = "log.png";
-  log.onerror = () => console.log("Ошибка загрузки log.png");
+
+  function loadImage(src, image) {
+    return new Promise((resolve) => {
+      image.onload = () => resolve(true);
+      image.onerror = () => {
+        console.log("Ошибка загрузки " + src);
+        resolve(false);
+      };
+      image.src = src;
+    });
+  }
 
   // Игрок
   let player = {
@@ -1818,6 +1898,7 @@ if (currentRoomId) {
 gameBeforeUnloadHandler = () => {
   if (syncInterval) clearInterval(syncInterval);
   if (winnerCheckInterval) clearInterval(winnerCheckInterval);
+  stopRoomReadyPoll();
 };
 
 window.addEventListener("beforeunload", gameBeforeUnloadHandler);
@@ -1886,10 +1967,17 @@ exitEndGameForCurrentMatch = async function() {
     if (!isWatching3) obstacles3.push({ x: lane3, z: 1 });
   }
 
+    async function prepareGameAssets() {
+    await Promise.all([
+      loadImage("beaver.png", beaver),
+      loadImage("log.png", log)
+    ]);
+  }
+
  function jump() {
   console.log("jump called, grounded:", player.grounded, "gameOver:", player.gameOver, "gameStarted:", gameStarted);
 
-  if (player.grounded && !player.gameOver) {
+  if (player.grounded && !player.gameOver && gameStarted) {
     player.dy = player.jump;
     player.grounded = false;
     console.log("jump executed!");
@@ -2288,7 +2376,8 @@ return;
 }
 
 async function leaveAfterLoss() {
-    hideEndGameModal();
+  stopRoomReadyPoll();
+  hideEndGameModal();
   stopEndGameWatcher();
   endGameShown = false;
   
@@ -2326,7 +2415,8 @@ async function leaveAfterLoss() {
   playerIds: newPlayers,
   playerNames: newPlayerNames,
   updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  [`gameState.playersData.${playerId}.leftRoom`]: true
+  [`gameState.playersData.${playerId}.leftRoom`]: true,
+  [`gameState.playersReady.${playerId}`]: firebase.firestore.FieldValue.delete()
 };
 
     if (newPlayers.length < 2) {
@@ -2592,29 +2682,112 @@ if (!endGameShown) {
   }
 
   // Запуск спавна препятствий
-  let spawnInterval1 = setInterval(spawnObstacle1, 1200);
-  let spawnInterval2 = setInterval(spawnObstacle2, 1500);
-  let spawnInterval3 = setInterval(spawnObstacle3, 1800);
+  let spawnInterval1 = null;
+let spawnInterval2 = null;
+let spawnInterval3 = null;
 
-  // Таймер перед стартом
-  let countdown = setInterval(() => {
-    startTimer--;
-    
-    if (startTimer < 0) {
-      clearInterval(countdown);
-      
-      // ОЧИЩАЕМ ВСЕ БРЕВНА
+let syncedCountdownStartedAtMs = null;
+
+async function startGameFlow() {
+  await prepareGameAssets();
+
+  requestAnimationFrame(loop);
+
+  spawnInterval1 = setInterval(spawnObstacle1, 1200);
+  spawnInterval2 = setInterval(spawnObstacle2, 1500);
+  spawnInterval3 = setInterval(spawnObstacle3, 1800);
+
+  await markPlayerReadyForGame(currentRoomId);
+
+  stopRoomReadyPoll();
+  roomReadyPollInterval = setInterval(async () => {
+    if (!currentRoomId) return;
+
+    try {
+      const roomRef = db.collection("rooms").doc(currentRoomId);
+      const doc = await roomRef.get();
+      if (!doc.exists) return;
+
+      const room = doc.data();
+      if (!room) return;
+
+      const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
+
+      if (!countdownStartedAt) {
+        await tryStartSyncedCountdown(currentRoomId);
+        return;
+      }
+
+      syncedCountdownStartedAtMs = countdownStartedAt;
+      stopRoomReadyPoll();
+    } catch (e) {
+      console.error("Ошибка roomReadyPoll:", e);
+    }
+  }, 300);
+}
+
+const originalLoop = loop;
+loop = function(currentTime) {
+  deltaTime = (currentTime - lastTime) / 16.67;
+  deltaTime = Math.min(2, Math.max(0.5, deltaTime));
+  lastTime = currentTime;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (syncedCountdownStartedAtMs) {
+    const elapsed = Math.floor((Date.now() - syncedCountdownStartedAtMs) / 1000);
+
+    if (elapsed <= 2) {
+      startTimer = 3 - elapsed;
+      showStartText = true;
+      gameStarted = false;
+    } else if (elapsed === 3) {
+      startTimer = 0;
+      showStartText = true;
+      gameStarted = false;
+    } else if (!gameStarted) {
       obstacles1 = [];
       obstacles2 = [];
       obstacles3 = [];
-      
       gameStarted = true;
       showStartText = false;
     }
-  }, 1000);
-  
-  // Запуск игрового цикла
+  }
+
+  drawRoad();
+  updatePlayer();
+  updateObstacles1();
+  updateObstacles2();
+  updateObstacles3();
+  drawObstacles1();
+  drawObstacles2();
+  drawObstacles3();
+  drawPlayer();
+
+  if (!gameStarted) {
+    drawStartTimer();
+  }
+
+  ctx.fillStyle = "#fff";
+  ctx.font = "20px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText("Score: " + score, 20, 40);
+
+  if (player.gameOver && !endGameShown) {
+    drawGameOver();
+  }
+
+  if (!endGameShown) {
+    drawExitButton();
+  }
+
+  if (gameStarted) {
+    gameSpeed += 0.00001 * deltaTime;
+  }
+
   requestAnimationFrame(loop);
+};
+
+startGameFlow();
 }
 </script>
 
