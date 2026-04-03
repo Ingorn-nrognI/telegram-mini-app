@@ -1880,7 +1880,7 @@ if (currentRoomId) {
       [`gameState.playersData.${playerId}.firstObstacleResolved`]: firstObstacleResolved,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }).catch(err => console.error("Ошибка обновления позиции:", err));
-  }, 2500);
+  }, 400);
 
   winnerCheckInterval = setInterval(() => {
     if (gameStarted && currentRoomId && !winnerProcessing) {
@@ -2168,7 +2168,7 @@ playerState.alive = !playerLost;
     if (frozenObstacle) {
       ctx.drawImage(log, frozenObstacle.x, frozenObstacle.y, frozenObstacle.size, frozenObstacle.size);
     }
-    
+
     if (!player.gameOver && !isWatching2) {
       for (let i = 0; i < obstacles2.length; i++) {
         const o = obstacles2[i];
@@ -2180,11 +2180,11 @@ playerState.alive = !playerLost;
         const y = 100 + (canvas.height - 200) * progress;
 
         ctx.drawImage(log, x, y, size, size);
-        
+
         if (progress > 0.85 &&
             player.x < x + size && player.x + player.width > x &&
             player.y < y + size && player.y + player.height > y) {
-  
+
           frozenObstacle = { x: x, y: y, size: size };
           player.frozenX = player.x;
           player.frozenY = player.y;
@@ -2195,7 +2195,12 @@ playerState.alive = !playerLost;
           playerLost = true;
           playerState.alive = false;
           firstObstacleResolved = true;
-          markPlayerAsLost();
+
+          (async () => {
+            await markPlayerAsLost();
+            await markPendingDuelFinish(o);
+          })();
+
           return;
         }
 
@@ -2205,9 +2210,45 @@ playerState.alive = !playerLost;
           if (!firstObstacleResolved) {
             firstObstacleResolved = true;
           }
-          
+
           if (!player.grounded) {
             score++;
+
+            if (currentRoomId) {
+              const roomRef = db.collection("rooms").doc(currentRoomId);
+
+              roomRef.get().then(async (doc) => {
+                if (!doc.exists) return;
+
+                const room = doc.data();
+                const pendingFinish = room?.gameState?.pendingFinish;
+
+                if (
+                  pendingFinish?.active === true &&
+                  pendingFinish.winnerId === playerId &&
+                  pendingFinish.resolved !== true &&
+                  Number(pendingFinish.targetSpawnAtMs || 0) === Number(o.spawnAtMs)
+                ) {
+                  await roomRef.update({
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    [`gameState.playersData.${playerId}.score`]: score,
+                    [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
+                    "gameState.pendingFinish.resolved": true,
+                    "gameState.pendingFinish.resolvedAt": Date.now(),
+                    "gameState.pendingFinish.finalWinnerScore": score
+                  });
+
+                  await checkWinner();
+                  return;
+                }
+
+                await roomRef.update({
+                  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                  [`gameState.playersData.${playerId}.score`]: score,
+                  [`gameState.playersData.${playerId}.firstObstacleResolved`]: true
+                });
+              }).catch(err => console.error("Ошибка обновления счёта:", err));
+            }
           }
         }
       }
@@ -2374,6 +2415,95 @@ playerState.alive = !playerLost;
   }
 }
 
+async function markPendingDuelFinish(obstacle) {
+  if (!currentRoomId || !obstacle?.spawnAtMs) return;
+
+  const roomRef = db.collection("rooms").doc(currentRoomId);
+
+  try {
+    const doc = await roomRef.get();
+    if (!doc.exists) return;
+
+    const room = doc.data();
+    const playersData = room?.gameState?.playersData || {};
+
+    const alivePlayers = Object.entries(playersData).filter(([_, p]) => {
+      return p && p.alive === true && p.leftRoom !== true;
+    });
+
+    const loserPlayers = Object.entries(playersData).filter(([_, p]) => {
+      return p && p.lost === true && p.leftRoom !== true;
+    });
+
+    if (alivePlayers.length === 1 && loserPlayers.length === 1) {
+      const winnerId = alivePlayers[0][0];
+      const loserId = loserPlayers[0][0];
+      const loserScore = Number(loserPlayers[0][1]?.score || 0);
+
+      await roomRef.update({
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        "gameState.pendingFinish": {
+          active: true,
+          winnerId,
+          loserId,
+          loserScore,
+          targetSpawnAtMs: obstacle.spawnAtMs,
+          resolved: false
+        }
+      });
+    }
+  } catch (e) {
+    console.error("Ошибка markPendingDuelFinish:", e);
+  }
+}
+
+function buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish) {
+  if (!Array.isArray(allLosersSorted) || allLosersSorted.length < 2) {
+    return null;
+  }
+
+  if (pendingFinish?.finalWinnerScore != null) {
+    return null;
+  }
+
+  const first = allLosersSorted[0];
+  const second = allLosersSorted[1];
+  if (!first || !second) return null;
+
+  const firstScore = Number(first[1]?.score || 0);
+  const secondScore = Number(second[1]?.score || 0);
+
+  if (firstScore !== secondScore) {
+    return null;
+  }
+
+  const results = [
+    {
+      place: 1,
+      name: first[1]?.name || roomData.playerNames?.[first[0]] || "Игрок",
+      score: firstScore
+    },
+    {
+      place: 1,
+      name: second[1]?.name || roomData.playerNames?.[second[0]] || "Игрок",
+      score: secondScore
+    }
+  ];
+
+  if (allLosersSorted[2]) {
+    results.push({
+      place: 3,
+      name: allLosersSorted[2][1]?.name || roomData.playerNames?.[allLosersSorted[2][0]] || "Игрок",
+      score: Number(allLosersSorted[2][1]?.score || 0)
+    });
+  }
+
+  return {
+    winnerLabel: "Ничья",
+    results
+  };
+}
+
 async function leaveAfterLoss() {
   stopRoomReadyPoll();
   hideEndGameModal();
@@ -2492,41 +2622,43 @@ async function checkWinner() {
     if (roomData.gameState.finished) return;
 
     const playersData = roomData.gameState.playersData;
+    const pendingFinish = roomData.gameState.pendingFinish || null;
 
     const alivePlayers = Object.entries(playersData).filter(([_, p]) => {
-  return p && p.alive === true && p.leftRoom !== true;
-});
+      return p && p.alive === true && p.leftRoom !== true;
+    });
 
-const allLosersSorted = Object.entries(playersData)
-  .filter(([_, p]) => p && p.lost === true && p.leftRoom !== true)
-  .sort((a, b) => Number(b[1].lostAt || 0) - Number(a[1].lostAt || 0));
+    const allLosersSorted = Object.entries(playersData)
+      .filter(([_, p]) => p && p.lost === true && p.leftRoom !== true)
+      .sort((a, b) => Number(b[1].lostAt || 0) - Number(a[1].lostAt || 0));
 
-    // =========================
-    // ВАРИАНТ 1: остался 1 живой
-    // =========================
     if (alivePlayers.length === 1) {
-  const winnerId = alivePlayers[0][0];
-  const winnerData = playersData[winnerId] || {};
-  const winnerName = winnerData.name || roomData.playerNames?.[winnerId] || "Игрок";
+      const winnerId = alivePlayers[0][0];
+      const winnerData = playersData[winnerId] || {};
+      const winnerName = winnerData.name || roomData.playerNames?.[winnerId] || "Игрок";
 
-  const loserEntries = allLosersSorted.filter(([pid]) => pid !== winnerId);
+      const loserEntries = allLosersSorted.filter(([pid]) => pid !== winnerId);
 
-      const maxLoserScore = loserEntries.length
-        ? Math.max(...loserEntries.map(([_, p]) => Number(p.score || 0)))
-        : -1;
-
-      // Победитель должен УЖЕ обогнать лучший счёт проигравших
-      if (Number(winnerData.score || 0) <= maxLoserScore) {
-        return;
+      if (
+        pendingFinish &&
+        pendingFinish.active === true &&
+        pendingFinish.winnerId === winnerId
+      ) {
+        if (pendingFinish.resolved !== true) {
+          return;
+        }
       }
 
       winnerProcessing = true;
 
-      const winnerScore = winnerId === playerId ? score : Number(winnerData.score || 0);
+      const winnerScore =
+        pendingFinish?.finalWinnerScore != null
+          ? Number(pendingFinish.finalWinnerScore)
+          : (winnerId === playerId ? score : Number(winnerData.score || 0));
 
-if (winnerId === playerId) {
-  await saveBestScore(winnerScore);
-}
+      if (winnerId === playerId) {
+        await saveBestScore(winnerScore);
+      }
 
       const finalResults = [
         {
@@ -2537,30 +2669,31 @@ if (winnerId === playerId) {
       ];
 
       if (loserEntries[0]) {
-  finalResults.push({
-    place: 2,
-    name: loserEntries[0][1].name || roomData.playerNames?.[loserEntries[0][0]] || "Игрок",
-    score: Number(loserEntries[0][1].score || 0)
-  });
-}
+        finalResults.push({
+          place: 2,
+          name: loserEntries[0][1].name || roomData.playerNames?.[loserEntries[0][0]] || "Игрок",
+          score: Number(loserEntries[0][1].score || 0)
+        });
+      }
 
       if (loserEntries[1]) {
-  finalResults.push({
-    place: 3,
-    name: loserEntries[1][1].name || roomData.playerNames?.[loserEntries[1][0]] || "Игрок",
-    score: Number(loserEntries[1][1].score || 0)
-  });
-}
+        finalResults.push({
+          place: 3,
+          name: loserEntries[1][1].name || roomData.playerNames?.[loserEntries[1][0]] || "Игрок",
+          score: Number(loserEntries[1][1].score || 0)
+        });
+      }
 
       await roomRef.update({
-  status: "finished",
-  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  "gameState.finished": true,
-  "gameState.started": false,
-  "gameState.winner": winnerName,
-  "gameState.results": finalResults,
-  [`gameState.playersData.${winnerId}.score`]: winnerScore
-});
+        status: "finished",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        "gameState.finished": true,
+        "gameState.started": false,
+        "gameState.winner": winnerName,
+        "gameState.results": finalResults,
+        "gameState.pendingFinish": firebase.firestore.FieldValue.delete(),
+        [`gameState.playersData.${winnerId}.score`]: winnerScore
+      });
 
       showEndGameModal({
         winner: winnerName,
@@ -2570,32 +2703,44 @@ if (winnerId === playerId) {
       return;
     }
 
-    // =========================
-    // ВАРИАНТ 2: живых не осталось
-    // =========================
     if (alivePlayers.length === 0 && allLosersSorted.length > 0) {
-  // Последний проигравший = фактический победитель
-  const winnerId = allLosersSorted[0][0];
-  const winnerData = allLosersSorted[0][1] || {};
-  const winnerName = winnerData.name || roomData.playerNames?.[winnerId] || "Игрок";
-
-      const otherLosers = allLosersSorted.slice(1);
-
-      const maxOtherScore = otherLosers.length
-        ? Math.max(...otherLosers.map(([_, p]) => Number(p.score || 0)))
-        : -1;
-
-      // Даём +1 очко за последнее разыгранное бревно
-      const winnerScore = Math.max(
-        Number(winnerData.score || 0),
-        maxOtherScore + 1
-      );
-
       winnerProcessing = true;
 
+      const drawResult = buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish);
+
+      if (drawResult) {
+        const myLoserEntry = allLosersSorted.find(([pid]) => pid === playerId);
+        if (myLoserEntry) {
+          await saveBestScore(Number(myLoserEntry[1]?.score || 0));
+        }
+
+        await roomRef.update({
+          status: "finished",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          "gameState.finished": true,
+          "gameState.started": false,
+          "gameState.winner": drawResult.winnerLabel,
+          "gameState.results": drawResult.results,
+          "gameState.pendingFinish": firebase.firestore.FieldValue.delete()
+        });
+
+        showEndGameModal({
+          winner: drawResult.winnerLabel,
+          results: drawResult.results
+        });
+
+        return;
+      }
+
+      const winnerId = allLosersSorted[0][0];
+      const winnerData = allLosersSorted[0][1] || {};
+      const winnerName = winnerData.name || roomData.playerNames?.[winnerId] || "Игрок";
+      const otherLosers = allLosersSorted.slice(1);
+      const winnerScore = Number(winnerData.score || 0);
+
       if (winnerId === playerId) {
-  await saveBestScore(winnerScore);
-}
+        await saveBestScore(winnerScore);
+      }
 
       const finalResults = [
         {
@@ -2606,30 +2751,31 @@ if (winnerId === playerId) {
       ];
 
       if (otherLosers[0]) {
-  finalResults.push({
-    place: 2,
-    name: otherLosers[0][1].name || roomData.playerNames?.[otherLosers[0][0]] || "Игрок",
-    score: Number(otherLosers[0][1].score || 0)
-  });
-}
+        finalResults.push({
+          place: 2,
+          name: otherLosers[0][1].name || roomData.playerNames?.[otherLosers[0][0]] || "Игрок",
+          score: Number(otherLosers[0][1].score || 0)
+        });
+      }
 
-if (otherLosers[1]) {
-  finalResults.push({
-    place: 3,
-    name: otherLosers[1][1].name || roomData.playerNames?.[otherLosers[1][0]] || "Игрок",
-    score: Number(otherLosers[1][1].score || 0)
-  });
-}
+      if (otherLosers[1]) {
+        finalResults.push({
+          place: 3,
+          name: otherLosers[1][1].name || roomData.playerNames?.[otherLosers[1][0]] || "Игрок",
+          score: Number(otherLosers[1][1].score || 0)
+        });
+      }
 
       await roomRef.update({
-  status: "finished",
-  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  "gameState.finished": true,
-  "gameState.started": false,
-  "gameState.winner": winnerName,
-  "gameState.results": finalResults,
-  [`gameState.playersData.${winnerId}.score`]: winnerScore
-});
+        status: "finished",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        "gameState.finished": true,
+        "gameState.started": false,
+        "gameState.winner": winnerName,
+        "gameState.results": finalResults,
+        "gameState.pendingFinish": firebase.firestore.FieldValue.delete(),
+        [`gameState.playersData.${winnerId}.score`]: winnerScore
+      });
 
       showEndGameModal({
         winner: winnerName,
@@ -2680,11 +2826,11 @@ if (!endGameShown) {
 
   // СИНХРОННЫЕ ПАРАМЕТРЫ МАТЧА
   const MATCH_COUNTDOWN_MS = 4000;     // 3,2,1,START
-  const FIRST_OBSTACLE_DELAY_MS = 250; // первый ряд после START
+  const FIRST_OBSTACLE_DELAY_MS = 220; // первый ряд после START
   const LANE1_INTERVAL_MS = 1200;
   const LANE2_INTERVAL_MS = 1500;
   const LANE3_INTERVAL_MS = 1800;
-  const OBSTACLE_TRAVEL_MS = 1800;     // скорость бревна
+  const OBSTACLE_TRAVEL_MS = 1350;     // скорость бревна
 
   let syncedCountdownStartedAtMs = null;
   let raceStartedAtMs = null;
@@ -2706,7 +2852,7 @@ if (!endGameShown) {
 
   async function calibrateServerClock(force = false) {
     const now = Date.now();
-    if (!force && now - lastClockCalibrationAtMs < 10000) return;
+    if (!force && now - lastClockCalibrationAtMs < 5000) return;
     if (!currentRoomId) return;
 
     try {
