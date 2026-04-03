@@ -568,73 +568,80 @@ async function cleanupRooms() {
 async function loadRooms() {
   const list = document.getElementById("roomsList");
 
-  if (roomsListener) roomsListener();
-
-  roomsListener = db.collection("rooms")
-  .where("status", "==", "waiting")
-  .onSnapshot(async snapshot => {
-    list.innerHTML = "";
-
-    if (snapshot.empty) {
-      list.innerHTML = "Нет комнат";
-      return;
-    }
-
-    const now = Date.now();
-const maxWaitingRoomAge = 10 * 60 * 1000; // waiting-комнаты: 10 минут
-const maxFinishedRoomAge = 2 * 60 * 1000; // finished-комнаты: 2 минуты
-let visibleRooms = 0;
-
-for (const doc of snapshot.docs) {
-  const room = doc.data();
-
-  if (!room || !Array.isArray(room.playerIds)) {
-  continue;
-}
-
-const players = room.playerIds.filter(Boolean);
-  const created = getRoomTimeMs(room.created) || 0;
-const updatedAt = getRoomTimeMs(room.updatedAt) || getRoomTimeMs(room.created) || 0;
-const isFinished = room.status === "finished" || room.gameState?.finished === true;
-const isStarted = room.status === "playing" || room.gameState?.started === true;
-
-const waitingTooOld =
-  !isStarted && !isFinished && created && (now - created > maxWaitingRoomAge);
-
-const finishedTooOld =
-  isFinished && updatedAt && (now - updatedAt > maxFinishedRoomAge);
-
-const playingTooOld =
-  isStarted && !isFinished && updatedAt && (now - updatedAt > 3 * 60 * 1000);
-
-if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
-  continue;
-}
-
-  // finished-комнаты не показываем
-  if (isFinished) {
-    continue;
+  if (roomsListener) {
+    roomsListener();
+    roomsListener = null;
   }
 
-  const div = document.createElement("div");
-  div.className = "roomItem";
-  div.innerText = `Комната (${players.length}/3)`;
-  div.onclick = () => joinRoom(doc.id);
+  roomsListener = db.collection("rooms")
+    .where("status", "==", "waiting")
+    .onSnapshot(async snapshot => {
+      // Если уже открыта/создаётся/подключается комната —
+      // не даём списку комнат перерисовать UI поверх неё
+      if (currentRoomId || isCreatingRoom || isJoiningRoom) {
+        return;
+      }
 
-  list.appendChild(div);
-  visibleRooms++;
-}
+      list.innerHTML = "";
 
-    if (visibleRooms === 0) {
-      list.innerHTML = "Нет доступных комнат";
-    }
-  });
+      if (snapshot.empty) {
+        list.innerHTML = "Нет комнат";
+        return;
+      }
+
+      const now = Date.now();
+      const maxWaitingRoomAge = 10 * 60 * 1000;
+      const maxFinishedRoomAge = 2 * 60 * 1000;
+      let visibleRooms = 0;
+
+      for (const doc of snapshot.docs) {
+        const room = doc.data();
+
+        if (!room || !Array.isArray(room.playerIds)) continue;
+
+        const players = room.playerIds.filter(Boolean);
+        const created = getRoomTimeMs(room.created) || 0;
+        const updatedAt = getRoomTimeMs(room.updatedAt) || getRoomTimeMs(room.created) || 0;
+        const isFinished = room.status === "finished" || room.gameState?.finished === true;
+        const isStarted = room.status === "playing" || room.gameState?.started === true;
+
+        const waitingTooOld =
+          !isStarted && !isFinished && created && (now - created > maxWaitingRoomAge);
+
+        const finishedTooOld =
+          isFinished && updatedAt && (now - updatedAt > maxFinishedRoomAge);
+
+        const playingTooOld =
+          isStarted && !isFinished && updatedAt && (now - updatedAt > 3 * 60 * 1000);
+
+        if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
+          continue;
+        }
+
+        if (isFinished) continue;
+
+        const div = document.createElement("div");
+        div.className = "roomItem";
+        div.innerText = `Комната (${players.length}/3)`;
+        div.onclick = () => joinRoom(doc.id);
+
+        list.appendChild(div);
+        visibleRooms++;
+      }
+
+      if (visibleRooms === 0) {
+        list.innerHTML = "Нет доступных комнат";
+      }
+    });
 }
  async function createRoom() {
-  if (isCreatingRoom) return;
+  if (isCreatingRoom || isJoiningRoom || currentRoomId) return;
 
   const { id, name } = getCurrentPlayer();
   const createBtn = document.getElementById("createRoomBtn");
+  const list = document.getElementById("roomsList");
+
+  const roomRef = db.collection("rooms").doc();
 
   const room = {
     hostId: id,
@@ -653,7 +660,7 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
       winner: null,
       playersData: {
         [id]: {
-          name: name,
+          name,
           alive: true,
           lost: false,
           leftRoom: false,
@@ -668,19 +675,36 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
   try {
     isCreatingRoom = true;
 
+    // Сразу убиваем слушатель списка, чтобы он не перерисовал UI назад
+    if (roomsListener) {
+      roomsListener();
+      roomsListener = null;
+    }
+
+    currentRoomId = roomRef.id;
+    multiplayerGameStarted = false;
+
     if (createBtn) {
       createBtn.style.pointerEvents = "none";
       createBtn.style.opacity = "0.6";
       createBtn.innerText = "Создание...";
+      createBtn.style.display = "none";
     }
 
-    const docRef = await db.collection("rooms").add(room);
+    if (list) {
+      list.innerHTML = `
+        Игроки: 1/3 <br><br>
+        ${name}
+        <br><br>
+        <div onclick="leaveRoom('${roomRef.id}')" style="background:#dc3545;padding:10px;border-radius:10px;text-align:center;">
+          Выйти из комнаты
+        </div>
+      `;
+    }
 
-    currentRoomId = docRef.id;
-    multiplayerGameStarted = false;
+    await roomRef.set(room);
 
-    // Сразу открываем экран комнаты без лишнего .get()
-    openRoomScreen(docRef.id, {
+    openRoomScreen(roomRef.id, {
       ...room,
       created: Date.now(),
       updatedAt: Date.now()
@@ -689,13 +713,18 @@ if (players.length === 0 || waitingTooOld || finishedTooOld || playingTooOld) {
   } catch (e) {
     console.error("Ошибка createRoom:", e);
 
+    currentRoomId = null;
+
     if (e.code === "resource-exhausted") {
       alert("Firebase перегружен или превышен лимит. Попробуй позже.");
     } else {
       alert("Ошибка создания комнаты");
     }
 
-    currentRoomId = null;
+    if (createBtn) {
+      createBtn.style.display = "block";
+    }
+
     loadRooms();
   } finally {
     isCreatingRoom = false;
@@ -913,6 +942,7 @@ async function tryStartRoom(roomId) {
 }
 
 function startSharedRoomCountdown(roomId) {
+  
   if (roomHostCountdownInterval) {
     clearInterval(roomHostCountdownInterval);
     roomHostCountdownInterval = null;
@@ -920,6 +950,8 @@ function startSharedRoomCountdown(roomId) {
 }
 
   function openRoomScreen(roomId, optimisticRoom = null) {
+  const screenRoomId = roomId;
+
   const list = document.getElementById("roomsList");
   const createBtn = document.getElementById("createRoomBtn");
   const roomRef = db.collection("rooms").doc(roomId);
@@ -943,6 +975,8 @@ function startSharedRoomCountdown(roomId) {
   let latestRoom = optimisticRoom;
 
   function renderRoom(room) {
+    if (currentRoomId !== screenRoomId) return;
+
     if (!room || !Array.isArray(room.playerIds)) {
       list.innerHTML = "Подключение к комнате...";
       return;
@@ -995,6 +1029,8 @@ function startSharedRoomCountdown(roomId) {
 
   // Быстрый одноразовый get, чтобы не ждать onSnapshot
   roomRef.get().then((doc) => {
+    if (currentRoomId !== screenRoomId) return;
+
     if (!doc.exists) {
       list.innerHTML = "Комната была удалена";
       createBtn.style.display = "block";
@@ -1010,6 +1046,8 @@ function startSharedRoomCountdown(roomId) {
   });
 
   currentRoomListener = roomRef.onSnapshot(async (doc) => {
+    if (currentRoomId !== screenRoomId) return;
+
     if (!doc.exists) {
       list.innerHTML = "Комната была удалена";
       createBtn.style.display = "block";
@@ -1048,6 +1086,7 @@ function startSharedRoomCountdown(roomId) {
   });
 
   roomCountdownInterval = setInterval(async () => {
+    if (currentRoomId !== screenRoomId) return;
     if (!latestRoom) return;
 
     renderRoom(latestRoom);
