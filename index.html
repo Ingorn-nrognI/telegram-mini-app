@@ -2472,6 +2472,57 @@ async function markPendingDuelFinish() {
     console.error("Ошибка markPendingDuelFinish:", e);
   }
 }
+
+function buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish) {
+  if (!Array.isArray(allLosersSorted) || allLosersSorted.length < 2) {
+    return null;
+  }
+
+  // если pendingFinish завершён с finalWinnerScore,
+  // значит кто-то реально перепрыгнул последнее бревно — это НЕ ничья
+  if (pendingFinish?.finalWinnerScore != null) {
+    return null;
+  }
+
+  const first = allLosersSorted[0];
+  const second = allLosersSorted[1];
+
+  if (!first || !second) return null;
+
+  const firstScore = Number(first[1]?.score || 0);
+  const secondScore = Number(second[1]?.score || 0);
+
+  // ничья только если у двух последних одинаковый счёт
+  if (firstScore !== secondScore) {
+    return null;
+  }
+
+  const results = [
+    {
+      place: 1,
+      name: first[1]?.name || roomData.playerNames?.[first[0]] || "Игрок",
+      score: firstScore
+    },
+    {
+      place: 1,
+      name: second[1]?.name || roomData.playerNames?.[second[0]] || "Игрок",
+      score: secondScore
+    }
+  ];
+
+  if (allLosersSorted[2]) {
+    results.push({
+      place: 3,
+      name: allLosersSorted[2][1]?.name || roomData.playerNames?.[allLosersSorted[2][0]] || "Игрок",
+      score: Number(allLosersSorted[2][1]?.score || 0)
+    });
+  }
+
+  return {
+    winnerLabel: "Ничья",
+    results
+  };
+}
   
 async function leaveAfterLoss() {
   stopRoomReadyPoll();
@@ -2689,17 +2740,44 @@ const allLosersSorted = Object.entries(playersData)
     // ВАРИАНТ 2: живых не осталось
     // =========================
     if (alivePlayers.length === 0 && allLosersSorted.length > 0) {
-  // Последний проигравший = фактический победитель
+  winnerProcessing = true;
+
+  // Сначала пробуем определить ничью
+  const drawResult = buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish);
+
+  if (drawResult) {
+  // Для leaderboard обновляем рекорд только текущего игрока
+  const myLoserEntry = allLosersSorted.find(([pid]) => pid === playerId);
+  if (myLoserEntry) {
+    await saveBestScore(Number(myLoserEntry[1]?.score || 0));
+  }
+
+  await roomRef.update({
+    status: "finished",
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    "gameState.finished": true,
+    "gameState.started": false,
+    "gameState.winner": drawResult.winnerLabel,
+    "gameState.results": drawResult.results,
+    "gameState.pendingFinish": firebase.firestore.FieldValue.delete()
+  });
+
+  showEndGameModal({
+    winner: drawResult.winnerLabel,
+    results: drawResult.results
+  });
+
+  return;
+}
+
+  // Обычная логика, если ничьей нет
   const winnerId = allLosersSorted[0][0];
   const winnerData = allLosersSorted[0][1] || {};
   const winnerName = winnerData.name || roomData.playerNames?.[winnerId] || "Игрок";
 
   const otherLosers = allLosersSorted.slice(1);
 
-  // Берём реальный счёт из игры, без искусственного +1
   const winnerScore = Number(winnerData.score || 0);
-
-  winnerProcessing = true;
 
   if (winnerId === playerId) {
     await saveBestScore(winnerScore);
