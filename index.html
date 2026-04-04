@@ -403,6 +403,8 @@ const ROOM_MAX_WAITING_LIFETIME_MS = 10 * 60 * 1000;  // максимум 10 м�
 
 let syncedServerNowOffsetMs = 0;
 let serverClockSyncedOnce = false;
+let localRoomCountdownEndAtMs = null;
+let localRoomCountdownStartAtKey = null;
 
 function getSyncedServerNowMs() {
   return Date.now() + syncedServerNowOffsetMs;
@@ -411,6 +413,8 @@ function getSyncedServerNowMs() {
 function resetServerClockSync() {
   syncedServerNowOffsetMs = 0;
   serverClockSyncedOnce = false;
+  localRoomCountdownEndAtMs = null;
+  localRoomCountdownStartAtKey = null;
 }
 
 function syncServerClockFromRoom(room) {
@@ -426,6 +430,22 @@ function syncServerClockFromRoom(room) {
     syncedServerNowOffsetMs = updatedAtMs - Date.now();
     serverClockSyncedOnce = true;
   }
+}
+
+function getStableRoomCountdownLeftSec(startAtMs, totalSeconds = 120) {
+  if (!startAtMs) {
+    localRoomCountdownEndAtMs = null;
+    localRoomCountdownStartAtKey = null;
+    return totalSeconds;
+  }
+
+  if (localRoomCountdownStartAtKey !== startAtMs || !localRoomCountdownEndAtMs) {
+    localRoomCountdownStartAtKey = startAtMs;
+    const remainingMs = Math.max(0, (totalSeconds * 1000) - Math.max(0, getSyncedServerNowMs() - startAtMs));
+    localRoomCountdownEndAtMs = Date.now() + remainingMs;
+  }
+
+  return Math.max(0, Math.ceil((localRoomCountdownEndAtMs - Date.now()) / 1000));
 }
 
 function stopRoomCountdown() {
@@ -1365,11 +1385,12 @@ function startSharedRoomCountdown(roomId) {
 
     if (!room.gameState?.started && room.playerIds.length >= 2) {
       const startAtMs = getRoomTimeMs(room.startAt);
-      const leftSec = startAtMs
-        ? Math.max(0, 120 - Math.floor((getSyncedServerNowMs() - startAtMs) / 1000))
-        : 120;
+      const leftSec = getStableRoomCountdownLeftSec(startAtMs, 120);
 
       timerText = `<br>Старт через: ${leftSec} сек`;
+    } else {
+      localRoomCountdownEndAtMs = null;
+      localRoomCountdownStartAtKey = null;
     }
 
     const playersNames = (room.playerIds || []).map(pid => {
@@ -1520,7 +1541,7 @@ function startSharedRoomCountdown(roomId) {
     }
 
     if (playersCount >= 2 && startAtMs) {
-      const leftSec = Math.max(0, 120 - Math.floor((getSyncedServerNowMs() - startAtMs) / 1000));
+      const leftSec = getStableRoomCountdownLeftSec(startAtMs, 120);
       if (leftSec <= 0) {
         await tryStartRoom(roomId);
       }
@@ -1997,7 +2018,7 @@ exitEndGameForCurrentMatch = async function() {
 function spawnObstacle2() {
   if (!gameStarted) return;
   if (!isWatching2) {
-    obstacles2.push({ x: lane2, z: 1, passed: false });
+    obstacles2.push({ id: nextObstacleId++, x: lane2, z: 1, passed: false });
   }
 }
 
@@ -2236,6 +2257,12 @@ playerState.alive = !playerLost;
   frozenObstacle = { x: x, y: y, size: size };
   player.frozenX = player.x;
   player.frozenY = player.y;
+
+  if (o.id != null && scoredObstacleIds.has(o.id)) {
+    scoredObstacleIds.delete(o.id);
+    score = Math.max(0, score - 1);
+  }
+
   obstacles2 = [];
   player.gameOverText = "Ты врезался! Счёт: " + score;
 
@@ -2262,7 +2289,10 @@ playerState.alive = !playerLost;
   }
 
   // Очко добавляется именно в игре
-  if (!player.grounded) {
+  if (!player.grounded && (o.id == null || !scoredObstacleIds.has(o.id))) {
+    if (o.id != null) {
+      scoredObstacleIds.add(o.id);
+    }
     score++;
 
     if (currentRoomId) {
@@ -2912,6 +2942,8 @@ let spawnInterval3 = null;
 
 let syncedCountdownStartedAtMs = null;
 let spawnStarted = false;
+let nextObstacleId = 1;
+const scoredObstacleIds = new Set();
 
 function startSpawnIfNeeded() {
   if (spawnStarted) return;
@@ -2982,6 +3014,8 @@ loop = function(currentTime) {
       obstacles1 = [];
       obstacles2 = [];
       obstacles3 = [];
+      scoredObstacleIds.clear();
+      nextObstacleId = 1;
       gameStarted = true;
       showStartText = false;
       startSpawnIfNeeded();
