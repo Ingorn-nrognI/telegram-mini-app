@@ -416,12 +416,22 @@ function resetServerClockSync() {
 function syncServerClockFromRoom(room) {
   if (!room) return;
 
-  const updatedAtMs = getRoomTimeMs(room.updatedAt);
+  const updatedAt = room.updatedAt;
+
+  // ВАЖНО:
+  // синхронизируемся только по реальному serverTimestamp из Firestore.
+  // При optimistic-рендере createRoom/joinRoom сюда раньше прилетало обычное число Date.now(),
+  // из-за чего каждый клиент "запоминал" своё локальное время как серверное.
+  // Именно это и давало расхождение таймера комнаты и старта матча на 1-5 секунд.
+  if (!updatedAt || typeof updatedAt.toMillis !== "function") {
+    return;
+  }
+
+  const updatedAtMs = updatedAt.toMillis();
   if (!updatedAtMs) return;
 
-  // Синхронизируем часы только один раз при входе в комнату.
-  // Если брать updatedAt на каждом snapshot, таймер будет прыгать
-  // рывками на 5-10 секунд при очередных записях в Firestore.
+  // Берём первое настоящее серверное время и дальше не дёргаем offset на каждом snapshot,
+  // иначе таймер будет подпрыгивать из-за новых записей в Firestore.
   if (!serverClockSyncedOnce) {
     syncedServerNowOffsetMs = updatedAtMs - Date.now();
     serverClockSyncedOnce = true;
@@ -488,6 +498,13 @@ function stopRoomReadyPoll() {
   if (roomReadyPollInterval) {
     clearInterval(roomReadyPollInterval);
     roomReadyPollInterval = null;
+  }
+}
+
+function stopGameCountdownStartListener() {
+  if (gameCountdownStartListener) {
+    gameCountdownStartListener();
+    gameCountdownStartListener = null;
   }
 }
   
@@ -1627,6 +1644,7 @@ function startSharedRoomCountdown(roomId) {
   stopRoomCountdown();
   stopRoomPresence();
   stopRoomReadyPoll();
+  stopGameCountdownStartListener();
 
   if (currentRoomListener) {
     currentRoomListener();
@@ -2436,6 +2454,14 @@ playerState.alive = !playerLost;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
 
+    // Пока не получили ОБЩЕЕ серверное время старта, не показываем "3",
+    // иначе у одного игрока счётчик может визуально зависнуть на 3 ещё на 1-2 секунды.
+    if (!syncedCountdownStartedAtMs) {
+      ctx.font = "bold 32px Arial";
+      ctx.fillText("Синхронизация...", canvas.width / 2, canvas.height / 2);
+      return;
+    }
+
     if (startTimer > 0) {
       ctx.font = "bold 80px Arial";
       ctx.fillText(startTimer, canvas.width / 2, canvas.height / 2);
@@ -2574,6 +2600,7 @@ async function leaveAfterLoss() {
 
   if (syncInterval) clearInterval(syncInterval);
   stopRoomPresence();
+  stopGameCountdownStartListener();
   window.gameInitialized = false;
   fullResetMenu();
   loadRooms();
@@ -2627,6 +2654,7 @@ if (currentRoomListener) {
 
 stopRoomCountdown();
 stopRoomPresence();
+stopGameCountdownStartListener();
 multiplayerGameStarted = false;
   
 clearInterval(spawnInterval1);
@@ -2937,16 +2965,22 @@ async function startGameFlow() {
   await markPlayerReadyForGame(currentRoomId);
 
   stopRoomReadyPoll();
-  roomReadyPollInterval = setInterval(async () => {
-    if (!currentRoomId) return;
+  stopGameCountdownStartListener();
+
+  const roomRef = db.collection("rooms").doc(currentRoomId);
+
+  // Слушаем документ комнаты в реальном времени до тех пор,
+  // пока сервер не выставит ОБЩЕЕ countdownStartedAt.
+  // Это убирает ситуацию, когда один клиент уже начал честный отсчёт,
+  // а другой ещё 1-2 секунды висит на локальной "3".
+  gameCountdownStartListener = roomRef.onSnapshot(async (doc) => {
+    if (!doc.exists || !currentRoomId) return;
 
     try {
-      const roomRef = db.collection("rooms").doc(currentRoomId);
-      const doc = await roomRef.get();
-      if (!doc.exists) return;
-
       const room = doc.data();
       if (!room) return;
+
+      syncServerClockFromRoom(room);
 
       const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
 
@@ -2957,10 +2991,39 @@ async function startGameFlow() {
 
       syncedCountdownStartedAtMs = countdownStartedAt;
       stopRoomReadyPoll();
+      stopGameCountdownStartListener();
+    } catch (e) {
+      console.error("Ошибка gameCountdownStartListener:", e);
+    }
+  });
+
+  // safety-poll как резерв на случай редкого пропуска realtime snapshot
+  roomReadyPollInterval = setInterval(async () => {
+    if (!currentRoomId || syncedCountdownStartedAtMs) return;
+
+    try {
+      const doc = await roomRef.get();
+      if (!doc.exists) return;
+
+      const room = doc.data();
+      if (!room) return;
+
+      syncServerClockFromRoom(room);
+
+      const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
+
+      if (!countdownStartedAt) {
+        await tryStartSyncedCountdown(currentRoomId);
+        return;
+      }
+
+      syncedCountdownStartedAtMs = countdownStartedAt;
+      stopRoomReadyPoll();
+      stopGameCountdownStartListener();
     } catch (e) {
       console.error("Ошибка roomReadyPoll:", e);
     }
-  }, 300);
+  }, 250);
 }
 
 loop = function(currentTime) {
