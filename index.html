@@ -2270,7 +2270,6 @@ playerState.alive = !playerLost;
 
   (async () => {
     await markPlayerAsLost();
-    await markPendingDuelFinish();
   })();
 
   return;
@@ -2294,30 +2293,6 @@ playerState.alive = !playerLost;
         if (!doc.exists) return;
 
         const room = doc.data();
-        const pendingFinish = room?.gameState?.pendingFinish;
-
-        // если это тот самый последний прыжок после смерти второго игрока
-        if (
-          pendingFinish?.active === true &&
-          pendingFinish.winnerId === playerId &&
-          pendingFinish.resolved !== true
-        ) {
-          // записываем актуальный счёт матча для финального окна
-          await roomRef.update({
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            [`gameState.playersData.${playerId}.score`]: score,
-            [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
-            "gameState.pendingFinish.resolved": true,
-            "gameState.pendingFinish.resolvedAt": Date.now(),
-            "gameState.pendingFinish.finalWinnerScore": score
-          });
-
-          // leaderboard отдельно здесь НЕ трогаем
-          await checkWinner();
-          return;
-        }
-
-        // обычное обновление счёта в процессе матча
         await roomRef.update({
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
           [`gameState.playersData.${playerId}.score`]: score,
@@ -2719,46 +2694,65 @@ async function checkWinner() {
     const pendingFinish = roomData.gameState.pendingFinish || null;
 
     const alivePlayers = Object.entries(playersData).filter(([_, p]) => {
-  return p && p.alive === true && p.leftRoom !== true;
-});
+      return p && p.alive === true && p.leftRoom !== true;
+    });
 
-const allLosersSorted = Object.entries(playersData)
-  .filter(([_, p]) => p && p.lost === true && p.leftRoom !== true)
-  .sort((a, b) => Number(b[1].lostAt || 0) - Number(a[1].lostAt || 0));
+    const allLosersSorted = Object.entries(playersData)
+      .filter(([_, p]) => p && p.lost === true && p.leftRoom !== true)
+      .sort((a, b) => Number(b[1].lostAt || 0) - Number(a[1].lostAt || 0));
 
-    // =========================
-    // ВАРИАНТ 1: остался 1 живой
-    // =========================
-    if (alivePlayers.length === 1) {
-  const winnerId = alivePlayers[0][0];
-  const winnerData = playersData[winnerId] || {};
-  const winnerName = winnerData.name || roomData.playerNames?.[winnerId] || "Игрок";
-
-  const loserEntries = allLosersSorted.filter(([pid]) => pid !== winnerId);
-
-  // Если это особый случай 1v1, ждём, пока победитель реально перепрыгнет последнее бревно
-  if (
-    pendingFinish &&
-    pendingFinish.active === true &&
-    pendingFinish.winnerId === winnerId
-  ) {
-    if (pendingFinish.resolved !== true) {
+    // ВАЖНО:
+    // матч НЕ заканчивается, когда остался один живой игрок.
+    // Последний игрок должен продолжать игру дальше, пока сам не проиграет.
+    // Победителя определяем только когда живых игроков не осталось вообще.
+    if (alivePlayers.length > 0) {
       return;
     }
-  }
 
-  winnerProcessing = true;
+    // =========================
+    // ВАРИАНТ: живых не осталось
+    // =========================
+    if (allLosersSorted.length > 0) {
+      winnerProcessing = true;
 
-  // Для окна победителя берём финальный счёт матча
-  const winnerScore =
-    pendingFinish?.finalWinnerScore != null
-      ? Number(pendingFinish.finalWinnerScore)
-      : (winnerId === playerId ? score : Number(winnerData.score || 0));
+      const drawResult = buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish);
 
-  // А вот leaderboard в главном меню обновляем только как рекорд
-  if (winnerId === playerId) {
-    await saveBestScore(winnerScore);
-  }
+      if (drawResult) {
+        for (const item of drawResult.results) {
+          if (item.name === name) {
+            await saveBestScore(item.score);
+          }
+        }
+
+        await roomRef.update({
+          status: "finished",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          "gameState.finished": true,
+          "gameState.started": false,
+          "gameState.winner": drawResult.winnerLabel,
+          "gameState.results": drawResult.results,
+          "gameState.pendingFinish": firebase.firestore.FieldValue.delete()
+        });
+
+        showEndGameModal({
+          winner: drawResult.winnerLabel,
+          results: drawResult.results
+        });
+
+        return;
+      }
+
+      const winnerId = allLosersSorted[0][0];
+      const winnerData = allLosersSorted[0][1] || {};
+      const winnerName = winnerData.name || roomData.playerNames?.[winnerId] || "Игрок";
+
+      const otherLosers = allLosersSorted.slice(1);
+      const winnerScore = Number(winnerData.score || 0);
+
+      if (winnerId === playerId) {
+        await saveBestScore(winnerScore);
+      }
+
       const finalResults = [
         {
           place: 1,
@@ -2767,129 +2761,38 @@ const allLosersSorted = Object.entries(playersData)
         }
       ];
 
-      if (loserEntries[0]) {
-  finalResults.push({
-    place: 2,
-    name: loserEntries[0][1].name || roomData.playerNames?.[loserEntries[0][0]] || "Игрок",
-    score: Number(loserEntries[0][1].score || 0)
-  });
-}
+      if (otherLosers[0]) {
+        finalResults.push({
+          place: 2,
+          name: otherLosers[0][1].name || roomData.playerNames?.[otherLosers[0][0]] || "Игрок",
+          score: Number(otherLosers[0][1].score || 0)
+        });
+      }
 
-      if (loserEntries[1]) {
-  finalResults.push({
-    place: 3,
-    name: loserEntries[1][1].name || roomData.playerNames?.[loserEntries[1][0]] || "Игрок",
-    score: Number(loserEntries[1][1].score || 0)
-  });
-}
+      if (otherLosers[1]) {
+        finalResults.push({
+          place: 3,
+          name: otherLosers[1][1].name || roomData.playerNames?.[otherLosers[1][0]] || "Игрок",
+          score: Number(otherLosers[1][1].score || 0)
+        });
+      }
 
       await roomRef.update({
-  status: "finished",
-  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  "gameState.finished": true,
-  "gameState.started": false,
-  "gameState.winner": winnerName,
-  "gameState.results": finalResults,
-  "gameState.pendingFinish": firebase.firestore.FieldValue.delete(),
-  [`gameState.playersData.${winnerId}.score`]: winnerScore
-});
+        status: "finished",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        "gameState.finished": true,
+        "gameState.started": false,
+        "gameState.winner": winnerName,
+        "gameState.results": finalResults,
+        "gameState.pendingFinish": firebase.firestore.FieldValue.delete(),
+        [`gameState.playersData.${winnerId}.score`]: winnerScore
+      });
 
       showEndGameModal({
         winner: winnerName,
         results: finalResults
       });
-
-      return;
     }
-
-    // =========================
-    // ВАРИАНТ 2: живых не осталось
-    // =========================
-    if (alivePlayers.length === 0 && allLosersSorted.length > 0) {
-  winnerProcessing = true;
-
-  // Сначала пробуем определить ничью
-  const drawResult = buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish);
-
-  if (drawResult) {
-    // Для leaderboard обновляем рекорд только каждому игроку по его реальному счёту
-    for (const item of drawResult.results) {
-      if (item.name === name) {
-        await saveBestScore(item.score);
-      }
-    }
-
-    await roomRef.update({
-      status: "finished",
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      "gameState.finished": true,
-      "gameState.started": false,
-      "gameState.winner": drawResult.winnerLabel,
-      "gameState.results": drawResult.results,
-      "gameState.pendingFinish": firebase.firestore.FieldValue.delete()
-    });
-
-    showEndGameModal({
-      winner: drawResult.winnerLabel,
-      results: drawResult.results
-    });
-
-    return;
-  }
-
-  // Обычная логика, если ничьей нет
-  const winnerId = allLosersSorted[0][0];
-  const winnerData = allLosersSorted[0][1] || {};
-  const winnerName = winnerData.name || roomData.playerNames?.[winnerId] || "Игрок";
-
-  const otherLosers = allLosersSorted.slice(1);
-
-  const winnerScore = Number(winnerData.score || 0);
-
-  if (winnerId === playerId) {
-    await saveBestScore(winnerScore);
-  }
-
-  const finalResults = [
-    {
-      place: 1,
-      name: winnerName,
-      score: winnerScore
-    }
-  ];
-
-  if (otherLosers[0]) {
-    finalResults.push({
-      place: 2,
-      name: otherLosers[0][1].name || roomData.playerNames?.[otherLosers[0][0]] || "Игрок",
-      score: Number(otherLosers[0][1].score || 0)
-    });
-  }
-
-  if (otherLosers[1]) {
-    finalResults.push({
-      place: 3,
-      name: otherLosers[1][1].name || roomData.playerNames?.[otherLosers[1][0]] || "Игрок",
-      score: Number(otherLosers[1][1].score || 0)
-    });
-  }
-
-  await roomRef.update({
-    status: "finished",
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    "gameState.finished": true,
-    "gameState.started": false,
-    "gameState.winner": winnerName,
-    "gameState.results": finalResults,
-    "gameState.pendingFinish": firebase.firestore.FieldValue.delete(),
-    [`gameState.playersData.${winnerId}.score`]: winnerScore
-  });
-
-  showEndGameModal({
-    winner: winnerName,
-    results: finalResults
-  });
-}
   } catch (e) {
     console.error("Ошибка checkWinner:", e);
   }
