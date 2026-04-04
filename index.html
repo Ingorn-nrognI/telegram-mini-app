@@ -395,6 +395,7 @@ let roomPresenceTouchHandler = null;
 let roomVisibilityHandler = null;
 let roomPageHideHandler = null;
 let roomReadyPollInterval = null;
+let gameCountdownStartListener = null;
   
 const ROOM_OFFLINE_GRACE_MS = 60 * 1000;              // 1 минута на возврат
 const ROOM_PRESENCE_PING_MS = 15000;                  // heartbeat раз в 15 сек
@@ -1561,6 +1562,7 @@ function startSharedRoomCountdown(roomId) {
 
       stopRoomCountdown();
       stopRoomPresence();
+      stopGameCountdownStartListener();
       multiplayerGameStarted = false;
 
       document.getElementById("createRoomBtn").style.display = "block";
@@ -1579,6 +1581,7 @@ function startSharedRoomCountdown(roomId) {
 
       stopRoomCountdown();
       stopRoomPresence();
+      stopGameCountdownStartListener();
       multiplayerGameStarted = false;
 
       document.getElementById("createRoomBtn").style.display = "block";
@@ -1630,6 +1633,7 @@ function startSharedRoomCountdown(roomId) {
 
     stopRoomCountdown();
     stopRoomPresence();
+    stopGameCountdownStartListener();
     multiplayerGameStarted = false;
     
     document.getElementById("createRoomBtn").style.display = "block";
