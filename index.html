@@ -2274,14 +2274,15 @@ playerState.alive = !playerLost;
   return;
 }
 
- if (!o.passed && o.z < 0.2 && !player.gameOver) {
+ if (!o.passed && o.z < 0.05 && !player.gameOver) {
   o.passed = true;
 
   if (!firstObstacleResolved) {
     firstObstacleResolved = true;
   }
 
-  // Очко добавляется именно в игре
+  // Очко добавляется только после того, как бревно уже прошло зону столкновения.
+  // Тогда игрок, который врежется в это же бревно в прыжке, не получит лишний балл.
   if (!player.grounded) {
     score++;
 
