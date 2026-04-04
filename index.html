@@ -2283,46 +2283,55 @@ playerState.alive = !playerLost;
     firstObstacleResolved = true;
   }
 
-  // Очко добавляется именно в игре
-  if (!player.grounded) {
+  const roomRef = currentRoomId ? db.collection("rooms").doc(currentRoomId) : null;
+  const passedAfterJump = !player.grounded;
+
+  // обычное очко даём только если игрок реально был в прыжке
+  if (passedAfterJump) {
     score++;
+  }
 
-    if (currentRoomId) {
-      const roomRef = db.collection("rooms").doc(currentRoomId);
+  if (roomRef) {
+    roomRef.get().then(async (doc) => {
+      if (!doc.exists) return;
 
-      roomRef.get().then(async (doc) => {
-        if (!doc.exists) return;
+      const room = doc.data();
+      const pendingFinish = room?.gameState?.pendingFinish;
+      const playerData = room?.gameState?.playersData?.[playerId] || {};
+      const remoteScore = Number(playerData.score || 0);
+      const finalScore = passedAfterJump ? score : remoteScore;
 
-        const room = doc.data();
-        const pendingFinish = room?.gameState?.pendingFinish;
-
-        // если это тот самый последний прыжок после смерти второго игрока,
-        // завершаем матч сразу после перепрыгивания этого же препятствия
-        if (
-          pendingFinish?.active === true &&
-          pendingFinish.winnerId === playerId &&
-          pendingFinish.resolved !== true
-        ) {
-          await roomRef.update({
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            [`gameState.playersData.${playerId}.score`]: score,
-            [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
-            "gameState.pendingFinish.resolved": true,
-            "gameState.pendingFinish.resolvedAt": Date.now(),
-            "gameState.pendingFinish.finalWinnerScore": score
-          });
-
-          await checkWinner();
-          return;
-        }
-
+      // Критический фикс:
+      // когда в комнате осталось 2 игрока и один уже умер,
+      // матч должен закончиться сразу после того,
+      // как второй игрок БЕЗОПАСНО пропустил это же бревно.
+      // Это событие нельзя привязывать только к начислению очка,
+      // потому что игрок может уже приземлиться к моменту o.z < 0.2,
+      // и тогда очко не добавится, хотя бревно он реально перепрыгнул.
+      if (
+        pendingFinish?.active === true &&
+        pendingFinish.winnerId === playerId &&
+        pendingFinish.resolved !== true
+      ) {
         await roomRef.update({
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          [`gameState.playersData.${playerId}.score`]: score,
-          [`gameState.playersData.${playerId}.firstObstacleResolved`]: true
+          [`gameState.playersData.${playerId}.score`]: finalScore,
+          [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
+          "gameState.pendingFinish.resolved": true,
+          "gameState.pendingFinish.resolvedAt": Date.now(),
+          "gameState.pendingFinish.finalWinnerScore": finalScore
         });
-      }).catch(err => console.error("Ошибка обновления счёта:", err));
-    }
+
+        await checkWinner();
+        return;
+      }
+
+      await roomRef.update({
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        [`gameState.playersData.${playerId}.score`]: finalScore,
+        [`gameState.playersData.${playerId}.firstObstacleResolved`]: true
+      });
+    }).catch(err => console.error("Ошибка обновления счёта:", err));
   }
 }
       }
