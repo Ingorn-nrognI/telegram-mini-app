@@ -201,24 +201,31 @@ body {
   box-shadow: 0 8px 24px rgba(0,0,0,0.35);
   box-sizing: border-box;
   z-index: 40;
+  overflow: hidden;
+}
+
+.history-scroll-area {
+  height: calc(100% - 54px);
   overflow-y: auto;
   overflow-x: hidden;
+  padding-right: 16px;
+  margin-right: 10px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 215, 0, 0.82) transparent;
   scrollbar-gutter: stable;
 }
 
-.history-panel::-webkit-scrollbar {
+.history-scroll-area::-webkit-scrollbar {
   width: 12px;
 }
 
-.history-panel::-webkit-scrollbar-track {
+.history-scroll-area::-webkit-scrollbar-track {
   background: transparent;
-  margin: 10px 4px 10px 0;
+  margin: 10px 0;
   border-radius: 999px;
 }
 
-.history-panel::-webkit-scrollbar-thumb {
+.history-scroll-area::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, rgba(255, 226, 96, 0.98), rgba(212, 160, 0, 0.98));
   border-radius: 999px;
   border: 3px solid rgba(0, 0, 0, 0.62);
@@ -227,11 +234,11 @@ body {
     0 0 0 1px rgba(255, 215, 0, 0.18);
 }
 
-.history-panel::-webkit-scrollbar-thumb:hover {
+.history-scroll-area::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgba(255, 235, 128, 1), rgba(226, 173, 0, 1));
 }
 
-.history-panel::-webkit-scrollbar-corner {
+.history-scroll-area::-webkit-scrollbar-corner {
   background: transparent;
 }
 
@@ -621,8 +628,10 @@ body {
 
     <div id="historyPanel" class="history-panel" onclick="event.stopPropagation()">
       <div class="history-panel-title">История игр</div>
-      <div class="history-panel-text">
-        Здесь будет история игр.
+      <div class="history-scroll-area">
+        <div class="history-panel-text">
+          Здесь будет история игр.
+        </div>
       </div>
     </div>
   </div>
@@ -1245,7 +1254,7 @@ function renderHistoryEntries(entries) {
   const title = `<div class="history-panel-title">История игр</div>`;
 
   if (!Array.isArray(entries) || entries.length === 0) {
-    panel.innerHTML = `${title}<div class="history-panel-text">Пока нет сыгранных матчей.</div>`;
+    panel.innerHTML = `${title}<div class="history-scroll-area"><div class="history-panel-text">Пока нет сыгранных матчей.</div></div>`;
     return;
   }
 
@@ -1295,7 +1304,7 @@ function renderHistoryEntries(entries) {
     `;
   }).join("");
 
-  panel.innerHTML = `${title}<div class="history-panel-text">${items}</div>`;
+  panel.innerHTML = `${title}<div class="history-scroll-area"><div class="history-panel-text">${items}</div></div>`;
 }
 
 async function loadGameHistory() {
@@ -1305,7 +1314,7 @@ async function loadGameHistory() {
   historyLoading = true;
   panel.innerHTML = `
     <div class="history-panel-title">История игр</div>
-    <div class="history-panel-text">Загрузка...</div>
+    <div class="history-scroll-area"><div class="history-panel-text">Загрузка...</div></div>
   `;
 
   try {
@@ -1325,7 +1334,7 @@ async function loadGameHistory() {
     console.error("Ошибка загрузки истории игр:", e);
     panel.innerHTML = `
       <div class="history-panel-title">История игр</div>
-      <div class="history-panel-text">Не удалось загрузить историю игр.</div>
+      <div class="history-scroll-area"><div class="history-panel-text">Не удалось загрузить историю игр.</div></div>
     `;
   } finally {
     historyLoading = false;
