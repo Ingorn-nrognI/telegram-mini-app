@@ -190,9 +190,11 @@ body {
   position: fixed;
   top: 96px;
   left: 50%;
-  right: 28px;
+  width: min(88vw, 560px);
+  transform: translateX(-50%);
+  right: auto;
   bottom: 92px;
-  padding: 22px 18px;
+  padding: 22px 18px 22px 18px;
   border-radius: 24px;
   background: rgba(0, 0, 0, 0.82);
   color: white;
@@ -200,6 +202,29 @@ body {
   box-sizing: border-box;
   z-index: 40;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 215, 0, 0.75) rgba(255,255,255,0.08);
+}
+
+.history-panel::-webkit-scrollbar {
+  width: 10px;
+}
+
+.history-panel::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+}
+
+.history-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.75);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.history-panel::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .history-panel.open {
@@ -489,6 +514,7 @@ body {
   cursor: pointer;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+  overflow: hidden;
 }
 
 .history-match-mode {
@@ -531,6 +557,7 @@ body {
 .history-match-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .history-match-table th,
@@ -539,6 +566,7 @@ body {
   padding: 8px 6px;
   font-size: 14px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
+  word-break: break-word;
 }
 
 .history-match-table th {
@@ -583,7 +611,7 @@ body {
       <div class="main-book-btn" onclick="toggleHistoryPanel(event)">📖</div>
     </div>
 
-    <div id="historyPanel" class="history-panel">
+    <div id="historyPanel" class="history-panel" onclick="event.stopPropagation()">
       <div class="history-panel-title">История игр</div>
       <div class="history-panel-text">
         Здесь будет история игр.
@@ -1192,7 +1220,12 @@ function getHistoryResultMeta(item) {
   return { label: "проиграл", className: "lose" };
 }
 
-function toggleHistoryMatchDetails(matchId) {
+function toggleHistoryMatchDetails(matchId, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   expandedHistoryMatchId = expandedHistoryMatchId === matchId ? null : matchId;
   loadGameHistory();
 }
@@ -1245,7 +1278,7 @@ function renderHistoryEntries(entries) {
     ` : "";
 
     return `
-      <div class="history-match-card" onclick="toggleHistoryMatchDetails('${matchId.replace("'", "&#39;")}')">
+      <div class="history-match-card" onclick="toggleHistoryMatchDetails('${matchId.replace("'", "&#39;")}', event)">
         <div class="history-match-mode">Режим: ${modeLabel}</div>
         <div class="history-match-result ${resultMeta.className}">${resultMeta.label}</div>
         <div class="history-match-date">${playedAtText}</div>
