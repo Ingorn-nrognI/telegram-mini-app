@@ -190,11 +190,9 @@ body {
   position: fixed;
   top: 96px;
   left: 50%;
-  width: min(88vw, 560px);
-  transform: translateX(-50%);
-  right: auto;
+  right: 28px;
   bottom: 92px;
-  padding: 22px 22px 22px 18px;
+  padding: 22px 18px;
   border-radius: 24px;
   background: rgba(0, 0, 0, 0.82);
   color: white;
@@ -202,37 +200,6 @@ body {
   box-sizing: border-box;
   z-index: 40;
   overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 215, 0, 0.82) transparent;
-  scrollbar-gutter: stable;
-}
-
-.history-panel::-webkit-scrollbar {
-  width: 12px;
-}
-
-.history-panel::-webkit-scrollbar-track {
-  background: transparent;
-  margin: 10px 4px 10px 0;
-  border-radius: 999px;
-}
-
-.history-panel::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(255, 226, 96, 0.98), rgba(212, 160, 0, 0.98));
-  border-radius: 999px;
-  border: 3px solid rgba(0, 0, 0, 0.62);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 244, 180, 0.22),
-    0 0 0 1px rgba(255, 215, 0, 0.18);
-}
-
-.history-panel::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(255, 235, 128, 1), rgba(226, 173, 0, 1));
-}
-
-.history-panel::-webkit-scrollbar-corner {
-  background: transparent;
 }
 
 .history-panel.open {
@@ -522,7 +489,6 @@ body {
   cursor: pointer;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 4px 14px rgba(0,0,0,0.22);
-  overflow: hidden;
 }
 
 .history-match-mode {
@@ -565,7 +531,6 @@ body {
 .history-match-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
 }
 
 .history-match-table th,
@@ -574,7 +539,6 @@ body {
   padding: 8px 6px;
   font-size: 14px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
-  word-break: break-word;
 }
 
 .history-match-table th {
@@ -619,7 +583,7 @@ body {
       <div class="main-book-btn" onclick="toggleHistoryPanel(event)">📖</div>
     </div>
 
-    <div id="historyPanel" class="history-panel" onclick="event.stopPropagation()">
+    <div id="historyPanel" class="history-panel">
       <div class="history-panel-title">История игр</div>
       <div class="history-panel-text">
         Здесь будет история игр.
@@ -1059,9 +1023,29 @@ const db = firebase.firestore();
 // Получаем ник из Telegram
 // Получаем пользователя из Telegram
 let tgUser = null;
+const GUEST_ID_STORAGE_KEY = "bobr_guest_id_v1";
 
 if (window.Telegram && Telegram.WebApp) {
   tgUser = Telegram.WebApp.initDataUnsafe.user;
+}
+
+function generateGuestId() {
+  return "guest_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+}
+
+function getPersistentGuestId() {
+  try {
+    const saved = localStorage.getItem(GUEST_ID_STORAGE_KEY);
+    if (saved && String(saved).trim()) {
+      return String(saved).trim();
+    }
+
+    const created = generateGuestId();
+    localStorage.setItem(GUEST_ID_STORAGE_KEY, created);
+    return created;
+  } catch (e) {
+    return generateGuestId();
+  }
 }
 
 async function markPlayerReadyForGame(roomId) {
@@ -1118,8 +1102,9 @@ async function tryStartSyncedCountdown(roomId) {
 }
   
 function getCurrentPlayer() {
-  const fallbackName = document.getElementById("nickname").innerText.trim() || "Игрок";
-  const id = tgUser?.id ? String(tgUser.id) : "guest_" + fallbackName;
+  const nicknameEl = document.getElementById("nickname");
+  const fallbackName = nicknameEl?.innerText?.trim() || "Игрок";
+  const id = tgUser?.id ? String(tgUser.id) : getPersistentGuestId();
   const name = tgUser?.username || tgUser?.first_name || fallbackName;
 
   return { id, name };
@@ -1127,35 +1112,6 @@ function getCurrentPlayer() {
 
 const currentPlayer = getCurrentPlayer();
 document.getElementById("nickname").innerText = currentPlayer.name;
-
-
-function getCurrentPlayerId() {
-  return getCurrentPlayer().id;
-}
-
-async function waitForRoomMembership(roomRef, playerId, attempts = 8, delayMs = 250) {
-  for (let i = 0; i < attempts; i++) {
-    const doc = await roomRef.get();
-    if (doc.exists) {
-      const room = doc.data() || {};
-      const ids = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean) : [];
-      if (ids.includes(playerId)) {
-        return room;
-      }
-    }
-
-    if (i < attempts - 1) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
-
-  return null;
-}
-
-function shouldCurrentClientCleanupRoom(room) {
-  if (!room) return false;
-  return String(room.hostId || '') === String(getCurrentPlayerId());
-}
 
 let currentMenuView = "home";
 
@@ -1257,12 +1213,7 @@ function getHistoryResultMeta(item) {
   return { label: "проиграл", className: "lose" };
 }
 
-function toggleHistoryMatchDetails(matchId, event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
+function toggleHistoryMatchDetails(matchId) {
   expandedHistoryMatchId = expandedHistoryMatchId === matchId ? null : matchId;
   loadGameHistory();
 }
@@ -1315,7 +1266,7 @@ function renderHistoryEntries(entries) {
     ` : "";
 
     return `
-      <div class="history-match-card" onclick="toggleHistoryMatchDetails('${matchId.replace("'", "&#39;")}', event)">
+      <div class="history-match-card" onclick="toggleHistoryMatchDetails('${matchId.replace("'", "&#39;")}')">
         <div class="history-match-mode">Режим: ${modeLabel}</div>
         <div class="history-match-result ${resultMeta.className}">${resultMeta.label}</div>
         <div class="history-match-date">${playedAtText}</div>
@@ -1794,7 +1745,7 @@ async function createRoom() {
 }
   
 async function joinRoom(roomId) {
-  if (isJoiningRoom || !roomId) return;
+  if (isJoiningRoom) return;
   isJoiningRoom = true;
 
   const { id, name } = getCurrentPlayer();
@@ -1802,16 +1753,14 @@ async function joinRoom(roomId) {
   const list = document.getElementById("roomsList");
   const createBtn = document.getElementById("createRoomBtn");
 
-  if (createBtn) createBtn.style.display = "none";
-  if (list) {
-    list.innerHTML = `
-      Подключение к комнате...<br><br>
-      Игрок: ${name}
-    `;
-  }
+  createBtn.style.display = "none";
+  list.innerHTML = `
+    Подключение к комнате...<br><br>
+    Игрок: ${name}
+  `;
 
   try {
-    const now = Date.now();
+    await cleanupInactivePlayers(roomId);
 
     await db.runTransaction(async (transaction) => {
       const doc = await transaction.get(roomRef);
@@ -1826,39 +1775,45 @@ async function joinRoom(roomId) {
         throw new Error("ROOM_DATA_ERROR");
       }
 
-      if (room.status === "finished" || room.gameState?.finished === true) {
+      if (room.status === "finished") {
         throw new Error("ROOM_FINISHED");
       }
 
-      const currentIds = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean) : [];
-      const alreadyInRoom = currentIds.includes(id);
-
-      if (currentIds.length >= 3 && !alreadyInRoom) {
+      if (room.playerIds.length >= 3 && !room.playerIds.includes(id)) {
         throw new Error("ROOM_FULL");
       }
 
-      const playerIds = alreadyInRoom ? [...currentIds] : [...currentIds, id];
-      const playerNames = { ...(room.playerNames || {}) };
+      const playerIds = Array.isArray(room.playerIds) ? [...room.playerIds] : [];
+      const playerNames = room.playerNames || {};
+
+      if (!playerIds.includes(id)) {
+        playerIds.push(id);
+      }
+
       playerNames[id] = name;
+
+      const now = Date.now();
 
       const updateData = {
         playerIds,
         playerNames,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         [`gameState.playersReady.${id}`]: false,
-        [`gameState.playersData.${id}.name`]: name,
-        [`gameState.playersData.${id}.alive`]: true,
-        [`gameState.playersData.${id}.lost`]: false,
-        [`gameState.playersData.${id}.leftRoom`]: false,
-        [`gameState.playersData.${id}.position`]: 0,
-        [`gameState.playersData.${id}.score`]: 0,
-        [`gameState.playersData.${id}.firstObstacleResolved`]: false,
-        [`gameState.playersData.${id}.online`]: true,
-        [`gameState.playersData.${id}.lastSeen`]: now,
-        [`gameState.playersData.${id}.lastActionAt`]: now,
-        [`gameState.playersData.${id}.closedAt`]: null,
-        [`gameState.playersData.${id}.gameLoaded`]: false,
-        [`gameState.playersData.${id}.gameLoadedAt`]: null
+        [`gameState.playersData.${id}`]: {
+          name,
+          alive: true,
+          lost: false,
+          leftRoom: false,
+          position: 0,
+          score: 0,
+          firstObstacleResolved: false,
+          online: true,
+          lastSeen: now,
+          lastActionAt: now,
+          closedAt: null,
+          gameLoaded: false,
+          gameLoadedAt: null
+        }
       };
 
       if (playerIds.length >= 2 && !room.startAt && !room.gameState?.started) {
@@ -1868,14 +1823,46 @@ async function joinRoom(roomId) {
       transaction.update(roomRef, updateData);
     });
 
-    const confirmedRoom = await waitForRoomMembership(roomRef, id, 10, 300);
-    if (!confirmedRoom) {
-      throw new Error("JOIN_NOT_CONFIRMED");
-    }
-
     currentRoomId = roomId;
     multiplayerGameStarted = false;
-    openRoomScreen(roomId, confirmedRoom);
+
+    const now = Date.now();
+
+    openRoomScreen(roomId, {
+      hostId: null,
+      playerIds: [id],
+      playerNames: { [id]: name },
+      status: "waiting",
+      created: now,
+      updatedAt: now,
+      startAt: null,
+        gameState: {
+        started: false,
+        finished: false,
+        winner: null,
+        countdownStartedAt: null,
+        playersReady: {
+          [id]: false
+        },
+        playersData: {
+          [id]: {
+            name,
+            alive: true,
+            lost: false,
+            leftRoom: false,
+            position: 0,
+            score: 0,
+            firstObstacleResolved: false,
+            online: true,
+            lastSeen: now,
+            lastActionAt: now,
+            closedAt: null,
+            gameLoaded: false,
+            gameLoadedAt: null
+          }
+        }
+      }
+    });
 
   } catch (e) {
     if (currentRoomListener) {
@@ -1885,10 +1872,8 @@ async function joinRoom(roomId) {
 
     stopRoomCountdown();
     stopRoomPresence();
-
-    const btn = document.getElementById("createRoomBtn");
-    if (btn) btn.style.display = "block";
-
+    document.getElementById("createRoomBtn").style.display = "block";
+    
     if (e.message === "ROOM_DELETED") {
       alert("Комната уже удалена");
     } else if (e.message === "ROOM_DATA_ERROR") {
@@ -1897,8 +1882,6 @@ async function joinRoom(roomId) {
       alert("Игра в комнате уже закончена");
     } else if (e.message === "ROOM_FULL") {
       alert("Комната заполнена");
-    } else if (e.message === "JOIN_NOT_CONFIRMED") {
-      alert("Не удалось подключиться к комнате. Попробуй ещё раз.");
     } else if (e.code === "resource-exhausted") {
       alert("Firebase перегружен или превышен лимит. Попробуй позже.");
     } else {
@@ -2009,6 +1992,7 @@ function startSharedRoomCountdown(roomId) {
 
   stopRoomCountdown();
   startRoomPresence(roomId);
+  cleanupInactivePlayers(roomId);
 
   let latestRoom = optimisticRoom;
 
@@ -2120,9 +2104,7 @@ function startSharedRoomCountdown(roomId) {
       roomCreatedAt > 0 &&
       (getSyncedServerNowMs() - roomCreatedAt > ROOM_MAX_WAITING_LIFETIME_MS)
     ) {
-      if (shouldCurrentClientCleanupRoom(latestRoom)) {
-        await cleanupInactivePlayers(roomId);
-      }
+      await cleanupInactivePlayers(roomId);
       return;
     }
 
@@ -2149,9 +2131,7 @@ function startSharedRoomCountdown(roomId) {
       return;
     }
 
-    if (shouldCurrentClientCleanupRoom(latestRoom)) {
-      await cleanupInactivePlayers(roomId);
-    }
+    await cleanupInactivePlayers(roomId);
     await tryStartRoom(roomId);
   });
 
@@ -2173,9 +2153,7 @@ function startSharedRoomCountdown(roomId) {
       roomCreatedAt > 0 &&
       (getSyncedServerNowMs() - roomCreatedAt > ROOM_MAX_WAITING_LIFETIME_MS)
     ) {
-      if (shouldCurrentClientCleanupRoom(latestRoom)) {
-        await cleanupInactivePlayers(roomId);
-      }
+      await cleanupInactivePlayers(roomId);
       return;
     }
 
@@ -2194,9 +2172,7 @@ function startSharedRoomCountdown(roomId) {
       return;
     }
 
-    if (shouldCurrentClientCleanupRoom(latestRoom)) {
-      await cleanupInactivePlayers(roomId);
-    }
+    await cleanupInactivePlayers(roomId);
 
     const playersCount = Array.isArray(latestRoom.playerIds) ? latestRoom.playerIds.length : 0;
     const startAtMs = getRoomTimeMs(latestRoom.startAt);
@@ -2261,23 +2237,6 @@ function startSharedRoomCountdown(roomId) {
       return;
     }
 
-    if (!room.playerIds.includes(id)) {
-      currentRoomId = null;
-      resetServerClockSync();
-
-      if (currentRoomListener) {
-        currentRoomListener();
-        currentRoomListener = null;
-      }
-
-      stopRoomCountdown();
-      stopRoomPresence();
-      multiplayerGameStarted = false;
-      document.getElementById("createRoomBtn").style.display = "block";
-      loadRooms();
-      return;
-    }
-
     const newPlayerIds = room.playerIds.filter(pid => pid !== id);
 
     if (newPlayerIds.length === 0) {
@@ -2289,8 +2248,7 @@ function startSharedRoomCountdown(roomId) {
       const updateData = {
         playerIds: newPlayerIds,
         playerNames: newPlayerNames,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        hostId: newPlayerIds.includes(room.hostId) ? room.hostId : newPlayerIds[0]
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
 
       if (newPlayerIds.length < 2) {
