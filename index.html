@@ -164,9 +164,9 @@ body {
 }
 
 .main-book-btn {
-  width: 54px;
-  height: 54px;
-  min-width: 54px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -212,104 +212,11 @@ body {
   margin-bottom: 14px;
 }
 
-.history-panel-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.history-empty {
-  padding: 16px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.85);
-  font-size: 16px;
-}
-
-.history-card {
-  border-radius: 18px;
-  background: rgba(255,255,255,0.07);
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-.history-card-header {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: white;
-  text-align: left;
-  padding: 14px 14px 12px;
-  cursor: pointer;
-}
-
-.history-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.history-mode-label {
-  font-size: 13px;
-  color: rgba(255,255,255,0.7);
-  margin-bottom: 4px;
-}
-
-.history-mode-value {
+.history-panel-text {
   font-size: 18px;
-  font-weight: bold;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.92);
 }
-
-.history-status {
-  font-size: 16px;
-  font-weight: bold;
-  white-space: nowrap;
-}
-
-.history-status.win { color: #32d74b; }
-.history-status.lose { color: #ff5c5c; }
-.history-status.draw { color: #b8b8b8; }
-
-.history-date {
-  font-size: 14px;
-  color: rgba(255,255,255,0.82);
-}
-
-.history-card-details {
-  display: none;
-  padding: 0 14px 14px;
-}
-
-.history-card.expanded .history-card-details {
-  display: block;
-}
-
-.history-results-title {
-  font-size: 15px;
-  font-weight: bold;
-  margin-bottom: 8px;
-  color: #FFD700;
-}
-
-.history-results-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.history-results-table th,
-.history-results-table td {
-  padding: 8px 4px;
-  border-bottom: 1px solid rgba(255,255,255,0.12);
-  text-align: center;
-  font-size: 14px;
-}
-
-.history-results-table th {
-  color: #FFD700;
-}
-
 
 .mode-popup {
   display: none;
@@ -607,8 +514,8 @@ body {
 
     <div id="historyPanel" class="history-panel">
       <div class="history-panel-title">История игр</div>
-      <div id="historyPanelList" class="history-panel-list">
-        <div class="history-empty">Загрузка истории игр...</div>
+      <div class="history-panel-text">
+        Здесь будет история игр.
       </div>
     </div>
   </div>
@@ -703,11 +610,7 @@ let roomVisibilityHandler = null;
 let roomPageHideHandler = null;
 let roomReadyPollInterval = null;
 let gameCountdownStartListener = null;
-
-let historyGamesListener = null;
-let historyGamesCache = [];
-let expandedHistoryGameId = null;
-
+  
 const ROOM_OFFLINE_GRACE_MS = 60 * 1000;              // 1 минута на возврат
 const ROOM_PRESENCE_PING_MS = 15000;                  // heartbeat раз в 15 сек
 const ROOM_ACTION_PING_THROTTLE_MS = 5000;            // не спамить записями
@@ -1112,174 +1015,6 @@ function getCurrentPlayer() {
 const currentPlayer = getCurrentPlayer();
 document.getElementById("nickname").innerText = currentPlayer.name;
 
-function getHistoryCollectionRef(playerIdOverride = null) {
-  const targetPlayerId = String(playerIdOverride || getCurrentPlayer().id);
-  return db.collection("users").doc(targetPlayerId).collection("matchHistory");
-}
-
-function formatHistoryDateLocal(timestampMs) {
-  const value = Number(timestampMs || 0);
-  if (!value) return "Дата неизвестна";
-
-  const date = new Date(value);
-  return date.toLocaleString("ru-RU", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
-function getOutcomeLabelClass(outcome) {
-  if (outcome === "win") return "win";
-  if (outcome === "draw") return "draw";
-  return "lose";
-}
-
-function getOutcomeLabelText(outcome) {
-  if (outcome === "win") return "Выиграл";
-  if (outcome === "draw") return "Ничья";
-  return "Проиграл";
-}
-
-function getPlayerHistoryOutcome(resultData, playerName) {
-  const winnerLabel = String(resultData?.winner || "").trim().toLowerCase();
-  const results = Array.isArray(resultData?.results) ? resultData.results : [];
-  const playerResult = results.find(item => String(item?.name || "").trim() === String(playerName || "").trim());
-
-  if (winnerLabel === "ничья" && playerResult && Number(playerResult.place) === 1) {
-    return "draw";
-  }
-
-  if (playerResult && Number(playerResult.place) === 1) {
-    return "win";
-  }
-
-  return "lose";
-}
-
-function renderHistoryPanel() {
-  const listEl = document.getElementById("historyPanelList");
-  if (!listEl) return;
-
-  if (!Array.isArray(historyGamesCache) || historyGamesCache.length === 0) {
-    listEl.innerHTML = '<div class="history-empty">Пока нет сыгранных матчей.</div>';
-    return;
-  }
-
-  listEl.innerHTML = historyGamesCache.map((item) => {
-    const outcomeClass = getOutcomeLabelClass(item.outcome);
-    const outcomeText = getOutcomeLabelText(item.outcome);
-    const isExpanded = expandedHistoryGameId === item.id;
-    const rows = (Array.isArray(item.results) ? item.results : [])
-      .slice()
-      .sort((a, b) => Number(a.place || 0) - Number(b.place || 0))
-      .map((row) => `
-        <tr>
-          <td>${row.place ?? "—"}</td>
-          <td>${row.name || "Игрок"}</td>
-          <td>${Number(row.score || 0)}</td>
-        </tr>
-      `)
-      .join("");
-
-    return `
-      <div class="history-card ${isExpanded ? "expanded" : ""}">
-        <button class="history-card-header" onclick="toggleHistoryGameDetails('${item.id}')">
-          <div class="history-card-top">
-            <div>
-              <div class="history-mode-label">Режим</div>
-              <div class="history-mode-value">${item.mode || "Bobr Run"}</div>
-            </div>
-            <div class="history-status ${outcomeClass}">${outcomeText}</div>
-          </div>
-          <div class="history-date">${formatHistoryDateLocal(item.finishedAt)}</div>
-        </button>
-        <div class="history-card-details">
-          <div class="history-results-title">Результат матча</div>
-          <table class="history-results-table">
-            <thead>
-              <tr>
-                <th>Место</th>
-                <th>Игрок</th>
-                <th>Счёт</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-function toggleHistoryGameDetails(gameId) {
-  expandedHistoryGameId = expandedHistoryGameId === gameId ? null : gameId;
-  renderHistoryPanel();
-}
-
-function stopHistoryGamesListener() {
-  if (historyGamesListener) {
-    historyGamesListener();
-    historyGamesListener = null;
-  }
-}
-
-function startHistoryGamesListener() {
-  if (historyGamesListener) return;
-
-  const { id } = getCurrentPlayer();
-
-  historyGamesListener = getHistoryCollectionRef(id)
-    .orderBy("finishedAt", "desc")
-    .limit(10)
-    .onSnapshot((snapshot) => {
-      historyGamesCache = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      if (expandedHistoryGameId && !historyGamesCache.some(item => item.id === expandedHistoryGameId)) {
-        expandedHistoryGameId = null;
-      }
-
-      renderHistoryPanel();
-    }, (error) => {
-      console.error("Ошибка загрузки истории игр:", error);
-      const listEl = document.getElementById("historyPanelList");
-      if (listEl) {
-        listEl.innerHTML = '<div class="history-empty">Не удалось загрузить историю игр.</div>';
-      }
-    });
-}
-
-async function saveMatchHistoryForCurrentPlayer(resultData) {
-  try {
-    const { id, name } = getCurrentPlayer();
-    const roomId = String(resultData?.roomId || currentRoomId || "");
-    if (!roomId) return;
-
-    const results = buildEndGamePlaces(resultData?.results || []);
-    if (!results.length) return;
-
-    const outcome = getPlayerHistoryOutcome(resultData, name);
-    const finishedAt = Date.now();
-
-    await getHistoryCollectionRef(id).doc(roomId).set({
-      mode: "Bobr Run",
-      outcome,
-      finishedAt,
-      results,
-      winner: String(resultData?.winner || "")
-    }, { merge: true });
-  } catch (e) {
-    console.error("Ошибка сохранения истории матча:", e);
-  }
-}
-
-startHistoryGamesListener();
-
 let currentMenuView = "home";
 
 function setMenuView(view) {
@@ -1334,7 +1069,6 @@ function toggleHistoryPanel(event) {
   const historyPanel = document.getElementById("historyPanel");
   if (!historyPanel) return;
 
-  renderHistoryPanel();
   historyPanel.classList.toggle("open");
 }
 
@@ -1409,8 +1143,6 @@ function startGame() {
 function showEndGameModal(resultData) {
   if (!resultData || endGameShown) return;
 
-  saveMatchHistoryForCurrentPlayer(resultData);
-
   const modal = document.getElementById("endGameModal");
   const titleEl = document.getElementById("endGameTitle");
   const winnerNameEl = document.getElementById("endGameWinnerName");
@@ -1468,7 +1200,6 @@ function startRoomFinishWatcher(roomId) {
 
     if (room.gameState.finished === true && room.gameState.winner && room.gameState.results) {
       const resultData = {
-        roomId,
         winner: room.gameState.winner,
         results: room.gameState.results
       };
@@ -2344,8 +2075,8 @@ function openSkins() {
   alert("Скины");
 }
 
-function openGuide(event) {
-  toggleHistoryPanel(event);
+function openGuide() {
+  toggleHistoryPanel();
 }
 
 function openSettings() {
@@ -3198,7 +2929,6 @@ async function resolvePendingDuelFinishIfNeeded(roomRef, fallbackFinalScore) {
 
       resolved = true;
       resolvedResultData = {
-        roomId: currentRoomId,
         winner: winnerName,
         results: finalResults
       };
@@ -3482,7 +3212,6 @@ const allLosersSorted = Object.entries(playersData)
 });
 
       showEndGameModal({
-        roomId: currentRoomId,
         winner: winnerName,
         results: finalResults
       });
@@ -3518,7 +3247,6 @@ const allLosersSorted = Object.entries(playersData)
     });
 
     showEndGameModal({
-      roomId: currentRoomId,
       winner: drawResult.winnerLabel,
       results: drawResult.results
     });
@@ -3575,7 +3303,6 @@ const allLosersSorted = Object.entries(playersData)
   });
 
   showEndGameModal({
-    roomId: currentRoomId,
     winner: winnerName,
     results: finalResults
   });
@@ -3784,6 +3511,23 @@ loop = function(currentTime) {
 
 startGameFlow();
 }
+
+window.toggleModePopup = toggleModePopup;
+window.enterBobrRunMode = enterBobrRunMode;
+window.exitGameMode = exitGameMode;
+window.openLeaderboard = openLeaderboard;
+window.closeLeaderboard = closeLeaderboard;
+window.openRooms = openRooms;
+window.closeRooms = closeRooms;
+window.createRoom = createRoom;
+window.joinRoom = joinRoom;
+window.leaveRoom = leaveRoom;
+window.openSkins = openSkins;
+window.openSettings = openSettings;
+window.toggleHistoryPanel = toggleHistoryPanel;
+window.toggleHistoryGameDetails = toggleHistoryGameDetails;
+window.closeEndGameAndExit = closeEndGameAndExit;
+
 </script>
 
 
