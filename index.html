@@ -185,6 +185,39 @@ body {
   background: #555;
 }
 
+.history-panel {
+  display: none;
+  position: fixed;
+  top: 96px;
+  left: 50%;
+  right: 28px;
+  bottom: 92px;
+  padding: 22px 18px;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.82);
+  color: white;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  box-sizing: border-box;
+  z-index: 40;
+  overflow-y: auto;
+}
+
+.history-panel.open {
+  display: block;
+}
+
+.history-panel-title {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 14px;
+}
+
+.history-panel-text {
+  font-size: 18px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.92);
+}
+
 .mode-popup {
   display: none;
   width: 100%;
@@ -476,7 +509,14 @@ body {
     </div>
 
     <div class="start-play-row">
-      <div class="main-book-btn" onclick="openGuide()">📖</div>
+      <div class="main-book-btn" onclick="toggleHistoryPanel(event)">📖</div>
+    </div>
+
+    <div id="historyPanel" class="history-panel">
+      <div class="history-panel-title">История игр</div>
+      <div class="history-panel-text">
+        Здесь будет история игр.
+      </div>
     </div>
   </div>
 
@@ -984,6 +1024,7 @@ function setMenuView(view) {
   const bobrRunScreen = document.getElementById("bobrRunScreen");
   const backButton = document.getElementById("modeBackButton");
   const modePopup = document.getElementById("modePopup");
+  const historyPanel = document.getElementById("historyPanel");
 
   if (homeScreen) {
     homeScreen.classList.toggle("active", view === "home");
@@ -999,6 +1040,10 @@ function setMenuView(view) {
 
   if (modePopup) {
     modePopup.classList.remove("open");
+  }
+
+  if (historyPanel) {
+    historyPanel.classList.remove("open");
   }
 }
 
@@ -1018,17 +1063,44 @@ function closeModePopup() {
   modePopup.classList.remove("open");
 }
 
+function toggleHistoryPanel(event) {
+  if (event) event.stopPropagation();
+
+  const historyPanel = document.getElementById("historyPanel");
+  if (!historyPanel) return;
+
+  historyPanel.classList.toggle("open");
+}
+
+function closeHistoryPanel() {
+  const historyPanel = document.getElementById("historyPanel");
+  if (!historyPanel) return;
+
+  historyPanel.classList.remove("open");
+}
+
 function handleMenuBackgroundClick(event) {
   const modePopup = document.getElementById("modePopup");
   const mainPlayButton = document.getElementById("mainPlayButton");
+  const historyPanel = document.getElementById("historyPanel");
+  const bookButton = document.querySelector(".main-book-btn");
 
-  if (!modePopup || !mainPlayButton) return;
+  if (modePopup && mainPlayButton) {
+    const clickedInsidePopup = modePopup.contains(event.target);
+    const clickedPlayButton = mainPlayButton.contains(event.target);
 
-  const clickedInsidePopup = modePopup.contains(event.target);
-  const clickedPlayButton = mainPlayButton.contains(event.target);
+    if (!clickedInsidePopup && !clickedPlayButton) {
+      closeModePopup();
+    }
+  }
 
-  if (!clickedInsidePopup && !clickedPlayButton) {
-    closeModePopup();
+  if (historyPanel && bookButton) {
+    const clickedInsideHistory = historyPanel.contains(event.target);
+    const clickedBookButton = bookButton.contains(event.target);
+
+    if (!clickedInsideHistory && !clickedBookButton) {
+      closeHistoryPanel();
+    }
   }
 }
 
@@ -2004,7 +2076,7 @@ function openSkins() {
 }
 
 function openGuide() {
-  alert("Здесь можно открыть правила, гайд или информацию о игре.");
+  toggleHistoryPanel();
 }
 
 function openSettings() {
