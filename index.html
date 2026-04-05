@@ -194,7 +194,7 @@ body {
   transform: translateX(-50%);
   right: auto;
   bottom: 92px;
-  padding: 22px 18px 22px 18px;
+  padding: 22px 12px 22px 18px;
   border-radius: 24px;
   background: rgba(0, 0, 0, 0.82);
   color: white;
@@ -204,23 +204,28 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 215, 0, 0.75) rgba(255,255,255,0.08);
+  scrollbar-color: rgba(255, 215, 0, 0.82) transparent;
+  scrollbar-gutter: stable;
 }
 
 .history-panel::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 
 .history-panel::-webkit-scrollbar-track {
-  background: rgba(255,255,255,0.08);
-  border-radius: 999px;
+  background: transparent;
+  margin: 8px 0;
 }
 
 .history-panel::-webkit-scrollbar-thumb {
-  background: rgba(255, 215, 0, 0.75);
+  background: linear-gradient(180deg, rgba(255, 226, 96, 0.98), rgba(212, 160, 0, 0.98));
   border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  border: 2px solid rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.22);
+}
+
+.history-panel::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 235, 128, 1), rgba(226, 173, 0, 1));
 }
 
 .history-panel::-webkit-scrollbar-corner {
