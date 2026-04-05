@@ -181,6 +181,132 @@ body {
   background: #555;
 }
 
+.history-panel {
+  display: none;
+  position: fixed;
+  top: 96px;
+  left: 50%;
+  right: 28px;
+  bottom: 92px;
+  padding: 22px 18px;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.82);
+  color: white;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  box-sizing: border-box;
+  z-index: 40;
+  overflow-y: auto;
+}
+
+.history-panel.open {
+  display: block;
+}
+
+.history-panel-title {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 14px;
+}
+
+.history-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-empty {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.85);
+  font-size: 16px;
+}
+
+.history-card {
+  border-radius: 18px;
+  background: rgba(255,255,255,0.07);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.history-card-header {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: white;
+  text-align: left;
+  padding: 14px 14px 12px;
+  cursor: pointer;
+}
+
+.history-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.history-mode-label {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
+}
+
+.history-mode-value {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.history-status {
+  font-size: 16px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.history-status.win { color: #32d74b; }
+.history-status.lose { color: #ff5c5c; }
+.history-status.draw { color: #b8b8b8; }
+
+.history-date {
+  font-size: 14px;
+  color: rgba(255,255,255,0.82);
+}
+
+.history-card-details {
+  display: none;
+  padding: 0 14px 14px;
+}
+
+.history-card.expanded .history-card-details {
+  display: block;
+}
+
+.history-results-title {
+  font-size: 15px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #FFD700;
+}
+
+.history-results-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-results-table th,
+.history-results-table td {
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  text-align: center;
+  font-size: 14px;
+}
+
+.history-results-table th {
+  color: #FFD700;
+}
+
+
 .mode-popup {
   display: none;
   width: 100%;
@@ -472,7 +598,14 @@ body {
     </div>
 
     <div class="start-play-row">
-      <div class="main-book-btn" onclick="openGuide()">📖</div>
+      <div class="main-book-btn" onclick="toggleHistoryPanel(event)">📖</div>
+    </div>
+
+    <div id="historyPanel" class="history-panel">
+      <div class="history-panel-title">История игр</div>
+      <div id="historyPanelList" class="history-panel-list">
+        <div class="history-empty">Загрузка истории игр...</div>
+      </div>
     </div>
   </div>
 
@@ -566,6 +699,10 @@ let roomVisibilityHandler = null;
 let roomPageHideHandler = null;
 let roomReadyPollInterval = null;
 let gameCountdownStartListener = null;
+
+let historyGamesListener = null;
+let historyGamesCache = [];
+let expandedHistoryGameId = null;
 
 let historyGamesListener = null;
 let historyGamesCache = [];
@@ -1152,6 +1289,7 @@ function setMenuView(view) {
   const bobrRunScreen = document.getElementById("bobrRunScreen");
   const backButton = document.getElementById("modeBackButton");
   const modePopup = document.getElementById("modePopup");
+  const historyPanel = document.getElementById("historyPanel");
 
   if (homeScreen) {
     homeScreen.classList.toggle("active", view === "home");
@@ -1167,6 +1305,10 @@ function setMenuView(view) {
 
   if (modePopup) {
     modePopup.classList.remove("open");
+  }
+
+  if (historyPanel) {
+    historyPanel.classList.remove("open");
   }
 }
 
@@ -1186,17 +1328,44 @@ function closeModePopup() {
   modePopup.classList.remove("open");
 }
 
+function toggleHistoryPanel(event) {
+  if (event) event.stopPropagation();
+
+  const historyPanel = document.getElementById("historyPanel");
+  if (!historyPanel) return;
+
+  historyPanel.classList.toggle("open");
+}
+
+function closeHistoryPanel() {
+  const historyPanel = document.getElementById("historyPanel");
+  if (!historyPanel) return;
+
+  historyPanel.classList.remove("open");
+}
+
 function handleMenuBackgroundClick(event) {
   const modePopup = document.getElementById("modePopup");
   const mainPlayButton = document.getElementById("mainPlayButton");
+  const historyPanel = document.getElementById("historyPanel");
+  const bookButton = document.querySelector(".main-book-btn");
 
-  if (!modePopup || !mainPlayButton) return;
+  if (modePopup && mainPlayButton) {
+    const clickedInsidePopup = modePopup.contains(event.target);
+    const clickedPlayButton = mainPlayButton.contains(event.target);
 
-  const clickedInsidePopup = modePopup.contains(event.target);
-  const clickedPlayButton = mainPlayButton.contains(event.target);
+    if (!clickedInsidePopup && !clickedPlayButton) {
+      closeModePopup();
+    }
+  }
 
-  if (!clickedInsidePopup && !clickedPlayButton) {
-    closeModePopup();
+  if (historyPanel && bookButton) {
+    const clickedInsideHistory = historyPanel.contains(event.target);
+    const clickedBookButton = bookButton.contains(event.target);
+
+    if (!clickedInsideHistory && !clickedBookButton) {
+      closeHistoryPanel();
+    }
   }
 }
 
@@ -2174,8 +2343,8 @@ function openSkins() {
   alert("Скины");
 }
 
-function openGuide() {
-  alert("Здесь можно открыть правила, гайд или информацию о игре.");
+function openGuide(event) {
+  toggleHistoryPanel(event);
 }
 
 function openSettings() {
@@ -3405,6 +3574,7 @@ const allLosersSorted = Object.entries(playersData)
   });
 
   showEndGameModal({
+    roomId: currentRoomId,
     winner: winnerName,
     results: finalResults
   });
