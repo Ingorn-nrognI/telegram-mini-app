@@ -2482,9 +2482,8 @@ playerState.alive = !playerLost;
         let finalScore = score;
 
         // Если это последний прыжок в дуэли 1v1,
-        // завершаем матч сразу после перепрыгивания того самого бревна.
-        // Здесь есть и fallback на случай, когда pendingFinish ещё не успел прилететь из Firestore.
-        const duelResolved = await resolvePendingDuelFinishIfNeeded(roomRef, room, finalScore);
+        // завершаем матч прямо здесь транзакцией, без ожидания отдельного checkWinner().
+        const duelResolved = await resolvePendingDuelFinishIfNeeded(roomRef, finalScore);
         if (duelResolved) {
           return;
         }
@@ -2707,60 +2706,120 @@ async function markPendingDuelFinish() {
     console.error("Ошибка markPendingDuelFinish:", e);
   }
 }
-async function resolvePendingDuelFinishIfNeeded(roomRef, room, fallbackFinalScore) {
-  if (!roomRef || !room) return false;
+async function resolvePendingDuelFinishIfNeeded(roomRef, fallbackFinalScore) {
+  if (!roomRef || !currentRoomId) return false;
 
-  const playersData = room?.gameState?.playersData || {};
-  const pendingFinish = room?.gameState?.pendingFinish || null;
+  let resolved = false;
+  let resolvedResultData = null;
+  let resolvedScore = Number(fallbackFinalScore || 0);
 
-  const alivePlayers = Object.entries(playersData).filter(([_, p]) => {
-    return p && p.alive === true && p.leftRoom !== true;
-  });
+  try {
+    await db.runTransaction(async (transaction) => {
+      const roomDoc = await transaction.get(roomRef);
+      if (!roomDoc.exists) return;
 
-  const loserPlayers = Object.entries(playersData).filter(([_, p]) => {
-    return p && p.lost === true && p.leftRoom !== true;
-  });
+      const room = roomDoc.data();
+      if (!room?.gameState?.playersData) return;
+      if (room.gameState.finished === true || room.status === "finished") return;
 
-  const isFallbackDuelState =
-    alivePlayers.length === 1 &&
-    loserPlayers.length === 1 &&
-    alivePlayers[0][0] === playerId;
+      const playersData = room.gameState.playersData || {};
+      const pendingFinish = room.gameState.pendingFinish || null;
 
-  const canResolveExistingPending =
-    pendingFinish?.active === true &&
-    pendingFinish.winnerId === playerId &&
-    pendingFinish.resolved !== true;
+      const alivePlayers = Object.entries(playersData).filter(([_, p]) => {
+        return p && p.alive === true && p.leftRoom !== true;
+      });
 
-  if (!canResolveExistingPending && !isFallbackDuelState) {
+      const loserPlayers = Object.entries(playersData).filter(([_, p]) => {
+        return p && p.lost === true && p.leftRoom !== true;
+      });
+
+      const canResolveExistingPending =
+        pendingFinish?.active === true &&
+        pendingFinish.winnerId === playerId &&
+        pendingFinish.resolved !== true;
+
+      const isFallbackDuelState =
+        alivePlayers.length === 1 &&
+        loserPlayers.length === 1 &&
+        alivePlayers[0][0] === playerId;
+
+      if (!canResolveExistingPending && !isFallbackDuelState) {
+        return;
+      }
+
+      const loserEntry = canResolveExistingPending
+        ? loserPlayers.find(([pid]) => pid === pendingFinish.loserId) || loserPlayers[0]
+        : loserPlayers[0];
+
+      const loserId = loserEntry?.[0] || (canResolveExistingPending ? pendingFinish.loserId : null);
+      const loserData = loserEntry?.[1] || {};
+      const loserScore = canResolveExistingPending
+        ? Number(pendingFinish.loserScore || loserData.score || 0)
+        : Number(loserData.score || 0);
+
+      const winnerData = playersData[playerId] || {};
+      const winnerName = winnerData.name || room.playerNames?.[playerId] || name;
+      const loserName = loserData.name || room.playerNames?.[loserId] || "Игрок";
+
+      const finalScore = Math.max(Number(fallbackFinalScore || 0), loserScore + 1);
+      resolvedScore = finalScore;
+      score = finalScore;
+
+      const finalResults = [
+        {
+          place: 1,
+          name: winnerName,
+          score: finalScore
+        },
+        {
+          place: 2,
+          name: loserName,
+          score: loserScore
+        }
+      ];
+
+      transaction.update(roomRef, {
+        status: "finished",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        "gameState.finished": true,
+        "gameState.started": false,
+        "gameState.winner": winnerName,
+        "gameState.results": finalResults,
+        [`gameState.playersData.${playerId}.score`]: finalScore,
+        [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
+        "gameState.pendingFinish": {
+          active: true,
+          winnerId: playerId,
+          loserId,
+          loserScore,
+          resolved: true,
+          resolvedAt: Date.now(),
+          finalWinnerScore: finalScore
+        }
+      });
+
+      resolved = true;
+      resolvedResultData = {
+        winner: winnerName,
+        results: finalResults
+      };
+    });
+  } catch (e) {
+    console.error("Ошибка resolvePendingDuelFinishIfNeeded:", e);
     return false;
   }
 
-  const loserScore = canResolveExistingPending
-    ? Number(pendingFinish.loserScore || 0)
-    : Number(loserPlayers[0]?.[1]?.score || 0);
+  if (!resolved) {
+    return false;
+  }
 
-  const finalScore = Math.max(Number(fallbackFinalScore || 0), loserScore + 1);
-  score = finalScore;
+  winnerProcessing = true;
+  await saveBestScore(resolvedScore);
 
-  const updateData = {
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    [`gameState.playersData.${playerId}.score`]: finalScore,
-    [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
-    "gameState.pendingFinish": {
-      active: true,
-      winnerId: playerId,
-      loserId: canResolveExistingPending
-        ? pendingFinish.loserId
-        : loserPlayers[0]?.[0] || null,
-      loserScore,
-      resolved: true,
-      resolvedAt: Date.now(),
-      finalWinnerScore: finalScore
-    }
-  };
+  if (resolvedResultData && !endGameShown) {
+    showEndGameModal(resolvedResultData);
+  }
 
-  await roomRef.update(updateData);
-  await checkWinner();
   return true;
 }
 
