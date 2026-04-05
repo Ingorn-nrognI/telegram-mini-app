@@ -142,7 +142,11 @@ body {
 
 .main-play-btn {
   width: 100%;
-  padding: 16px 20px;
+  height: 54px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: white;
   cursor: pointer;
@@ -160,9 +164,9 @@ body {
 }
 
 .main-book-btn {
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -699,10 +703,6 @@ let roomVisibilityHandler = null;
 let roomPageHideHandler = null;
 let roomReadyPollInterval = null;
 let gameCountdownStartListener = null;
-
-let historyGamesListener = null;
-let historyGamesCache = [];
-let expandedHistoryGameId = null;
 
 let historyGamesListener = null;
 let historyGamesCache = [];
@@ -1334,6 +1334,7 @@ function toggleHistoryPanel(event) {
   const historyPanel = document.getElementById("historyPanel");
   if (!historyPanel) return;
 
+  renderHistoryPanel();
   historyPanel.classList.toggle("open");
 }
 
