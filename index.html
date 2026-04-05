@@ -142,11 +142,7 @@ body {
 
 .main-play-btn {
   width: 100%;
-  height: 54px;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 16px 20px;
   text-align: center;
   color: white;
   cursor: pointer;
@@ -183,39 +179,6 @@ body {
 
 .main-book-btn:hover {
   background: #555;
-}
-
-.history-panel {
-  display: none;
-  position: fixed;
-  top: 96px;
-  left: 50%;
-  right: 28px;
-  bottom: 92px;
-  padding: 22px 18px;
-  border-radius: 24px;
-  background: rgba(0, 0, 0, 0.82);
-  color: white;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-  box-sizing: border-box;
-  z-index: 40;
-  overflow-y: auto;
-}
-
-.history-panel.open {
-  display: block;
-}
-
-.history-panel-title {
-  font-size: 28px;
-  font-weight: bold;
-  margin-bottom: 14px;
-}
-
-.history-panel-text {
-  font-size: 18px;
-  line-height: 1.45;
-  color: rgba(255,255,255,0.92);
 }
 
 .mode-popup {
@@ -509,14 +472,7 @@ body {
     </div>
 
     <div class="start-play-row">
-      <div class="main-book-btn" onclick="toggleHistoryPanel(event)">📖</div>
-    </div>
-
-    <div id="historyPanel" class="history-panel">
-      <div class="history-panel-title">История игр</div>
-      <div class="history-panel-text">
-        Здесь будет история игр.
-      </div>
+      <div class="main-book-btn" onclick="openGuide()">📖</div>
     </div>
   </div>
 
@@ -610,7 +566,11 @@ let roomVisibilityHandler = null;
 let roomPageHideHandler = null;
 let roomReadyPollInterval = null;
 let gameCountdownStartListener = null;
-  
+
+let historyGamesListener = null;
+let historyGamesCache = [];
+let expandedHistoryGameId = null;
+
 const ROOM_OFFLINE_GRACE_MS = 60 * 1000;              // 1 минута на возврат
 const ROOM_PRESENCE_PING_MS = 15000;                  // heartbeat раз в 15 сек
 const ROOM_ACTION_PING_THROTTLE_MS = 5000;            // не спамить записями
@@ -1015,6 +975,174 @@ function getCurrentPlayer() {
 const currentPlayer = getCurrentPlayer();
 document.getElementById("nickname").innerText = currentPlayer.name;
 
+function getHistoryCollectionRef(playerIdOverride = null) {
+  const targetPlayerId = String(playerIdOverride || getCurrentPlayer().id);
+  return db.collection("users").doc(targetPlayerId).collection("matchHistory");
+}
+
+function formatHistoryDateLocal(timestampMs) {
+  const value = Number(timestampMs || 0);
+  if (!value) return "Дата неизвестна";
+
+  const date = new Date(value);
+  return date.toLocaleString("ru-RU", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function getOutcomeLabelClass(outcome) {
+  if (outcome === "win") return "win";
+  if (outcome === "draw") return "draw";
+  return "lose";
+}
+
+function getOutcomeLabelText(outcome) {
+  if (outcome === "win") return "Выиграл";
+  if (outcome === "draw") return "Ничья";
+  return "Проиграл";
+}
+
+function getPlayerHistoryOutcome(resultData, playerName) {
+  const winnerLabel = String(resultData?.winner || "").trim().toLowerCase();
+  const results = Array.isArray(resultData?.results) ? resultData.results : [];
+  const playerResult = results.find(item => String(item?.name || "").trim() === String(playerName || "").trim());
+
+  if (winnerLabel === "ничья" && playerResult && Number(playerResult.place) === 1) {
+    return "draw";
+  }
+
+  if (playerResult && Number(playerResult.place) === 1) {
+    return "win";
+  }
+
+  return "lose";
+}
+
+function renderHistoryPanel() {
+  const listEl = document.getElementById("historyPanelList");
+  if (!listEl) return;
+
+  if (!Array.isArray(historyGamesCache) || historyGamesCache.length === 0) {
+    listEl.innerHTML = '<div class="history-empty">Пока нет сыгранных матчей.</div>';
+    return;
+  }
+
+  listEl.innerHTML = historyGamesCache.map((item) => {
+    const outcomeClass = getOutcomeLabelClass(item.outcome);
+    const outcomeText = getOutcomeLabelText(item.outcome);
+    const isExpanded = expandedHistoryGameId === item.id;
+    const rows = (Array.isArray(item.results) ? item.results : [])
+      .slice()
+      .sort((a, b) => Number(a.place || 0) - Number(b.place || 0))
+      .map((row) => `
+        <tr>
+          <td>${row.place ?? "—"}</td>
+          <td>${row.name || "Игрок"}</td>
+          <td>${Number(row.score || 0)}</td>
+        </tr>
+      `)
+      .join("");
+
+    return `
+      <div class="history-card ${isExpanded ? "expanded" : ""}">
+        <button class="history-card-header" onclick="toggleHistoryGameDetails('${item.id}')">
+          <div class="history-card-top">
+            <div>
+              <div class="history-mode-label">Режим</div>
+              <div class="history-mode-value">${item.mode || "Bobr Run"}</div>
+            </div>
+            <div class="history-status ${outcomeClass}">${outcomeText}</div>
+          </div>
+          <div class="history-date">${formatHistoryDateLocal(item.finishedAt)}</div>
+        </button>
+        <div class="history-card-details">
+          <div class="history-results-title">Результат матча</div>
+          <table class="history-results-table">
+            <thead>
+              <tr>
+                <th>Место</th>
+                <th>Игрок</th>
+                <th>Счёт</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function toggleHistoryGameDetails(gameId) {
+  expandedHistoryGameId = expandedHistoryGameId === gameId ? null : gameId;
+  renderHistoryPanel();
+}
+
+function stopHistoryGamesListener() {
+  if (historyGamesListener) {
+    historyGamesListener();
+    historyGamesListener = null;
+  }
+}
+
+function startHistoryGamesListener() {
+  if (historyGamesListener) return;
+
+  const { id } = getCurrentPlayer();
+
+  historyGamesListener = getHistoryCollectionRef(id)
+    .orderBy("finishedAt", "desc")
+    .limit(10)
+    .onSnapshot((snapshot) => {
+      historyGamesCache = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      if (expandedHistoryGameId && !historyGamesCache.some(item => item.id === expandedHistoryGameId)) {
+        expandedHistoryGameId = null;
+      }
+
+      renderHistoryPanel();
+    }, (error) => {
+      console.error("Ошибка загрузки истории игр:", error);
+      const listEl = document.getElementById("historyPanelList");
+      if (listEl) {
+        listEl.innerHTML = '<div class="history-empty">Не удалось загрузить историю игр.</div>';
+      }
+    });
+}
+
+async function saveMatchHistoryForCurrentPlayer(resultData) {
+  try {
+    const { id, name } = getCurrentPlayer();
+    const roomId = String(resultData?.roomId || currentRoomId || "");
+    if (!roomId) return;
+
+    const results = buildEndGamePlaces(resultData?.results || []);
+    if (!results.length) return;
+
+    const outcome = getPlayerHistoryOutcome(resultData, name);
+    const finishedAt = Date.now();
+
+    await getHistoryCollectionRef(id).doc(roomId).set({
+      mode: "Bobr Run",
+      outcome,
+      finishedAt,
+      results,
+      winner: String(resultData?.winner || "")
+    }, { merge: true });
+  } catch (e) {
+    console.error("Ошибка сохранения истории матча:", e);
+  }
+}
+
+startHistoryGamesListener();
+
 let currentMenuView = "home";
 
 function setMenuView(view) {
@@ -1024,7 +1152,6 @@ function setMenuView(view) {
   const bobrRunScreen = document.getElementById("bobrRunScreen");
   const backButton = document.getElementById("modeBackButton");
   const modePopup = document.getElementById("modePopup");
-  const historyPanel = document.getElementById("historyPanel");
 
   if (homeScreen) {
     homeScreen.classList.toggle("active", view === "home");
@@ -1040,10 +1167,6 @@ function setMenuView(view) {
 
   if (modePopup) {
     modePopup.classList.remove("open");
-  }
-
-  if (historyPanel) {
-    historyPanel.classList.remove("open");
   }
 }
 
@@ -1063,44 +1186,17 @@ function closeModePopup() {
   modePopup.classList.remove("open");
 }
 
-function toggleHistoryPanel(event) {
-  if (event) event.stopPropagation();
-
-  const historyPanel = document.getElementById("historyPanel");
-  if (!historyPanel) return;
-
-  historyPanel.classList.toggle("open");
-}
-
-function closeHistoryPanel() {
-  const historyPanel = document.getElementById("historyPanel");
-  if (!historyPanel) return;
-
-  historyPanel.classList.remove("open");
-}
-
 function handleMenuBackgroundClick(event) {
   const modePopup = document.getElementById("modePopup");
   const mainPlayButton = document.getElementById("mainPlayButton");
-  const historyPanel = document.getElementById("historyPanel");
-  const bookButton = document.querySelector(".main-book-btn");
 
-  if (modePopup && mainPlayButton) {
-    const clickedInsidePopup = modePopup.contains(event.target);
-    const clickedPlayButton = mainPlayButton.contains(event.target);
+  if (!modePopup || !mainPlayButton) return;
 
-    if (!clickedInsidePopup && !clickedPlayButton) {
-      closeModePopup();
-    }
-  }
+  const clickedInsidePopup = modePopup.contains(event.target);
+  const clickedPlayButton = mainPlayButton.contains(event.target);
 
-  if (historyPanel && bookButton) {
-    const clickedInsideHistory = historyPanel.contains(event.target);
-    const clickedBookButton = bookButton.contains(event.target);
-
-    if (!clickedInsideHistory && !clickedBookButton) {
-      closeHistoryPanel();
-    }
+  if (!clickedInsidePopup && !clickedPlayButton) {
+    closeModePopup();
   }
 }
 
@@ -1142,6 +1238,8 @@ function startGame() {
 
 function showEndGameModal(resultData) {
   if (!resultData || endGameShown) return;
+
+  saveMatchHistoryForCurrentPlayer(resultData);
 
   const modal = document.getElementById("endGameModal");
   const titleEl = document.getElementById("endGameTitle");
@@ -1200,6 +1298,7 @@ function startRoomFinishWatcher(roomId) {
 
     if (room.gameState.finished === true && room.gameState.winner && room.gameState.results) {
       const resultData = {
+        roomId,
         winner: room.gameState.winner,
         results: room.gameState.results
       };
@@ -2076,7 +2175,7 @@ function openSkins() {
 }
 
 function openGuide() {
-  toggleHistoryPanel();
+  alert("Здесь можно открыть правила, гайд или информацию о игре.");
 }
 
 function openSettings() {
@@ -2929,6 +3028,7 @@ async function resolvePendingDuelFinishIfNeeded(roomRef, fallbackFinalScore) {
 
       resolved = true;
       resolvedResultData = {
+        roomId: currentRoomId,
         winner: winnerName,
         results: finalResults
       };
@@ -3212,6 +3312,7 @@ const allLosersSorted = Object.entries(playersData)
 });
 
       showEndGameModal({
+        roomId: currentRoomId,
         winner: winnerName,
         results: finalResults
       });
@@ -3247,6 +3348,7 @@ const allLosersSorted = Object.entries(playersData)
     });
 
     showEndGameModal({
+      roomId: currentRoomId,
       winner: drawResult.winnerLabel,
       results: drawResult.results
     });
