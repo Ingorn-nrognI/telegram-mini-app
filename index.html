@@ -480,6 +480,77 @@ body {
   font-weight: bold;
   cursor: pointer;
 }
+
+.history-match-card {
+  background: #161616;
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+}
+
+.history-match-mode {
+  font-size: 16px;
+  font-weight: bold;
+  color: #FFD700;
+  margin-bottom: 6px;
+}
+
+.history-match-result {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 6px;
+  text-transform: lowercase;
+}
+
+.history-match-result.win {
+  color: #28a745;
+}
+
+.history-match-result.lose {
+  color: #dc3545;
+}
+
+.history-match-result.draw {
+  color: #9aa0a6;
+}
+
+.history-match-date {
+  font-size: 14px;
+  color: rgba(255,255,255,0.82);
+}
+
+.history-match-details {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  padding-top: 12px;
+}
+
+.history-match-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-match-table th,
+.history-match-table td {
+  text-align: left;
+  padding: 8px 6px;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.history-match-table th {
+  color: #FFD700;
+  font-size: 13px;
+}
+
+.history-match-table td:last-child,
+.history-match-table th:last-child {
+  text-align: right;
+}
+
 </style>
 </head>
 
@@ -611,6 +682,7 @@ let roomPageHideHandler = null;
 let roomReadyPollInterval = null;
 let gameCountdownStartListener = null;
 let historyLoading = false;
+let expandedHistoryMatchId = null;
 
 const GAME_READY_BUFFER_MS = 1500;
   
@@ -1107,6 +1179,24 @@ function getHistoryCollectionRef(playerId) {
   return db.collection("users").doc(String(playerId)).collection("history");
 }
 
+function getHistoryResultMeta(item) {
+  const winnerValue = String(item?.winner || "").trim().toLowerCase();
+  if (winnerValue === "ничья") {
+    return { label: "ничья", className: "draw" };
+  }
+
+  if (item?.youWon) {
+    return { label: "выиграл", className: "win" };
+  }
+
+  return { label: "проиграл", className: "lose" };
+}
+
+function toggleHistoryMatchDetails(matchId) {
+  expandedHistoryMatchId = expandedHistoryMatchId === matchId ? null : matchId;
+  loadGameHistory();
+}
+
 function renderHistoryEntries(entries) {
   const panel = document.getElementById("historyPanel");
   if (!panel) return;
@@ -1118,26 +1208,48 @@ function renderHistoryEntries(entries) {
     return;
   }
 
-  const items = entries.map((item) => {
-    const isDraw = String(item.winner || "").toLowerCase() === "ничья";
-    const yourPlace = item.yourPlace ? ` • твоё место: ${item.yourPlace}` : "";
-    const score = Number(item.yourScore || 0);
-    const resultLabel = isDraw
-      ? "Ничья"
-      : (item.youWon ? "Победа" : "Поражение");
+  const items = entries.map((item, index) => {
+    const matchId = String(item.roomId || item.savedAt || index);
+    const isExpanded = expandedHistoryMatchId === matchId;
+    const resultMeta = getHistoryResultMeta(item);
+    const playedAtText = formatHistoryDate(item.playedAt);
+    const modeLabel = item.mode || "Bobr Run";
 
-    const playersText = Array.isArray(item.results)
+    const resultsRows = Array.isArray(item.results)
       ? item.results
-          .map(r => `${r.place}. ${r.name} — ${Number(r.score || 0)}`)
-          .join("<br>")
+          .slice()
+          .sort((a, b) => Number(a.place || 0) - Number(b.place || 0))
+          .map((row) => `
+            <tr>
+              <td>${Number(row.place || 0)}</td>
+              <td>${row.name || "Игрок"}</td>
+              <td>${Number(row.score || 0)}</td>
+            </tr>
+          `)
+          .join("")
       : "";
 
+    const detailsHtml = isExpanded ? `
+      <div class="history-match-details">
+        <table class="history-match-table">
+          <thead>
+            <tr>
+              <th>Место</th>
+              <th>Игрок</th>
+              <th>Счёт</th>
+            </tr>
+          </thead>
+          <tbody>${resultsRows}</tbody>
+        </table>
+      </div>
+    ` : "";
+
     return `
-      <div style="background:rgba(255,255,255,0.08);border-radius:16px;padding:14px 12px;margin-bottom:12px;">
-        <div style="font-size:16px;color:#FFD700;font-weight:bold;margin-bottom:6px;">${resultLabel}${yourPlace}</div>
-        <div style="font-size:14px;opacity:0.85;margin-bottom:8px;">${formatHistoryDate(item.playedAt)}</div>
-        <div style="font-size:15px;margin-bottom:8px;">Твой счёт: ${score}</div>
-        <div style="font-size:15px;line-height:1.45;">${playersText}</div>
+      <div class="history-match-card" onclick="toggleHistoryMatchDetails('${matchId.replace("'", "&#39;")}')">
+        <div class="history-match-mode">Режим: ${modeLabel}</div>
+        <div class="history-match-result ${resultMeta.className}">${resultMeta.label}</div>
+        <div class="history-match-date">${playedAtText}</div>
+        ${detailsHtml}
       </div>
     `;
   }).join("");
@@ -1215,6 +1327,7 @@ async function saveMatchHistoryForAllPlayers(roomId, roomData) {
     batch.set(historyRef, {
       roomId,
       playedAt,
+      mode: "Bobr Run",
       winner: roomData.gameState.winner || "—",
       results,
       yourName: playerName,
@@ -1391,14 +1504,21 @@ function startRoomFinishWatcher(roomId) {
 }
 
 async function closeEndGameAndExit() {
-  if (typeof exitEndGameForCurrentMatch === "function") {
-    await exitEndGameForCurrentMatch();
+  hideEndGameModal();
+  stopEndGameWatcher();
+  endGameShown = false;
+
+  const savedExitHandler = exitEndGameForCurrentMatch;
+  openEndGameForCurrentMatch = null;
+  exitEndGameForCurrentMatch = null;
+
+  if (typeof savedExitHandler === "function") {
+    await savedExitHandler();
+    hideEndGameModal();
     return;
   }
 
   hideEndGameModal();
-  stopEndGameWatcher();
-  endGameShown = false;
 }
   
 function openRooms() {
@@ -2295,6 +2415,10 @@ function initGame() {
       gameCanvas.style.display = "none";
     }
 
+    hideEndGameModal();
+    endGameShown = false;
+    openEndGameForCurrentMatch = null;
+    exitEndGameForCurrentMatch = null;
     closeRooms();
     setMenuView("mode");
     latestGameRoomState = null;
@@ -2491,6 +2615,8 @@ exitEndGameForCurrentMatch = async function() {
   hideEndGameModal();
   stopEndGameWatcher();
   endGameShown = false;
+  openEndGameForCurrentMatch = null;
+  exitEndGameForCurrentMatch = null;
 
   try {
     if (roomId) {
@@ -3287,6 +3413,8 @@ if (winnerCheckInterval) clearInterval(winnerCheckInterval);
 
 window.gameInitialized = false;
 showExitButton = false;
+hideEndGameModal();
+endGameShown = false;
 openEndGameForCurrentMatch = null;
 exitEndGameForCurrentMatch = null;
 
@@ -3589,7 +3717,7 @@ let spawnStarted = false;
 let spawnAccumulator1 = 0;
 let spawnAccumulator2 = 0;
 let spawnAccumulator3 = 0;
-const FIXED_STEP_MS = 1000 / 60;
+const FIXED_STEP_MS = 1000 / 120;
 const LANE1_SPAWN_MS = 1200;
 const LANE2_SPAWN_MS = 1500;
 const LANE3_SPAWN_MS = 1800;
@@ -3615,7 +3743,7 @@ function startSpawnIfNeeded() {
 }
 
 function stepSimulation() {
-  deltaTime = 1;
+  deltaTime = FIXED_STEP_MS / 16.67;
 
   updatePlayer();
   updateObstacles1();
@@ -3661,6 +3789,7 @@ async function startGameFlow() {
   lastCountdownSecond = null;
   resetSpawnState();
 
+  lastTime = performance.now();
   requestAnimationFrame(loop);
 
   try {
@@ -3734,6 +3863,7 @@ async function startGameFlow() {
 }
 
 loop = function(currentTime) {
+  const frameDeltaMs = Math.min(32, Math.max(0, currentTime - lastTime));
   lastTime = currentTime;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -3770,14 +3900,19 @@ loop = function(currentTime) {
 
       const gameElapsedMs = nowMs - (syncedCountdownStartedAtMs + GAME_READY_BUFFER_MS + 3000);
       const targetTick = Math.max(0, Math.floor(gameElapsedMs / FIXED_STEP_MS));
-      const ticksToSimulate = Math.min(20, Math.max(0, targetTick - lastTargetTick));
+      let ticksToSimulate = Math.max(0, targetTick - lastTargetTick);
+
+      if (ticksToSimulate > 0) {
+        const hardCap = Math.max(1, Math.ceil(frameDeltaMs / FIXED_STEP_MS) + 8);
+        ticksToSimulate = Math.min(ticksToSimulate, hardCap);
+      }
 
       for (let i = 0; i < ticksToSimulate; i++) {
         simulationTick++;
         stepSimulation();
       }
 
-      lastTargetTick = targetTick;
+      lastTargetTick += ticksToSimulate;
     }
   }
 
@@ -3824,6 +3959,7 @@ window.openSkins = openSkins;
 window.openSettings = openSettings;
 window.toggleHistoryPanel = toggleHistoryPanel;
 window.toggleHistoryGameDetails = toggleHistoryGameDetails;
+window.toggleHistoryMatchDetails = toggleHistoryMatchDetails;
 window.closeEndGameAndExit = closeEndGameAndExit;
 
 </script>
