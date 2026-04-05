@@ -473,7 +473,7 @@ body {
   <!-- Финальное окно -->
 <div id="endGameModal">
   <div class="endGameBox">
-    <div class="endGameTitle">Победитель</div>
+    <div id="endGameTitle" class="endGameTitle">Победитель</div>
     <div id="endGameWinnerName" class="endGameWinnerName">—</div>
 
     <table class="endGamePlaces">
@@ -1026,12 +1026,19 @@ function showEndGameModal(resultData) {
   if (!resultData || endGameShown) return;
 
   const modal = document.getElementById("endGameModal");
+  const titleEl = document.getElementById("endGameTitle");
   const winnerNameEl = document.getElementById("endGameWinnerName");
   const placesBody = document.getElementById("endGamePlacesBody");
 
-  if (!modal || !winnerNameEl || !placesBody) return;
+  if (!modal || !titleEl || !winnerNameEl || !placesBody) return;
 
-  winnerNameEl.textContent = resultData.winner || "—";
+  const winnerLabel = String(resultData.winner || "").trim();
+  const isDraw = winnerLabel.toLowerCase() === "ничья";
+
+  titleEl.textContent = isDraw ? "Ничья" : "Победитель";
+  winnerNameEl.textContent = isDraw ? "" : (winnerLabel || "—");
+  winnerNameEl.style.display = isDraw ? "none" : "block";
+
   placesBody.innerHTML = "";
 
   const places = buildEndGamePlaces(resultData.results);
