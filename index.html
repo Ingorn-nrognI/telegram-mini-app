@@ -30,20 +30,10 @@ body {
 .top-bar {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
   padding: 20px;
   background: rgba(0,0,0,0.3);
   color: white;
   font-size: 20px;
-  position: relative;
-  z-index: 20;
-}
-
-.top-bar-left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
 }
 
 .settings {
@@ -51,36 +41,7 @@ body {
   font-size: 24px;
 }
 
-.mode-back-btn {
-  display: none;
-  padding: 8px 14px;
-  border-radius: 18px;
-  background: rgba(0,0,0,0.35);
-  color: white;
-  font-size: 15px;
-  font-weight: bold;
-  cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.12);
-}
-
-.mode-back-btn.visible {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Экраны меню */
-.menu-screen {
-  display: none;
-  flex: 1;
-  position: relative;
-}
-
-.menu-screen.active {
-  display: flex;
-  flex-direction: column;
-}
-
+/* Центр */
 .main {
   flex: 1;
   display: flex;
@@ -92,92 +53,9 @@ body {
   color: #FFD700;
   text-shadow: 3px 3px 8px rgba(0,0,0,0.6);
   letter-spacing: 2px;
-  text-align: center;
-  padding: 20px;
-  box-sizing: border-box;
 }
 
-.mode-title {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 58px;
-  font-weight: bold;
-  font-family: 'Arial Black', sans-serif;
-  color: #FFD700;
-  text-shadow: 3px 3px 8px rgba(0,0,0,0.6);
-  letter-spacing: 2px;
-  text-align: center;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.start-play-wrap {
-  position: fixed;
-  left: 50%;
-  bottom: 26px;
-  transform: translateX(-50%);
-  width: min(45%, 260px);
-  min-width: 170px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  z-index: 25;
-}
-
-.main-play-btn {
-  width: 100%;
-  padding: 16px 20px;
-  text-align: center;
-  color: white;
-  cursor: pointer;
-  border-radius: 28px;
-  background: #28a745;
-  font-weight: bold;
-  font-size: 22px;
-  transition: 0.2s;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  box-sizing: border-box;
-}
-
-.main-play-btn:hover {
-  background: #23913d;
-}
-
-.mode-popup {
-  display: none;
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 10px;
-  border-radius: 24px;
-  background: rgba(0, 0, 0, 0.75);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  box-sizing: border-box;
-}
-
-.mode-popup.open {
-  display: block;
-}
-
-.mode-popup-btn {
-  width: 100%;
-  padding: 16px 14px;
-  text-align: center;
-  color: white;
-  cursor: pointer;
-  border-radius: 18px;
-  background: #444;
-  font-weight: bold;
-  transition: 0.2s;
-  box-sizing: border-box;
-}
-
-.mode-popup-btn:hover {
-  background: #555;
-}
-
-/* Нижнее меню режима */
+/* Нижнее меню */
 .bottom-bar {
   position: fixed;
   bottom: 20px;
@@ -192,10 +70,6 @@ body {
   border-radius: 50px;
   box-sizing: border-box;
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
-
-.mode-bottom-bar {
-  z-index: 25;
 }
 
 .bottom-btn {
@@ -218,7 +92,6 @@ body {
 .bottom-btn:hover {
   background: #555;
 }
-
 /* Меню */
 #menu {
   position: absolute;
@@ -294,7 +167,23 @@ body {
   z-index: 10 !important;
 }
 
-/* ===== КОМНАТЫ ===== */
+.menu-reset .main {
+  font-size: 24px !important;
+  color: white !important;
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.menu-reset .top-bar {
+  display: flex !important;
+  justify-content: space-between !important;
+  padding: 15px !important;
+  color: white !important;
+  font-size: 18px !important;
+}
+  /* ===== КОМНАТЫ ===== */
 #roomsModal {
   display: none;
   position: fixed;
@@ -413,35 +302,18 @@ body {
 <body>
 
 <!-- МЕНЮ -->
-<div id="menu" onclick="handleMenuBackgroundClick(event)">
+<div id="menu">
   <div class="top-bar">
-    <div class="top-bar-left">
-      <div id="nickname">Игрок</div>
-      <div id="modeBackButton" class="mode-back-btn" onclick="exitGameMode()">← Назад</div>
-    </div>
+    <div id="nickname">Игрок</div>
     <div class="settings" onclick="openSettings()">⚙️</div>
   </div>
 
-  <div id="homeScreen" class="menu-screen active">
-    <div class="main">Bobr World</div>
+  <div class="main">BobrUp</div>
 
-    <div class="start-play-wrap">
-      <div id="modePopup" class="mode-popup">
-        <div class="mode-popup-btn" onclick="enterBobrRunMode(event)">Bobr Run</div>
-      </div>
-
-      <div id="mainPlayButton" class="main-play-btn" onclick="toggleModePopup(event)">▶ Играть</div>
-    </div>
-  </div>
-
-  <div id="bobrRunScreen" class="menu-screen">
-    <div class="mode-title">Bobr Run</div>
-
-    <div class="bottom-bar mode-bottom-bar">
-      <div class="bottom-btn" onclick="openLeaderboard()">📊 Таблица</div>
-      <div class="bottom-btn play" onclick="openRooms()">▶ Играть</div>
-      <div class="bottom-btn" onclick="openSkins()">🎨 Скины</div>
-    </div>
+  <div class="bottom-bar">
+    <div class="bottom-btn" onclick="openLeaderboard()">📊 Таблица</div>
+    <div class="bottom-btn play" onclick="openRooms()">▶ Играть</div>
+    <div class="bottom-btn" onclick="openSkins()">🎨 Скины</div>
   </div>
 </div>
 
@@ -928,73 +800,6 @@ function getCurrentPlayer() {
 
 const currentPlayer = getCurrentPlayer();
 document.getElementById("nickname").innerText = currentPlayer.name;
-
-let currentMenuView = "home";
-
-function setMenuView(view) {
-  currentMenuView = view;
-
-  const homeScreen = document.getElementById("homeScreen");
-  const bobrRunScreen = document.getElementById("bobrRunScreen");
-  const backButton = document.getElementById("modeBackButton");
-  const modePopup = document.getElementById("modePopup");
-
-  if (homeScreen) {
-    homeScreen.classList.toggle("active", view === "home");
-  }
-
-  if (bobrRunScreen) {
-    bobrRunScreen.classList.toggle("active", view === "mode");
-  }
-
-  if (backButton) {
-    backButton.classList.toggle("visible", view === "mode");
-  }
-
-  if (modePopup) {
-    modePopup.classList.remove("open");
-  }
-}
-
-function toggleModePopup(event) {
-  if (event) event.stopPropagation();
-
-  const modePopup = document.getElementById("modePopup");
-  if (!modePopup) return;
-
-  modePopup.classList.toggle("open");
-}
-
-function closeModePopup() {
-  const modePopup = document.getElementById("modePopup");
-  if (!modePopup) return;
-
-  modePopup.classList.remove("open");
-}
-
-function handleMenuBackgroundClick(event) {
-  const modePopup = document.getElementById("modePopup");
-  const mainPlayButton = document.getElementById("mainPlayButton");
-
-  if (!modePopup || !mainPlayButton) return;
-
-  const clickedInsidePopup = modePopup.contains(event.target);
-  const clickedPlayButton = mainPlayButton.contains(event.target);
-
-  if (!clickedInsidePopup && !clickedPlayButton) {
-    closeModePopup();
-  }
-}
-
-function enterBobrRunMode(event) {
-  if (event) event.stopPropagation();
-  setMenuView("mode");
-}
-
-function exitGameMode() {
-  closeRooms();
-  setMenuView("home");
-}
 
 // ========================
 // КНОПКИ МЕНЮ
@@ -1965,26 +1770,35 @@ function openSettings() {
 function initGame() {
 
   function fullResetMenu() {
+    // Полностью очищаем inline-стили
     document.body.removeAttribute("style");
-
+    
     const menu = document.getElementById("menu");
-    if (menu) {
-      menu.removeAttribute("style");
-      menu.style.display = "flex";
-      menu.classList.add("menu-reset");
-
-      requestAnimationFrame(() => {
-        menu.classList.remove("menu-reset");
-      });
-    }
-
-    const gameCanvas = document.getElementById("game");
-    if (gameCanvas) {
-      gameCanvas.style.display = "none";
-    }
-
-    closeRooms();
-    setMenuView("mode");
+    menu.removeAttribute("style");
+    
+    const topBar = document.querySelector(".top-bar");
+    if (topBar) topBar.removeAttribute("style");
+    
+    const mainDiv = document.querySelector(".main");
+    if (mainDiv) mainDiv.removeAttribute("style");
+    
+    const bottomBar = document.querySelector(".bottom-bar");
+    if (bottomBar) bottomBar.removeAttribute("style");
+    
+    const btns = document.querySelectorAll(".bottom-btn");
+    btns.forEach(btn => btn.removeAttribute("style"));
+    
+    // Восстанавливаем display
+    menu.style.display = "flex";
+    document.getElementById("game").style.display = "none";
+    
+    // Принудительно применяем CSS класс для восстановления
+    menu.classList.add("menu-reset");
+    
+    // Минимальная задержка (один кадр) - незаметно для пользователя
+    requestAnimationFrame(() => {
+      menu.classList.remove("menu-reset");
+    });
   }
 
   // Защита от повторного запуска
@@ -2479,30 +2293,13 @@ playerState.alive = !playerLost;
         if (!doc.exists) return;
 
         const room = doc.data();
-        const pendingFinish = room?.gameState?.pendingFinish;
         let finalScore = score;
 
-        // Если это тот самый последний прыжок после смерти второго игрока,
-        // победителю обязательно засчитываем +1 за это же бревно.
-        if (
-          pendingFinish?.active === true &&
-          pendingFinish.winnerId === playerId &&
-          pendingFinish.resolved !== true
-        ) {
-          const loserScore = Number(pendingFinish.loserScore || 0);
-          finalScore = Math.max(score, loserScore + 1);
-          score = finalScore;
-
-          await roomRef.update({
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            [`gameState.playersData.${playerId}.score`]: finalScore,
-            [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
-            "gameState.pendingFinish.resolved": true,
-            "gameState.pendingFinish.resolvedAt": Date.now(),
-            "gameState.pendingFinish.finalWinnerScore": finalScore
-          });
-
-          await checkWinner();
+        // Если это последний прыжок в дуэли 1v1,
+        // завершаем матч сразу после перепрыгивания того самого бревна.
+        // Здесь есть и fallback на случай, когда pendingFinish ещё не успел прилететь из Firestore.
+        const duelResolved = await resolvePendingDuelFinishIfNeeded(roomRef, room, finalScore);
+        if (duelResolved) {
           return;
         }
 
@@ -2723,6 +2520,63 @@ async function markPendingDuelFinish() {
   } catch (e) {
     console.error("Ошибка markPendingDuelFinish:", e);
   }
+}
+
+async function resolvePendingDuelFinishIfNeeded(roomRef, room, fallbackFinalScore) {
+  if (!roomRef || !room) return false;
+
+  const playersData = room?.gameState?.playersData || {};
+  const pendingFinish = room?.gameState?.pendingFinish || null;
+
+  const alivePlayers = Object.entries(playersData).filter(([_, p]) => {
+    return p && p.alive === true && p.leftRoom !== true;
+  });
+
+  const loserPlayers = Object.entries(playersData).filter(([_, p]) => {
+    return p && p.lost === true && p.leftRoom !== true;
+  });
+
+  const isFallbackDuelState =
+    alivePlayers.length === 1 &&
+    loserPlayers.length === 1 &&
+    alivePlayers[0][0] === playerId;
+
+  const canResolveExistingPending =
+    pendingFinish?.active === true &&
+    pendingFinish.winnerId === playerId &&
+    pendingFinish.resolved !== true;
+
+  if (!canResolveExistingPending && !isFallbackDuelState) {
+    return false;
+  }
+
+  const loserScore = canResolveExistingPending
+    ? Number(pendingFinish.loserScore || 0)
+    : Number(loserPlayers[0]?.[1]?.score || 0);
+
+  const finalScore = Math.max(Number(fallbackFinalScore || 0), loserScore + 1);
+  score = finalScore;
+
+  const updateData = {
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    [`gameState.playersData.${playerId}.score`]: finalScore,
+    [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
+    "gameState.pendingFinish": {
+      active: true,
+      winnerId: playerId,
+      loserId: canResolveExistingPending
+        ? pendingFinish.loserId
+        : loserPlayers[0]?.[0] || null,
+      loserScore,
+      resolved: true,
+      resolvedAt: Date.now(),
+      finalWinnerScore: finalScore
+    }
+  };
+
+  await roomRef.update(updateData);
+  await checkWinner();
+  return true;
 }
 
 function buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish) {
