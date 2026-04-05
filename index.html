@@ -1774,7 +1774,7 @@ async function createRoom() {
 }
   
 async function joinRoom(roomId) {
-  if (isJoiningRoom) return;
+  if (isJoiningRoom || !roomId) return;
   isJoiningRoom = true;
 
   const { id, name } = getCurrentPlayer();
@@ -1782,14 +1782,18 @@ async function joinRoom(roomId) {
   const list = document.getElementById("roomsList");
   const createBtn = document.getElementById("createRoomBtn");
 
-  createBtn.style.display = "none";
-  list.innerHTML = `
-    Подключение к комнате...<br><br>
-    Игрок: ${name}
-  `;
+  if (createBtn) createBtn.style.display = "none";
+  if (list) {
+    list.innerHTML = `
+      Подключение к комнате...<br><br>
+      Игрок: ${name}
+    `;
+  }
 
   try {
     await cleanupInactivePlayers(roomId);
+
+    const now = Date.now();
 
     await db.runTransaction(async (transaction) => {
       const doc = await transaction.get(roomRef);
@@ -1804,45 +1808,39 @@ async function joinRoom(roomId) {
         throw new Error("ROOM_DATA_ERROR");
       }
 
-      if (room.status === "finished") {
+      if (room.status === "finished" || room.gameState?.finished === true) {
         throw new Error("ROOM_FINISHED");
       }
 
-      if (room.playerIds.length >= 3 && !room.playerIds.includes(id)) {
+      const currentIds = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean) : [];
+      const alreadyInRoom = currentIds.includes(id);
+
+      if (currentIds.length >= 3 && !alreadyInRoom) {
         throw new Error("ROOM_FULL");
       }
 
-      const playerIds = Array.isArray(room.playerIds) ? [...room.playerIds] : [];
-      const playerNames = room.playerNames || {};
-
-      if (!playerIds.includes(id)) {
-        playerIds.push(id);
-      }
-
+      const playerIds = alreadyInRoom ? [...currentIds] : [...currentIds, id];
+      const playerNames = { ...(room.playerNames || {}) };
       playerNames[id] = name;
-
-      const now = Date.now();
 
       const updateData = {
         playerIds,
         playerNames,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         [`gameState.playersReady.${id}`]: false,
-        [`gameState.playersData.${id}`]: {
-          name,
-          alive: true,
-          lost: false,
-          leftRoom: false,
-          position: 0,
-          score: 0,
-          firstObstacleResolved: false,
-          online: true,
-          lastSeen: now,
-          lastActionAt: now,
-          closedAt: null,
-          gameLoaded: false,
-          gameLoadedAt: null
-        }
+        [`gameState.playersData.${id}.name`]: name,
+        [`gameState.playersData.${id}.alive`]: true,
+        [`gameState.playersData.${id}.lost`]: false,
+        [`gameState.playersData.${id}.leftRoom`]: false,
+        [`gameState.playersData.${id}.position`]: 0,
+        [`gameState.playersData.${id}.score`]: 0,
+        [`gameState.playersData.${id}.firstObstacleResolved`]: false,
+        [`gameState.playersData.${id}.online`]: true,
+        [`gameState.playersData.${id}.lastSeen`]: now,
+        [`gameState.playersData.${id}.lastActionAt`]: now,
+        [`gameState.playersData.${id}.closedAt`]: null,
+        [`gameState.playersData.${id}.gameLoaded`]: false,
+        [`gameState.playersData.${id}.gameLoadedAt`]: null
       };
 
       if (playerIds.length >= 2 && !room.startAt && !room.gameState?.started) {
@@ -1852,46 +1850,14 @@ async function joinRoom(roomId) {
       transaction.update(roomRef, updateData);
     });
 
+    const freshDoc = await roomRef.get();
+    if (!freshDoc.exists) {
+      throw new Error("ROOM_DELETED");
+    }
+
     currentRoomId = roomId;
     multiplayerGameStarted = false;
-
-    const now = Date.now();
-
-    openRoomScreen(roomId, {
-      hostId: null,
-      playerIds: [id],
-      playerNames: { [id]: name },
-      status: "waiting",
-      created: now,
-      updatedAt: now,
-      startAt: null,
-        gameState: {
-        started: false,
-        finished: false,
-        winner: null,
-        countdownStartedAt: null,
-        playersReady: {
-          [id]: false
-        },
-        playersData: {
-          [id]: {
-            name,
-            alive: true,
-            lost: false,
-            leftRoom: false,
-            position: 0,
-            score: 0,
-            firstObstacleResolved: false,
-            online: true,
-            lastSeen: now,
-            lastActionAt: now,
-            closedAt: null,
-            gameLoaded: false,
-            gameLoadedAt: null
-          }
-        }
-      }
-    });
+    openRoomScreen(roomId, freshDoc.data());
 
   } catch (e) {
     if (currentRoomListener) {
@@ -1901,8 +1867,10 @@ async function joinRoom(roomId) {
 
     stopRoomCountdown();
     stopRoomPresence();
-    document.getElementById("createRoomBtn").style.display = "block";
-    
+
+    const btn = document.getElementById("createRoomBtn");
+    if (btn) btn.style.display = "block";
+
     if (e.message === "ROOM_DELETED") {
       alert("Комната уже удалена");
     } else if (e.message === "ROOM_DATA_ERROR") {
