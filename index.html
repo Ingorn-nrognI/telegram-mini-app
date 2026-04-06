@@ -2537,6 +2537,7 @@ function initGame() {
     closeRooms();
     setMenuView("mode");
     latestGameRoomState = null;
+    latestReadyState = { readyCount: 0, totalCount: 1 };
     loadGameHistory();
   }
 
@@ -2624,6 +2625,10 @@ let gameStarted = false;   // игра ещё не началась
 let startTimer = 3;        // таймер
 let showStartText = true;  // показывать ли START
 let latestGameRoomState = null;
+let latestReadyState = {
+  readyCount: 0,
+  totalCount: 1
+};
 let simulationTick = 0;
 let lastTargetTick = 0;
 let lastCountdownSecond = null;
@@ -3175,18 +3180,30 @@ playerState.alive = !playerLost;
     // Пока не получили общее серверное время старта,
     // показываем экран подготовки и ждём всех игроков.
     if (!syncedCountdownStartedAtMs) {
-      const playerIds = Array.isArray(latestGameRoomState?.playerIds)
-        ? latestGameRoomState.playerIds.filter(Boolean)
-        : [];
-      const playersReady = latestGameRoomState?.gameState?.playersReady || {};
-      const readyCount = playerIds.filter(pid => playersReady[pid] === true).length;
-      const totalCount = playerIds.length || 1;
+      const readyCount = Number(latestReadyState?.readyCount || 0);
+      const totalCount = Math.max(1, Number(latestReadyState?.totalCount || 1));
+      const progress = Math.max(0, Math.min(1, readyCount / totalCount));
+
+      const barWidth = Math.min(canvas.width * 0.64, 360);
+      const barHeight = 20;
+      const barX = (canvas.width - barWidth) / 2;
+      const barY = canvas.height / 2 + 6;
+      const fillWidth = Math.max(0, Math.min(barWidth, barWidth * progress));
 
       ctx.font = "bold 34px Arial";
-      ctx.fillText("Загрузка игры...", canvas.width / 2, canvas.height / 2 - 16);
+      ctx.fillText(`Подключение игроков ${readyCount}/${totalCount}`, canvas.width / 2, canvas.height / 2 - 26);
 
-      ctx.font = "24px Arial";
-      ctx.fillText(`Готово игроков: ${readyCount}/${totalCount}`, canvas.width / 2, canvas.height / 2 + 26);
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      roundRect(ctx, barX, barY, barWidth, barHeight, 10);
+
+      if (fillWidth > 0) {
+        ctx.fillStyle = "#28a745";
+        roundRect(ctx, barX, barY, fillWidth, barHeight, 10);
+      }
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "20px Arial";
+      ctx.fillText("Ожидаем, пока игра загрузится у всех...", canvas.width / 2, barY + 52);
       return;
     }
 
@@ -3875,34 +3892,23 @@ function stepSimulation() {
   }
 }
 
-async function startGameFlow() {
-  syncedCountdownStartedAtMs = null;
-  startTimer = 3;
-  showStartText = true;
-  gameStarted = false;
-  simulationTick = 0;
-  lastTargetTick = 0;
-  lastCountdownSecond = null;
-  resetSpawnState();
+function updateReadyStateFromRoom(room) {
+  const playerIds = Array.isArray(room?.playerIds)
+    ? room.playerIds.filter(Boolean)
+    : [];
 
-  lastTime = performance.now();
-  requestAnimationFrame(loop);
+  const playersReady = room?.gameState?.playersReady || {};
+  const readyCount = playerIds.filter(pid => playersReady[pid] === true).length;
 
-  try {
-    await prepareGameAssets();
-  } catch (e) {
-    console.error("Ошибка загрузки ассетов:", e);
-  }
+  latestReadyState = {
+    readyCount,
+    totalCount: playerIds.length || 1
+  };
+}
 
-  await markPlayerReadyForGame(currentRoomId);
-
-  stopRoomReadyPoll();
+function startGameReadyListener(roomRef) {
   stopGameCountdownStartListener();
 
-  const roomRef = db.collection("rooms").doc(currentRoomId);
-
-  // Слушаем документ комнаты в реальном времени до тех пор,
-  // пока сервер не выставит ОБЩЕЕ countdownStartedAt.
   gameCountdownStartListener = roomRef.onSnapshot(async (doc) => {
     if (!doc.exists || !currentRoomId) return;
 
@@ -3912,6 +3918,7 @@ async function startGameFlow() {
 
       latestGameRoomState = room;
       syncServerClockFromRoom(room);
+      updateReadyStateFromRoom(room);
 
       const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
 
@@ -3927,6 +3934,80 @@ async function startGameFlow() {
       console.error("Ошибка gameCountdownStartListener:", e);
     }
   });
+}
+
+async function startGameFlow() {
+  syncedCountdownStartedAtMs = null;
+  startTimer = 3;
+  showStartText = true;
+  gameStarted = false;
+  simulationTick = 0;
+  lastTargetTick = 0;
+  lastCountdownSecond = null;
+  latestReadyState = {
+    readyCount: 0,
+    totalCount: Array.isArray(latestGameRoomState?.playerIds)
+      ? Math.max(1, latestGameRoomState.playerIds.filter(Boolean).length)
+      : 1
+  };
+  resetSpawnState();
+
+  lastTime = performance.now();
+  requestAnimationFrame(loop);
+
+  const roomRef = db.collection("rooms").doc(currentRoomId);
+
+  stopRoomReadyPoll();
+  startGameReadyListener(roomRef);
+
+  try {
+    const initialDoc = await roomRef.get();
+    if (initialDoc.exists) {
+      const initialRoom = initialDoc.data();
+      latestGameRoomState = initialRoom;
+      syncServerClockFromRoom(initialRoom);
+      updateReadyStateFromRoom(initialRoom);
+
+      const initialCountdownStartedAt = getRoomTimeMs(initialRoom?.gameState?.countdownStartedAt);
+      if (initialCountdownStartedAt) {
+        syncedCountdownStartedAtMs = initialCountdownStartedAt;
+      }
+    }
+  } catch (e) {
+    console.error("Ошибка initial room state:", e);
+  }
+
+  try {
+    await prepareGameAssets();
+  } catch (e) {
+    console.error("Ошибка загрузки ассетов:", e);
+  }
+
+  latestReadyState.readyCount = Math.min(
+    latestReadyState.totalCount,
+    Math.max(latestReadyState.readyCount, 1)
+  );
+
+  await markPlayerReadyForGame(currentRoomId);
+
+  try {
+    const roomAfterReadyDoc = await roomRef.get();
+    if (roomAfterReadyDoc.exists) {
+      const roomAfterReady = roomAfterReadyDoc.data();
+      latestGameRoomState = roomAfterReady;
+      syncServerClockFromRoom(roomAfterReady);
+      updateReadyStateFromRoom(roomAfterReady);
+
+      const countdownStartedAt = getRoomTimeMs(roomAfterReady?.gameState?.countdownStartedAt);
+      if (countdownStartedAt) {
+        syncedCountdownStartedAtMs = countdownStartedAt;
+        stopRoomReadyPoll();
+        stopGameCountdownStartListener();
+      }
+    }
+  } catch (e) {
+    console.error("Ошибка roomAfterReady:", e);
+  }
 
   // Резервный poll на случай редкого пропуска realtime-снапшота.
   roomReadyPollInterval = setInterval(async () => {
@@ -3941,6 +4022,7 @@ async function startGameFlow() {
 
       latestGameRoomState = room;
       syncServerClockFromRoom(room);
+      updateReadyStateFromRoom(room);
 
       const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
 
