@@ -3182,28 +3182,12 @@ playerState.alive = !playerLost;
     if (!syncedCountdownStartedAtMs) {
       const readyCount = Number(latestReadyState?.readyCount || 0);
       const totalCount = Math.max(1, Number(latestReadyState?.totalCount || 1));
-      const progress = Math.max(0, Math.min(1, readyCount / totalCount));
-
-      const barWidth = Math.min(canvas.width * 0.64, 360);
-      const barHeight = 20;
-      const barX = (canvas.width - barWidth) / 2;
-      const barY = canvas.height / 2 + 6;
-      const fillWidth = Math.max(0, Math.min(barWidth, barWidth * progress));
 
       ctx.font = "bold 34px Arial";
-      ctx.fillText(`Подключение игроков ${readyCount}/${totalCount}`, canvas.width / 2, canvas.height / 2 - 26);
+      ctx.fillText("Загрузка игры...", canvas.width / 2, canvas.height / 2 - 16);
 
-      ctx.fillStyle = "rgba(255,255,255,0.18)";
-      roundRect(ctx, barX, barY, barWidth, barHeight, 10);
-
-      if (fillWidth > 0) {
-        ctx.fillStyle = "#28a745";
-        roundRect(ctx, barX, barY, fillWidth, barHeight, 10);
-      }
-
-      ctx.fillStyle = "#fff";
-      ctx.font = "20px Arial";
-      ctx.fillText("Ожидаем, пока игра загрузится у всех...", canvas.width / 2, barY + 52);
+      ctx.font = "24px Arial";
+      ctx.fillText(`Готово игроков: ${readyCount}/${totalCount}`, canvas.width / 2, canvas.height / 2 + 26);
       return;
     }
 
