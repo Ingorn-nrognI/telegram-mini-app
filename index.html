@@ -728,6 +728,8 @@ let roomReadyPollInterval = null;
 let gameCountdownStartListener = null;
 let historyLoading = false;
 let expandedHistoryMatchId = null;
+let historyRealtimeUnsubscribe = null;
+let latestHistoryEntries = [];
 
 const GAME_READY_BUFFER_MS = 350;
   
@@ -1223,6 +1225,22 @@ function closeHistoryPanel() {
   if (!historyPanel) return;
 
   historyPanel.classList.remove("open");
+  stopHistoryRealtimeListener();
+}
+
+
+function stopHistoryRealtimeListener() {
+  if (historyRealtimeUnsubscribe) {
+    historyRealtimeUnsubscribe();
+    historyRealtimeUnsubscribe = null;
+  }
+}
+
+function refreshHistoryPanelIfOpen() {
+  const historyPanel = document.getElementById("historyPanel");
+  if (historyPanel && historyPanel.classList.contains("open")) {
+    loadGameHistory({ force: true, useRealtime: true });
+  }
 }
 
 function formatHistoryDate(value) {
@@ -1326,9 +1344,12 @@ function renderHistoryEntries(entries) {
   panel.innerHTML = `${title}<div class="history-scroll-area"><div class="history-panel-text">${items}</div></div>`;
 }
 
-async function loadGameHistory() {
+async function loadGameHistory(options = {}) {
+  const { force = false, useRealtime = true } = options;
   const panel = document.getElementById("historyPanel");
-  if (!panel || historyLoading) return;
+  if (!panel) return;
+
+  if (historyLoading && !force) return;
 
   historyLoading = true;
   panel.innerHTML = `
@@ -1338,17 +1359,31 @@ async function loadGameHistory() {
 
   try {
     const { id } = getCurrentPlayer();
-    const snapshot = await getHistoryCollectionRef(id)
+    const query = getHistoryCollectionRef(id)
       .orderBy("playedAt", "desc")
-      .limit(20)
-      .get();
+      .limit(20);
 
-    const entries = [];
+    const snapshot = await query.get();
+
+    latestHistoryEntries = [];
     snapshot.forEach((doc) => {
-      entries.push(doc.data() || {});
+      latestHistoryEntries.push(doc.data() || {});
     });
 
-    renderHistoryEntries(entries);
+    renderHistoryEntries(latestHistoryEntries);
+
+    if (useRealtime) {
+      stopHistoryRealtimeListener();
+      historyRealtimeUnsubscribe = query.onSnapshot((liveSnapshot) => {
+        latestHistoryEntries = [];
+        liveSnapshot.forEach((doc) => {
+          latestHistoryEntries.push(doc.data() || {});
+        });
+        renderHistoryEntries(latestHistoryEntries);
+      }, (e) => {
+        console.error("Ошибка realtime истории игр:", e);
+      });
+    }
   } catch (e) {
     console.error("Ошибка загрузки истории игр:", e);
     panel.innerHTML = `
@@ -1427,13 +1462,16 @@ async function saveMatchHistoryForAllPlayers(roomId, roomData) {
 
 async function ensureCurrentMatchHistorySaved(roomId, roomData) {
   if (!roomId || !roomData?.gameState?.finished || !Array.isArray(roomData?.gameState?.results)) {
-    return;
+    return false;
   }
 
   try {
     await saveMatchHistoryForAllPlayers(roomId, roomData);
+    refreshHistoryPanelIfOpen();
+    return true;
   } catch (e) {
     console.error("Ошибка сохранения истории матча:", e);
+    return false;
   }
 }
 
@@ -1589,6 +1627,9 @@ async function closeEndGameAndExit() {
   if (typeof savedExitHandler === "function") {
     await savedExitHandler();
     hideEndGameModal();
+    setTimeout(() => {
+      loadGameHistory({ force: true, useRealtime: false });
+    }, 500);
     return;
   }
 
@@ -2466,7 +2507,10 @@ function initGame() {
     closeRooms();
     setMenuView("mode");
     latestGameRoomState = null;
-    loadGameHistory();
+    loadGameHistory({ force: true, useRealtime: false });
+    setTimeout(() => {
+      loadGameHistory({ force: true, useRealtime: false });
+    }, 900);
   }
 
   // Защита от повторного запуска
