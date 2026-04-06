@@ -709,6 +709,7 @@ let multiplayerGameStarted = false;
 
 let endGameWatcher = null;
 let endGameShown = false;
+let isClosingEndGame = false;
 let openEndGameForCurrentMatch = null;
 let exitEndGameForCurrentMatch = null;
 
@@ -1503,7 +1504,7 @@ function startGame() {
 }
 
 function showEndGameModal(resultData) {
-  if (!resultData || endGameShown) return;
+  if (!resultData || endGameShown || isClosingEndGame) return;
 
   const modal = document.getElementById("endGameModal");
   const titleEl = document.getElementById("endGameTitle");
@@ -1534,6 +1535,7 @@ function showEndGameModal(resultData) {
   });
 
   resetEndGameUIState();
+  isClosingEndGame = false;
   modal.style.display = "flex";
   endGameShown = true;
 }
@@ -1546,6 +1548,7 @@ function hideEndGameModal() {
     modal.style.pointerEvents = "none";
     modal.setAttribute("aria-hidden", "true");
   }
+  endGameShown = false;
 }
 
 function forceCloseEndGameUI() {
@@ -1556,6 +1559,7 @@ function forceCloseEndGameUI() {
   modal.style.visibility = "hidden";
   modal.style.pointerEvents = "none";
   modal.setAttribute("aria-hidden", "true");
+  endGameShown = false;
 }
 
 function resetEndGameUIState() {
@@ -1565,6 +1569,7 @@ function resetEndGameUIState() {
   modal.style.visibility = "";
   modal.style.pointerEvents = "";
   modal.removeAttribute("aria-hidden");
+  isClosingEndGame = false;
 }
 
 function stopEndGameWatcher() {
@@ -1603,21 +1608,26 @@ function startRoomFinishWatcher(roomId) {
 }
 
 async function closeEndGameAndExit() {
-  hideEndGameModal();
+  if (isClosingEndGame) return;
+  isClosingEndGame = true;
+
+  forceCloseEndGameUI();
   stopEndGameWatcher();
-  endGameShown = false;
 
   const savedExitHandler = exitEndGameForCurrentMatch;
   openEndGameForCurrentMatch = null;
   exitEndGameForCurrentMatch = null;
 
-  if (typeof savedExitHandler === "function") {
-    await savedExitHandler();
-    hideEndGameModal();
-    return;
+  try {
+    if (typeof savedExitHandler === "function") {
+      await savedExitHandler();
+    }
+  } finally {
+    forceCloseEndGameUI();
+    setTimeout(forceCloseEndGameUI, 0);
+    setTimeout(forceCloseEndGameUI, 120);
+    setTimeout(() => { isClosingEndGame = false; }, 200);
   }
-
-  hideEndGameModal();
 }
   
 function openRooms() {
@@ -2486,6 +2496,7 @@ function initGame() {
 
     forceCloseEndGameUI();
     endGameShown = false;
+    isClosingEndGame = false;
     openEndGameForCurrentMatch = null;
     exitEndGameForCurrentMatch = null;
     closeRooms();
@@ -2684,6 +2695,7 @@ exitEndGameForCurrentMatch = async function() {
   forceCloseEndGameUI();
   stopEndGameWatcher();
   endGameShown = false;
+  isClosingEndGame = true;
   openEndGameForCurrentMatch = null;
   exitEndGameForCurrentMatch = null;
 
@@ -3437,6 +3449,7 @@ async function leaveAfterLoss() {
   showExitButton = false;
   forceCloseEndGameUI();
   endGameShown = false;
+  isClosingEndGame = false;
   openEndGameForCurrentMatch = null;
   exitEndGameForCurrentMatch = null;
 
