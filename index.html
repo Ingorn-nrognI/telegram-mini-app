@@ -710,6 +710,7 @@ let multiplayerGameStarted = false;
 let endGameWatcher = null;
 let endGameShown = false;
 let isClosingEndGame = false;
+let endGameExitHandled = false;
 let openEndGameForCurrentMatch = null;
 let exitEndGameForCurrentMatch = null;
 
@@ -1581,14 +1582,29 @@ function stopEndGameWatcher() {
 
 function startRoomFinishWatcher(roomId) {
   stopEndGameWatcher();
+  endGameExitHandled = false;
 
   const roomRef = db.collection("rooms").doc(roomId);
 
   endGameWatcher = roomRef.onSnapshot(async (doc) => {
-    if (!doc.exists) return;
+    if (!doc.exists) {
+      if (!endGameExitHandled && currentRoomId === roomId) {
+        endGameExitHandled = true;
+        await leaveAfterLoss();
+      }
+      return;
+    }
 
     const room = doc.data();
     if (!room || !room.gameState) return;
+
+    if (room.gameState.exitRequested === true) {
+      if (!endGameExitHandled && currentRoomId === roomId) {
+        endGameExitHandled = true;
+        await leaveAfterLoss();
+      }
+      return;
+    }
 
     if (room.gameState.finished === true && room.gameState.winner && room.gameState.results) {
       await ensureCurrentMatchHistorySaved(roomId, room);
@@ -1611,8 +1627,24 @@ async function closeEndGameAndExit() {
   if (isClosingEndGame) return;
   isClosingEndGame = true;
 
+  const roomId = currentRoomId;
+  const roomRef = roomId ? db.collection("rooms").doc(roomId) : null;
+
+  if (roomRef) {
+    try {
+      await roomRef.update({
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        "gameState.exitRequested": true,
+        "gameState.exitRequestedAt": firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) {
+      console.error("Ошибка общего выхода из финального окна:", e);
+    }
+  }
+
   forceCloseEndGameUI();
   stopEndGameWatcher();
+  endGameExitHandled = true;
 
   const savedExitHandler = exitEndGameForCurrentMatch;
   openEndGameForCurrentMatch = null;
@@ -1621,6 +1653,8 @@ async function closeEndGameAndExit() {
   try {
     if (typeof savedExitHandler === "function") {
       await savedExitHandler();
+    } else {
+      await leaveAfterLoss();
     }
   } finally {
     forceCloseEndGameUI();
@@ -2497,6 +2531,7 @@ function initGame() {
     forceCloseEndGameUI();
     endGameShown = false;
     isClosingEndGame = false;
+    endGameExitHandled = false;
     openEndGameForCurrentMatch = null;
     exitEndGameForCurrentMatch = null;
     closeRooms();
@@ -2690,30 +2725,13 @@ window.addEventListener("beforeunload", gameBeforeUnloadHandler);
 };
 
 exitEndGameForCurrentMatch = async function() {
-  const roomId = currentRoomId;
-
   forceCloseEndGameUI();
   stopEndGameWatcher();
   endGameShown = false;
   isClosingEndGame = true;
+  endGameExitHandled = true;
   openEndGameForCurrentMatch = null;
   exitEndGameForCurrentMatch = null;
-
-  try {
-    if (roomId) {
-      const roomRef = db.collection("rooms").doc(roomId);
-      const doc = await roomRef.get();
-
-      if (doc.exists) {
-        const room = doc.data();
-        if (room?.gameState?.finished) {
-          await roomRef.delete();
-        }
-      }
-    }
-  } catch (e) {
-    console.error("Ошибка удаления завершённой комнаты:", e);
-  }
 
   await leaveAfterLoss();
 };
@@ -3450,6 +3468,7 @@ async function leaveAfterLoss() {
   forceCloseEndGameUI();
   endGameShown = false;
   isClosingEndGame = false;
+  endGameExitHandled = false;
   openEndGameForCurrentMatch = null;
   exitEndGameForCurrentMatch = null;
 
