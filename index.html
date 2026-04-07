@@ -713,6 +713,7 @@ let isClosingEndGame = false;
 let endGameExitHandled = false;
 let openEndGameForCurrentMatch = null;
 let exitEndGameForCurrentMatch = null;
+let activeLeaveAfterLossHandler = null;
 
 let gameResizeHandler = null;
 let gameBeforeUnloadHandler = null;
@@ -1580,6 +1581,41 @@ function stopEndGameWatcher() {
   }
 }
 
+async function runActiveLeaveAfterLoss() {
+  if (typeof activeLeaveAfterLossHandler === "function") {
+    await activeLeaveAfterLossHandler();
+    return;
+  }
+
+  forceCloseEndGameUI();
+  stopEndGameWatcher();
+  currentRoomId = null;
+  resetServerClockSync();
+  stopRoomCountdown();
+  stopRoomPresence();
+  stopRoomReadyPoll();
+  stopGameCountdownStartListener();
+  multiplayerGameStarted = false;
+  endGameShown = false;
+  isClosingEndGame = false;
+  endGameExitHandled = false;
+  openEndGameForCurrentMatch = null;
+  exitEndGameForCurrentMatch = null;
+  activeLeaveAfterLossHandler = null;
+
+  const menu = document.getElementById("menu");
+  const game = document.getElementById("game");
+  const createRoomBtn = document.getElementById("createRoomBtn");
+
+  if (menu) menu.style.display = "flex";
+  if (game) game.style.display = "none";
+  if (createRoomBtn) createRoomBtn.style.display = "block";
+
+  closeRooms();
+  setMenuView("mode");
+  loadRooms();
+}
+
 function startRoomFinishWatcher(roomId) {
   stopEndGameWatcher();
   endGameExitHandled = false;
@@ -1590,7 +1626,7 @@ function startRoomFinishWatcher(roomId) {
     if (!doc.exists) {
       if (!endGameExitHandled && currentRoomId === roomId) {
         endGameExitHandled = true;
-        await leaveAfterLoss();
+        await runActiveLeaveAfterLoss();
       }
       return;
     }
@@ -1601,7 +1637,7 @@ function startRoomFinishWatcher(roomId) {
     if (room.gameState.exitRequested === true) {
       if (!endGameExitHandled && currentRoomId === roomId) {
         endGameExitHandled = true;
-        await leaveAfterLoss();
+        await runActiveLeaveAfterLoss();
       }
       return;
     }
@@ -1638,7 +1674,7 @@ async function closeEndGameAndExit() {
         "gameState.exitRequestedAt": firebase.firestore.FieldValue.serverTimestamp()
       });
     } catch (e) {
-      console.error("Ошибка общего выхода из финального окна:", e);
+      console.log("Пропуск общего выхода из финального окна:", e?.message || e);
     }
   }
 
@@ -1654,7 +1690,7 @@ async function closeEndGameAndExit() {
     if (typeof savedExitHandler === "function") {
       await savedExitHandler();
     } else {
-      await leaveAfterLoss();
+      await runActiveLeaveAfterLoss();
     }
   } finally {
     forceCloseEndGameUI();
@@ -2767,6 +2803,8 @@ window.addEventListener("beforeunload", gameBeforeUnloadHandler);
   showEndGameModal(resultData);
 };
 
+activeLeaveAfterLossHandler = leaveAfterLoss;
+
 exitEndGameForCurrentMatch = async function() {
   forceCloseEndGameUI();
   stopEndGameWatcher();
@@ -3434,12 +3472,6 @@ function buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish) {
     return null;
   }
 
-  // если pendingFinish завершён с finalWinnerScore,
-  // значит кто-то реально перепрыгнул последнее бревно — это НЕ ничья
-  if (pendingFinish?.finalWinnerScore != null) {
-    return null;
-  }
-
   const first = allLosersSorted[0];
   const second = allLosersSorted[1];
 
@@ -3447,9 +3479,20 @@ function buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish) {
 
   const firstScore = Number(first[1]?.score || 0);
   const secondScore = Number(second[1]?.score || 0);
+  const firstLostAt = Number(first[1]?.lostAt || 0);
+  const secondLostAt = Number(second[1]?.lostAt || 0);
+  const lostAtDiffMs = Math.abs(firstLostAt - secondLostAt);
+  const isSimultaneousCrash = firstLostAt > 0 && secondLostAt > 0 && lostAtDiffMs <= 1200;
 
   // ничья только если у двух последних одинаковый счёт
   if (firstScore !== secondScore) {
+    return null;
+  }
+
+  // Если pendingFinish уже успел записать временного победителя,
+  // но оба игрока умерли почти одновременно и со счётом вровень,
+  // это всё равно ничья.
+  if (pendingFinish?.finalWinnerScore != null && !isSimultaneousCrash) {
     return null;
   }
 
@@ -3481,6 +3524,7 @@ function buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish) {
 }
   
 async function leaveAfterLoss() {
+  activeLeaveAfterLossHandler = leaveAfterLoss;
   stopRoomReadyPoll();
   hideEndGameModal();
   stopEndGameWatcher();
@@ -3507,6 +3551,7 @@ async function leaveAfterLoss() {
   if (winnerCheckInterval) clearInterval(winnerCheckInterval);
 
   window.gameInitialized = false;
+  activeLeaveAfterLossHandler = null;
   showExitButton = false;
   forceCloseEndGameUI();
   endGameShown = false;
