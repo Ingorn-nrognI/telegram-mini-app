@@ -732,6 +732,75 @@ let gameCountdownStartListener = null;
 let historyLoading = false;
 let expandedHistoryMatchId = null;
 
+let roomMaintenanceLock = false;
+let lastRoomMaintenanceAt = 0;
+const ROOM_MAINTENANCE_THROTTLE_MS = 2500;
+
+function isRetryableFirestoreContentionError(error) {
+  const code = String(error?.code || "").toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
+
+  return (
+    code === "aborted" ||
+    code === "failed-precondition" ||
+    code === "cancelled" ||
+    message.includes("failed-precondition") ||
+    message.includes("too much contention") ||
+    message.includes("transaction") && message.includes("retry") ||
+    message.includes("current document") && message.includes("updatetime")
+  );
+}
+
+function reportFirestoreContention(context, error) {
+  if (isRetryableFirestoreContentionError(error)) {
+    console.warn(`${context}: пропущен конфликт одновременной записи`);
+    return true;
+  }
+
+  return false;
+}
+
+async function runRoomTransaction(roomRef, callback, context = "Firestore transaction") {
+  try {
+    return await db.runTransaction(async (transaction) => {
+      return await callback(transaction);
+    });
+  } catch (e) {
+    if (reportFirestoreContention(context, e)) {
+      return null;
+    }
+
+    throw e;
+  }
+}
+
+function isCurrentPlayerRoomHost(room) {
+  if (!room) return false;
+  const { id } = getCurrentPlayer();
+  return room.hostId === id;
+}
+
+async function maybeRunRoomMaintenance(roomId, room, { force = false } = {}) {
+  if (!roomId || !room) return;
+  if (!force && !isCurrentPlayerRoomHost(room)) return;
+  if (roomMaintenanceLock) return;
+
+  const now = Date.now();
+  if (!force && now - lastRoomMaintenanceAt < ROOM_MAINTENANCE_THROTTLE_MS) {
+    return;
+  }
+
+  roomMaintenanceLock = true;
+  lastRoomMaintenanceAt = now;
+
+  try {
+    await cleanupInactivePlayers(roomId);
+    await tryStartRoom(roomId);
+  } finally {
+    roomMaintenanceLock = false;
+  }
+}
+
 const GAME_READY_BUFFER_MS = 350;
   
 const ROOM_OFFLINE_GRACE_MS = 60 * 1000;              // 1 минута на возврат
@@ -924,7 +993,7 @@ async function cleanupInactivePlayers(roomId) {
   const roomRef = db.collection("rooms").doc(roomId);
 
   try {
-    await db.runTransaction(async (transaction) => {
+    await runRoomTransaction(roomRef, async (transaction) => {
       const doc = await transaction.get(roomRef);
       if (!doc.exists) return;
 
@@ -1022,7 +1091,7 @@ async function cleanupInactivePlayers(roomId) {
       });
 
       transaction.update(roomRef, updateData);
-    });
+    }, "cleanupInactivePlayers");
   } catch (e) {
     console.error("Ошибка cleanupInactivePlayers:", e);
   }
@@ -1185,7 +1254,7 @@ async function tryStartSyncedCountdown(roomId) {
   const roomRef = db.collection("rooms").doc(roomId);
 
   try {
-    await db.runTransaction(async (transaction) => {
+    await runRoomTransaction(roomRef, async (transaction) => {
       const doc = await transaction.get(roomRef);
       if (!doc.exists) return;
 
@@ -1208,7 +1277,7 @@ async function tryStartSyncedCountdown(roomId) {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         "gameState.countdownStartedAt": firebase.firestore.FieldValue.serverTimestamp()
       });
-    });
+    }, "tryStartSyncedCountdown");
   } catch (e) {
     console.error("Ошибка tryStartSyncedCountdown:", e);
   }
@@ -2010,7 +2079,7 @@ async function joinRoom(roomId) {
   try {
     await cleanupInactivePlayers(roomId);
 
-    await db.runTransaction(async (transaction) => {
+    await runRoomTransaction(roomRef, async (transaction) => {
       const doc = await transaction.get(roomRef);
 
       if (!doc.exists) {
@@ -2062,7 +2131,7 @@ async function joinRoom(roomId) {
       }
 
       transaction.update(roomRef, updateData);
-    });
+    }, "joinRoom");
 
     let confirmedRoom = await waitForRoomMembership(roomRef, id, 20, 250);
 
@@ -2156,7 +2225,7 @@ async function tryStartRoom(roomId) {
   const roomRef = db.collection("rooms").doc(roomId);
 
   try {
-    await db.runTransaction(async (transaction) => {
+    await runRoomTransaction(roomRef, async (transaction) => {
       const doc = await transaction.get(roomRef);
       if (!doc.exists) return;
 
@@ -2210,7 +2279,7 @@ async function tryStartRoom(roomId) {
           "gameState.started": true
         });
       }
-    });
+    }, "tryStartRoom");
   } catch (e) {
     console.error("Ошибка tryStartRoom:", e);
   }
@@ -2388,8 +2457,7 @@ function startSharedRoomCountdown(roomId) {
       return;
     }
 
-    await cleanupInactivePlayers(roomId);
-    await tryStartRoom(roomId);
+    await maybeRunRoomMaintenance(roomId, latestRoom);
   });
 
   roomCountdownInterval = setInterval(async () => {
@@ -2430,7 +2498,7 @@ function startSharedRoomCountdown(roomId) {
       return;
     }
 
-    await cleanupInactivePlayers(roomId);
+    await maybeRunRoomMaintenance(roomId, latestRoom);
 
     const playersCount = Array.isArray(latestRoom.playerIds) ? latestRoom.playerIds.length : 0;
     const startAtMs = getRoomTimeMs(latestRoom.startAt);
@@ -3435,7 +3503,7 @@ async function resolvePendingDuelFinishIfNeeded(roomRef, fallbackFinalScore) {
   let resolvedScore = Number(fallbackFinalScore || 0);
 
   try {
-    await db.runTransaction(async (transaction) => {
+    await runRoomTransaction(roomRef, async (transaction) => {
       const roomDoc = await transaction.get(roomRef);
       if (!roomDoc.exists) return;
 
@@ -3524,7 +3592,7 @@ async function resolvePendingDuelFinishIfNeeded(roomRef, fallbackFinalScore) {
         winner: winnerName,
         results: finalResults
       };
-    });
+    }, "resolvePendingDuelFinishIfNeeded");
   } catch (e) {
     console.error("Ошибка resolvePendingDuelFinishIfNeeded:", e);
     return false;
