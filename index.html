@@ -1097,15 +1097,68 @@ function startRoomPresence(roomId) {
   measurementId: "G-HPXPGC87TB"
 };
 
-firebase.initializeApp(firebaseConfig);
+function shouldIgnoreExternalConsoleError(message) {
+  const text = String(message || "").toLowerCase();
+  return (
+    text.includes("device-orientation") ||
+    text.includes("cache storage") ||
+    text.includes("cachedfiles") ||
+    text.includes("operation too large") ||
+    text.includes("unsupported feature") ||
+    text.includes("postevent")
+  );
+}
+
+function reportAppError(prefix, error) {
+  const message = error?.message || error?.reason?.message || error?.reason || error || "Неизвестная ошибка";
+
+  if (shouldIgnoreExternalConsoleError(message)) {
+    console.warn(prefix, message);
+    return;
+  }
+
+  console.error(prefix, error);
+}
+
+window.addEventListener("error", (event) => {
+  const message = event?.message || "";
+  if (shouldIgnoreExternalConsoleError(message)) {
+    event.preventDefault();
+    console.warn("Стороннее сообщение браузера/Telegram:", message);
+  }
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const reason = event?.reason;
+  const message = reason?.message || String(reason || "");
+
+  if (shouldIgnoreExternalConsoleError(message)) {
+    event.preventDefault();
+    console.warn("Поймано внешнее promise-сообщение:", message);
+    return;
+  }
+
+  console.error("Необработанная ошибка Promise:", reason);
+  event.preventDefault();
+});
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.firestore();
   
 // Получаем ник из Telegram
 // Получаем пользователя из Telegram
 let tgUser = null;
+const tgApp = window.Telegram?.WebApp || null;
 
-if (window.Telegram && Telegram.WebApp) {
-  tgUser = Telegram.WebApp.initDataUnsafe.user;
+try {
+  tgUser = tgApp?.initDataUnsafe?.user || null;
+  tgApp?.ready?.();
+  tgApp?.expand?.();
+} catch (e) {
+  reportAppError("Ошибка инициализации Telegram WebApp:", e);
+  tgUser = null;
 }
 
 async function markPlayerReadyForGame(roomId) {
