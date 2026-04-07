@@ -774,6 +774,20 @@ async function runRoomTransaction(roomRef, callback, context = "Firestore transa
   }
 }
 
+async function safeRoomUpdate(roomRef, updateData, context = "Firestore update") {
+  try {
+    await safeRoomUpdate(roomRef, updateData, "touchRoomPresence");
+    return true;
+  } catch (e) {
+    if (reportFirestoreContention(context, e)) {
+      return false;
+    }
+
+    throw e;
+  }
+}
+
+
 function isCurrentPlayerRoomHost(room) {
   if (!room) return false;
   const { id } = getCurrentPlayer();
@@ -976,12 +990,12 @@ async function markRoomOffline(roomId) {
   const roomRef = db.collection("rooms").doc(roomId);
 
   try {
-    await roomRef.update({
+    await safeRoomUpdate(roomRef, {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       [`gameState.playersData.${id}.online`]: false,
       [`gameState.playersData.${id}.closedAt`]: now,
       [`gameState.playersData.${id}.lastSeen`]: now
-    });
+    }, "markRoomOffline");
   } catch (e) {
     console.log("markRoomOffline skip:", e?.message || e);
   }
@@ -1107,7 +1121,6 @@ function startRoomPresence(roomId) {
   roomPresenceInterval = setInterval(() => {
     if (currentRoomId !== roomId) return;
     touchRoomPresence(roomId, { markAction: false });
-    cleanupInactivePlayers(roomId);
   }, ROOM_PRESENCE_PING_MS);
 
   roomPresenceClickHandler = () => {
@@ -1140,7 +1153,6 @@ function startRoomPresence(roomId) {
     // Поэтому здесь больше НЕ ставим offline мгновенно.
     if (!document.hidden) {
       touchRoomPresence(roomId, { markAction: true });
-      cleanupInactivePlayers(roomId);
     }
   };
 
@@ -1237,12 +1249,12 @@ async function markPlayerReadyForGame(roomId) {
   const roomRef = db.collection("rooms").doc(roomId);
 
   try {
-    await roomRef.update({
+    await safeRoomUpdate(roomRef, {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       [`gameState.playersReady.${id}`]: true,
       [`gameState.playersData.${id}.gameLoaded`]: true,
       [`gameState.playersData.${id}.gameLoadedAt`]: Date.now()
-    });
+    }, "markPlayerReadyForGame");
   } catch (e) {
     console.error("Ошибка markPlayerReadyForGame:", e);
   }
@@ -1571,11 +1583,11 @@ async function saveMatchHistoryForAllPlayers(roomId, roomData) {
     const roomDoc = await roomRef.get();
 
     if (roomDoc.exists) {
-      await roomRef.update({
+      await safeRoomUpdate(roomRef, {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         "gameState.historySaved": true,
         "gameState.historySavedAt": firebase.firestore.FieldValue.serverTimestamp()
-      });
+      }, "saveMatchHistoryForAllPlayers.historySaved");
     }
   } catch (e) {
     console.error("Ошибка отметки сохранённой истории:", e);
@@ -1822,11 +1834,11 @@ async function closeEndGameAndExit() {
 
   if (roomRef) {
     try {
-      await roomRef.update({
+      await safeRoomUpdate(roomRef, {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         "gameState.exitRequested": true,
         "gameState.exitRequestedAt": firebase.firestore.FieldValue.serverTimestamp()
-      });
+      }, "closeEndGameAndExit");
     } catch (e) {
       console.log("Пропуск общего выхода из финального окна:", e?.message || e);
     }
@@ -1921,7 +1933,6 @@ async function loadRooms() {
           hasOfflineExpiredPlayer ||
           roomWaitingTooLong
         ) {
-          cleanupInactivePlayers(doc.id);
           continue;
         }
 
@@ -2589,7 +2600,7 @@ function startSharedRoomCountdown(roomId) {
         updateData[`gameState.playersReady.${id}`] = firebase.firestore.FieldValue.delete();
       }
 
-      await roomRef.update(updateData);
+      await safeRoomUpdate(roomRef, updateData, "leaveRoom");
     }
 
     currentRoomId = null;
@@ -2869,13 +2880,13 @@ let winnerCheckInterval = null;
 if (currentRoomId) {
   const roomRef = db.collection("rooms").doc(currentRoomId);
 
-  roomRef.update({
+  safeRoomUpdate(roomRef, {
     [`gameState.playersData.${playerId}.name`]: name,
     [`gameState.playersData.${playerId}.position`]: Math.round(playerState.position),
     [`gameState.playersData.${playerId}.alive`]: playerState.alive,
     [`gameState.playersData.${playerId}.score`]: score,
     [`gameState.playersData.${playerId}.firstObstacleResolved`]: firstObstacleResolved
-  }).catch(err => console.error("Ошибка начальной записи игрока:", err));
+  }, "initGame.initialPlayerState").catch(err => console.error("Ошибка начальной записи игрока:", err));
 
   let lastSyncedState = {
     position: null,
@@ -2903,13 +2914,13 @@ if (currentRoomId) {
       firstObstacleResolved: firstObstacleResolved
     };
 
-    roomRef.update({
+    safeRoomUpdate(roomRef, {
       [`gameState.playersData.${playerId}.position`]: roundedPosition,
       [`gameState.playersData.${playerId}.alive`]: playerState.alive,
       [`gameState.playersData.${playerId}.score`]: score,
       [`gameState.playersData.${playerId}.firstObstacleResolved`]: firstObstacleResolved,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(err => console.error("Ошибка обновления позиции:", err));
+    }, "initGame.syncPlayerState").catch(err => console.error("Ошибка обновления позиции:", err));
   }, 1500);
 
   winnerCheckInterval = setInterval(() => {
@@ -3268,11 +3279,11 @@ playerState.alive = !playerLost;
         }
 
         // обычное обновление счёта в процессе матча
-        await roomRef.update({
+        await safeRoomUpdate(roomRef, {
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
           [`gameState.playersData.${playerId}.score`]: finalScore,
           [`gameState.playersData.${playerId}.firstObstacleResolved`]: true
-        });
+        }, "drawObstacles2.scoreUpdate");
       }).catch(err => console.error("Ошибка обновления счёта:", err));
     }
   }
@@ -3441,14 +3452,14 @@ playerState.alive = !playerLost;
   const roomRef = db.collection("rooms").doc(currentRoomId);
 
   try {
-    await roomRef.update({
+    await safeRoomUpdate(roomRef, {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       [`gameState.playersData.${playerId}.name`]: name,
       [`gameState.playersData.${playerId}.alive`]: false,
       [`gameState.playersData.${playerId}.lost`]: true,
       [`gameState.playersData.${playerId}.score`]: score,
       [`gameState.playersData.${playerId}.lostAt`]: Date.now()
-    });
+    }, "markPlayerAsLost");
   } catch (e) {
     console.error("Ошибка отметки поражения:", e);
   }
@@ -3480,7 +3491,7 @@ async function markPendingDuelFinish() {
       const loserId = loserPlayers[0][0];
       const loserScore = Number(loserPlayers[0][1]?.score || 0);
 
-      await roomRef.update({
+      await safeRoomUpdate(roomRef, {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         "gameState.pendingFinish": {
           active: true,
@@ -3489,7 +3500,7 @@ async function markPendingDuelFinish() {
           loserScore,
           resolved: false
         }
-      });
+      }, "markPendingDuelFinish");
     }
   } catch (e) {
     console.error("Ошибка markPendingDuelFinish:", e);
@@ -3775,7 +3786,7 @@ async function leaveAfterLoss() {
         updateData.startAt = null;
       }
 
-      await roomRef.update(updateData);
+      await safeRoomUpdate(roomRef, updateData, "leaveAfterLoss");
     } catch (e) {
       console.error("Ошибка выхода после поражения:", e);
     }
