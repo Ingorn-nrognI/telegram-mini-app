@@ -776,7 +776,7 @@ async function runRoomTransaction(roomRef, callback, context = "Firestore transa
 
 async function safeRoomUpdate(roomRef, updateData, context = "Firestore update") {
   try {
-    await safeRoomUpdate(roomRef, updateData, "touchRoomPresence");
+    await roomRef.update(updateData);
     return true;
   } catch (e) {
     if (reportFirestoreContention(context, e)) {
