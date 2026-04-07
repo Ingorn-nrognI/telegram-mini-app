@@ -711,6 +711,7 @@ let endGameWatcher = null;
 let endGameShown = false;
 let isClosingEndGame = false;
 let endGameExitHandled = false;
+let suppressEndGameModal = false;
 let openEndGameForCurrentMatch = null;
 let exitEndGameForCurrentMatch = null;
 let activeLeaveAfterLossHandler = null;
@@ -1672,7 +1673,9 @@ function startGame() {
 }
 
 function showEndGameModal(resultData) {
-  if (!resultData || endGameShown || isClosingEndGame) return;
+  if (!resultData || endGameShown || isClosingEndGame || endGameExitHandled || suppressEndGameModal) {
+    return;
+  }
 
   const modal = document.getElementById("endGameModal");
   const titleEl = document.getElementById("endGameTitle");
@@ -1703,6 +1706,7 @@ function showEndGameModal(resultData) {
   });
 
   resetEndGameUIState();
+  suppressEndGameModal = false;
   isClosingEndGame = false;
   modal.style.display = "flex";
   endGameShown = true;
@@ -1730,6 +1734,13 @@ function forceCloseEndGameUI() {
   endGameShown = false;
 }
 
+function hardCloseEndGameModal() {
+  forceCloseEndGameUI();
+  setTimeout(forceCloseEndGameUI, 0);
+  setTimeout(forceCloseEndGameUI, 120);
+  setTimeout(forceCloseEndGameUI, 300);
+}
+
 function resetEndGameUIState() {
   const modal = document.getElementById("endGameModal");
   if (!modal) return;
@@ -1748,12 +1759,17 @@ function stopEndGameWatcher() {
 }
 
 async function runActiveLeaveAfterLoss() {
+  suppressEndGameModal = true;
+  endGameExitHandled = true;
+  isClosingEndGame = true;
+  hardCloseEndGameModal();
+
   if (typeof activeLeaveAfterLossHandler === "function") {
     await activeLeaveAfterLossHandler();
     return;
   }
 
-  forceCloseEndGameUI();
+  hardCloseEndGameModal();
   stopEndGameWatcher();
   currentRoomId = null;
   resetServerClockSync();
@@ -1808,6 +1824,10 @@ function startRoomFinishWatcher(roomId) {
       return;
     }
 
+    if (suppressEndGameModal || isClosingEndGame || endGameExitHandled) {
+      return;
+    }
+
     if (room.gameState.finished === true && room.gameState.winner && room.gameState.results) {
       await ensureCurrentMatchHistorySaved(roomId, room);
 
@@ -1828,6 +1848,8 @@ function startRoomFinishWatcher(roomId) {
 async function closeEndGameAndExit() {
   if (isClosingEndGame) return;
   isClosingEndGame = true;
+  suppressEndGameModal = true;
+  endGameExitHandled = true;
 
   const roomId = currentRoomId;
   const roomRef = roomId ? db.collection("rooms").doc(roomId) : null;
@@ -1844,9 +1866,8 @@ async function closeEndGameAndExit() {
     }
   }
 
-  forceCloseEndGameUI();
+  hardCloseEndGameModal();
   stopEndGameWatcher();
-  endGameExitHandled = true;
 
   const savedExitHandler = exitEndGameForCurrentMatch;
   openEndGameForCurrentMatch = null;
@@ -1859,9 +1880,7 @@ async function closeEndGameAndExit() {
       await runActiveLeaveAfterLoss();
     }
   } finally {
-    forceCloseEndGameUI();
-    setTimeout(forceCloseEndGameUI, 0);
-    setTimeout(forceCloseEndGameUI, 120);
+    hardCloseEndGameModal();
     setTimeout(() => { isClosingEndGame = false; }, 200);
   }
 }
@@ -2961,6 +2980,8 @@ window.addEventListener("beforeunload", gameBeforeUnloadHandler);
   let showExitButton = false;
 
   openEndGameForCurrentMatch = function(resultData) {
+  if (suppressEndGameModal || isClosingEndGame || endGameExitHandled) return;
+
   player.gameOver = false;
   showExitButton = false;
   isWatching2 = true;
@@ -3691,8 +3712,12 @@ function buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish) {
   
 async function leaveAfterLoss() {
   activeLeaveAfterLossHandler = leaveAfterLoss;
+  suppressEndGameModal = true;
+  endGameExitHandled = true;
+  isClosingEndGame = true;
+  hardCloseEndGameModal();
   stopRoomReadyPoll();
-  hideEndGameModal();
+  hardCloseEndGameModal();
   stopEndGameWatcher();
   endGameShown = false;
 
@@ -3717,6 +3742,7 @@ async function leaveAfterLoss() {
   if (winnerCheckInterval) clearInterval(winnerCheckInterval);
 
   window.gameInitialized = false;
+  suppressEndGameModal = false;
   activeLeaveAfterLossHandler = null;
   showExitButton = false;
   forceCloseEndGameUI();
