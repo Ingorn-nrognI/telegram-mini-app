@@ -859,10 +859,15 @@ async function maybeRunRoomMaintenance(roomId, room, { force = false } = {}) {
 const GAME_READY_BUFFER_MS = 350;
   
 const ROOM_OFFLINE_GRACE_MS = 60 * 1000;
-const ROOM_PRESENCE_PING_MS = 15000;
-const ROOM_ACTION_PING_THROTTLE_MS = 5000;
+const ROOM_PRESENCE_PING_MS = 30000;
+const ROOM_ACTION_PING_THROTTLE_MS = 10000;
 const ROOM_MAX_WAITING_LIFETIME_MS = 10 * 60 * 1000;
 const ROOM_LAUNCH_PROTECTION_MS = 3 * 60 * 1000;
+const ROOM_LIST_CLEANUP_THROTTLE_MS = 15000;
+
+let lastRoomPresenceWriteAt = 0;
+let lastRoomsCleanupAt = 0;
+let roomsCleanupPromise = null;
 
 let syncedServerNowOffsetMs = 0;
 let serverClockSyncedOnce = false;
@@ -986,15 +991,20 @@ function isRoomLaunchProtected(room) {
   return false;
 }
   
-async function touchRoomPresence(roomId, { markAction = false } = {}) {
+async function touchRoomPresence(roomId, { markAction = false, force = false } = {}) {
   if (!roomId || currentRoomId !== roomId) return;
 
-  const { id, name } = getCurrentPlayer();
   const now = Date.now();
+  const minDelay = markAction ? ROOM_ACTION_PING_THROTTLE_MS : Math.max(12000, ROOM_PRESENCE_PING_MS - 5000);
+
+  if (!force && now - lastRoomPresenceWriteAt < minDelay) {
+    return;
+  }
+
+  const { id, name } = getCurrentPlayer();
   const roomRef = db.collection("rooms").doc(roomId);
 
   const updateData = {
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     [`gameState.playersData.${id}.name`]: name,
     [`gameState.playersData.${id}.online`]: true,
     [`gameState.playersData.${id}.leftRoom`]: false,
@@ -1003,11 +1013,15 @@ async function touchRoomPresence(roomId, { markAction = false } = {}) {
   };
 
   if (markAction) {
+    updateData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
     updateData[`gameState.playersData.${id}.lastActionAt`] = now;
   }
 
   try {
-    await roomRef.update(updateData);
+    const ok = await safeRoomUpdate(roomRef, updateData, "touchRoomPresence");
+    if (ok !== false) {
+      lastRoomPresenceWriteAt = now;
+    }
   } catch (e) {
     console.log("touchRoomPresence skip:", e?.message || e);
   }
@@ -1141,7 +1155,7 @@ function startRoomPresence(roomId) {
 
   let lastActionPingAt = 0;
 
-  touchRoomPresence(roomId, { markAction: true });
+  touchRoomPresence(roomId, { markAction: true, force: true });
 
   roomPresenceInterval = setInterval(() => {
     if (currentRoomId !== roomId) return;
@@ -1177,7 +1191,8 @@ function startRoomPresence(roomId) {
   };
 
   roomPageHideHandler = () => {
-    // На pagehide / beforeunload не помечаем offline мгновенно
+    if (currentRoomId !== roomId) return;
+    markRoomOffline(roomId);
   };
 
   document.addEventListener("click", roomPresenceClickHandler, true);
@@ -1353,15 +1368,19 @@ function isCurrentClientRoomWriteDriver(room) {
 const currentPlayer = getCurrentPlayer();
 document.getElementById("nickname").innerText = currentPlayer.name;
 
-async function waitForRoomMembership(roomRef, playerId, attempts = 12, delayMs = 200) {
+async function waitForRoomMembership(roomRef, playerId, attempts = 8, delayMs = 250) {
   for (let i = 0; i < attempts; i++) {
-    const doc = await roomRef.get();
-    if (doc.exists) {
-      const room = doc.data() || {};
-      const ids = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean) : [];
-      if (ids.includes(playerId)) {
-        return room;
+    try {
+      const doc = await roomRef.get();
+      if (doc.exists) {
+        const room = doc.data() || {};
+        const ids = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean) : [];
+        if (ids.includes(playerId)) {
+          return room;
+        }
       }
+    } catch (e) {
+      console.warn("waitForRoomMembership:", e?.message || e);
     }
 
     if (i < attempts - 1) {
@@ -1370,6 +1389,218 @@ async function waitForRoomMembership(roomRef, playerId, attempts = 12, delayMs =
   }
 
   return null;
+}
+
+function getRoomFreshnessMs(room) {
+  return getRoomTimeMs(room?.updatedAt) || getRoomTimeMs(room?.created) || 0;
+}
+
+function getRoomPlayerLastSeenMs(room, playerId) {
+  const data = room?.gameState?.playersData?.[playerId] || {};
+  return Number(data.lastSeen || 0) || getRoomFreshnessMs(room) || 0;
+}
+
+function isRoomWaitingJoinable(room) {
+  if (!room) return false;
+  if (room.status !== "waiting") return false;
+  if (room.gameState?.started === true || room.gameState?.finished === true) return false;
+  const activePlayerIds = getRenderableRoomPlayerIds(room);
+  if (activePlayerIds.length === 0 || activePlayerIds.length >= 3) return false;
+  return true;
+}
+
+function isRoomProbablyStale(room) {
+  if (!room) return true;
+
+  const now = Date.now();
+  const freshMs = getRoomFreshnessMs(room);
+  const activePlayerIds = getRenderableRoomPlayerIds(room);
+
+  if (activePlayerIds.length === 0) return true;
+
+  const hasFreshPlayer = activePlayerIds.some((pid) => {
+    const playerData = room?.gameState?.playersData?.[pid] || {};
+    const closedAt = Number(playerData.closedAt || 0) || 0;
+    const lastSeen = getRoomPlayerLastSeenMs(room, pid);
+
+    if (closedAt > 0 && now - closedAt > ROOM_OFFLINE_GRACE_MS) {
+      return false;
+    }
+
+    return lastSeen > 0 && now - lastSeen <= ROOM_OFFLINE_GRACE_MS;
+  });
+
+  if (hasFreshPlayer) {
+    return false;
+  }
+
+  if (freshMs > 0 && now - freshMs > ROOM_MAX_WAITING_LIFETIME_MS) {
+    return true;
+  }
+
+  return activePlayerIds.every((pid) => {
+    const lastSeen = getRoomPlayerLastSeenMs(room, pid);
+    return !lastSeen || now - lastSeen > ROOM_OFFLINE_GRACE_MS;
+  });
+}
+
+function buildOptimisticJoinedRoom(baseRoom, playerId, playerName) {
+  const room = JSON.parse(JSON.stringify(baseRoom || {}));
+  const playerIds = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean) : [];
+  const alreadyInRoom = playerIds.includes(playerId);
+
+  room.playerIds = alreadyInRoom ? playerIds : [...playerIds, playerId];
+  room.playerNames = { ...(room.playerNames || {}), [playerId]: playerName };
+  room.status = room.status || "waiting";
+  room.gameState = room.gameState || {};
+  room.gameState.playersReady = {
+    ...(room.gameState.playersReady || {}),
+    [playerId]: false
+  };
+  room.gameState.playersData = {
+    ...(room.gameState.playersData || {}),
+    [playerId]: {
+      ...(room.gameState.playersData?.[playerId] || {}),
+      name: playerName,
+      alive: true,
+      lost: false,
+      leftRoom: false,
+      position: 0,
+      score: 0,
+      firstObstacleResolved: false,
+      online: true,
+      lastSeen: Date.now(),
+      lastActionAt: Date.now(),
+      closedAt: null,
+      gameLoaded: false,
+      gameLoadedAt: null
+    }
+  };
+
+  return room;
+}
+
+async function cleanupRooms({ force = false } = {}) {
+  const now = Date.now();
+
+  if (!force && now - lastRoomsCleanupAt < ROOM_LIST_CLEANUP_THROTTLE_MS) {
+    return;
+  }
+
+  if (roomsCleanupPromise) {
+    return roomsCleanupPromise;
+  }
+
+  lastRoomsCleanupAt = now;
+
+  roomsCleanupPromise = (async () => {
+    try {
+      const snapshot = await db.collection("rooms").get();
+
+      for (const doc of snapshot.docs) {
+        const room = doc.data();
+
+        if (!room || room.status !== "waiting") continue;
+        if (room.gameState?.started === true || room.gameState?.finished === true) continue;
+
+        if (isRoomProbablyStale(room)) {
+          await cleanupInactivePlayers(doc.id);
+        }
+      }
+    } catch (e) {
+      console.error("Ошибка cleanupRooms:", e);
+    } finally {
+      roomsCleanupPromise = null;
+    }
+  })();
+
+  return roomsCleanupPromise;
+}
+
+async function findExistingWaitingRoomForPlayer(playerId) {
+  try {
+    const snapshot = await db.collection("rooms")
+      .where("playerIds", "array-contains", playerId)
+      .get();
+
+    const candidates = [];
+
+    for (const doc of snapshot.docs) {
+      const room = doc.data();
+      if (!isRoomWaitingJoinable(room)) continue;
+
+      const selfData = room?.gameState?.playersData?.[playerId] || {};
+      const activeIds = getRenderableRoomPlayerIds(room);
+      if (selfData.leftRoom === true || !activeIds.includes(playerId)) continue;
+
+      if (isRoomProbablyStale(room)) {
+        await cleanupInactivePlayers(doc.id);
+        continue;
+      }
+
+      candidates.push({ id: doc.id, room });
+    }
+
+    candidates.sort((a, b) => getRoomFreshnessMs(b.room) - getRoomFreshnessMs(a.room));
+
+    return candidates[0] || null;
+  } catch (e) {
+    console.error("Ошибка findExistingWaitingRoomForPlayer:", e);
+    return null;
+  }
+}
+
+async function attemptSimpleRoomJoin(roomRef, roomId, playerId, playerName) {
+  try {
+    const doc = await getRoomDocumentDirect(roomId);
+    if (!doc.exists) return null;
+
+    const room = doc.data();
+    if (!room || !isRoomWaitingJoinable(room)) return null;
+
+    const activePlayerIds = getRenderableRoomPlayerIds(room);
+    const alreadyInRoom = activePlayerIds.includes(playerId);
+
+    if (activePlayerIds.length >= 3 && !alreadyInRoom) {
+      return null;
+    }
+
+    const now = Date.now();
+    const updateData = {
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      [`playerNames.${playerId}`]: playerName,
+      [`gameState.playersReady.${playerId}`]: false,
+      [`gameState.playersData.${playerId}.name`]: playerName,
+      [`gameState.playersData.${playerId}.alive`]: true,
+      [`gameState.playersData.${playerId}.lost`]: false,
+      [`gameState.playersData.${playerId}.leftRoom`]: false,
+      [`gameState.playersData.${playerId}.position`]: 0,
+      [`gameState.playersData.${playerId}.score`]: 0,
+      [`gameState.playersData.${playerId}.firstObstacleResolved`]: false,
+      [`gameState.playersData.${playerId}.online`]: true,
+      [`gameState.playersData.${playerId}.lastSeen`]: now,
+      [`gameState.playersData.${playerId}.lastActionAt`]: now,
+      [`gameState.playersData.${playerId}.closedAt`]: null,
+      [`gameState.playersData.${playerId}.gameLoaded`]: false,
+      [`gameState.playersData.${playerId}.gameLoadedAt`]: null
+    };
+
+    if (!alreadyInRoom) {
+      updateData.playerIds = firebase.firestore.FieldValue.arrayUnion(playerId);
+    }
+
+    if ((alreadyInRoom ? activePlayerIds.length : activePlayerIds.length + 1) >= 2 && !room.startAt && !room.gameState?.started) {
+      updateData.startAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+
+    const ok = await safeRoomUpdate(roomRef, updateData, "attemptSimpleRoomJoin");
+    if (ok === false) return null;
+
+    return buildOptimisticJoinedRoom(room, playerId, playerName);
+  } catch (e) {
+    console.error("Ошибка attemptSimpleRoomJoin:", e);
+    return null;
+  }
 }
 
 let currentMenuView = "home";
@@ -2061,8 +2292,41 @@ function closeRooms() {
 }
 
 
-async function cleanupRooms() {
-  return;
+async function cleanupRooms({ force = false } = {}) {
+  const now = Date.now();
+
+  if (!force && now - lastRoomsCleanupAt < ROOM_LIST_CLEANUP_THROTTLE_MS) {
+    return;
+  }
+
+  if (roomsCleanupPromise) {
+    return roomsCleanupPromise;
+  }
+
+  lastRoomsCleanupAt = now;
+
+  roomsCleanupPromise = (async () => {
+    try {
+      const snapshot = await db.collection("rooms").get();
+
+      for (const doc of snapshot.docs) {
+        const room = doc.data();
+
+        if (!room || room.status !== "waiting") continue;
+        if (room.gameState?.started === true || room.gameState?.finished === true) continue;
+
+        if (isRoomProbablyStale(room)) {
+          await cleanupInactivePlayers(doc.id);
+        }
+      }
+    } catch (e) {
+      console.error("Ошибка cleanupRooms:", e);
+    } finally {
+      roomsCleanupPromise = null;
+    }
+  })();
+
+  return roomsCleanupPromise;
 }
 
 function buildVisibleRoomItems(snapshot) {
@@ -2081,6 +2345,7 @@ function buildVisibleRoomItems(snapshot) {
     if (room.status !== "waiting") return;
     if (isStarted || isFinished) return;
     if (activePlayerIds.length === 0 || activePlayerIds.length >= 3) return;
+    if (isRoomProbablyStale(room)) return;
 
     roomItems.push({
       id: doc.id,
@@ -2165,6 +2430,7 @@ async function loadRooms() {
   setCreateRoomButtonVisible(true);
   list.innerHTML = "Загрузка...";
 
+  await cleanupRooms();
   await renderRoomsListOnce();
 
   roomsListener = db.collection("rooms").onSnapshot((snapshot) => {
@@ -2193,6 +2459,16 @@ async function createRoom() {
   const { id, name } = getCurrentPlayer();
   const list = document.getElementById("roomsList");
   const now = Date.now();
+
+  await cleanupRooms();
+
+  const existingRoom = await findExistingWaitingRoomForPlayer(id);
+  if (existingRoom) {
+    currentRoomId = existingRoom.id;
+    openRoomScreen(existingRoom.id, existingRoom.room);
+    return;
+  }
+
   const roomRef = db.collection("rooms").doc();
 
   const room = {
@@ -2252,7 +2528,16 @@ async function createRoom() {
 
     await roomRef.set(room);
 
-    const confirmedRoom = await waitForRoomMembership(roomRef, id, 15, 200);
+    let confirmedRoom = null;
+
+    try {
+      const doc = await getRoomDocumentDirect(roomRef.id);
+      if (doc.exists) {
+        confirmedRoom = doc.data();
+      }
+    } catch (e) {
+      console.warn("createRoom confirmation skipped:", e?.message || e);
+    }
 
     currentRoomId = roomRef.id;
     multiplayerGameStarted = false;
@@ -2303,7 +2588,25 @@ async function joinRoom(roomId) {
     `;
   }
 
+  let baseRoomForOptimisticJoin = null;
+
   try {
+    const initialDoc = await getRoomDocumentDirect(roomId);
+    if (!initialDoc.exists) {
+      throw new Error("ROOM_DELETED");
+    }
+
+    baseRoomForOptimisticJoin = initialDoc.data() || {};
+
+    if (!isRoomWaitingJoinable(baseRoomForOptimisticJoin)) {
+      throw new Error("ROOM_UNAVAILABLE");
+    }
+
+    const activeBeforeJoin = getRenderableRoomPlayerIds(baseRoomForOptimisticJoin);
+    if (activeBeforeJoin.length >= 3 && !activeBeforeJoin.includes(id)) {
+      throw new Error("ROOM_FULL");
+    }
+
     const result = await runRoomTransaction(roomRef, async (transaction) => {
       const doc = await transaction.get(roomRef);
 
@@ -2356,29 +2659,49 @@ async function joinRoom(roomId) {
         [`gameState.playersData.${id}.gameLoadedAt`]: null
       });
 
-      return true;
+      return buildOptimisticJoinedRoom(room, id, name);
     }, "joinRoom");
 
-    if (result === null) {
-      throw new Error("JOIN_RETRY");
+    let joinedRoom = result;
+
+    if (joinedRoom === null) {
+      joinedRoom = await attemptSimpleRoomJoin(roomRef, roomId, id, name);
     }
 
-    const confirmedRoom = await waitForRoomMembership(roomRef, id, 15, 200);
+    let confirmedRoom = null;
+
+    try {
+      confirmedRoom = await waitForRoomMembership(roomRef, id, 5, 250);
+    } catch (e) {
+      console.warn("joinRoom membership check skipped:", e?.message || e);
+    }
 
     if (!confirmedRoom) {
-      throw new Error("JOIN_NOT_CONFIRMED");
+      try {
+        const latestDoc = await getRoomDocumentDirect(roomId);
+        if (latestDoc.exists) {
+          const latestRoom = latestDoc.data() || {};
+          const activeIds = getRenderableRoomPlayerIds(latestRoom);
+          if (activeIds.includes(id)) {
+            confirmedRoom = latestRoom;
+          }
+        }
+      } catch (e) {
+        console.warn("joinRoom latest room fetch skipped:", e?.message || e);
+      }
     }
 
-    const activeIds = getRenderableRoomPlayerIds(confirmedRoom);
+    const optimisticRoom = confirmedRoom || joinedRoom || buildOptimisticJoinedRoom(baseRoomForOptimisticJoin, id, name);
+    const optimisticIds = getRenderableRoomPlayerIds(optimisticRoom);
 
-    if (!activeIds.includes(id)) {
+    if (!optimisticIds.includes(id)) {
       throw new Error("JOIN_NOT_CONFIRMED");
     }
 
     currentRoomId = roomId;
     multiplayerGameStarted = false;
     multiplayerStartInProgress = false;
-    openRoomScreen(roomId, confirmedRoom);
+    openRoomScreen(roomId, optimisticRoom);
   } catch (e) {
     console.error("Ошибка joinRoom:", e);
 
@@ -2560,10 +2883,10 @@ function openRoomScreen(roomId, optimisticRoom = null) {
     }
 
     const playersCount = getRenderableRoomPlayerIds(room).length;
-    const shouldMaintainRoomStartState = playersCount >= 2 || !!room.startAt;
+    const shouldMaintainRoomStartState = playersCount >= 2 || !!room.startAt || isRoomProbablyStale(room);
 
     if (shouldMaintainRoomStartState && isCurrentClientRoomWriteDriver(room)) {
-      await tryStartRoom(roomId);
+      await maybeRunRoomMaintenance(roomId, room);
     }
   }
 
