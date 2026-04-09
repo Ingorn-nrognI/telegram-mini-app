@@ -715,6 +715,7 @@ let suppressEndGameModal = false;
 let openEndGameForCurrentMatch = null;
 let exitEndGameForCurrentMatch = null;
 let activeLeaveAfterLossHandler = null;
+let blockEndGameModalUntilNextMatch = false;
 
 let gameResizeHandler = null;
 let gameBeforeUnloadHandler = null;
@@ -1648,6 +1649,8 @@ function exitGameMode() {
 
 function startGame() {
   winnerProcessing = false;
+  blockEndGameModalUntilNextMatch = false;
+  suppressEndGameModal = false;
   document.getElementById("menu").style.display = "none";
   document.getElementById("game").style.display = "block";
   
@@ -1668,7 +1671,7 @@ function buildEndGamePlaces(results) {
 }
 
 function showEndGameModal(resultData) {
-  if (!resultData || endGameShown || isClosingEndGame || endGameExitHandled || suppressEndGameModal) {
+  if (!resultData || endGameShown || isClosingEndGame || endGameExitHandled || suppressEndGameModal || blockEndGameModalUntilNextMatch) {
     return;
   }
 
@@ -1754,6 +1757,7 @@ function stopEndGameWatcher() {
 }
 
 async function runActiveLeaveAfterLoss() {
+  blockEndGameModalUntilNextMatch = true;
   suppressEndGameModal = true;
   endGameExitHandled = true;
   isClosingEndGame = true;
@@ -1823,7 +1827,9 @@ function startRoomFinishWatcher(roomId) {
         results: room.gameState.results
       };
 
-      if (typeof openEndGameForCurrentMatch === "function") {
+      if (blockEndGameModalUntilNextMatch) return;
+
+  if (typeof openEndGameForCurrentMatch === "function") {
         openEndGameForCurrentMatch(resultData);
       } else {
         showEndGameModal(resultData);
@@ -1835,6 +1841,7 @@ function startRoomFinishWatcher(roomId) {
 async function closeEndGameAndExit() {
   if (isClosingEndGame) return;
 
+  blockEndGameModalUntilNextMatch = true;
   isClosingEndGame = true;
   suppressEndGameModal = true;
   endGameExitHandled = true;
@@ -2614,6 +2621,8 @@ async function leaveRoom(roomId) {
 }
   
 async function startMultiplayerGame(roomId) {
+  blockEndGameModalUntilNextMatch = false;
+  suppressEndGameModal = false;
   stopRoomCountdown();
   stopRoomPresence();
   stopRoomReadyPoll();
@@ -2744,6 +2753,7 @@ function openSettings() {
 function initGame() {
 
   function fullResetMenu() {
+    blockEndGameModalUntilNextMatch = true;
     document.body.removeAttribute("style");
 
     const menu = document.getElementById("menu");
@@ -2933,7 +2943,7 @@ function initGame() {
   let showExitButton = false;
 
   openEndGameForCurrentMatch = function(resultData) {
-    if (suppressEndGameModal || isClosingEndGame || endGameExitHandled) return;
+    if (suppressEndGameModal || isClosingEndGame || endGameExitHandled || blockEndGameModalUntilNextMatch) return;
 
     player.gameOver = false;
     showExitButton = false;
@@ -2943,9 +2953,11 @@ function initGame() {
     showEndGameModal(resultData);
   };
 
+  blockEndGameModalUntilNextMatch = false;
   activeLeaveAfterLossHandler = leaveAfterLoss;
 
   exitEndGameForCurrentMatch = async function() {
+    blockEndGameModalUntilNextMatch = true;
     forceCloseEndGameUI();
     stopEndGameWatcher();
     endGameShown = false;
@@ -3633,6 +3645,7 @@ function initGame() {
   
   async function leaveAfterLoss() {
     activeLeaveAfterLossHandler = leaveAfterLoss;
+    blockEndGameModalUntilNextMatch = true;
     suppressEndGameModal = true;
     endGameExitHandled = true;
     isClosingEndGame = true;
@@ -3663,7 +3676,6 @@ function initGame() {
     if (winnerCheckInterval) clearInterval(winnerCheckInterval);
 
     window.gameInitialized = false;
-    suppressEndGameModal = false;
     activeLeaveAfterLossHandler = null;
     showExitButton = false;
     forceCloseEndGameUI();
