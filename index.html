@@ -733,6 +733,8 @@ let roomVisibilityHandler = null;
 let roomPageHideHandler = null;
 let roomReadyPollInterval = null;
 let gameCountdownStartListener = null;
+let roomsPollingInterval = null;
+let currentRoomPollingInterval = null;
 let historyLoading = false;
 let expandedHistoryMatchId = null;
 
@@ -1901,10 +1903,16 @@ async function closeEndGameAndExit() {
   
 
 
+
 function stopRoomsListListener() {
   if (roomsListener) {
     roomsListener();
     roomsListener = null;
+  }
+
+  if (roomsPollingInterval) {
+    clearInterval(roomsPollingInterval);
+    roomsPollingInterval = null;
   }
 }
 
@@ -1912,6 +1920,11 @@ function stopCurrentRoomRealtime() {
   if (currentRoomListener) {
     currentRoomListener();
     currentRoomListener = null;
+  }
+
+  if (currentRoomPollingInterval) {
+    clearInterval(currentRoomPollingInterval);
+    currentRoomPollingInterval = null;
   }
 
   stopRoomCountdown();
@@ -1952,6 +1965,39 @@ function getRenderableRoomPlayerIds(room) {
 function getRenderableRoomPlayerNames(room) {
   return getRenderableRoomPlayerIds(room).map((pid) => {
     return room.playerNames?.[pid] || room.gameState?.playersData?.[pid]?.name || "Игрок";
+  });
+}
+
+async function getRoomsSnapshotDirect() {
+  try {
+    return await db.collection("rooms").get({ source: "server" });
+  } catch (e) {
+    console.warn("getRoomsSnapshotDirect: server fetch failed, fallback to default get", e?.message || e);
+    return await db.collection("rooms").get();
+  }
+}
+
+async function getRoomDocumentDirect(roomId) {
+  const roomRef = db.collection("rooms").doc(roomId);
+
+  try {
+    return await roomRef.get({ source: "server" });
+  } catch (e) {
+    console.warn("getRoomDocumentDirect: server fetch failed, fallback to default get", e?.message || e);
+    return await roomRef.get();
+  }
+}
+
+function sortVisibleRooms(items) {
+  return items.sort((a, b) => {
+    const aUpdated = getRoomTimeMs(a.room?.updatedAt) || getRoomTimeMs(a.room?.created) || 0;
+    const bUpdated = getRoomTimeMs(b.room?.updatedAt) || getRoomTimeMs(b.room?.created) || 0;
+
+    if (b.playersCount !== a.playersCount) {
+      return b.playersCount - a.playersCount;
+    }
+
+    return bUpdated - aUpdated;
   });
 }
 
@@ -2018,6 +2064,81 @@ async function cleanupRooms() {
   return;
 }
 
+async function renderRoomsListOnce() {
+  const list = document.getElementById("roomsList");
+  if (!list) return;
+
+  if (currentRoomId && !isLeavingRoom) {
+    return;
+  }
+
+  try {
+    const snapshot = await getRoomsSnapshotDirect();
+
+    if (currentRoomId && !isLeavingRoom) {
+      return;
+    }
+
+    const roomItems = [];
+
+    snapshot.forEach((doc) => {
+      const room = doc.data();
+      if (!room) return;
+
+      const activePlayerIds = getRenderableRoomPlayerIds(room);
+      const isStarted = room.status === "playing" || room.gameState?.started === true;
+      const isFinished = room.status === "finished" || room.gameState?.finished === true;
+
+      if (room.status !== "waiting") return;
+      if (isStarted || isFinished) return;
+      if (activePlayerIds.length === 0 || activePlayerIds.length >= 3) return;
+
+      roomItems.push({
+        id: doc.id,
+        room,
+        playersCount: activePlayerIds.length,
+        playersNames: getRenderableRoomPlayerNames(room)
+      });
+    });
+
+    sortVisibleRooms(roomItems);
+    list.innerHTML = "";
+
+    if (roomItems.length === 0) {
+      list.innerHTML = "Нет доступных комнат";
+      setCreateRoomButtonVisible(true);
+      return;
+    }
+
+    roomItems.forEach((item) => {
+      const div = document.createElement("div");
+      div.className = "roomItem";
+
+      const title = item.playersNames.length > 0
+        ? item.playersNames.join(", ")
+        : "Игрок";
+
+      div.innerHTML = `
+        <div>Комната (${item.playersCount}/3)</div>
+        <div style="margin-top:6px;font-size:14px;opacity:0.85;">${title}</div>
+      `;
+
+      div.onclick = () => {
+        if (isJoiningRoom || isCreatingRoom || isLeavingRoom || currentRoomId) return;
+        joinRoom(item.id);
+      };
+
+      list.appendChild(div);
+    });
+
+    setCreateRoomButtonVisible(true);
+  } catch (error) {
+    console.error("Ошибка загрузки списка комнат:", error);
+    list.innerHTML = "Не удалось загрузить комнаты";
+    setCreateRoomButtonVisible(true);
+  }
+}
+
 async function loadRooms() {
   const list = document.getElementById("roomsList");
   if (!list) return;
@@ -2030,72 +2151,14 @@ async function loadRooms() {
   setCreateRoomButtonVisible(true);
   list.innerHTML = "Загрузка...";
 
-  roomsListener = db.collection("rooms")
-    .where("status", "==", "waiting")
-    .onSnapshot((snapshot) => {
-      if (currentRoomId && !isLeavingRoom) {
-        return;
-      }
+  await renderRoomsListOnce();
 
-      list.innerHTML = "";
-
-      const roomItems = [];
-
-      snapshot.forEach((doc) => {
-        const room = doc.data();
-        if (!room) return;
-
-        const activePlayerIds = getRenderableRoomPlayerIds(room);
-        const isStarted = room.status === "playing" || room.gameState?.started === true;
-        const isFinished = room.status === "finished" || room.gameState?.finished === true;
-
-        if (isStarted || isFinished) return;
-        if (activePlayerIds.length === 0 || activePlayerIds.length >= 3) return;
-
-        roomItems.push({
-          id: doc.id,
-          room,
-          playersCount: activePlayerIds.length,
-          playersNames: getRenderableRoomPlayerNames(room)
-        });
-      });
-
-      roomItems.sort((a, b) => b.playersCount - a.playersCount);
-
-      if (roomItems.length === 0) {
-        list.innerHTML = "Нет доступных комнат";
-        setCreateRoomButtonVisible(true);
-        return;
-      }
-
-      roomItems.forEach((item) => {
-        const div = document.createElement("div");
-        div.className = "roomItem";
-
-        const title = item.playersNames.length > 0
-          ? item.playersNames.join(", ")
-          : "Игрок";
-
-        div.innerHTML = `
-          <div>Комната (${item.playersCount}/3)</div>
-          <div style="margin-top:6px;font-size:14px;opacity:0.85;">${title}</div>
-        `;
-
-        div.onclick = () => {
-          if (isJoiningRoom || isCreatingRoom || isLeavingRoom) return;
-          joinRoom(item.id);
-        };
-
-        list.appendChild(div);
-      });
-
-      setCreateRoomButtonVisible(true);
-    }, (error) => {
-      console.error("Ошибка загрузки списка комнат:", error);
-      list.innerHTML = "Не удалось загрузить комнаты";
-      setCreateRoomButtonVisible(true);
-    });
+  roomsPollingInterval = setInterval(() => {
+    if (currentRoomId && !isLeavingRoom) return;
+    renderRoomsListOnce();
+  }, 2000);
 }
+
 
 async function createRoom() {
   if (isCreatingRoom || isJoiningRoom || isLeavingRoom || currentRoomId) return;
@@ -2385,10 +2448,10 @@ function startSharedRoomCountdown(roomId) {
   }
 }
 
+
 function openRoomScreen(roomId, optimisticRoom = null) {
   const screenRoomId = roomId;
   const list = document.getElementById("roomsList");
-  const roomRef = db.collection("rooms").doc(roomId);
 
   stopRoomsListListener();
   stopCurrentRoomRealtime();
@@ -2446,6 +2509,44 @@ function openRoomScreen(roomId, optimisticRoom = null) {
     `;
   }
 
+  async function syncRoomScreen() {
+    if (currentRoomId !== screenRoomId || isLeavingRoom) return;
+
+    try {
+      const doc = await getRoomDocumentDirect(roomId);
+
+      if (currentRoomId !== screenRoomId || isLeavingRoom) return;
+
+      if (!doc.exists) {
+        restoreRoomsLobby({
+          message: "Комната была удалена",
+          keepModalOpen: true,
+          reloadRooms: true
+        });
+        return;
+      }
+
+      latestRoom = doc.data();
+      syncServerClockFromRoom(latestRoom);
+      renderRoom(latestRoom);
+
+      const isStarted = latestRoom?.gameState?.started === true || latestRoom?.status === "playing";
+      if (isStarted) {
+        stopRoomCountdown();
+
+        if (!multiplayerGameStarted) {
+          multiplayerGameStarted = true;
+          startMultiplayerGame(roomId);
+        }
+        return;
+      }
+
+      await tryStartRoom(roomId);
+    } catch (e) {
+      console.error("Ошибка синхронизации комнаты:", e);
+    }
+  }
+
   if (list) {
     if (optimisticRoom) {
       renderRoom(optimisticRoom);
@@ -2454,37 +2555,13 @@ function openRoomScreen(roomId, optimisticRoom = null) {
     }
   }
 
-  currentRoomListener = roomRef.onSnapshot(async (doc) => {
-    if (currentRoomId !== screenRoomId || isLeavingRoom) return;
+  syncRoomScreen();
 
-    if (!doc.exists) {
-      restoreRoomsLobby({
-        message: "Комната была удалена",
-        keepModalOpen: true,
-        reloadRooms: true
-      });
-      return;
-    }
+  currentRoomPollingInterval = setInterval(() => {
+    syncRoomScreen();
+  }, 1000);
 
-    latestRoom = doc.data();
-    syncServerClockFromRoom(latestRoom);
-    renderRoom(latestRoom);
-
-    const isStarted = latestRoom?.gameState?.started === true || latestRoom?.status === "playing";
-    if (isStarted) {
-      stopRoomCountdown();
-
-      if (!multiplayerGameStarted) {
-        multiplayerGameStarted = true;
-        startMultiplayerGame(roomId);
-      }
-      return;
-    }
-
-    await tryStartRoom(roomId);
-  });
-
-  roomCountdownInterval = setInterval(async () => {
+  roomCountdownInterval = setInterval(() => {
     if (currentRoomId !== screenRoomId || isLeavingRoom) return;
     if (!latestRoom) return;
 
@@ -2498,12 +2575,11 @@ function openRoomScreen(roomId, optimisticRoom = null) {
         multiplayerGameStarted = true;
         startMultiplayerGame(roomId);
       }
-      return;
     }
-
-    await tryStartRoom(roomId);
   }, 1000);
 }
+
+
 
 async function leaveRoom(roomId) {
   if (!roomId || isLeavingRoom) return;
@@ -2577,6 +2653,8 @@ async function leaveRoom(roomId) {
     });
   }
 }
+
+
 async function openLeaderboard() {
   const modal = document.getElementById("leaderboardModal");
   const contentDiv = document.getElementById("leaderboardContent");
