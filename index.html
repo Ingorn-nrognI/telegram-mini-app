@@ -706,6 +706,7 @@ let winnerProcessing = false;
 let roomCountdownInterval = null;
 let roomHostCountdownInterval = null;
 let multiplayerGameStarted = false;
+let multiplayerStartInProgress = false;
 
 let endGameWatcher = null;
 let endGameShown = false;
@@ -2023,6 +2024,7 @@ async function createRoom() {
 
     currentRoomId = roomRef.id;
     multiplayerGameStarted = false;
+    multiplayerStartInProgress = false;
 
     if (createBtn) {
       createBtn.style.pointerEvents = "none";
@@ -2362,6 +2364,8 @@ function openRoomScreen(roomId, optimisticRoom = null) {
       list.innerHTML = "Комната устарела и была удалена";
       createBtn.style.display = "block";
       currentRoomId = null;
+      multiplayerGameStarted = false;
+      multiplayerStartInProgress = false;
       stopRoomCountdown();
       stopRoomPresence();
       return;
@@ -2406,6 +2410,8 @@ function openRoomScreen(roomId, optimisticRoom = null) {
       list.innerHTML = "Комната была удалена";
       createBtn.style.display = "block";
       currentRoomId = null;
+      multiplayerGameStarted = false;
+      multiplayerStartInProgress = false;
       stopRoomCountdown();
       stopRoomPresence();
       return;
@@ -2424,6 +2430,8 @@ function openRoomScreen(roomId, optimisticRoom = null) {
       list.innerHTML = "Комната была удалена";
       createBtn.style.display = "block";
       currentRoomId = null;
+      multiplayerGameStarted = false;
+      multiplayerStartInProgress = false;
       stopRoomCountdown();
       stopRoomPresence();
       return;
@@ -2552,6 +2560,7 @@ async function leaveRoom(roomId) {
       stopRoomCountdown();
       stopRoomPresence();
       multiplayerGameStarted = false;
+      multiplayerStartInProgress = false;
 
       document.getElementById("createRoomBtn").style.display = "block";
       loadRooms();
@@ -2570,6 +2579,7 @@ async function leaveRoom(roomId) {
       stopRoomCountdown();
       stopRoomPresence();
       multiplayerGameStarted = false;
+      multiplayerStartInProgress = false;
 
       document.getElementById("createRoomBtn").style.display = "block";
       loadRooms();
@@ -2631,16 +2641,17 @@ async function leaveRoom(roomId) {
 }
   
 async function startMultiplayerGame(roomId) {
+  if (!roomId || multiplayerStartInProgress) return;
+
+  multiplayerStartInProgress = true;
   blockEndGameModalUntilNextMatch = false;
   suppressEndGameModal = false;
   stopRoomCountdown();
-  stopRoomPresence();
   stopRoomReadyPoll();
   stopGameCountdownStartListener();
 
-  if (currentRoomListener) {
-    currentRoomListener();
-    currentRoomListener = null;
+  if (currentRoomId !== roomId) {
+    currentRoomId = roomId;
   }
 
   endGameShown = false;
@@ -2648,6 +2659,11 @@ async function startMultiplayerGame(roomId) {
 
   closeRooms();
   startGame();
+
+  if (currentRoomListener) {
+    currentRoomListener();
+    currentRoomListener = null;
+  }
 }
   
 async function openLeaderboard() {
@@ -2765,6 +2781,7 @@ function initGame() {
 
   function fullResetMenu() {
     blockEndGameModalUntilNextMatch = true;
+    multiplayerStartInProgress = false;
     document.body.removeAttribute("style");
 
     const menu = document.getElementById("menu");
@@ -3979,6 +3996,7 @@ function initGame() {
     stopRoomPresence();
     stopGameCountdownStartListener();
     multiplayerGameStarted = false;
+    multiplayerStartInProgress = false;
     resetSpawnState();
     clearGameRealtimeBindings();
 
@@ -4355,6 +4373,11 @@ function initGame() {
 
   async function startGameFlow() {
     syncedCountdownStartedAtMs = null;
+
+    if (currentRoomId) {
+      startRoomPresence(currentRoomId);
+      await touchRoomPresence(currentRoomId, { markAction: true });
+    }
     startTimer = 3;
     showStartText = true;
     gameStarted = false;
@@ -4385,6 +4408,7 @@ function initGame() {
     };
 
     await markPlayerReadyForGame(currentRoomId);
+    await touchRoomPresence(currentRoomId, { markAction: true });
 
     stopRoomReadyPoll();
     stopGameCountdownStartListener();
@@ -4420,6 +4444,7 @@ function initGame() {
         }
 
         syncedCountdownStartedAtMs = countdownStartedAt;
+        multiplayerStartInProgress = false;
       } catch (e) {
         console.error("Ошибка liveRoomStateListener:", e);
       }
