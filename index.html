@@ -823,7 +823,7 @@ function isCurrentPlayerRoomHost(room) {
 
 async function maybeRunRoomMaintenance(roomId, room, { force = false } = {}) {
   if (!roomId || !room) return;
-  if (!force && !isCurrentPlayerRoomHost(room)) return;
+  if (!force && !isCurrentClientRoomWriteDriver(room)) return;
   if (roomMaintenanceLock) return;
 
   const now = Date.now();
@@ -1275,6 +1275,7 @@ async function tryStartSyncedCountdown(roomId) {
 
       const room = doc.data();
       if (!room || !Array.isArray(room.playerIds)) return;
+      if (!isCurrentClientRoomWriteDriver(room)) return;
       if (room.status !== "playing" && room.gameState?.started !== true) return;
 
       const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
@@ -1294,7 +1295,7 @@ async function tryStartSyncedCountdown(roomId) {
 
       const waitedMs = Date.now() - playingStartedAtMs;
 
-      if (!allReady && waitedMs < 2500) return;
+      if (!allReady && waitedMs < 1200) return;
 
       transaction.update(roomRef, {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1305,13 +1306,34 @@ async function tryStartSyncedCountdown(roomId) {
     console.error("Ошибка tryStartSyncedCountdown:", e);
   }
 }
-  
+
 function getCurrentPlayer() {
   const fallbackName = document.getElementById("nickname").innerText.trim() || "Игрок";
   const id = tgUser?.id ? String(tgUser.id) : "guest_" + fallbackName;
   const name = tgUser?.username || tgUser?.first_name || fallbackName;
 
   return { id, name };
+}
+
+function getRoomWriteDriverId(room) {
+  if (!room) return null;
+
+  const ids = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean) : [];
+  if (ids.length === 0) return null;
+
+  const playersData = room.gameState?.playersData || {};
+
+  if (room.hostId && ids.includes(room.hostId) && playersData?.[room.hostId]?.leftRoom !== true) {
+    return room.hostId;
+  }
+
+  const activeIds = ids.filter((pid) => playersData?.[pid]?.leftRoom !== true);
+  return activeIds[0] || ids[0];
+}
+
+function isCurrentClientRoomWriteDriver(room) {
+  const { id } = getCurrentPlayer();
+  return getRoomWriteDriverId(room) === id;
 }
 
 const currentPlayer = getCurrentPlayer();
@@ -2254,6 +2276,7 @@ async function tryStartRoom(roomId) {
 
       const room = doc.data();
       if (!room || !Array.isArray(room.playerIds)) return;
+      if (!isCurrentClientRoomWriteDriver(room)) return;
       if (room.gameState?.started || room.status === "finished") return;
 
       const playersCount = room.playerIds.length;
@@ -2823,7 +2846,9 @@ function initGame() {
   const PLAYER_SIZE = 60;
   const REMOTE_PLAYER_SIZE = 52;
   const REMOTE_LABEL_FONT = "bold 13px Arial";
-  const SYNC_INTERVAL_MS = 60;
+  const SYNC_INTERVAL_MS = 90;
+  const REMOTE_SYNC_POSITION_STEP = 0.006;
+  const REMOTE_EXTRAPOLATION_LIMIT_MS = 220;
   const FIXED_STEP_MS = 1000 / 120;
   const DEFAULT_SHARED_RACE = {
     leftSpawnIntervalMs: 1200,
@@ -2888,6 +2913,16 @@ function initGame() {
     return clamp(ratio * canvas.height, 0, getGroundY());
   }
 
+  function quantizeRatio(value, step = REMOTE_SYNC_POSITION_STEP) {
+    const safeStep = Number(step) > 0 ? Number(step) : 0.006;
+    return Number((Math.round((Number(value || 0) / safeStep)) * safeStep).toFixed(4));
+  }
+
+  function getVelocityRatio() {
+    const safeHeight = Math.max(canvas.height || 1, 1);
+    return Number((player.dy / safeHeight).toFixed(5));
+  }
+
   let player = {
     x: getLaneCenter("center") - PLAYER_SIZE / 2,
     y: getGroundY(),
@@ -2905,6 +2940,7 @@ function initGame() {
 
   const playerState = {
     positionRatio: getPositionRatioFromY(player.y),
+    velocityRatio: 0,
     alive: true,
     grounded: true,
     lost: false,
@@ -3067,19 +3103,48 @@ function initGame() {
       }
     });
 
+    const gravityRatioPerFrame = player.gravity / Math.max(canvas.height || 1, 1);
+    const maxRatio = getPositionRatioFromY(getGroundY());
+
     return activeRemoteIds
       .map((pid) => {
         const data = room.gameState.playersData[pid] || {};
         const targetRatio = typeof data.positionRatio === "number" ? data.positionRatio : 0;
+        const velocityRatio = typeof data.velocityRatio === "number" ? data.velocityRatio : 0;
+        const sourceRevision = `${data.clientUpdatedAt || 0}:${targetRatio}:${velocityRatio}:${data.grounded === true ? 1 : 0}:${data.lost === true ? 1 : 0}`;
 
         if (!remoteVisualState[pid]) {
           remoteVisualState[pid] = {
-            visualRatio: targetRatio
+            visualRatio: targetRatio,
+            sourceRevision,
+            syncedRatio: targetRatio,
+            velocityRatio,
+            grounded: data.grounded === true,
+            lastLocalSyncAt: performance.now()
           };
         }
 
         const visualState = remoteVisualState[pid];
-        visualState.visualRatio += (targetRatio - visualState.visualRatio) * 0.35;
+
+        if (visualState.sourceRevision !== sourceRevision) {
+          visualState.sourceRevision = sourceRevision;
+          visualState.syncedRatio = targetRatio;
+          visualState.velocityRatio = velocityRatio;
+          visualState.grounded = data.grounded === true;
+          visualState.lastLocalSyncAt = performance.now();
+        }
+
+        let predictedRatio = targetRatio;
+
+        if (data.alive !== false && data.lost !== true && visualState.grounded !== true) {
+          const ageMs = Math.min(REMOTE_EXTRAPOLATION_LIMIT_MS, Math.max(0, performance.now() - visualState.lastLocalSyncAt));
+          const framesSinceSync = ageMs / 16.67;
+          predictedRatio = visualState.syncedRatio + (visualState.velocityRatio * framesSinceSync) + (0.5 * gravityRatioPerFrame * framesSinceSync * framesSinceSync);
+        }
+
+        predictedRatio = clamp(predictedRatio, 0, maxRatio);
+        const lerpFactor = Math.max(0.28, Math.min(0.72, 0.24 + Math.abs(predictedRatio - visualState.visualRatio) * 8));
+        visualState.visualRatio += (predictedRatio - visualState.visualRatio) * lerpFactor;
 
         return {
           id: pid,
@@ -3160,6 +3225,7 @@ function initGame() {
 
   let lastSentSyncState = {
     positionRatio: null,
+    velocityRatio: null,
     grounded: null,
     alive: null,
     lost: null,
@@ -3172,10 +3238,13 @@ function initGame() {
     if (!currentRoomId) return;
 
     const roomRef = db.collection("rooms").doc(currentRoomId);
-    const positionRatio = getPositionRatioFromY(player.y);
+    const positionRatioRaw = getPositionRatioFromY(player.y);
+    const positionRatio = quantizeRatio(positionRatioRaw);
+    const velocityRatio = getVelocityRatio();
     const now = Date.now();
 
     playerState.positionRatio = positionRatio;
+    playerState.velocityRatio = velocityRatio;
     playerState.alive = !playerLost;
     playerState.grounded = player.grounded;
     playerState.lost = playerLost;
@@ -3184,14 +3253,19 @@ function initGame() {
 
     const positionChanged =
       lastSentSyncState.positionRatio === null ||
-      Math.abs(lastSentSyncState.positionRatio - positionRatio) >= 0.01;
+      Math.abs(lastSentSyncState.positionRatio - positionRatio) >= REMOTE_SYNC_POSITION_STEP;
+
+    const velocityChanged =
+      lastSentSyncState.velocityRatio === null ||
+      Math.abs(lastSentSyncState.velocityRatio - velocityRatio) >= 0.0025;
 
     const stateChanged =
       lastSentSyncState.grounded !== player.grounded ||
       lastSentSyncState.alive !== !playerLost ||
       lastSentSyncState.lost !== playerLost ||
       lastSentSyncState.score !== score ||
-      lastSentSyncState.firstObstacleResolved !== firstObstacleResolved;
+      lastSentSyncState.firstObstacleResolved !== firstObstacleResolved ||
+      velocityChanged;
 
     const enoughTimePassed = now - lastSentSyncState.sentAt >= SYNC_INTERVAL_MS;
 
@@ -3200,10 +3274,10 @@ function initGame() {
     }
 
     const updateData = {
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       [`gameState.playersData.${playerId}.name`]: name,
       [`gameState.playersData.${playerId}.position`]: Math.round(player.y),
       [`gameState.playersData.${playerId}.positionRatio`]: positionRatio,
+      [`gameState.playersData.${playerId}.velocityRatio`]: velocityRatio,
       [`gameState.playersData.${playerId}.alive`]: !playerLost,
       [`gameState.playersData.${playerId}.grounded`]: player.grounded,
       [`gameState.playersData.${playerId}.lost`]: playerLost,
@@ -3225,6 +3299,7 @@ function initGame() {
       if (ok !== false) {
         lastSentSyncState = {
           positionRatio,
+          velocityRatio,
           grounded: player.grounded,
           alive: !playerLost,
           lost: playerLost,
@@ -3247,10 +3322,11 @@ function initGame() {
     }, SYNC_INTERVAL_MS);
 
     winnerCheckInterval = setInterval(() => {
-      if (gameStarted && currentRoomId && !winnerProcessing) {
-        checkWinner();
-      }
-    }, 1200);
+      if (!gameStarted || !currentRoomId || winnerProcessing) return;
+      if (!latestGameRoomState) return;
+      if (!isCurrentClientRoomWriteDriver(latestGameRoomState)) return;
+      checkWinner();
+    }, 2200);
   }
 
   if (gameBeforeUnloadHandler) {
@@ -3413,6 +3489,7 @@ function initGame() {
 
     player.x = getLaneCenter("center") - player.width / 2;
     playerState.positionRatio = getPositionRatioFromY(player.y);
+    playerState.velocityRatio = getVelocityRatio();
     playerState.alive = !playerLost;
     playerState.grounded = player.grounded;
   }
@@ -3477,6 +3554,7 @@ function initGame() {
     playerLost = true;
     playerState.alive = false;
     playerState.lost = true;
+    playerState.velocityRatio = 0;
     playerState.firstObstacleResolved = true;
     playerState.crashObstacleZ = Number(o.z.toFixed(5));
     playerState.crashPositionRatio = getPositionRatioFromY(player.y);
@@ -3527,22 +3605,26 @@ function initGame() {
 
             if (currentRoomId) {
               const roomRef = db.collection("rooms").doc(currentRoomId);
+              const finalScore = score;
 
-              roomRef.get().then(async (doc) => {
-                if (!doc.exists) return;
+              (async () => {
+                const duelLikelyPending =
+                  latestGameRoomState?.gameState?.pendingFinish?.active === true &&
+                  latestGameRoomState?.gameState?.pendingFinish?.winnerId === playerId &&
+                  latestGameRoomState?.gameState?.pendingFinish?.resolved !== true;
 
-                let finalScore = score;
-                const duelResolved = await resolvePendingDuelFinishIfNeeded(roomRef, finalScore);
-                if (duelResolved) {
-                  return;
+                if (duelLikelyPending) {
+                  const duelResolved = await resolvePendingDuelFinishIfNeeded(roomRef, finalScore);
+                  if (duelResolved) {
+                    return;
+                  }
                 }
 
                 await safeRoomUpdate(roomRef, {
-                  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                   [`gameState.playersData.${playerId}.score`]: finalScore,
                   [`gameState.playersData.${playerId}.firstObstacleResolved`]: true
                 }, "drawObstacles2.scoreUpdate");
-              }).catch(err => console.error("Ошибка обновления счёта:", err));
+              })().catch(err => console.error("Ошибка обновления счёта:", err));
             }
           }
         }
@@ -4399,6 +4481,7 @@ function initGame() {
     gameSpeed = Number(sharedRace.speedBase || DEFAULT_SHARED_RACE.speedBase);
     lastSentSyncState = {
       positionRatio: null,
+      velocityRatio: null,
       grounded: null,
       alive: null,
       lost: null,
@@ -4439,7 +4522,9 @@ function initGame() {
         const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
 
         if (!countdownStartedAt) {
-          await tryStartSyncedCountdown(currentRoomId);
+          if (isCurrentClientRoomWriteDriver(room)) {
+            await tryStartSyncedCountdown(currentRoomId);
+          }
           return;
         }
 
@@ -4466,7 +4551,9 @@ function initGame() {
         const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
 
         if (!countdownStartedAt) {
-          await tryStartSyncedCountdown(currentRoomId);
+          if (isCurrentClientRoomWriteDriver(room)) {
+            await tryStartSyncedCountdown(currentRoomId);
+          }
           return;
         }
 
@@ -4474,7 +4561,7 @@ function initGame() {
       } catch (e) {
         console.error("Ошибка roomReadyPoll:", e);
       }
-    }, 250);
+    }, 600);
   }
 
   function loop(currentTime) {
