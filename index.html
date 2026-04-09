@@ -750,8 +750,14 @@ function isRetryableFirestoreContentionError(error) {
     code === "aborted" ||
     code === "failed-precondition" ||
     code === "cancelled" ||
+    code === "resource-exhausted" ||
+    code === "unavailable" ||
+    code === "deadline-exceeded" ||
     message.includes("failed-precondition") ||
     message.includes("too much contention") ||
+    message.includes("quota exceeded") ||
+    message.includes("resource exhausted") ||
+    message.includes("too many requests") ||
     (message.includes("transaction") && message.includes("retry")) ||
     (message.includes("current document") && message.includes("updatetime"))
   );
@@ -767,7 +773,8 @@ function reportFirestoreContention(context, error) {
 }
 
 async function runRoomTransaction(roomRef, callback, context = "Firestore transaction") {
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 5;
+
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       return await db.runTransaction(async (transaction) => {
@@ -776,17 +783,21 @@ async function runRoomTransaction(roomRef, callback, context = "Firestore transa
     } catch (e) {
       if (isRetryableFirestoreContentionError(e)) {
         if (attempt < MAX_RETRIES - 1) {
-          const delay = 100 * Math.pow(2, attempt);
+          const baseDelay = e?.code === "resource-exhausted" ? 250 : 100;
+          const delay = baseDelay * Math.pow(2, attempt);
           console.warn(`${context}: retry ${attempt + 1}/${MAX_RETRIES - 1} after ${delay}ms`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
+
         console.warn(`${context}: все попытки исчерпаны, пропускаем`);
         return null;
       }
+
       throw e;
     }
   }
+
   return null;
 }
 
@@ -2379,6 +2390,8 @@ async function joinRoom(roomId) {
       alert("Эта комната уже недоступна");
     } else if (e.message === "ROOM_FULL") {
       alert("Комната заполнена");
+    } else if (e.message === "JOIN_RETRY" || e?.code === "resource-exhausted") {
+      alert("Сервер комнаты был перегружен. Попробуй ещё раз через пару секунд.");
     } else {
       alert("Не удалось войти в комнату. Попробуй ещё раз.");
     }
@@ -2427,17 +2440,16 @@ async function tryStartRoom(roomId) {
       }
 
       if (playersCount < 2) {
-        const updateData = {
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        if (room.startAt) updateData.startAt = null;
-
-        transaction.update(roomRef, updateData);
+        if (room.startAt) {
+          transaction.update(roomRef, {
+            startAt: null,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
         return;
       }
 
-      if (playersCount >= 2 && !room.startAt) {
+      if (!room.startAt) {
         transaction.update(roomRef, {
           startAt: firebase.firestore.FieldValue.serverTimestamp(),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -2445,7 +2457,7 @@ async function tryStartRoom(roomId) {
         return;
       }
 
-      if (playersCount >= 2 && countdownLeft !== null && countdownLeft <= 0) {
+      if (countdownLeft !== null && countdownLeft <= 0) {
         transaction.update(roomRef, {
           status: "playing",
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -2547,7 +2559,12 @@ function openRoomScreen(roomId, optimisticRoom = null) {
       return;
     }
 
-    await tryStartRoom(roomId);
+    const playersCount = getRenderableRoomPlayerIds(room).length;
+    const shouldMaintainRoomStartState = playersCount >= 2 || !!room.startAt;
+
+    if (shouldMaintainRoomStartState && isCurrentClientRoomWriteDriver(room)) {
+      await tryStartRoom(roomId);
+    }
   }
 
   if (list) {
