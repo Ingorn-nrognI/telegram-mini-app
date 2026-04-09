@@ -2750,6 +2750,7 @@ function openSettings() {
 // ========================
 // ИГРА
 // ========================
+
 function initGame() {
 
   function fullResetMenu() {
@@ -2780,30 +2781,36 @@ function initGame() {
     exitEndGameForCurrentMatch = null;
     closeRooms();
     setMenuView("mode");
-    latestGameRoomState = null;
     loadGameHistory();
   }
 
   if (window.gameInitialized) return;
   window.gameInitialized = true;
-  
+
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
 
   const roadLeft = 0.15;
   const roadRight = 0.85;
   const laneOffset = 0.2;
+  const PLAYER_SIZE = 60;
+  const REMOTE_PLAYER_SIZE = 52;
+  const REMOTE_LABEL_FONT = "bold 13px Arial";
+  const SYNC_INTERVAL_MS = 120;
+  const FIXED_STEP_MS = 1000 / 120;
+  const DEFAULT_SHARED_RACE = {
+    leftSpawnIntervalMs: 1200,
+    centerSpawnIntervalMs: 1500,
+    rightSpawnIntervalMs: 1800,
+    speedBase: 0.008,
+    speedGainPerTick: 0.00001
+  };
 
   canvas.width = canvas.clientWidth || window.innerWidth;
   canvas.height = canvas.clientHeight || window.innerHeight;
 
-  const playerState = {
-    position: 0,
-    alive: true
-  };
-
   const { id: playerId, name } = getCurrentPlayer();
-  
+
   const beaver = new Image();
   const log = new Image();
 
@@ -2818,37 +2825,94 @@ function initGame() {
     });
   }
 
+  function getRoadCenter() {
+    return (roadLeft + roadRight) / 2;
+  }
+
+  function getLaneCenter(slot) {
+    const roadCenter = getRoadCenter();
+    if (slot === "left") return canvas.width * (roadCenter - laneOffset);
+    if (slot === "right") return canvas.width * (roadCenter + laneOffset);
+    return canvas.width * roadCenter;
+  }
+
+  function getGroundY() {
+    return canvas.height - 150;
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function truncateName(value) {
+    const text = String(value || "Игрок");
+    return text.length > 10 ? text.slice(0, 10) + "…" : text;
+  }
+
+  function getPositionRatioFromY(y) {
+    if (!canvas.height) return 0;
+    return Number((y / canvas.height).toFixed(5));
+  }
+
+  function getYFromPositionRatio(ratio) {
+    if (typeof ratio !== "number" || Number.isNaN(ratio)) {
+      return getGroundY();
+    }
+    return clamp(ratio * canvas.height, 0, getGroundY());
+  }
+
   let player = {
-    x: canvas.width / 2 - 30,
-    y: canvas.height - 150,
-    width: 60,
-    height: 60,
+    x: getLaneCenter("center") - PLAYER_SIZE / 2,
+    y: getGroundY(),
+    width: PLAYER_SIZE,
+    height: PLAYER_SIZE,
     dy: 0,
     gravity: 0.6,
     jump: -13,
     grounded: true,
     gameOver: false,
-    gameOverText: "Ты врезался!"
+    gameOverText: "Ты врезался!",
+    frozenX: null,
+    frozenY: null
   };
 
-  const roadCenter = (roadLeft + roadRight) / 2;
-  const lane1 = canvas.width * (roadCenter - laneOffset);
-  const lane2 = canvas.width * roadCenter;
-  const lane3 = canvas.width * (roadCenter + laneOffset);
-
-  player.x = lane2 - player.width / 2;
+  const playerState = {
+    positionRatio: getPositionRatioFromY(player.y),
+    alive: true,
+    grounded: true,
+    lost: false,
+    score: 0,
+    firstObstacleResolved: false,
+    crashObstacleZ: null,
+    crashPositionRatio: null
+  };
 
   if (gameResizeHandler) {
     window.removeEventListener("resize", gameResizeHandler);
   }
 
-  gameResizeHandler = () => {};
+  gameResizeHandler = () => {
+    const prevHeight = canvas.height || window.innerHeight || 1;
+    const currentRatio = prevHeight ? clamp(player.y / prevHeight, 0, 1) : 0;
+    canvas.width = canvas.clientWidth || window.innerWidth;
+    canvas.height = canvas.clientHeight || window.innerHeight;
+    player.x = getLaneCenter("center") - player.width / 2;
+    player.y = clamp(currentRatio * canvas.height, 0, getGroundY());
+
+    if (player.frozenX != null) {
+      player.frozenX = player.x;
+    }
+    if (player.frozenY != null) {
+      player.frozenY = player.y;
+    }
+  };
   window.addEventListener("resize", gameResizeHandler);
 
   let obstacles1 = [];
   let obstacles2 = [];
   let obstacles3 = [];
-  let gameSpeed = 0.008;
+  let sharedRace = { ...DEFAULT_SHARED_RACE };
+  let gameSpeed = sharedRace.speedBase;
   let lastTime = performance.now();
   let deltaTime = 1;
   let score = 0;
@@ -2857,64 +2921,248 @@ function initGame() {
   let startTimer = 3;
   let showStartText = true;
   let latestGameRoomState = null;
-  let simulationTick = 0;
-  let lastTargetTick = 0;
   let lastCountdownSecond = null;
+  let syncedCountdownStartedAtMs = null;
 
   let syncInterval = null;
   let winnerCheckInterval = null;
+  let liveRoomStateListener = null;
 
-  if (currentRoomId) {
+  let playerLost = false;
+  let frozenObstacle = null;
+  let exitBtn = { x: 0, y: 0, w: 0, h: 0 };
+  let watchBtn = { x: 0, y: 0, w: 0, h: 0 };
+  let exitToMenuBtn = { x: 0, y: 0, w: 0, h: 0 };
+  let showExitButton = false;
+
+  let spawnStarted = false;
+  let spawnAccumulator1 = 0;
+  let spawnAccumulator2 = 0;
+  let spawnAccumulator3 = 0;
+  let simulationTick = 0;
+  let lastTargetTick = 0;
+
+  function clearGameRealtimeBindings() {
+    if (liveRoomStateListener) {
+      liveRoomStateListener();
+      liveRoomStateListener = null;
+    }
+
+    if (syncInterval) {
+      clearInterval(syncInterval);
+      syncInterval = null;
+    }
+
+    if (winnerCheckInterval) {
+      clearInterval(winnerCheckInterval);
+      winnerCheckInterval = null;
+    }
+  }
+
+  async function ensureSharedRaceConfig(roomId) {
+    if (!roomId) return DEFAULT_SHARED_RACE;
+
+    const roomRef = db.collection("rooms").doc(roomId);
+
+    try {
+      const result = await runRoomTransaction(roomRef, async (transaction) => {
+        const doc = await transaction.get(roomRef);
+        if (!doc.exists) return DEFAULT_SHARED_RACE;
+
+        const room = doc.data() || {};
+        const existing = room.gameState?.sharedRace || null;
+
+        if (existing && existing.centerSpawnIntervalMs) {
+          return {
+            leftSpawnIntervalMs: Number(existing.leftSpawnIntervalMs || DEFAULT_SHARED_RACE.leftSpawnIntervalMs),
+            centerSpawnIntervalMs: Number(existing.centerSpawnIntervalMs || DEFAULT_SHARED_RACE.centerSpawnIntervalMs),
+            rightSpawnIntervalMs: Number(existing.rightSpawnIntervalMs || DEFAULT_SHARED_RACE.rightSpawnIntervalMs),
+            speedBase: Number(existing.speedBase || DEFAULT_SHARED_RACE.speedBase),
+            speedGainPerTick: Number(existing.speedGainPerTick || DEFAULT_SHARED_RACE.speedGainPerTick)
+          };
+        }
+
+        const config = { ...DEFAULT_SHARED_RACE };
+
+        transaction.update(roomRef, {
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          "gameState.sharedRace": config
+        });
+
+        return config;
+      }, "ensureSharedRaceConfig");
+
+      if (result && result.centerSpawnIntervalMs) {
+        return result;
+      }
+    } catch (e) {
+      console.error("Ошибка ensureSharedRaceConfig:", e);
+    }
+
+    return { ...DEFAULT_SHARED_RACE };
+  }
+
+  function getOrderedActivePlayerIds(room) {
+    if (!room || !Array.isArray(room.playerIds)) return [];
+    return room.playerIds.filter((pid) => {
+      if (!pid) return false;
+      const p = room.gameState?.playersData?.[pid] || {};
+      return p.leftRoom !== true;
+    });
+  }
+
+  function getRemoteSlotForPlayer(targetPlayerId) {
+    const orderedIds = getOrderedActivePlayerIds(latestGameRoomState);
+    const otherIds = orderedIds.filter((pid) => pid !== playerId);
+
+    if (otherIds.length <= 0) return null;
+    if (otherIds.length === 1) {
+      return targetPlayerId === otherIds[0] ? "left" : null;
+    }
+
+    if (otherIds[0] === targetPlayerId) return "left";
+    if (otherIds[1] === targetPlayerId) return "right";
+    return null;
+  }
+
+  function getRemotePlayersForRender() {
+    const room = latestGameRoomState;
+    if (!room?.gameState?.playersData) return [];
+
+    return getOrderedActivePlayerIds(room)
+      .filter((pid) => pid !== playerId)
+      .slice(0, 2)
+      .map((pid) => {
+        const data = room.gameState.playersData[pid] || {};
+        return {
+          id: pid,
+          slot: getRemoteSlotForPlayer(pid),
+          name: data.name || room.playerNames?.[pid] || "Игрок",
+          positionRatio: typeof data.positionRatio === "number" ? data.positionRatio : 0,
+          alive: data.alive !== false,
+          lost: data.lost === true,
+          score: Number(data.score || 0),
+          crashObstacleZ: typeof data.crashObstacleZ === "number" ? data.crashObstacleZ : null,
+          crashPositionRatio: typeof data.crashPositionRatio === "number" ? data.crashPositionRatio : null
+        };
+      })
+      .filter(item => item.slot);
+  }
+
+  function buildObstacleDrawData(slot, obstacle) {
+    const scale = 1 - obstacle.z;
+    const size = 60 * scale;
+    const laneCenter = getLaneCenter(slot);
+    const x = canvas.width / 2 + (laneCenter - canvas.width / 2) * scale - size / 2;
+    const y = 100 + (canvas.height - 200) * scale;
+    return { x, y, size, scale };
+  }
+
+  function createObstacle(slot, z = 1, passed = false) {
+    return { slot, z, passed };
+  }
+
+  function resetSpawnState() {
+    spawnStarted = false;
+    spawnAccumulator1 = 0;
+    spawnAccumulator2 = 0;
+    spawnAccumulator3 = 0;
+  }
+
+  function spawnObstacle1() {
+    if (!gameStarted) return;
+    obstacles1.push(createObstacle("left"));
+  }
+
+  function spawnObstacle2() {
+    if (!gameStarted) return;
+    obstacles2.push(createObstacle("center", 1, false));
+  }
+
+  function spawnObstacle3() {
+    if (!gameStarted) return;
+    obstacles3.push(createObstacle("right"));
+  }
+
+  function startSpawnIfNeeded() {
+    if (spawnStarted) return;
+    spawnStarted = true;
+
+    spawnAccumulator1 = 0;
+    spawnAccumulator2 = 0;
+    spawnAccumulator3 = 0;
+
+    spawnObstacle1();
+    spawnObstacle2();
+    spawnObstacle3();
+  }
+
+  async function prepareGameAssets() {
+    await Promise.all([
+      loadImage("beaver.png", beaver),
+      loadImage("log.png", log)
+    ]);
+  }
+
+  function jump() {
+    if (player.grounded && !player.gameOver && gameStarted) {
+      player.dy = player.jump;
+      player.grounded = false;
+    }
+  }
+
+  async function syncLocalPlayerState(force = false) {
+    if (!currentRoomId) return;
+
     const roomRef = db.collection("rooms").doc(currentRoomId);
+    const positionRatio = getPositionRatioFromY(player.y);
+    playerState.positionRatio = positionRatio;
+    playerState.alive = !playerLost;
+    playerState.grounded = player.grounded;
+    playerState.lost = playerLost;
+    playerState.score = score;
+    playerState.firstObstacleResolved = firstObstacleResolved;
 
-    safeRoomUpdate(roomRef, {
+    const updateData = {
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       [`gameState.playersData.${playerId}.name`]: name,
-      [`gameState.playersData.${playerId}.position`]: Math.round(playerState.position),
-      [`gameState.playersData.${playerId}.alive`]: playerState.alive,
+      [`gameState.playersData.${playerId}.position`]: Math.round(player.y),
+      [`gameState.playersData.${playerId}.positionRatio`]: positionRatio,
+      [`gameState.playersData.${playerId}.alive`]: !playerLost,
+      [`gameState.playersData.${playerId}.grounded`]: player.grounded,
+      [`gameState.playersData.${playerId}.lost`]: playerLost,
       [`gameState.playersData.${playerId}.score`]: score,
       [`gameState.playersData.${playerId}.firstObstacleResolved`]: firstObstacleResolved
-    }, "initGame.initialPlayerState").catch(err => console.error("Ошибка начальной записи игрока:", err));
-
-    let lastSyncedState = {
-      position: null,
-      alive: null,
-      score: null,
-      firstObstacleResolved: null
     };
+
+    if (playerLost) {
+      updateData[`gameState.playersData.${playerId}.crashObstacleZ`] = typeof playerState.crashObstacleZ === "number" ? playerState.crashObstacleZ : null;
+      updateData[`gameState.playersData.${playerId}.crashPositionRatio`] = typeof playerState.crashPositionRatio === "number" ? playerState.crashPositionRatio : null;
+    } else if (force) {
+      updateData[`gameState.playersData.${playerId}.crashObstacleZ`] = null;
+      updateData[`gameState.playersData.${playerId}.crashPositionRatio`] = null;
+    }
+
+    try {
+      await safeRoomUpdate(roomRef, updateData, "syncLocalPlayerState");
+    } catch (err) {
+      console.error("Ошибка синхронизации игрока:", err);
+    }
+  }
+
+  if (currentRoomId) {
+    syncLocalPlayerState(true);
 
     syncInterval = setInterval(() => {
       if (!currentRoomId) return;
-
-      const roundedPosition = Math.round(playerState.position);
-      const hasChanges =
-        lastSyncedState.position !== roundedPosition ||
-        lastSyncedState.alive !== playerState.alive ||
-        lastSyncedState.score !== score ||
-        lastSyncedState.firstObstacleResolved !== firstObstacleResolved;
-
-      if (!hasChanges) return;
-
-      lastSyncedState = {
-        position: roundedPosition,
-        alive: playerState.alive,
-        score: score,
-        firstObstacleResolved: firstObstacleResolved
-      };
-
-      safeRoomUpdate(roomRef, {
-        [`gameState.playersData.${playerId}.position`]: roundedPosition,
-        [`gameState.playersData.${playerId}.alive`]: playerState.alive,
-        [`gameState.playersData.${playerId}.score`]: score,
-        [`gameState.playersData.${playerId}.firstObstacleResolved`]: firstObstacleResolved,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, "initGame.syncPlayerState").catch(err => console.error("Ошибка обновления позиции:", err));
-    }, 1500);
+      syncLocalPlayerState(false);
+    }, SYNC_INTERVAL_MS);
 
     winnerCheckInterval = setInterval(() => {
       if (gameStarted && currentRoomId && !winnerProcessing) {
         checkWinner();
       }
-    }, 3000);
+    }, 1200);
   }
 
   if (gameBeforeUnloadHandler) {
@@ -2922,32 +3170,17 @@ function initGame() {
   }
 
   gameBeforeUnloadHandler = () => {
-    if (syncInterval) clearInterval(syncInterval);
-    if (winnerCheckInterval) clearInterval(winnerCheckInterval);
+    clearGameRealtimeBindings();
     stopRoomReadyPoll();
   };
 
   window.addEventListener("beforeunload", gameBeforeUnloadHandler);
-
-  let isWatching1 = false;
-  let isWatching2 = false;
-  let isWatching3 = false;
-  let playerLost = false;
-  
-  let frozenObstacle = null;
-  
-  let exitBtn = {x: 0, y: 0, w: 0, h: 0};
-  let watchBtn = {x: 0, y: 0, w: 0, h: 0};
-
-  let exitToMenuBtn = {x: 0, y: 0, w: 0, h: 0};
-  let showExitButton = false;
 
   openEndGameForCurrentMatch = function(resultData) {
     if (suppressEndGameModal || isClosingEndGame || endGameExitHandled || blockEndGameModalUntilNextMatch) return;
 
     player.gameOver = false;
     showExitButton = false;
-    isWatching2 = true;
     frozenObstacle = null;
 
     showEndGameModal(resultData);
@@ -2968,41 +3201,6 @@ function initGame() {
 
     await leaveAfterLoss();
   };
-
-  function spawnObstacle1() {
-    if (!gameStarted) return;
-    if (!isWatching1) {
-      obstacles1.push({ x: lane1, z: 1 });
-    }
-  }
-
-  function spawnObstacle2() {
-    if (!gameStarted) return;
-    if (!isWatching2) {
-      obstacles2.push({ x: lane2, z: 1, passed: false });
-    }
-  }
-
-  function spawnObstacle3() {
-    if (!gameStarted) return;
-    if (!isWatching3) {
-      obstacles3.push({ x: lane3, z: 1 });
-    }
-  }
-
-  async function prepareGameAssets() {
-    await Promise.all([
-      loadImage("beaver.png", beaver),
-      loadImage("log.png", log)
-    ]);
-  }
-
-  function jump() {
-    if (player.grounded && !player.gameOver && gameStarted) {
-      player.dy = player.jump;
-      player.grounded = false;
-    }
-  }
 
   if (gameCanvasClickHandler) {
     canvas.removeEventListener("click", gameCanvasClickHandler);
@@ -3027,12 +3225,11 @@ function initGame() {
         x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
         y > watchBtn.y && y < watchBtn.y + watchBtn.h
       ) {
-        isWatching2 = true;
         player.gameOver = false;
         player.dy = 0;
         player.grounded = true;
 
-        if (player.frozenX !== undefined) {
+        if (player.frozenX !== undefined && player.frozenX !== null) {
           player.x = player.frozenX;
           player.y = player.frozenY;
         }
@@ -3083,12 +3280,11 @@ function initGame() {
         x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
         y > watchBtn.y && y < watchBtn.y + watchBtn.h
       ) {
-        isWatching2 = true;
         player.gameOver = false;
         player.dy = 0;
         player.grounded = true;
 
-        if (player.frozenX !== undefined) {
+        if (player.frozenX !== undefined && player.frozenX !== null) {
           player.x = player.frozenX;
           player.y = player.frozenY;
         }
@@ -3112,47 +3308,49 @@ function initGame() {
   };
 
   canvas.addEventListener("touchstart", gameCanvasTouchHandler);
-  
+
   function updatePlayer() {
     if (!player.gameOver && gameStarted) {
       player.dy += player.gravity * deltaTime;
       player.y += player.dy * deltaTime;
     }
-    
-    if (player.y >= canvas.height - 150) {
-      player.y = canvas.height - 150;
+
+    const groundY = getGroundY();
+
+    if (player.y >= groundY) {
+      player.y = groundY;
       player.dy = 0;
       player.grounded = true;
     }
 
-    playerState.position = player.y;
+    player.x = getLaneCenter("center") - player.width / 2;
+    playerState.positionRatio = getPositionRatioFromY(player.y);
     playerState.alive = !playerLost;
+    playerState.grounded = player.grounded;
+  }
+
+  function updateObstacleArray(arr) {
+    arr.forEach(o => {
+      o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
+    });
+    return arr.filter(o => o.z > 0);
   }
 
   function updateObstacles1() {
-    if (!isWatching1 && gameStarted) {
-      obstacles1.forEach(o => {
-        o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
-      });
-      obstacles1 = obstacles1.filter(o => o.z > 0);
+    if (gameStarted) {
+      obstacles1 = updateObstacleArray(obstacles1);
     }
   }
 
   function updateObstacles2() {
-    if (!isWatching2 && gameStarted) {
-      obstacles2.forEach(o => {
-        o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
-      });
-      obstacles2 = obstacles2.filter(o => o.z > 0);
+    if (gameStarted) {
+      obstacles2 = updateObstacleArray(obstacles2);
     }
   }
 
   function updateObstacles3() {
-    if (!isWatching3 && gameStarted) {
-      obstacles3.forEach(o => {
-        o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
-      });
-      obstacles3 = obstacles3.filter(o => o.z > 0);
+    if (gameStarted) {
+      obstacles3 = updateObstacleArray(obstacles3);
     }
   }
 
@@ -3167,21 +3365,41 @@ function initGame() {
     ctx.fill();
   }
 
-  function drawObstacles1() {
-    obstacles1.forEach(o => {
-      let scale = 1 - o.z;
-      let size = 60 * scale;
-      let x = canvas.width / 2 + (lane1 - canvas.width / 2) * scale - size/2;
-      let y = 100 + (canvas.height - 200) * scale;
-
-      ctx.drawImage(log, x, y, size, size);
-
-      if (!player.gameOver && scale > 0.85 &&
-          player.x < x + size && player.x + player.width > x &&
-          player.y < y + size && player.y + player.height > y) {
-        player.gameOver = true;
-      }
+  function drawObstacleSet(arr) {
+    arr.forEach(o => {
+      const drawData = buildObstacleDrawData(o.slot, o);
+      ctx.drawImage(log, drawData.x, drawData.y, drawData.size, drawData.size);
     });
+  }
+
+  function drawObstacles1() {
+    drawObstacleSet(obstacles1);
+  }
+
+  async function handleLocalCrash(o, drawData) {
+    frozenObstacle = { x: drawData.x, y: drawData.y, size: drawData.size };
+    player.frozenX = player.x;
+    player.frozenY = player.y;
+    obstacles2 = [];
+    player.gameOverText = "Ты врезался! Счёт: " + score;
+
+    saveBestScore(score);
+
+    player.gameOver = true;
+    playerLost = true;
+    playerState.alive = false;
+    playerState.lost = true;
+    playerState.firstObstacleResolved = true;
+    playerState.crashObstacleZ = Number(o.z.toFixed(5));
+    playerState.crashPositionRatio = getPositionRatioFromY(player.y);
+    firstObstacleResolved = true;
+
+    await syncLocalPlayerState(true);
+
+    (async () => {
+      await markPlayerAsLost();
+      await markPendingDuelFinish();
+    })();
   }
 
   function drawObstacles2() {
@@ -3189,38 +3407,21 @@ function initGame() {
       ctx.drawImage(log, frozenObstacle.x, frozenObstacle.y, frozenObstacle.size, frozenObstacle.size);
     }
 
-    if (!player.gameOver && !isWatching2) {
+    if (!player.gameOver) {
       for (let i = 0; i < obstacles2.length; i++) {
-        let o = obstacles2[i];
-        let scale = 1 - o.z;
-        let size = 60 * scale;
-        let x = canvas.width / 2 + (lane2 - canvas.width / 2) * scale - size/2;
-        let y = 100 + (canvas.height - 200) * scale;
+        const o = obstacles2[i];
+        const drawData = buildObstacleDrawData("center", o);
 
-        ctx.drawImage(log, x, y, size, size);
+        ctx.drawImage(log, drawData.x, drawData.y, drawData.size, drawData.size);
 
-        if (scale > 0.85 &&
-            player.x < x + size && player.x + player.width > x &&
-            player.y < y + size && player.y + player.height > y) {
-
-          frozenObstacle = { x: x, y: y, size: size };
-          player.frozenX = player.x;
-          player.frozenY = player.y;
-          obstacles2 = [];
-          player.gameOverText = "Ты врезался! Счёт: " + score;
-
-          saveBestScore(score);
-
-          player.gameOver = true;
-          playerLost = true;
-          playerState.alive = false;
-          firstObstacleResolved = true;
-
-          (async () => {
-            await markPlayerAsLost();
-            await markPendingDuelFinish();
-          })();
-
+        if (
+          drawData.scale > 0.85 &&
+          player.x < drawData.x + drawData.size &&
+          player.x + player.width > drawData.x &&
+          player.y < drawData.y + drawData.size &&
+          player.y + player.height > drawData.y
+        ) {
+          handleLocalCrash(o, drawData);
           return;
         }
 
@@ -3229,10 +3430,12 @@ function initGame() {
 
           if (!firstObstacleResolved) {
             firstObstacleResolved = true;
+            playerState.firstObstacleResolved = true;
           }
 
           if (!player.grounded) {
             score++;
+            playerState.score = score;
 
             if (currentRoomId) {
               const roomRef = db.collection("rooms").doc(currentRoomId);
@@ -3240,9 +3443,7 @@ function initGame() {
               roomRef.get().then(async (doc) => {
                 if (!doc.exists) return;
 
-                const room = doc.data();
                 let finalScore = score;
-
                 const duelResolved = await resolvePendingDuelFinishIfNeeded(roomRef, finalScore);
                 if (duelResolved) {
                   return;
@@ -3258,32 +3459,78 @@ function initGame() {
           }
         }
       }
+    } else {
+      obstacles2.forEach((o) => {
+        const drawData = buildObstacleDrawData("center", o);
+        ctx.drawImage(log, drawData.x, drawData.y, drawData.size, drawData.size);
+      });
     }
   }
 
   function drawObstacles3() {
-    obstacles3.forEach(o => {
-      let scale = 1 - o.z;
-      let size = 60 * scale;
-      let x = canvas.width / 2 + (lane3 - canvas.width / 2) * scale - size/2;
-      let y = 100 + (canvas.height - 200) * scale;
+    drawObstacleSet(obstacles3);
+  }
 
-      ctx.drawImage(log, x, y, size, size);
+  function drawNicknameLabel(centerX, y, text, alpha = 1) {
+    const label = truncateName(text);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = REMOTE_LABEL_FONT;
+    ctx.textAlign = "center";
+    const metrics = ctx.measureText(label);
+    const paddingX = 8;
+    const width = metrics.width + paddingX * 2;
+    const height = 20;
+    const boxX = centerX - width / 2;
+    const boxY = y + 58;
 
-      if (!player.gameOver && scale > 0.85 &&
-          player.x < x + size && player.x + player.width > x &&
-          player.y < y + size && player.y + player.height > y) {
-        player.gameOver = true;
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    roundRect(ctx, boxX, boxY, width, height, 10);
+    ctx.fillStyle = "#fff";
+    ctx.fillText(label, centerX, boxY + 14);
+    ctx.restore();
+  }
+
+  function drawRemotePlayers() {
+    const remotes = getRemotePlayersForRender();
+
+    remotes.forEach((remote) => {
+      const centerX = getLaneCenter(remote.slot);
+      const y = getYFromPositionRatio(remote.positionRatio);
+      const x = centerX - REMOTE_PLAYER_SIZE / 2;
+      const alpha = remote.lost ? 0.45 : 0.95;
+
+      if (remote.lost && typeof remote.crashObstacleZ === "number") {
+        const frozenDraw = buildObstacleDrawData(remote.slot, { z: remote.crashObstacleZ });
+        ctx.save();
+        ctx.globalAlpha = 0.95;
+        ctx.drawImage(log, frozenDraw.x, frozenDraw.y, frozenDraw.size, frozenDraw.size);
+        ctx.restore();
       }
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(beaver, x, y, REMOTE_PLAYER_SIZE, REMOTE_PLAYER_SIZE);
+      ctx.restore();
+
+      drawNicknameLabel(centerX, y, remote.name, alpha);
     });
   }
 
   function drawPlayer() {
-    if (frozenObstacle && isWatching2) {
-      ctx.drawImage(beaver, player.frozenX || player.x, player.frozenY || player.y, player.width, player.height);
+    const drawX = (frozenObstacle && !player.gameOver && player.frozenX != null) ? player.frozenX : player.x;
+    const drawY = (frozenObstacle && !player.gameOver && player.frozenY != null) ? player.frozenY : player.y;
+
+    if (playerLost) {
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      ctx.drawImage(beaver, drawX, drawY, player.width, player.height);
+      ctx.restore();
     } else {
-      ctx.drawImage(beaver, player.x, player.y, player.width, player.height);
+      ctx.drawImage(beaver, drawX, drawY, player.width, player.height);
     }
+
+    drawNicknameLabel(getLaneCenter("center"), drawY, name, playerLost ? 0.6 : 1);
   }
 
   function roundRect(ctx, x, y, w, h, r) {
@@ -3303,34 +3550,23 @@ function initGame() {
 
   function drawExitButton() {
     if (!showExitButton) return;
-    
+
     const btnWidth = 100;
     const btnHeight = 45;
     const padding = 20;
-    
+
     const btnX = canvas.width - btnWidth - padding;
     const btnY = canvas.height - btnHeight - padding;
-    
+
     exitToMenuBtn = { x: btnX, y: btnY, w: btnWidth, h: btnHeight };
-    
+
     ctx.fillStyle = "#dc3545";
-    ctx.beginPath();
-    ctx.moveTo(btnX + 10, btnY);
-    ctx.lineTo(btnX + btnWidth - 10, btnY);
-    ctx.quadraticCurveTo(btnX + btnWidth, btnY, btnX + btnWidth, btnY + 10);
-    ctx.lineTo(btnX + btnWidth, btnY + btnHeight - 10);
-    ctx.quadraticCurveTo(btnX + btnWidth, btnY + btnHeight, btnX + btnWidth - 10, btnY + btnHeight);
-    ctx.lineTo(btnX + 10, btnY + btnHeight);
-    ctx.quadraticCurveTo(btnX, btnY + btnHeight, btnX, btnY + btnHeight - 10);
-    ctx.lineTo(btnX, btnY + 10);
-    ctx.quadraticCurveTo(btnX, btnY, btnX + 10, btnY);
-    ctx.closePath();
-    ctx.fill();
-    
+    roundRect(ctx, btnX, btnY, btnWidth, btnHeight, 12);
+
     ctx.fillStyle = "#fff";
     ctx.font = "bold 16px Arial";
     ctx.textAlign = "center";
-    ctx.fillText("Выйти", btnX + btnWidth/2, btnY + btnHeight/2 + 5);
+    ctx.fillText("Выйти", btnX + btnWidth / 2, btnY + btnHeight / 2 + 5);
   }
 
   function drawGameOver() {
@@ -3348,7 +3584,7 @@ function initGame() {
     ctx.fillStyle = "#fff";
     ctx.font = "22px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(player.gameOverText, canvas.width/2, boxY + 50);
+    ctx.fillText(player.gameOverText, canvas.width / 2, boxY + 50);
 
     const btnWidth = 110;
     const btnHeight = 40;
@@ -3361,7 +3597,7 @@ function initGame() {
     roundRect(ctx, watchX, watchY, btnWidth, btnHeight, 15);
     ctx.fillStyle = "#fff";
     ctx.font = "16px Arial";
-    ctx.fillText("Смотреть", watchX + btnWidth/2, watchY + 25);
+    ctx.fillText("Смотреть", watchX + btnWidth / 2, watchY + 25);
 
     const exitX = boxX + boxWidth - btnWidth - 20;
     const exitY = watchY;
@@ -3370,7 +3606,7 @@ function initGame() {
     ctx.fillStyle = "#dc3545";
     roundRect(ctx, exitX, exitY, btnWidth, btnHeight, 15);
     ctx.fillStyle = "#fff";
-    ctx.fillText("Выйти", exitX + btnWidth/2, exitY + 25);
+    ctx.fillText("Выйти", exitX + btnWidth / 2, exitY + 25);
   }
 
   function drawStartTimer() {
@@ -3417,7 +3653,9 @@ function initGame() {
         [`gameState.playersData.${playerId}.alive`]: false,
         [`gameState.playersData.${playerId}.lost`]: true,
         [`gameState.playersData.${playerId}.score`]: score,
-        [`gameState.playersData.${playerId}.lostAt`]: Date.now()
+        [`gameState.playersData.${playerId}.lostAt`]: Date.now(),
+        [`gameState.playersData.${playerId}.crashObstacleZ`]: typeof playerState.crashObstacleZ === "number" ? playerState.crashObstacleZ : null,
+        [`gameState.playersData.${playerId}.crashPositionRatio`]: typeof playerState.crashPositionRatio === "number" ? playerState.crashPositionRatio : null
       }, "markPlayerAsLost");
     } catch (e) {
       console.error("Ошибка отметки поражения:", e);
@@ -3642,7 +3880,7 @@ function initGame() {
       results
     };
   }
-  
+
   async function leaveAfterLoss() {
     activeLeaveAfterLossHandler = leaveAfterLoss;
     blockEndGameModalUntilNextMatch = true;
@@ -3671,9 +3909,7 @@ function initGame() {
     stopGameCountdownStartListener();
     multiplayerGameStarted = false;
     resetSpawnState();
-
-    if (syncInterval) clearInterval(syncInterval);
-    if (winnerCheckInterval) clearInterval(winnerCheckInterval);
+    clearGameRealtimeBindings();
 
     window.gameInitialized = false;
     activeLeaveAfterLossHandler = null;
@@ -4015,77 +4251,6 @@ function initGame() {
     }
   }
 
-  function loop(currentTime) {
-    deltaTime = (currentTime - lastTime) / 16.67;
-    deltaTime = Math.min(2, Math.max(0.5, deltaTime));
-
-    lastTime = currentTime;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    drawRoad();
-    updatePlayer();
-    updateObstacles1();
-    updateObstacles2();
-    updateObstacles3();
-    drawObstacles1();
-    drawObstacles2();
-    drawObstacles3();
-    drawPlayer();
-
-    if (!gameStarted) {
-      drawStartTimer();
-    }
-
-    ctx.fillStyle = "#fff";
-    ctx.font = "20px Arial";
-    ctx.textAlign = "left";
-    ctx.fillText("Score: " + score, 20, 40);
-    
-    if (player.gameOver && !endGameShown) {
-      drawGameOver();
-    }
-
-    if (!endGameShown) {
-      drawExitButton();
-    }
-    
-    if (gameStarted) {
-      gameSpeed += 0.00001 * deltaTime;
-    }
-
-    requestAnimationFrame(loop);
-  }
-
-  let syncedCountdownStartedAtMs = null;
-  let spawnStarted = false;
-  let spawnAccumulator1 = 0;
-  let spawnAccumulator2 = 0;
-  let spawnAccumulator3 = 0;
-  const FIXED_STEP_MS = 1000 / 120;
-  const LANE1_SPAWN_MS = 1200;
-  const LANE2_SPAWN_MS = 1500;
-  const LANE3_SPAWN_MS = 1800;
-
-  function resetSpawnState() {
-    spawnStarted = false;
-    spawnAccumulator1 = 0;
-    spawnAccumulator2 = 0;
-    spawnAccumulator3 = 0;
-  }
-
-  function startSpawnIfNeeded() {
-    if (spawnStarted) return;
-    spawnStarted = true;
-
-    spawnAccumulator1 = 0;
-    spawnAccumulator2 = 0;
-    spawnAccumulator3 = 0;
-
-    spawnObstacle1();
-    spawnObstacle2();
-    spawnObstacle3();
-  }
-
   function stepSimulation() {
     deltaTime = FIXED_STEP_MS / 16.67;
 
@@ -4095,30 +4260,24 @@ function initGame() {
     updateObstacles3();
 
     if (gameStarted) {
-      gameSpeed += 0.00001;
+      gameSpeed += Number(sharedRace.speedGainPerTick || DEFAULT_SHARED_RACE.speedGainPerTick);
 
-      if (!isWatching1) {
-        spawnAccumulator1 += FIXED_STEP_MS;
-        while (spawnAccumulator1 >= LANE1_SPAWN_MS) {
-          spawnAccumulator1 -= LANE1_SPAWN_MS;
-          spawnObstacle1();
-        }
+      spawnAccumulator1 += FIXED_STEP_MS;
+      while (spawnAccumulator1 >= Number(sharedRace.leftSpawnIntervalMs || DEFAULT_SHARED_RACE.leftSpawnIntervalMs)) {
+        spawnAccumulator1 -= Number(sharedRace.leftSpawnIntervalMs || DEFAULT_SHARED_RACE.leftSpawnIntervalMs);
+        spawnObstacle1();
       }
 
-      if (!isWatching2) {
-        spawnAccumulator2 += FIXED_STEP_MS;
-        while (spawnAccumulator2 >= LANE2_SPAWN_MS) {
-          spawnAccumulator2 -= LANE2_SPAWN_MS;
-          spawnObstacle2();
-        }
+      spawnAccumulator2 += FIXED_STEP_MS;
+      while (spawnAccumulator2 >= Number(sharedRace.centerSpawnIntervalMs || DEFAULT_SHARED_RACE.centerSpawnIntervalMs)) {
+        spawnAccumulator2 -= Number(sharedRace.centerSpawnIntervalMs || DEFAULT_SHARED_RACE.centerSpawnIntervalMs);
+        spawnObstacle2();
       }
 
-      if (!isWatching3) {
-        spawnAccumulator3 += FIXED_STEP_MS;
-        while (spawnAccumulator3 >= LANE3_SPAWN_MS) {
-          spawnAccumulator3 -= LANE3_SPAWN_MS;
-          spawnObstacle3();
-        }
+      spawnAccumulator3 += FIXED_STEP_MS;
+      while (spawnAccumulator3 >= Number(sharedRace.rightSpawnIntervalMs || DEFAULT_SHARED_RACE.rightSpawnIntervalMs)) {
+        spawnAccumulator3 -= Number(sharedRace.rightSpawnIntervalMs || DEFAULT_SHARED_RACE.rightSpawnIntervalMs);
+        spawnObstacle3();
       }
     }
   }
@@ -4142,6 +4301,9 @@ function initGame() {
       console.error("Ошибка загрузки ассетов:", e);
     }
 
+    sharedRace = await ensureSharedRaceConfig(currentRoomId);
+    gameSpeed = Number(sharedRace.speedBase || DEFAULT_SHARED_RACE.speedBase);
+
     await markPlayerReadyForGame(currentRoomId);
 
     stopRoomReadyPoll();
@@ -4149,7 +4311,7 @@ function initGame() {
 
     const roomRef = db.collection("rooms").doc(currentRoomId);
 
-    gameCountdownStartListener = roomRef.onSnapshot(async (doc) => {
+    liveRoomStateListener = roomRef.onSnapshot(async (doc) => {
       if (!doc.exists || !currentRoomId) return;
 
       try {
@@ -4159,6 +4321,17 @@ function initGame() {
         latestGameRoomState = room;
         syncServerClockFromRoom(room);
 
+        const sharedFromRoom = room.gameState?.sharedRace;
+        if (sharedFromRoom?.centerSpawnIntervalMs) {
+          sharedRace = {
+            leftSpawnIntervalMs: Number(sharedFromRoom.leftSpawnIntervalMs || DEFAULT_SHARED_RACE.leftSpawnIntervalMs),
+            centerSpawnIntervalMs: Number(sharedFromRoom.centerSpawnIntervalMs || DEFAULT_SHARED_RACE.centerSpawnIntervalMs),
+            rightSpawnIntervalMs: Number(sharedFromRoom.rightSpawnIntervalMs || DEFAULT_SHARED_RACE.rightSpawnIntervalMs),
+            speedBase: Number(sharedFromRoom.speedBase || DEFAULT_SHARED_RACE.speedBase),
+            speedGainPerTick: Number(sharedFromRoom.speedGainPerTick || DEFAULT_SHARED_RACE.speedGainPerTick)
+          };
+        }
+
         const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
 
         if (!countdownStartedAt) {
@@ -4167,10 +4340,8 @@ function initGame() {
         }
 
         syncedCountdownStartedAtMs = countdownStartedAt;
-        stopRoomReadyPoll();
-        stopGameCountdownStartListener();
       } catch (e) {
-        console.error("Ошибка gameCountdownStartListener:", e);
+        console.error("Ошибка liveRoomStateListener:", e);
       }
     });
 
@@ -4195,15 +4366,13 @@ function initGame() {
         }
 
         syncedCountdownStartedAtMs = countdownStartedAt;
-        stopRoomReadyPoll();
-        stopGameCountdownStartListener();
       } catch (e) {
         console.error("Ошибка roomReadyPoll:", e);
       }
     }, 250);
   }
 
-  loop = function(currentTime) {
+  function loop(currentTime) {
     const frameDeltaMs = Math.min(32, Math.max(0, currentTime - lastTime));
     lastTime = currentTime;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -4227,10 +4396,11 @@ function initGame() {
         gameStarted = false;
       } else {
         if (!gameStarted) {
-          frozenObstacle = null;
+          frozenObstacle = playerLost ? frozenObstacle : null;
           obstacles1 = [];
           obstacles2 = [];
           obstacles3 = [];
+          gameSpeed = Number(sharedRace.speedBase || DEFAULT_SHARED_RACE.speedBase);
           gameStarted = true;
           showStartText = false;
           simulationTick = 0;
@@ -4261,6 +4431,7 @@ function initGame() {
     drawObstacles1();
     drawObstacles2();
     drawObstacles3();
+    drawRemotePlayers();
     drawPlayer();
 
     if (!gameStarted) {
@@ -4281,7 +4452,7 @@ function initGame() {
     }
 
     requestAnimationFrame(loop);
-  };
+  }
 
   startGameFlow();
 }
