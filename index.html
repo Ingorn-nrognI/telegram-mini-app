@@ -1283,9 +1283,17 @@ async function tryStartSyncedCountdown(roomId) {
       if (playerIds.length === 0) return;
 
       const playersReady = room.gameState?.playersReady || {};
-      const allReady = playerIds.every(pid => playersReady[pid] === true);
+      const readyCount = playerIds.filter(pid => playersReady[pid] === true).length;
+      const allReady = readyCount === playerIds.length;
 
-      if (!allReady) return;
+      const playingStartedAtMs =
+        getRoomTimeMs(room.gameState?.playingStartedAt) ||
+        getRoomTimeMs(room.updatedAt) ||
+        Date.now();
+
+      const waitedMs = Date.now() - playingStartedAtMs;
+
+      if (!allReady && waitedMs < 2500) return;
 
       transaction.update(roomRef, {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -2257,7 +2265,8 @@ async function tryStartRoom(roomId) {
         transaction.update(roomRef, {
           status: "playing",
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          "gameState.started": true
+          "gameState.started": true,
+          "gameState.playingStartedAt": firebase.firestore.FieldValue.serverTimestamp()
         });
         return;
       }
@@ -2285,7 +2294,8 @@ async function tryStartRoom(roomId) {
         transaction.update(roomRef, {
           status: "playing",
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          "gameState.started": true
+          "gameState.started": true,
+          "gameState.playingStartedAt": firebase.firestore.FieldValue.serverTimestamp()
         });
       }
     }, "tryStartRoom");
@@ -2796,7 +2806,7 @@ function initGame() {
   const PLAYER_SIZE = 60;
   const REMOTE_PLAYER_SIZE = 52;
   const REMOTE_LABEL_FONT = "bold 13px Arial";
-  const SYNC_INTERVAL_MS = 120;
+  const SYNC_INTERVAL_MS = 60;
   const FIXED_STEP_MS = 1000 / 120;
   const DEFAULT_SHARED_RACE = {
     leftSpawnIntervalMs: 1200,
@@ -2923,6 +2933,7 @@ function initGame() {
   let latestGameRoomState = null;
   let lastCountdownSecond = null;
   let syncedCountdownStartedAtMs = null;
+  const remoteVisualState = {};
 
   let syncInterval = null;
   let winnerCheckInterval = null;
@@ -3029,16 +3040,35 @@ function initGame() {
     const room = latestGameRoomState;
     if (!room?.gameState?.playersData) return [];
 
-    return getOrderedActivePlayerIds(room)
+    const activeRemoteIds = getOrderedActivePlayerIds(room)
       .filter((pid) => pid !== playerId)
-      .slice(0, 2)
+      .slice(0, 2);
+
+    Object.keys(remoteVisualState).forEach((pid) => {
+      if (!activeRemoteIds.includes(pid)) {
+        delete remoteVisualState[pid];
+      }
+    });
+
+    return activeRemoteIds
       .map((pid) => {
         const data = room.gameState.playersData[pid] || {};
+        const targetRatio = typeof data.positionRatio === "number" ? data.positionRatio : 0;
+
+        if (!remoteVisualState[pid]) {
+          remoteVisualState[pid] = {
+            visualRatio: targetRatio
+          };
+        }
+
+        const visualState = remoteVisualState[pid];
+        visualState.visualRatio += (targetRatio - visualState.visualRatio) * 0.35;
+
         return {
           id: pid,
           slot: getRemoteSlotForPlayer(pid),
           name: data.name || room.playerNames?.[pid] || "Игрок",
-          positionRatio: typeof data.positionRatio === "number" ? data.positionRatio : 0,
+          positionRatio: visualState.visualRatio,
           alive: data.alive !== false,
           lost: data.lost === true,
           score: Number(data.score || 0),
@@ -3111,17 +3141,46 @@ function initGame() {
     }
   }
 
+  let lastSentSyncState = {
+    positionRatio: null,
+    grounded: null,
+    alive: null,
+    lost: null,
+    score: null,
+    firstObstacleResolved: null,
+    sentAt: 0
+  };
+
   async function syncLocalPlayerState(force = false) {
     if (!currentRoomId) return;
 
     const roomRef = db.collection("rooms").doc(currentRoomId);
     const positionRatio = getPositionRatioFromY(player.y);
+    const now = Date.now();
+
     playerState.positionRatio = positionRatio;
     playerState.alive = !playerLost;
     playerState.grounded = player.grounded;
     playerState.lost = playerLost;
     playerState.score = score;
     playerState.firstObstacleResolved = firstObstacleResolved;
+
+    const positionChanged =
+      lastSentSyncState.positionRatio === null ||
+      Math.abs(lastSentSyncState.positionRatio - positionRatio) >= 0.01;
+
+    const stateChanged =
+      lastSentSyncState.grounded !== player.grounded ||
+      lastSentSyncState.alive !== !playerLost ||
+      lastSentSyncState.lost !== playerLost ||
+      lastSentSyncState.score !== score ||
+      lastSentSyncState.firstObstacleResolved !== firstObstacleResolved;
+
+    const enoughTimePassed = now - lastSentSyncState.sentAt >= SYNC_INTERVAL_MS;
+
+    if (!force && !stateChanged && !(positionChanged && enoughTimePassed)) {
+      return;
+    }
 
     const updateData = {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -3132,7 +3191,8 @@ function initGame() {
       [`gameState.playersData.${playerId}.grounded`]: player.grounded,
       [`gameState.playersData.${playerId}.lost`]: playerLost,
       [`gameState.playersData.${playerId}.score`]: score,
-      [`gameState.playersData.${playerId}.firstObstacleResolved`]: firstObstacleResolved
+      [`gameState.playersData.${playerId}.firstObstacleResolved`]: firstObstacleResolved,
+      [`gameState.playersData.${playerId}.clientUpdatedAt`]: now
     };
 
     if (playerLost) {
@@ -3144,7 +3204,18 @@ function initGame() {
     }
 
     try {
-      await safeRoomUpdate(roomRef, updateData, "syncLocalPlayerState");
+      const ok = await safeRoomUpdate(roomRef, updateData, "syncLocalPlayerState");
+      if (ok !== false) {
+        lastSentSyncState = {
+          positionRatio,
+          grounded: player.grounded,
+          alive: !playerLost,
+          lost: playerLost,
+          score,
+          firstObstacleResolved,
+          sentAt: now
+        };
+      }
     } catch (err) {
       console.error("Ошибка синхронизации игрока:", err);
     }
@@ -4303,6 +4374,15 @@ function initGame() {
 
     sharedRace = await ensureSharedRaceConfig(currentRoomId);
     gameSpeed = Number(sharedRace.speedBase || DEFAULT_SHARED_RACE.speedBase);
+    lastSentSyncState = {
+      positionRatio: null,
+      grounded: null,
+      alive: null,
+      lost: null,
+      score: null,
+      firstObstacleResolved: null,
+      sentAt: 0
+    };
 
     await markPlayerReadyForGame(currentRoomId);
 
