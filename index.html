@@ -2,95 +2,153 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Bobr World</title>
 <style>
-html, body {
+:root {
+  --bg-1: #050816;
+  --bg-2: #0a1024;
+  --bg-3: #101d46;
+  --panel: rgba(11, 18, 42, 0.78);
+  --panel-strong: rgba(9, 14, 34, 0.92);
+  --panel-soft: rgba(255,255,255,0.06);
+  --text-main: #ffffff;
+  --text-soft: rgba(230, 238, 255, 0.75);
+  --text-dim: rgba(193, 205, 236, 0.55);
+  --blue-1: #5fa8ff;
+  --blue-2: #7e68ff;
+  --blue-3: #2de1ff;
+  --accent: #75f59c;
+  --danger: #ff6b78;
+  --warning: #ffd86b;
+  --shadow-main: 0 18px 40px rgba(0, 0, 0, 0.42);
+  --shadow-glow: 0 0 32px rgba(83, 159, 255, 0.16);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow-x: hidden;
+  overflow: hidden;
+  background: var(--bg-1);
 }
 
 body {
-  margin: 0;
   font-family: Arial, sans-serif;
-  background: #87CEEB;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  width: 100%;
+  color: var(--text-main);
   position: relative;
+}
+
+button {
+  border: none;
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+#menu {
+  position: fixed;
+  inset: 0;
   overflow: hidden;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(74, 118, 255, 0.35), transparent 30%),
+    radial-gradient(circle at 85% 18%, rgba(65, 210, 255, 0.22), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(111, 63, 255, 0.18), transparent 30%),
+    linear-gradient(180deg, #07101f 0%, #050813 42%, #05070e 100%);
+}
+
+.app-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(55px);
+  opacity: 0.55;
+}
+
+.orb-1 {
+  width: 180px;
+  height: 180px;
+  top: 78px;
+  left: -35px;
+  background: rgba(74, 118, 255, 0.45);
+}
+
+.orb-2 {
+  width: 160px;
+  height: 160px;
+  top: 210px;
+  right: -40px;
+  background: rgba(35, 209, 255, 0.28);
+}
+
+.orb-3 {
+  width: 200px;
+  height: 200px;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(116, 73, 255, 0.22);
 }
 
 .top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 20px;
-  background: rgba(0,0,0,0.3);
-  color: white;
-  font-size: 20px;
-  position: relative;
-  z-index: 20;
+  position: absolute;
+  top: calc(var(--safe-top) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100vw - 24px), 480px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  z-index: 50;
 }
 
-.top-bar-left {
+.top-bar-left,
+.top-bar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
-.top-bar-user {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 0;
-}
-
-#nickname {
-  font-size: 20px;
-  font-weight: bold;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 170px;
-}
-
-.settings {
-  cursor: pointer;
-  font-size: 24px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: rgba(0,0,0,0.2);
-  box-sizing: border-box;
+.top-bar-right {
+  justify-content: flex-end;
 }
 
 .mode-back-btn {
   display: none;
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  border-radius: 12px;
-  background: rgba(0,0,0,0.38);
-  color: white;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.14);
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 14px;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box;
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1;
+  background: linear-gradient(180deg, rgba(19, 30, 68, 0.98), rgba(10, 17, 37, 0.96));
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
   user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.22);
 }
 
 .mode-back-btn.visible {
@@ -101,371 +159,617 @@ body {
   transform: scale(0.97);
 }
 
-.menu-screen {
-  display: none;
-  flex: 1;
-  position: relative;
-}
-
-.menu-screen.active {
-  display: flex;
-  flex-direction: column;
-}
-
-.main {
-  flex: 1;
+.profile-card {
+  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 64px;
-  font-weight: bold;
-  font-family: 'Arial Black', sans-serif;
-  color: #FFD700;
-  text-shadow: 3px 3px 8px rgba(0,0,0,0.6);
-  letter-spacing: 2px;
-  text-align: center;
-  padding: 20px;
-  box-sizing: border-box;
+  gap: 10px;
+  padding: 9px 12px 9px 9px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(18, 29, 64, 0.96), rgba(9, 14, 33, 0.94));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: var(--shadow-main);
 }
 
-.mode-title {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 58px;
-  font-weight: bold;
-  font-family: 'Arial Black', sans-serif;
-  color: #FFD700;
-  text-shadow: 3px 3px 8px rgba(0,0,0,0.6);
-  letter-spacing: 2px;
-  text-align: center;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.mode-subtitle {
-  margin: -24px auto 0;
-  width: min(88vw, 620px);
-  color: rgba(255,255,255,0.92);
-  text-align: center;
-  font-size: 18px;
-  line-height: 1.45;
-  padding: 0 20px;
-  box-sizing: border-box;
-}
-
-.start-play-wrap {
-  position: fixed;
-  left: 50%;
-  bottom: 26px;
-  transform: translateX(-50%);
-  width: min(45%, 260px);
-  min-width: 170px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  z-index: 25;
-}
-
-.start-play-row {
-  position: fixed;
-  left: 50%;
-  bottom: 26px;
-  transform: translateX(calc(-50% + 150px));
-  display: flex;
-  align-items: center;
-  z-index: 25;
-}
-
-.main-play-btn-wrap {
-  width: 100%;
-}
-
-.main-play-btn {
-  width: 100%;
-  height: 54px;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: white;
-  cursor: pointer;
-  border-radius: 28px;
-  background: #28a745;
-  font-weight: bold;
-  font-size: 22px;
-  transition: 0.2s;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  box-sizing: border-box;
-}
-
-.main-play-btn:hover {
-  background: #23913d;
-}
-
-.main-book-btn {
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  cursor: pointer;
+.profile-avatar {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
   border-radius: 50%;
-  background: #444;
-  font-size: 28px;
-  transition: 0.2s;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  user-select: none;
-  box-sizing: border-box;
-}
-
-.main-book-btn:hover {
-  background: #555;
-}
-
-.history-panel {
-  display: none;
-  position: fixed;
-  top: 96px;
-  left: 50%;
-  width: min(88vw, 560px);
-  transform: translateX(-50%);
-  right: auto;
-  bottom: 92px;
-  padding: 22px 22px 22px 18px;
-  border-radius: 24px;
-  background: rgba(0, 0, 0, 0.82);
-  color: white;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-  box-sizing: border-box;
-  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.38), transparent 35%),
+    linear-gradient(135deg, #4da0ff, #6e65ff 58%, #40d9ff);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.22),
+    0 10px 22px rgba(48, 112, 255, 0.28);
+  background-size: cover;
+  background-position: center;
   overflow: hidden;
 }
 
-.history-panel.open {
+.profile-copy {
+  min-width: 0;
+}
+
+.profile-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+#nickname {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 128px;
+}
+
+.balance-card {
+  justify-self: center;
+  min-width: 112px;
+  padding: 8px 14px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 52, 0.96), rgba(10, 15, 32, 0.96));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: var(--shadow-main), var(--shadow-glow);
+  text-align: center;
+}
+
+.balance-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+.balance-value {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f4f8ff;
+  white-space: nowrap;
+}
+
+.wallet-btn {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background:
+    linear-gradient(135deg, rgba(111, 152, 255, 0.98), rgba(77, 116, 255, 0.94));
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow:
+    0 10px 24px rgba(46, 104, 255, 0.32),
+    inset 0 1px 0 rgba(255,255,255,0.24);
+}
+
+.icon-action-btn {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background:
+    linear-gradient(180deg, rgba(16, 25, 57, 0.96), rgba(9, 14, 33, 0.96));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.26);
+}
+
+.menu-screen {
+  display: none;
+  position: absolute;
+  inset: 0;
+  padding-top: calc(var(--safe-top) + 92px);
+  padding-bottom: calc(var(--safe-bottom) + 118px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  z-index: 10;
+}
+
+.menu-screen.active {
   display: block;
 }
 
-.history-scroll-area {
-  height: calc(100% - 54px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 16px;
-  margin-right: 10px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 215, 0, 0.82) transparent;
-  scrollbar-gutter: stable;
+.menu-screen::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
-.history-scroll-area::-webkit-scrollbar {
-  width: 12px;
+.screen-inner {
+  width: min(calc(100vw - 24px), 480px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 22px;
 }
 
-.history-scroll-area::-webkit-scrollbar-track {
-  background: transparent;
-  margin: 10px 0;
+.hero-card,
+.section-card,
+.mode-hero-card,
+.game-card,
+.stat-card,
+.info-card,
+.banner-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    linear-gradient(180deg, rgba(13, 21, 46, 0.96), rgba(7, 10, 24, 0.94));
+  box-shadow: var(--shadow-main);
+}
+
+.hero-card::before,
+.section-card::before,
+.mode-hero-card::before,
+.game-card::before,
+.stat-card::before,
+.info-card::before,
+.banner-card::before {
+  content: "";
+  position: absolute;
+  inset: auto -20% -55% auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(86, 165, 255, 0.28), transparent 70%);
+  pointer-events: none;
+}
+
+.hero-card {
+  padding: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(71, 134, 255, 0.26), transparent 35%),
+    radial-gradient(circle at 0% 100%, rgba(57, 220, 255, 0.18), transparent 32%),
+    linear-gradient(135deg, rgba(26, 49, 124, 0.98), rgba(11, 15, 34, 0.96) 64%);
+}
+
+.hero-topline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
   border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #dce7ff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 14px;
+  backdrop-filter: blur(8px);
 }
 
-.history-scroll-area::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(255, 226, 96, 0.98), rgba(212, 160, 0, 0.98));
-  border-radius: 999px;
-  border: 3px solid rgba(0, 0, 0, 0.62);
-}
-
-.history-panel-title {
+.hero-title {
+  margin: 0;
   font-size: 28px;
-  font-weight: bold;
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.hero-text {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-soft);
+  max-width: 310px;
+}
+
+.hero-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.primary-action,
+.secondary-action,
+.card-action,
+.mode-popup-btn,
+.inline-action {
+  min-height: 46px;
+  border-radius: 16px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  transition: transform 0.16s ease, opacity 0.16s ease, background 0.16s ease;
+}
+
+.primary-action:active,
+.secondary-action:active,
+.card-action:active,
+.mode-popup-btn:active,
+.inline-action:active,
+.bottom-btn:active,
+.wallet-btn:active,
+.icon-action-btn:active,
+.profile-card:active {
+  transform: scale(0.98);
+}
+
+.primary-action {
+  background:
+    linear-gradient(135deg, rgba(104, 152, 255, 0.98), rgba(52, 104, 255, 0.96));
+  color: #fff;
+  box-shadow:
+    0 12px 26px rgba(49, 105, 255, 0.32),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+.secondary-action {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.section-card,
+.info-card,
+.banner-card {
+  padding: 16px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 14px;
 }
 
-.history-panel-text {
-  font-size: 18px;
+.section-kicker {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.section-subtitle {
+  margin: 8px 0 0;
+  color: var(--text-soft);
+  font-size: 14px;
   line-height: 1.45;
-  color: rgba(255,255,255,0.92);
+}
+
+.inline-action {
+  background: rgba(255,255,255,0.06);
+  color: #dce7ff;
+  border: 1px solid rgba(255,255,255,0.08);
+  white-space: nowrap;
+}
+
+.cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.two-column-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.game-card {
+  padding: 16px;
+}
+
+.game-card.primary {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(71, 134, 255, 0.22), transparent 38%),
+    linear-gradient(135deg, rgba(17, 28, 70, 0.98), rgba(8, 11, 27, 0.95) 68%);
+}
+
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #dbe7ff;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+
+.card-text {
+  margin: 8px 0 0;
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.card-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.card-action {
+  background:
+    linear-gradient(135deg, rgba(100, 145, 255, 0.96), rgba(54, 103, 255, 0.92));
+  color: white;
+}
+
+.card-action.ghost {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e7efff;
+}
+
+.info-card h3,
+.banner-card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.info-card p,
+.banner-card p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat-card {
+  padding: 14px 12px;
+  text-align: left;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 8px;
+  letter-spacing: -0.03em;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+.mode-hero-card {
+  padding: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(71, 134, 255, 0.22), transparent 34%),
+    radial-gradient(circle at 10% 100%, rgba(64, 221, 255, 0.14), transparent 30%),
+    linear-gradient(135deg, rgba(18, 30, 74, 0.98), rgba(9, 13, 28, 0.96) 70%);
+}
+
+.mode-kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #dbe7ff;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.mode-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.mode-subtitle {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+
+.mode-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
 }
 
 .mode-popup {
   display: none;
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 10px;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--safe-bottom) + 100px);
+  width: min(calc(100vw - 24px), 480px);
+  padding: 12px;
   border-radius: 24px;
-  background: rgba(0, 0, 0, 0.75);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  box-sizing: border-box;
+  background:
+    linear-gradient(180deg, rgba(12, 18, 41, 0.98), rgba(8, 11, 23, 0.98));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.45);
+  z-index: 70;
 }
 
 .mode-popup.open {
   display: block;
 }
 
-.mode-popup-btn {
-  width: 100%;
-  padding: 16px 14px;
-  text-align: center;
-  color: white;
-  cursor: pointer;
-  border-radius: 18px;
-  background: #444;
-  font-weight: bold;
-  transition: 0.2s;
-  box-sizing: border-box;
-}
-
-.mode-popup-btn:hover {
-  background: #555;
-}
-
-.bottom-bar {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90%;
-  max-width: 600px;
-  display: flex;
-  justify-content: space-around;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 15px 20px;
-  border-radius: 50px;
-  box-sizing: border-box;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
-
-.mode-bottom-bar {
-  z-index: 25;
-}
-
-.bottom-btn {
-  flex: 1;
-  margin: 0 10px;
-  padding: 12px 0;
-  text-align: center;
-  color: white;
-  cursor: pointer;
-  border-radius: 25px;
-  background: #444;
-  font-weight: bold;
-  transition: 0.2s;
-}
-
-.bottom-btn.play {
-  background: #28a745;
-}
-
-.bottom-btn:hover {
-  background: #555;
-}
-
-#menu {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #2c3e50, #1a472a);
+.mode-popup-inner {
   display: flex;
   flex-direction: column;
-  z-index: 10;
-  overflow-y: auto;
+  gap: 10px;
 }
 
-#leaderboardModal,
-#roomsModal {
+.mode-popup-btn {
+  width: 100%;
+  background:
+    linear-gradient(180deg, rgba(19, 30, 69, 0.96), rgba(11, 17, 37, 0.96));
+  border: 1px solid rgba(255,255,255,0.08);
+  color: white;
+}
+
+.mode-popup-btn.primary {
+  background:
+    linear-gradient(135deg, rgba(104, 152, 255, 0.98), rgba(52, 104, 255, 0.94));
+  box-shadow: 0 12px 24px rgba(49, 105, 255, 0.28);
+}
+
+.history-panel {
   display: none;
   position: fixed;
-  top: 60px;
-  left: 20px;
-  right: 20px;
-  bottom: 100px;
-  background: rgba(0,0,0,0.92);
-  color: white;
-  padding: 20px;
-  border-radius: 15px;
-  z-index: 9999;
-  overflow-y: auto;
-  box-sizing: border-box;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--safe-bottom) + 98px);
+  width: min(calc(100vw - 24px), 480px);
+  max-height: min(56vh, 520px);
+  border-radius: 26px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(12, 17, 39, 0.98), rgba(7, 9, 19, 0.98));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 26px 44px rgba(0, 0, 0, 0.52);
+  z-index: 72;
 }
 
-.leaderboardHeader,
-.roomsHeader {
+.history-panel.open {
+  display: block;
+}
+
+.history-panel-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
-.leaderboardHeader h2,
-.roomsHeader h2 {
-  margin: 0;
-  font-size: 22px;
+.history-panel-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
-.closeBtn {
-  cursor: pointer;
-  font-size: 22px;
-}
-
-#leaderboardContent {
+.panel-close-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  color: #fff;
   font-size: 18px;
-  line-height: 1.5;
+  border: 1px solid rgba(255,255,255,0.06);
 }
 
-#roomsList {
-  margin-bottom: 20px;
-  font-size: 18px;
-  line-height: 1.55;
-}
-
-.createRoomBtn {
+.history-scroll-area {
+  max-height: calc(min(56vh, 520px) - 62px);
+  overflow-y: auto;
   padding: 12px;
-  background: #28a745;
-  text-align: center;
-  border-radius: 10px;
-  cursor: pointer;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(109, 154, 255, 0.7) transparent;
+}
+
+.history-scroll-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.history-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.history-scroll-area::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(111, 154, 255, 0.9), rgba(54, 104, 255, 0.8));
+  border-radius: 999px;
+}
+
+.history-panel-empty,
+.history-panel-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-soft);
 }
 
 .history-match-card {
-  background: #161616;
-  border-radius: 18px;
-  padding: 14px 14px 12px;
-  margin-bottom: 12px;
+  background:
+    linear-gradient(180deg, rgba(18, 26, 58, 0.86), rgba(9, 13, 29, 0.92));
+  border-radius: 20px;
+  padding: 14px;
+  margin-bottom: 10px;
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.22);
-  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
 }
 
 .history-match-mode {
-  font-size: 16px;
-  font-weight: bold;
-  color: #FFD700;
-  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b6cbff;
+  margin-bottom: 7px;
 }
 
 .history-match-result {
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 800;
   margin-bottom: 6px;
-  text-transform: lowercase;
 }
 
-.history-match-result.win { color: #28a745; }
-.history-match-result.lose { color: #dc3545; }
-.history-match-result.draw { color: #9aa0a6; }
+.history-match-result.win { color: var(--accent); }
+.history-match-result.lose { color: var(--danger); }
+.history-match-result.draw { color: #d9deea; }
 
 .history-match-date {
-  font-size: 14px;
-  color: rgba(255,255,255,0.82);
+  font-size: 13px;
+  color: var(--text-dim);
 }
 
 .history-match-details {
   margin-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.12);
+  border-top: 1px solid rgba(255,255,255,0.08);
   padding-top: 12px;
 }
 
@@ -478,86 +782,571 @@ body {
 .history-match-table th,
 .history-match-table td {
   text-align: left;
-  padding: 8px 6px;
-  font-size: 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 8px 4px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   word-break: break-word;
 }
 
 .history-match-table th {
-  color: #FFD700;
-  font-size: 13px;
+  color: #b7ccff;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .history-match-table td:last-child,
 .history-match-table th:last-child {
   text-align: right;
 }
+
+.bottom-bar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--safe-bottom) + 10px);
+  width: min(calc(100vw - 24px), 480px);
+  padding: 12px 8px 10px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  align-items: end;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(13, 18, 40, 0.94), rgba(7, 10, 21, 0.95));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 20px 38px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(18px);
+  z-index: 80;
+}
+
+.bottom-btn {
+  height: 58px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: rgba(227, 235, 255, 0.72);
+  transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.bottom-btn .nav-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.bottom-btn .nav-label {
+  font-size: 11px;
+  line-height: 1.1;
+  font-weight: 700;
+  text-align: center;
+}
+
+.bottom-btn.is-active:not(.center-fab) {
+  background:
+    linear-gradient(180deg, rgba(24, 36, 80, 0.95), rgba(13, 19, 42, 0.95));
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 10px 22px rgba(12, 18, 40, 0.28);
+}
+
+.center-fab {
+  width: 74px;
+  height: 74px;
+  justify-self: center;
+  margin-top: -34px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.22), transparent 32%),
+    linear-gradient(135deg, rgba(83, 152, 255, 1), rgba(58, 104, 255, 0.96));
+  color: #ffffff;
+  box-shadow:
+    0 16px 32px rgba(49, 105, 255, 0.35),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+}
+
+.center-fab .nav-icon {
+  font-size: 21px;
+}
+
+.center-fab .nav-label {
+  font-size: 12px;
+}
+
+.app-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  align-items: flex-start;
+  justify-content: center;
+  padding:
+    calc(var(--safe-top) + 78px)
+    12px
+    calc(var(--safe-bottom) + 104px);
+  background: rgba(3, 7, 18, 0.58);
+  backdrop-filter: blur(10px);
+}
+
+.app-modal-card {
+  width: min(100%, 480px);
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(12, 18, 41, 0.98), rgba(7, 10, 21, 0.98));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 24px 46px rgba(0, 0, 0, 0.46);
+}
+
+.leaderboardHeader,
+.roomsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.leaderboardHeader h2,
+.roomsHeader h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.closeBtn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.06);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+#leaderboardContent,
+#roomsList {
+  padding: 14px 16px 18px;
+  overflow-y: auto;
+}
+
+#leaderboardContent {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(19, 28, 62, 0.88), rgba(9, 13, 29, 0.94));
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.leaderboard-row-name {
+  color: #f3f7ff;
+  font-weight: 700;
+}
+
+.leaderboard-row-score {
+  color: #a8c3ff;
+  font-weight: 800;
+}
+
+.rooms-note {
+  border-radius: 18px;
+  padding: 14px;
+  background:
+    linear-gradient(180deg, rgba(19, 28, 62, 0.88), rgba(9, 13, 29, 0.94));
+  border: 1px solid rgba(255,255,255,0.06);
+  color: var(--text-soft);
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.createRoomBtn {
+  margin: 0 16px 16px;
+  min-height: 50px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(104, 152, 255, 0.98), rgba(52, 104, 255, 0.94));
+  text-align: center;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(49, 105, 255, 0.28);
+}
+
+@media (max-width: 420px) {
+  .top-bar {
+    width: calc(100vw - 16px);
+    gap: 8px;
+  }
+
+  .screen-inner,
+  .mode-popup,
+  .history-panel,
+  .bottom-bar {
+    width: calc(100vw - 16px);
+  }
+
+  .wallet-btn span {
+    display: none;
+  }
+
+  .wallet-btn {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  #nickname {
+    max-width: 100px;
+  }
+
+  .hero-title,
+  .mode-title {
+    font-size: 26px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .two-column-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bottom-btn .nav-label {
+    font-size: 10px;
+  }
+}
 </style>
 </head>
 <body>
 <div id="menu" onclick="handleMenuBackgroundClick(event)">
+  <div class="app-bg">
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+  </div>
+
   <div class="top-bar">
     <div class="top-bar-left">
       <div id="modeBackButton" class="mode-back-btn" onclick="event.stopPropagation(); exitGameMode()" aria-label="Назад">←</div>
-      <div class="top-bar-user">
-        <div id="nickname">Игрок</div>
-      </div>
+
+      <button type="button" class="profile-card" onclick="openSettings()" aria-label="Профиль игрока">
+        <div id="profileAvatar" class="profile-avatar">И</div>
+        <div class="profile-copy">
+          <div class="profile-label">Профиль</div>
+          <div id="nickname">Игрок</div>
+        </div>
+      </button>
     </div>
-    <div class="settings" onclick="openSettings()">⚙️</div>
+
+    <div class="balance-card">
+      <div class="balance-label">Баланс</div>
+      <div id="balanceValue" class="balance-value">0.00 TON</div>
+    </div>
+
+    <div class="top-bar-right">
+      <button type="button" class="wallet-btn" onclick="openWallet()" aria-label="Кошелёк">
+        <span>💼</span>
+        <span>Кошелёк</span>
+      </button>
+      <button type="button" class="icon-action-btn" onclick="openSettings()" aria-label="Настройки">⚙️</button>
+    </div>
   </div>
 
   <div id="homeScreen" class="menu-screen active">
-    <div class="main">Bobr World</div>
+    <div class="screen-inner">
+      <section class="hero-card">
+        <div class="hero-topline">⚡ Новое событие</div>
+        <h1 class="hero-title">Bobr World</h1>
+        <p class="hero-text">
+          Мобильный PvP-хаб в тёмном игровом стиле: режимы, история матчей, таблица лидеров, комнаты и будущая интеграция игрового модуля.
+        </p>
 
-    <div class="start-play-wrap">
-      <div class="main-play-btn-wrap">
-        <div id="modePopup" class="mode-popup">
-          <div class="mode-popup-btn" onclick="enterBobrRunMode(event)">Bobr Run</div>
+        <div class="hero-actions">
+          <button
+            type="button"
+            id="mainPlayButton"
+            class="primary-action"
+            data-games-trigger="true"
+            onclick="toggleModePopup(event)"
+          >
+            ▶ Играть
+          </button>
+
+          <button
+            type="button"
+            class="secondary-action"
+            data-history-trigger="true"
+            onclick="toggleHistoryPanel(event)"
+          >
+            🕘 История
+          </button>
         </div>
-        <div id="mainPlayButton" class="main-play-btn" onclick="toggleModePopup(event)">▶ Играть</div>
-      </div>
-    </div>
+      </section>
 
-    <div class="start-play-row">
-      <div class="main-book-btn" onclick="toggleHistoryPanel(event)">📖</div>
+      <section class="section-card">
+        <div class="section-heading">
+          <div>
+            <div class="section-kicker">Онлайн режимы</div>
+            <h2 class="section-title">Выбери, куда перейти</h2>
+          </div>
+
+          <button
+            type="button"
+            class="inline-action"
+            data-games-trigger="true"
+            onclick="toggleModePopup(event)"
+          >
+            Все игры
+          </button>
+        </div>
+
+        <p class="section-subtitle">
+          Стилизация сделана под мобильный Mini App: тёмный фон, мягкие сине-голубые свечения, скролл и фиксированная нижняя навигация.
+        </p>
+
+        <div id="gamesSection" class="cards-stack" style="margin-top:14px;">
+          <div class="game-card primary">
+            <div class="card-badge">⚔️ PvP режим</div>
+            <h3 class="card-title">Bobr Run</h3>
+            <p class="card-text">
+              Основной игровой режим. Сейчас рантайм убран из файла, но экран, навигация, история, комнаты и точки интеграции сохранены.
+            </p>
+            <div class="card-actions">
+              <button type="button" class="card-action" onclick="enterBobrRunMode(event)">Открыть PvP</button>
+              <button type="button" class="card-action ghost" onclick="openRooms()">Комнаты</button>
+            </div>
+          </div>
+
+          <div class="two-column-grid">
+            <div class="info-card">
+              <h3>🏆 Таблица</h3>
+              <p>Открой рейтинг игроков и лучшие результаты.</p>
+              <div class="card-actions">
+                <button type="button" class="card-action ghost" onclick="openLeaderboard()">Смотреть</button>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <h3>🎨 Скины</h3>
+              <p>Точка входа для раздела косметики и визуальных предметов.</p>
+              <div class="card-actions">
+                <button type="button" class="card-action ghost" onclick="openSkins()">Открыть</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="modePopup" class="mode-popup" onclick="event.stopPropagation()">
+          <div class="mode-popup-inner">
+            <button type="button" class="mode-popup-btn primary" onclick="enterBobrRunMode(event)">
+              ⚔️ Bobr Run
+            </button>
+            <button type="button" class="mode-popup-btn" onclick="event.stopPropagation(); openRooms()">
+              🎮 Комнаты
+            </button>
+            <button type="button" class="mode-popup-btn" onclick="event.stopPropagation(); openLeaderboard()">
+              🏆 Таблица лидеров
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-heading">
+          <div>
+            <div class="section-kicker">Статус</div>
+            <h2 class="section-title">Быстрый обзор</h2>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">PvP</div>
+            <div class="stat-label">Главный центр активности и быстрый переход в режим</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">24/7</div>
+            <div class="stat-label">Прокручиваемый домашний экран с постоянным нижним меню</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">UI</div>
+            <div class="stat-label">Новый тёмный мобильный стиль без ломания логики</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="banner-card">
+        <h3>🧾 История последних игр</h3>
+        <p>
+          Панель истории открывается поверх интерфейса и использует твою текущую Firestore-логику, поэтому сохранённые матчи продолжают подтягиваться.
+        </p>
+        <div class="card-actions" style="margin-top:14px;">
+          <button
+            type="button"
+            class="card-action ghost"
+            data-history-trigger="true"
+            onclick="toggleHistoryPanel(event)"
+          >
+            Открыть историю
+          </button>
+        </div>
+      </section>
     </div>
 
     <div id="historyPanel" class="history-panel" onclick="event.stopPropagation()">
-      <div class="history-panel-title">История игр</div>
+      <div class="history-panel-header">
+        <div class="history-panel-title">История игр</div>
+        <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">✕</button>
+      </div>
       <div class="history-scroll-area">
-        <div class="history-panel-text">Здесь будет история игр.</div>
+        <div class="history-panel-empty">Здесь будет история игр.</div>
       </div>
     </div>
   </div>
 
   <div id="bobrRunScreen" class="menu-screen">
-    <div class="mode-title">Bobr Run</div>
-    <div class="mode-subtitle">Игровой рантайм убран из этой версии файла. Остались меню, история, таблица и навигация приложения.</div>
+    <div class="screen-inner">
+      <section class="mode-hero-card">
+        <div class="mode-kicker">⚔️ PvP режим</div>
+        <h1 class="mode-title">Bobr Run</h1>
+        <p class="mode-subtitle">
+          Игровой рантайм убран из этой версии файла. Остались меню, история, таблица лидеров, комнаты и вся базовая навигация приложения.
+        </p>
 
-    <div class="bottom-bar mode-bottom-bar">
-      <div class="bottom-btn" onclick="openLeaderboard()">📊 Таблица</div>
-      <div class="bottom-btn play" onclick="openRooms()">▶ Играть</div>
-      <div class="bottom-btn" onclick="openSkins()">🎨 Скины</div>
+        <div class="mode-actions">
+          <button type="button" class="primary-action" onclick="openRooms()">Комнаты</button>
+          <button type="button" class="secondary-action" onclick="openLeaderboard()">Таблица</button>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-heading">
+          <div>
+            <div class="section-kicker">Интеграция</div>
+            <h2 class="section-title">Что уже готово</h2>
+          </div>
+        </div>
+
+        <div class="cards-stack">
+          <div class="info-card">
+            <h3>🔌 Точки подключения сохранены</h3>
+            <p>
+              Экран режима, кнопка назад, переходы, история матчей, таблица, модалки и навигация продолжают работать как часть приложения.
+            </p>
+          </div>
+
+          <div class="info-card">
+            <h3>🎮 Игровой модуль можно вернуть позже</h3>
+            <p>
+              Когда ты снова подключишь отдельный runtime Bobr Run, его можно будет встроить обратно без полного переделывания оболочки.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
+
+  <div class="bottom-bar">
+    <button
+      type="button"
+      id="navLeaderboard"
+      class="bottom-btn"
+      data-nav="leaderboard"
+      onclick="handleBottomNav('leaderboard', event)"
+    >
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">Таблица</span>
+    </button>
+
+    <button
+      type="button"
+      id="navGames"
+      class="bottom-btn"
+      data-nav="games"
+      data-games-trigger="true"
+      onclick="handleBottomNav('games', event)"
+    >
+      <span class="nav-icon">🎮</span>
+      <span class="nav-label">Игры</span>
+    </button>
+
+    <button
+      type="button"
+      id="navPvp"
+      class="bottom-btn center-fab"
+      data-nav="pvp"
+      onclick="handleBottomNav('pvp', event)"
+    >
+      <span class="nav-icon">⚔️</span>
+      <span class="nav-label">PvP</span>
+    </button>
+
+    <button
+      type="button"
+      id="navSkins"
+      class="bottom-btn"
+      data-nav="skins"
+      onclick="handleBottomNav('skins', event)"
+    >
+      <span class="nav-icon">🎨</span>
+      <span class="nav-label">Скины</span>
+    </button>
+
+    <button
+      type="button"
+      id="navHistory"
+      class="bottom-btn"
+      data-nav="history"
+      data-history-trigger="true"
+      onclick="handleBottomNav('history', event)"
+    >
+      <span class="nav-icon">🕘</span>
+      <span class="nav-label">История</span>
+    </button>
+  </div>
 </div>
 
-<div id="leaderboardModal">
-  <div class="leaderboardHeader">
-    <h2>🏆 Таблица лидеров</h2>
-    <span class="closeBtn" onclick="closeLeaderboard()">✖️</span>
+<div id="leaderboardModal" class="app-modal" onclick="handleModalBackdropClick('leaderboardModal', event)">
+  <div class="app-modal-card" onclick="event.stopPropagation()">
+    <div class="leaderboardHeader">
+      <h2>🏆 Таблица лидеров</h2>
+      <span class="closeBtn" onclick="closeLeaderboard()">✕</span>
+    </div>
+    <div id="leaderboardContent"></div>
   </div>
-  <div id="leaderboardContent"></div>
 </div>
 
-<div id="roomsModal">
-  <div class="roomsHeader">
-    <h2>🎮 Комнаты</h2>
-    <span class="closeBtn" onclick="closeRooms()">✖️</span>
+<div id="roomsModal" class="app-modal" onclick="handleModalBackdropClick('roomsModal', event)">
+  <div class="app-modal-card" onclick="event.stopPropagation()">
+    <div class="roomsHeader">
+      <h2>🎮 Комнаты</h2>
+      <span class="closeBtn" onclick="closeRooms()">✕</span>
+    </div>
+    <div id="roomsList"></div>
+    <div id="createRoomBtn" class="createRoomBtn" onclick="showGameUnavailable()">Bobr Run временно недоступен</div>
   </div>
-  <div id="roomsList"></div>
-  <div id="createRoomBtn" class="createRoomBtn" onclick="showGameUnavailable()">Bobr Run временно недоступен</div>
 </div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -585,6 +1374,7 @@ let telegramBackButtonHandler = null;
 let historyLoading = false;
 let expandedHistoryMatchId = null;
 let currentMenuView = "home";
+let currentBottomNav = "games";
 
 function shouldIgnoreExternalConsoleError(message) {
   const text = String(message || "").toLowerCase();
@@ -631,6 +1421,8 @@ try {
   tgUser = tgApp?.initDataUnsafe?.user || null;
   tgApp?.ready?.();
   tgApp?.expand?.();
+  tgApp?.setBackgroundColor?.("#050816");
+  tgApp?.setHeaderColor?.("#050816");
 } catch (e) {
   reportAppError("Ошибка инициализации Telegram WebApp:", e);
   tgUser = null;
@@ -646,6 +1438,68 @@ function getCurrentPlayer() {
   const id = tgUser?.id ? String(tgUser.id) : "guest_" + fallbackName;
   const name = tgUser?.username || tgUser?.first_name || fallbackName;
   return { id, name };
+}
+
+function getPlayerInitial(name) {
+  const value = String(name || "И").trim();
+  if (!value) return "И";
+  return value.charAt(0).toUpperCase();
+}
+
+function getCurrentBalanceRaw() {
+  const candidates = [
+    window.appUserBalance,
+    window.userBalance,
+    window.balance,
+    localStorage.getItem("bobr_balance")
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate === null || candidate === undefined || candidate === "") continue;
+
+    if (typeof candidate === "number" && Number.isFinite(candidate)) {
+      return candidate;
+    }
+
+    const parsed = parseFloat(String(candidate).replace(",", ".").replace(/[^\d.-]/g, ""));
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return 0;
+}
+
+function formatBalance(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "0.00 TON";
+  return `${number.toFixed(2)} TON`;
+}
+
+function renderTopProfile() {
+  const currentPlayer = getCurrentPlayer();
+  const nicknameEl = document.getElementById("nickname");
+  const avatarEl = document.getElementById("profileAvatar");
+  const balanceEl = document.getElementById("balanceValue");
+
+  if (nicknameEl) {
+    nicknameEl.innerText = currentPlayer.name;
+  }
+
+  if (avatarEl) {
+    if (tgUser?.photo_url) {
+      avatarEl.style.backgroundImage = `url("${tgUser.photo_url}")`;
+      avatarEl.style.color = "transparent";
+      avatarEl.textContent = "";
+    } else {
+      avatarEl.style.backgroundImage = "";
+      avatarEl.textContent = getPlayerInitial(currentPlayer.name);
+    }
+  }
+
+  if (balanceEl) {
+    balanceEl.innerText = formatBalance(getCurrentBalanceRaw());
+  }
 }
 
 function handleTelegramAppBack() {
@@ -684,7 +1538,37 @@ function syncAppBackButton(options = {}) {
   }
 }
 
-function setMenuView(view) {
+function setActiveBottomNav(navName) {
+  currentBottomNav = navName;
+  const buttons = document.querySelectorAll("[data-nav]");
+  buttons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.nav === navName);
+  });
+}
+
+function scrollHomeToTop() {
+  const homeScreen = document.getElementById("homeScreen");
+  if (!homeScreen) return;
+  homeScreen.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function scrollHomeToSection(sectionId) {
+  const homeScreen = document.getElementById("homeScreen");
+  const section = document.getElementById(sectionId);
+  if (!homeScreen || !section) return;
+
+  const homeRect = homeScreen.getBoundingClientRect();
+  const sectionRect = section.getBoundingClientRect();
+  const offset = sectionRect.top - homeRect.top + homeScreen.scrollTop - 10;
+
+  homeScreen.scrollTo({
+    top: Math.max(offset, 0),
+    behavior: "smooth"
+  });
+}
+
+function setMenuView(view, options = {}) {
+  const { preserveNav = false, keepHistory = false } = options;
   currentMenuView = view;
 
   const homeScreen = document.getElementById("homeScreen");
@@ -695,16 +1579,37 @@ function setMenuView(view) {
   if (homeScreen) homeScreen.classList.toggle("active", view === "home");
   if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "mode");
   if (modePopup) modePopup.classList.remove("open");
-  if (historyPanel) historyPanel.classList.remove("open");
+  if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
+
+  if (!preserveNav) {
+    setActiveBottomNav(view === "mode" ? "pvp" : "games");
+  }
 
   syncAppBackButton();
 }
 
 function toggleModePopup(event) {
   if (event) event.stopPropagation();
+
+  if (currentMenuView !== "home") {
+    setMenuView("home", { preserveNav: true });
+  }
+
+  closeHistoryPanel({ preserveNav: true });
+
   const modePopup = document.getElementById("modePopup");
   if (!modePopup) return;
-  modePopup.classList.toggle("open");
+
+  const willOpen = !modePopup.classList.contains("open");
+  modePopup.classList.remove("open");
+
+  if (willOpen) {
+    setActiveBottomNav("games");
+    requestAnimationFrame(() => {
+      scrollHomeToSection("gamesSection");
+      modePopup.classList.add("open");
+    });
+  }
 }
 
 function closeModePopup() {
@@ -714,6 +1619,10 @@ function closeModePopup() {
 
 function enterBobrRunMode(event) {
   if (event) event.stopPropagation();
+  closeModePopup();
+  closeHistoryPanel({ preserveNav: true });
+  closeLeaderboard();
+  closeRooms();
   setMenuView("mode");
 }
 
@@ -725,21 +1634,79 @@ function exitGameMode() {
   setMenuView("home");
 }
 
+function openGamesMenu() {
+  closeLeaderboard();
+  closeRooms();
+  setMenuView("home", { preserveNav: true });
+  setActiveBottomNav("games");
+  closeHistoryPanel({ preserveNav: true });
+
+  requestAnimationFrame(() => {
+    scrollHomeToSection("gamesSection");
+    const modePopup = document.getElementById("modePopup");
+    if (modePopup) modePopup.classList.add("open");
+  });
+}
+
+function openRecentHistory() {
+  closeLeaderboard();
+  closeRooms();
+  closeModePopup();
+  setMenuView("home", { preserveNav: true, keepHistory: true });
+
+  requestAnimationFrame(() => {
+    scrollHomeToTop();
+    const historyPanel = document.getElementById("historyPanel");
+    if (!historyPanel) return;
+    historyPanel.classList.add("open");
+    setActiveBottomNav("history");
+    loadGameHistory();
+  });
+}
+
 function toggleHistoryPanel(event) {
   if (event) event.stopPropagation();
+
+  if (currentMenuView !== "home") {
+    setMenuView("home", { preserveNav: true, keepHistory: true });
+  }
+
+  closeModePopup();
+
   const historyPanel = document.getElementById("historyPanel");
   if (!historyPanel) return;
 
   const willOpen = !historyPanel.classList.contains("open");
   historyPanel.classList.toggle("open");
+
   if (willOpen) {
+    setActiveBottomNav("history");
     loadGameHistory();
+  } else if (currentBottomNav === "history") {
+    setActiveBottomNav(currentMenuView === "mode" ? "pvp" : "games");
   }
 }
 
-function closeHistoryPanel() {
+function closeHistoryPanel(options = {}) {
+  const { preserveNav = false } = options;
   const historyPanel = document.getElementById("historyPanel");
-  if (historyPanel) historyPanel.classList.remove("open");
+  if (!historyPanel) return;
+
+  const wasOpen = historyPanel.classList.contains("open");
+  historyPanel.classList.remove("open");
+
+  if (wasOpen && !preserveNav && currentBottomNav === "history") {
+    setActiveBottomNav(currentMenuView === "mode" ? "pvp" : "games");
+  }
+}
+
+function getHistoryPanelHeaderHtml() {
+  return `
+    <div class="history-panel-header">
+      <div class="history-panel-title">История игр</div>
+      <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">✕</button>
+    </div>
+  `;
 }
 
 function formatHistoryDate(value) {
@@ -761,13 +1728,16 @@ function getHistoryCollectionRef(playerId) {
 
 function getHistoryResultMeta(item) {
   const winnerValue = String(item?.winner || "").trim().toLowerCase();
+
   if (winnerValue === "ничья") {
-    return { label: "ничья", className: "draw" };
+    return { label: "Ничья", className: "draw" };
   }
+
   if (item?.youWon) {
-    return { label: "выиграл", className: "win" };
+    return { label: "Победа", className: "win" };
   }
-  return { label: "проиграл", className: "lose" };
+
+  return { label: "Поражение", className: "lose" };
 }
 
 function toggleHistoryMatchDetails(matchId, event) {
@@ -775,6 +1745,7 @@ function toggleHistoryMatchDetails(matchId, event) {
     event.preventDefault();
     event.stopPropagation();
   }
+
   expandedHistoryMatchId = expandedHistoryMatchId === matchId ? null : matchId;
   loadGameHistory();
 }
@@ -783,10 +1754,10 @@ function renderHistoryEntries(entries) {
   const panel = document.getElementById("historyPanel");
   if (!panel) return;
 
-  const title = '<div class="history-panel-title">История игр</div>';
+  const header = getHistoryPanelHeaderHtml();
 
   if (!Array.isArray(entries) || entries.length === 0) {
-    panel.innerHTML = `${title}<div class="history-scroll-area"><div class="history-panel-text">Пока нет сыгранных матчей.</div></div>`;
+    panel.innerHTML = `${header}<div class="history-scroll-area"><div class="history-panel-empty">Пока нет сыгранных матчей.</div></div>`;
     return;
   }
 
@@ -836,7 +1807,7 @@ function renderHistoryEntries(entries) {
     `;
   }).join("");
 
-  panel.innerHTML = `${title}<div class="history-scroll-area"><div class="history-panel-text">${items}</div></div>`;
+  panel.innerHTML = `${header}<div class="history-scroll-area">${items}</div>`;
 }
 
 async function loadGameHistory() {
@@ -845,8 +1816,10 @@ async function loadGameHistory() {
 
   historyLoading = true;
   panel.innerHTML = `
-    <div class="history-panel-title">История игр</div>
-    <div class="history-scroll-area"><div class="history-panel-text">Загрузка...</div></div>
+    ${getHistoryPanelHeaderHtml()}
+    <div class="history-scroll-area">
+      <div class="history-panel-text">Загрузка...</div>
+    </div>
   `;
 
   try {
@@ -862,8 +1835,10 @@ async function loadGameHistory() {
   } catch (e) {
     console.error("Ошибка загрузки истории игр:", e);
     panel.innerHTML = `
-      <div class="history-panel-title">История игр</div>
-      <div class="history-scroll-area"><div class="history-panel-text">Не удалось загрузить историю игр.</div></div>
+      ${getHistoryPanelHeaderHtml()}
+      <div class="history-scroll-area">
+        <div class="history-panel-text">Не удалось загрузить историю игр.</div>
+      </div>
     `;
   } finally {
     historyLoading = false;
@@ -871,19 +1846,23 @@ async function loadGameHistory() {
 }
 
 async function openLeaderboard() {
+  closeModePopup();
+  closeHistoryPanel({ preserveNav: true });
+
   const modal = document.getElementById("leaderboardModal");
   const contentDiv = document.getElementById("leaderboardContent");
   if (!modal || !contentDiv) return;
 
-  modal.style.display = "block";
-  contentDiv.innerHTML = "<p>Загрузка...</p>";
+  setActiveBottomNav("leaderboard");
+  modal.style.display = "flex";
+  contentDiv.innerHTML = "<div class='history-panel-text'>Загрузка...</div>";
 
   try {
     const snapshot = await db.collection("leaderboard").orderBy("score", "desc").limit(10).get();
     contentDiv.innerHTML = "";
 
     if (snapshot.empty) {
-      contentDiv.innerHTML = "<p>Пока нет рекордов</p>";
+      contentDiv.innerHTML = "<div class='history-panel-text'>Пока нет рекордов.</div>";
       return;
     }
 
@@ -891,31 +1870,50 @@ async function openLeaderboard() {
     snapshot.forEach((doc) => {
       const p = doc.data() || {};
       const row = document.createElement("div");
-      row.textContent = `${index}. ${p.name || "Игрок"} — ${p.score || 0}`;
+      row.className = "leaderboard-row";
+
+      const name = document.createElement("div");
+      name.className = "leaderboard-row-name";
+      name.textContent = `${index}. ${p.name || "Игрок"}`;
+
+      const score = document.createElement("div");
+      score.className = "leaderboard-row-score";
+      score.textContent = `${p.score || 0}`;
+
+      row.appendChild(name);
+      row.appendChild(score);
       contentDiv.appendChild(row);
       index += 1;
     });
   } catch (e) {
     console.error("Ошибка загрузки таблицы:", e);
-    contentDiv.innerHTML = "<p>Ошибка загрузки таблицы</p>";
+    contentDiv.innerHTML = "<div class='history-panel-text'>Ошибка загрузки таблицы.</div>";
   }
 }
 
 function closeLeaderboard() {
   const modal = document.getElementById("leaderboardModal");
   if (modal) modal.style.display = "none";
+
+  if (currentBottomNav === "leaderboard") {
+    setActiveBottomNav(currentMenuView === "mode" ? "pvp" : "games");
+  }
 }
 
 function openRooms() {
+  closeModePopup();
+
   const roomsModal = document.getElementById("roomsModal");
   const roomsList = document.getElementById("roomsList");
   const createRoomBtn = document.getElementById("createRoomBtn");
 
   if (roomsList) {
     roomsList.innerHTML = `
-      Bobr Run убран из этой версии файла.<br><br>
-      Главное меню, история игр, таблица лидеров, настройки и навигация продолжают работать.<br><br>
-      Когда ты потом вернёшь отдельный игровой модуль обратно, сюда можно будет снова подключить комнаты и запуск матчей.
+      <div class="rooms-note">
+        Bobr Run убран из этой версии файла.<br><br>
+        Главное меню, история игр, таблица лидеров, настройки и навигация продолжают работать.<br><br>
+        Когда ты потом вернёшь отдельный игровой модуль обратно, сюда можно будет снова подключить комнаты и запуск матчей.
+      </div>
     `;
   }
 
@@ -924,7 +1922,7 @@ function openRooms() {
   }
 
   if (roomsModal) {
-    roomsModal.style.display = "block";
+    roomsModal.style.display = "flex";
   }
 }
 
@@ -942,7 +1940,12 @@ function joinRoom() { showGameUnavailable(); }
 function leaveRoom() { closeRooms(); }
 
 function openSkins() {
+  setActiveBottomNav("skins");
   alert("Скины");
+}
+
+function openWallet() {
+  alert("Кошелёк");
 }
 
 function openSettings() {
@@ -954,32 +1957,86 @@ function openSettings() {
   }
 }
 
+function handleBottomNav(action, event) {
+  if (event) event.stopPropagation();
+
+  switch (action) {
+    case "leaderboard":
+      openLeaderboard();
+      break;
+
+    case "games": {
+      const modePopup = document.getElementById("modePopup");
+      const isOpen = !!modePopup?.classList.contains("open");
+      if (currentMenuView === "home" && isOpen) {
+        closeModePopup();
+      } else {
+        openGamesMenu();
+      }
+      break;
+    }
+
+    case "pvp":
+      enterBobrRunMode(event);
+      break;
+
+    case "skins":
+      openSkins();
+      break;
+
+    case "history": {
+      const historyPanel = document.getElementById("historyPanel");
+      const isOpen = !!historyPanel?.classList.contains("open");
+      if (currentMenuView === "home" && isOpen) {
+        closeHistoryPanel();
+      } else {
+        openRecentHistory();
+      }
+      break;
+    }
+
+    default:
+      break;
+  }
+}
+
 function handleMenuBackgroundClick(event) {
   const modePopup = document.getElementById("modePopup");
-  const mainPlayButton = document.getElementById("mainPlayButton");
   const historyPanel = document.getElementById("historyPanel");
-  const bookButton = document.querySelector(".main-book-btn");
 
-  if (modePopup && mainPlayButton) {
+  const gameTriggers = Array.from(document.querySelectorAll("[data-games-trigger='true']"));
+  const historyTriggers = Array.from(document.querySelectorAll("[data-history-trigger='true']"));
+
+  if (modePopup) {
     const clickedInsidePopup = modePopup.contains(event.target);
-    const clickedPlayButton = mainPlayButton.contains(event.target);
-    if (!clickedInsidePopup && !clickedPlayButton) {
+    const clickedGameTrigger = gameTriggers.some((el) => el.contains(event.target));
+    if (!clickedInsidePopup && !clickedGameTrigger) {
       closeModePopup();
     }
   }
 
-  if (historyPanel && bookButton) {
+  if (historyPanel) {
     const clickedInsideHistory = historyPanel.contains(event.target);
-    const clickedBookButton = bookButton.contains(event.target);
-    if (!clickedInsideHistory && !clickedBookButton) {
+    const clickedHistoryTrigger = historyTriggers.some((el) => el.contains(event.target));
+    if (!clickedInsideHistory && !clickedHistoryTrigger) {
       closeHistoryPanel();
     }
   }
 }
 
-const currentPlayer = getCurrentPlayer();
-document.getElementById("nickname").innerText = currentPlayer.name;
+function handleModalBackdropClick(modalId, event) {
+  if (event.target.id !== modalId) return;
+
+  if (modalId === "leaderboardModal") {
+    closeLeaderboard();
+  } else if (modalId === "roomsModal") {
+    closeRooms();
+  }
+}
+
+renderTopProfile();
 setMenuView("home");
+setActiveBottomNav("games");
 
 window.toggleModePopup = toggleModePopup;
 window.enterBobrRunMode = enterBobrRunMode;
@@ -993,9 +2050,13 @@ window.joinRoom = joinRoom;
 window.leaveRoom = leaveRoom;
 window.openSkins = openSkins;
 window.openSettings = openSettings;
+window.openWallet = openWallet;
 window.toggleHistoryPanel = toggleHistoryPanel;
 window.toggleHistoryMatchDetails = toggleHistoryMatchDetails;
 window.showGameUnavailable = showGameUnavailable;
+window.handleBottomNav = handleBottomNav;
+window.handleMenuBackgroundClick = handleMenuBackgroundClick;
+window.handleModalBackdropClick = handleModalBackdropClick;
 </script>
 </body>
 </html>
