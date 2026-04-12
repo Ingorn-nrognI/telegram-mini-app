@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Menu + Game</title>
-
+<title>Bobr World</title>
 <style>
 html, body {
   margin: 0;
@@ -16,7 +15,7 @@ html, body {
 
 body {
   margin: 0;
-  font-family: Arial;
+  font-family: Arial, sans-serif;
   background: #87CEEB;
   display: flex;
   flex-direction: column;
@@ -26,7 +25,6 @@ body {
   overflow: hidden;
 }
 
-/* Верхняя панель */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -103,7 +101,6 @@ body {
   transform: scale(0.97);
 }
 
-/* Экраны меню */
 .menu-screen {
   display: none;
   flex: 1;
@@ -144,6 +141,17 @@ body {
   letter-spacing: 2px;
   text-align: center;
   padding: 20px;
+  box-sizing: border-box;
+}
+
+.mode-subtitle {
+  margin: -24px auto 0;
+  width: min(88vw, 620px);
+  color: rgba(255,255,255,0.92);
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.45;
+  padding: 0 20px;
   box-sizing: border-box;
 }
 
@@ -238,6 +246,10 @@ body {
   overflow: hidden;
 }
 
+.history-panel.open {
+  display: block;
+}
+
 .history-scroll-area {
   height: calc(100% - 54px);
   overflow-y: auto;
@@ -263,21 +275,6 @@ body {
   background: linear-gradient(180deg, rgba(255, 226, 96, 0.98), rgba(212, 160, 0, 0.98));
   border-radius: 999px;
   border: 3px solid rgba(0, 0, 0, 0.62);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 244, 180, 0.22),
-    0 0 0 1px rgba(255, 215, 0, 0.18);
-}
-
-.history-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(255, 235, 128, 1), rgba(226, 173, 0, 1));
-}
-
-.history-scroll-area::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
-.history-panel.open {
-  display: block;
 }
 
 .history-panel-title {
@@ -324,7 +321,6 @@ body {
   background: #555;
 }
 
-/* Нижнее меню режима */
 .bottom-bar {
   position: fixed;
   bottom: 20px;
@@ -366,7 +362,6 @@ body {
   background: #555;
 }
 
-/* Меню */
 #menu {
   position: absolute;
   inset: 0;
@@ -378,26 +373,16 @@ body {
   z-index: 10;
   overflow-y: auto;
 }
-/* Canvas для игры */
-#game {
-  display: none;
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background: #87CEEB;
-  z-index: 5;
-}
 
-/* Стили модалки таблицы */
-#leaderboardModal {
+#leaderboardModal,
+#roomsModal {
   display: none;
   position: fixed;
   top: 60px;
   left: 20px;
   right: 20px;
   bottom: 100px;
-  background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.92);
   color: white;
   padding: 20px;
   border-radius: 15px;
@@ -406,14 +391,16 @@ body {
   box-sizing: border-box;
 }
 
-.leaderboardHeader {
+.leaderboardHeader,
+.roomsHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
 }
 
-.leaderboardHeader h2 {
+.leaderboardHeader h2,
+.roomsHeader h2 {
   margin: 0;
   font-size: 22px;
 }
@@ -428,55 +415,10 @@ body {
   line-height: 1.5;
 }
 
-/* Принудительное восстановление меню */
-.menu-reset {
-  background: linear-gradient(135deg, #2c3e50, #1a472a) !important;
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  z-index: 10 !important;
-}
-
-/* ===== КОМНАТЫ ===== */
-#roomsModal {
-  display: none;
-  position: fixed;
-  top: 60px;
-  left: 20px;
-  right: 20px;
-  bottom: 100px;
-
-  background: rgba(0,0,0,0.95);
-  color: white;
-
-  padding: 20px;
-  border-radius: 15px;
-
-  z-index: 9999;
-  overflow-y: auto;
-}
-
-.roomsHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
 #roomsList {
   margin-bottom: 20px;
-}
-
-.roomItem {
-  padding: 12px;
-  background: #222;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  cursor: pointer;
+  font-size: 18px;
+  line-height: 1.55;
 }
 
 .createRoomBtn {
@@ -484,74 +426,6 @@ body {
   background: #28a745;
   text-align: center;
   border-radius: 10px;
-  cursor: pointer;
-}
-
-  /* ===== ФИНАЛЬНОЕ ОКНО ===== */
-#endGameModal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.75);
-  z-index: 10000;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.endGameBox {
-  width: 100%;
-  max-width: 420px;
-  background: #111;
-  color: white;
-  border-radius: 20px;
-  padding: 24px 20px;
-  box-sizing: border-box;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-}
-
-.endGameTitle {
-  font-size: 30px;
-  font-weight: bold;
-  margin-bottom: 14px;
-}
-
-.endGameWinnerName {
-  font-size: 24px;
-  color: #FFD700;
-  font-weight: bold;
-  margin-bottom: 24px;
-}
-
-.endGamePlaces {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 22px;
-}
-
-.endGamePlaces th,
-.endGamePlaces td {
-  border-bottom: 1px solid rgba(255,255,255,0.15);
-  padding: 10px 6px;
-  text-align: center;
-  font-size: 16px;
-}
-
-.endGamePlaces th {
-  color: #FFD700;
-}
-
-.endGameExitBtn {
-  width: 100%;
-  padding: 14px;
-  border: none;
-  border-radius: 14px;
-  background: #dc3545;
-  color: white;
-  font-size: 18px;
-  font-weight: bold;
   cursor: pointer;
 }
 
@@ -580,17 +454,9 @@ body {
   text-transform: lowercase;
 }
 
-.history-match-result.win {
-  color: #28a745;
-}
-
-.history-match-result.lose {
-  color: #dc3545;
-}
-
-.history-match-result.draw {
-  color: #9aa0a6;
-}
+.history-match-result.win { color: #28a745; }
+.history-match-result.lose { color: #dc3545; }
+.history-match-result.draw { color: #9aa0a6; }
 
 .history-match-date {
   font-size: 14px;
@@ -627,13 +493,9 @@ body {
 .history-match-table th:last-child {
   text-align: right;
 }
-
 </style>
 </head>
-
 <body>
-
-<!-- МЕНЮ -->
 <div id="menu" onclick="handleMenuBackgroundClick(event)">
   <div class="top-bar">
     <div class="top-bar-left">
@@ -653,7 +515,6 @@ body {
         <div id="modePopup" class="mode-popup">
           <div class="mode-popup-btn" onclick="enterBobrRunMode(event)">Bobr Run</div>
         </div>
-
         <div id="mainPlayButton" class="main-play-btn" onclick="toggleModePopup(event)">▶ Играть</div>
       </div>
     </div>
@@ -665,15 +526,14 @@ body {
     <div id="historyPanel" class="history-panel" onclick="event.stopPropagation()">
       <div class="history-panel-title">История игр</div>
       <div class="history-scroll-area">
-        <div class="history-panel-text">
-          Здесь будет история игр.
-        </div>
+        <div class="history-panel-text">Здесь будет история игр.</div>
       </div>
     </div>
   </div>
 
   <div id="bobrRunScreen" class="menu-screen">
     <div class="mode-title">Bobr Run</div>
+    <div class="mode-subtitle">Игровой рантайм убран из этой версии файла. Остались меню, история, таблица и навигация приложения.</div>
 
     <div class="bottom-bar mode-bottom-bar">
       <div class="bottom-btn" onclick="openLeaderboard()">📊 Таблица</div>
@@ -683,10 +543,6 @@ body {
   </div>
 </div>
 
-<!-- Canvas для игры -->
-<canvas id="game" style="display: none;"></canvas>
-
-<!-- Таблица лидеров (модалка) -->
 <div id="leaderboardModal">
   <div class="leaderboardHeader">
     <h2>🏆 Таблица лидеров</h2>
@@ -694,550 +550,20 @@ body {
   </div>
   <div id="leaderboardContent"></div>
 </div>
-  
+
 <div id="roomsModal">
   <div class="roomsHeader">
     <h2>🎮 Комнаты</h2>
     <span class="closeBtn" onclick="closeRooms()">✖️</span>
   </div>
-
-  <div id="roomsList">Загрузка...</div>
-
-  <div id="createRoomBtn" class="createRoomBtn" onclick="createRoom()">
-  ➕ Создать комнату
-</div>
+  <div id="roomsList"></div>
+  <div id="createRoomBtn" class="createRoomBtn" onclick="showGameUnavailable()">Bobr Run временно недоступен</div>
 </div>
 
-  <!-- Финальное окно -->
-<div id="endGameModal">
-  <div class="endGameBox">
-    <div id="endGameTitle" class="endGameTitle">Победитель</div>
-    <div id="endGameWinnerName" class="endGameWinnerName">—</div>
-
-    <table class="endGamePlaces">
-      <thead>
-        <tr>
-          <th>Место</th>
-          <th>Игрок</th>
-          <th>Счёт</th>
-        </tr>
-      </thead>
-      <tbody id="endGamePlacesBody"></tbody>
-    </table>
-
-    <button class="endGameExitBtn" onclick="closeEndGameAndExit()">Выйти</button>
-  </div>
-</div>
-  
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
-  
-let roomsListener = null;
-let currentRoomListener = null;
-let currentRoomId = null;
-let winnerProcessing = false;
-
-let roomCountdownInterval = null;
-let roomHostCountdownInterval = null;
-let multiplayerGameStarted = false;
-let multiplayerStartInProgress = false;
-
-let endGameWatcher = null;
-let endGameShown = false;
-let isClosingEndGame = false;
-let endGameExitHandled = false;
-let suppressEndGameModal = false;
-let openEndGameForCurrentMatch = null;
-let exitEndGameForCurrentMatch = null;
-let activeLeaveAfterLossHandler = null;
-let blockEndGameModalUntilNextMatch = false;
-
-let gameResizeHandler = null;
-let gameBeforeUnloadHandler = null;
-let gameCanvasClickHandler = null;
-let gameCanvasTouchHandler = null;
-let isCreatingRoom = false;
-let isJoiningRoom = false;
-let isLeavingRoom = false;
-
-let roomPresenceInterval = null;
-let roomPresenceClickHandler = null;
-let roomPresenceTouchHandler = null;
-let roomVisibilityHandler = null;
-let roomPageHideHandler = null;
-let roomReadyPollInterval = null;
-let gameCountdownStartListener = null;
-let roomsPollingInterval = null;
-let currentRoomPollingInterval = null;
-let historyLoading = false;
-let expandedHistoryMatchId = null;
-
-let roomMaintenanceLock = false;
-let lastRoomMaintenanceAt = 0;
-const ROOM_MAINTENANCE_THROTTLE_MS = 2500;
-
-function isRetryableFirestoreContentionError(error) {
-  const code = String(error?.code || "").toLowerCase();
-  const message = String(error?.message || "").toLowerCase();
-
-  return (
-    code === "aborted" ||
-    code === "failed-precondition" ||
-    code === "cancelled" ||
-    code === "resource-exhausted" ||
-    code === "unavailable" ||
-    code === "deadline-exceeded" ||
-    message.includes("failed-precondition") ||
-    message.includes("too much contention") ||
-    message.includes("quota exceeded") ||
-    message.includes("resource exhausted") ||
-    message.includes("too many requests") ||
-    (message.includes("transaction") && message.includes("retry")) ||
-    (message.includes("current document") && message.includes("updatetime"))
-  );
-}
-
-function reportFirestoreContention(context, error) {
-  if (isRetryableFirestoreContentionError(error)) {
-    console.warn(`${context}: пропущен конфликт одновременной записи`);
-    return true;
-  }
-
-  return false;
-}
-
-async function runRoomTransaction(roomRef, callback, context = "Firestore transaction") {
-  const MAX_RETRIES = 5;
-
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      return await db.runTransaction(async (transaction) => {
-        return await callback(transaction);
-      });
-    } catch (e) {
-      if (isRetryableFirestoreContentionError(e)) {
-        if (attempt < MAX_RETRIES - 1) {
-          const baseDelay = e?.code === "resource-exhausted" ? 250 : 100;
-          const delay = baseDelay * Math.pow(2, attempt);
-          console.warn(`${context}: retry ${attempt + 1}/${MAX_RETRIES - 1} after ${delay}ms`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-
-        console.warn(`${context}: все попытки исчерпаны, пропускаем`);
-        return null;
-      }
-
-      throw e;
-    }
-  }
-
-  return null;
-}
-
-async function safeRoomUpdate(roomRef, updateData, context = "Firestore update") {
-  try {
-    await roomRef.update(updateData);
-    return true;
-  } catch (e) {
-    if (reportFirestoreContention(context, e)) {
-      return false;
-    }
-
-    throw e;
-  }
-}
-
-async function safeFinishRoom(roomRef, updateData, context = "safeFinishRoom") {
-  return await runRoomTransaction(roomRef, async (transaction) => {
-    const doc = await transaction.get(roomRef);
-    if (!doc.exists) return false;
-
-    const room = doc.data();
-    if (room?.gameState?.finished === true || room?.status === "finished") {
-      return false;
-    }
-
-    transaction.update(roomRef, updateData);
-    return true;
-  }, context);
-}
-
-function isCurrentPlayerRoomHost(room) {
-  if (!room) return false;
-  const { id } = getCurrentPlayer();
-  return room.hostId === id;
-}
-
-async function maybeRunRoomMaintenance(roomId, room, { force = false } = {}) {
-  if (!roomId || !room) return;
-  if (!force && !isCurrentClientRoomWriteDriver(room)) return;
-  if (roomMaintenanceLock) return;
-
-  const now = Date.now();
-  if (!force && now - lastRoomMaintenanceAt < ROOM_MAINTENANCE_THROTTLE_MS) {
-    return;
-  }
-
-  roomMaintenanceLock = true;
-  lastRoomMaintenanceAt = now;
-
-  try {
-    await cleanupInactivePlayers(roomId);
-    await tryStartRoom(roomId);
-  } finally {
-    roomMaintenanceLock = false;
-  }
-}
-
-const GAME_READY_BUFFER_MS = 350;
-  
-const ROOM_OFFLINE_GRACE_MS = 60 * 1000;
-const ROOM_PRESENCE_PING_MS = 30000;
-const ROOM_ACTION_PING_THROTTLE_MS = 10000;
-const ROOM_MAX_WAITING_LIFETIME_MS = 10 * 60 * 1000;
-const ROOM_LAUNCH_PROTECTION_MS = 3 * 60 * 1000;
-const ROOM_LIST_CLEANUP_THROTTLE_MS = 15000;
-
-let lastRoomPresenceWriteAt = 0;
-let lastRoomsCleanupAt = 0;
-let roomsCleanupPromise = null;
-
-let syncedServerNowOffsetMs = 0;
-let serverClockSyncedOnce = false;
-
-function getSyncedServerNowMs() {
-  return Date.now() + syncedServerNowOffsetMs;
-}
-
-function resetServerClockSync() {
-  syncedServerNowOffsetMs = 0;
-  serverClockSyncedOnce = false;
-}
-
-function syncServerClockFromRoom(room) {
-  if (!room) return;
-
-  const updatedAt = room.updatedAt;
-
-  if (!updatedAt || typeof updatedAt.toMillis !== "function") {
-    return;
-  }
-
-  const updatedAtMs = updatedAt.toMillis();
-  if (!updatedAtMs) return;
-
-  if (!serverClockSyncedOnce) {
-    syncedServerNowOffsetMs = updatedAtMs - Date.now();
-    serverClockSyncedOnce = true;
-  }
-}
-
-function stopRoomCountdown() {
-  if (roomCountdownInterval) {
-    clearInterval(roomCountdownInterval);
-    roomCountdownInterval = null;
-  }
-
-  if (roomHostCountdownInterval) {
-    clearInterval(roomHostCountdownInterval);
-    roomHostCountdownInterval = null;
-  }
-}
-
-function getRoomTimeMs(value) {
-  if (!value) return null;
-
-  if (typeof value.toMillis === "function") {
-    return value.toMillis();
-  }
-
-  if (typeof value === "number") {
-    return value;
-  }
-
-  return null;
-}
-
-function stopRoomPresence() {
-  if (roomPresenceInterval) {
-    clearInterval(roomPresenceInterval);
-    roomPresenceInterval = null;
-  }
-
-  if (roomPresenceClickHandler) {
-    document.removeEventListener("click", roomPresenceClickHandler, true);
-    roomPresenceClickHandler = null;
-  }
-
-  if (roomPresenceTouchHandler) {
-    document.removeEventListener("touchstart", roomPresenceTouchHandler, true);
-    roomPresenceTouchHandler = null;
-  }
-
-  if (roomVisibilityHandler) {
-    document.removeEventListener("visibilitychange", roomVisibilityHandler);
-    roomVisibilityHandler = null;
-  }
-
-  if (roomPageHideHandler) {
-    window.removeEventListener("pagehide", roomPageHideHandler);
-    window.removeEventListener("beforeunload", roomPageHideHandler);
-    roomPageHideHandler = null;
-  }
-}
-
-function stopRoomReadyPoll() {
-  if (roomReadyPollInterval) {
-    clearInterval(roomReadyPollInterval);
-    roomReadyPollInterval = null;
-  }
-}
-
-function stopGameCountdownStartListener() {
-  if (gameCountdownStartListener) {
-    gameCountdownStartListener();
-    gameCountdownStartListener = null;
-  }
-}
-
-function isRoomLaunchProtected(room) {
-  if (!room) return false;
-
-  const isStarted = room.status === "playing" || room.gameState?.started === true;
-  if (isStarted) return true;
-
-  const playersCount = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean).length : 0;
-  if (playersCount < 2) return false;
-
-  const startAtMs = getRoomTimeMs(room.startAt);
-  const countdownStartedAtMs = getRoomTimeMs(room.gameState?.countdownStartedAt);
-
-  if (countdownStartedAtMs) return true;
-
-  if (startAtMs) {
-    const elapsed = getSyncedServerNowMs() - startAtMs;
-    if (elapsed >= 0 && elapsed <= ROOM_LAUNCH_PROTECTION_MS) {
-      return true;
-    }
-  }
-
-  return false;
-}
-  
-async function touchRoomPresence(roomId, { markAction = false, force = false } = {}) {
-  if (!roomId || currentRoomId !== roomId) return;
-
-  const now = Date.now();
-  const minDelay = markAction ? ROOM_ACTION_PING_THROTTLE_MS : Math.max(12000, ROOM_PRESENCE_PING_MS - 5000);
-
-  if (!force && now - lastRoomPresenceWriteAt < minDelay) {
-    return;
-  }
-
-  const { id, name } = getCurrentPlayer();
-  const roomRef = db.collection("rooms").doc(roomId);
-
-  const updateData = {
-    [`gameState.playersData.${id}.name`]: name,
-    [`gameState.playersData.${id}.online`]: true,
-    [`gameState.playersData.${id}.leftRoom`]: false,
-    [`gameState.playersData.${id}.lastSeen`]: now,
-    [`gameState.playersData.${id}.closedAt`]: null
-  };
-
-  if (markAction) {
-    updateData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-    updateData[`gameState.playersData.${id}.lastActionAt`] = now;
-  }
-
-  try {
-    const ok = await safeRoomUpdate(roomRef, updateData, "touchRoomPresence");
-    if (ok !== false) {
-      lastRoomPresenceWriteAt = now;
-    }
-  } catch (e) {
-    console.log("touchRoomPresence skip:", e?.message || e);
-  }
-}
-
-async function markRoomOffline(roomId) {
-  if (!roomId) return;
-
-  const { id } = getCurrentPlayer();
-  const now = Date.now();
-  const roomRef = db.collection("rooms").doc(roomId);
-
-  try {
-    await safeRoomUpdate(roomRef, {
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      [`gameState.playersData.${id}.online`]: false,
-      [`gameState.playersData.${id}.closedAt`]: now,
-      [`gameState.playersData.${id}.lastSeen`]: now
-    }, "markRoomOffline");
-  } catch (e) {
-    console.log("markRoomOffline skip:", e?.message || e);
-  }
-}
-
-async function cleanupInactivePlayers(roomId) {
-  if (!roomId) return;
-
-  const roomRef = db.collection("rooms").doc(roomId);
-
-  try {
-    await runRoomTransaction(roomRef, async (transaction) => {
-      const doc = await transaction.get(roomRef);
-      if (!doc.exists) return;
-
-      const room = doc.data();
-      if (!room || !Array.isArray(room.playerIds)) return;
-
-      const now = Date.now();
-      const playerIds = [...room.playerIds];
-      const playerNames = { ...(room.playerNames || {}) };
-      const playersData = room.gameState?.playersData || {};
-
-      const createdAt = getRoomTimeMs(room.created) || 0;
-      const updatedAt = getRoomTimeMs(room.updatedAt) || createdAt || 0;
-
-      const isStarted =
-        room.status === "playing" ||
-        room.gameState?.started === true;
-
-      const isFinished =
-        room.status === "finished" ||
-        room.gameState?.finished === true;
-
-      const launchProtected = isRoomLaunchProtected(room);
-
-      const shouldDeleteForMaxWaitingLifetime =
-        !isStarted &&
-        !isFinished &&
-        !launchProtected &&
-        createdAt > 0 &&
-        (now - createdAt > ROOM_MAX_WAITING_LIFETIME_MS);
-
-      if (shouldDeleteForMaxWaitingLifetime) {
-        transaction.delete(roomRef);
-        return;
-      }
-
-      const stalePlayerIds = (!isStarted && !isFinished && !launchProtected)
-        ? playerIds.filter((pid) => {
-            const p = playersData[pid] || {};
-            const lastSeen = Number(p.lastSeen || 0) || updatedAt || createdAt || 0;
-            const closedAt = Number(p.closedAt || 0) || 0;
-            const online = p.online === true;
-
-            const definitelyOffline =
-              closedAt > 0 && (now - closedAt > ROOM_OFFLINE_GRACE_MS);
-
-            const silentlyMissing =
-              !online &&
-              lastSeen > 0 &&
-              (now - lastSeen > ROOM_OFFLINE_GRACE_MS);
-
-            const fallbackMissing =
-              lastSeen > 0 &&
-              (now - lastSeen > ROOM_OFFLINE_GRACE_MS);
-
-            return definitelyOffline || silentlyMissing || fallbackMissing;
-          })
-        : [];
-
-      if (stalePlayerIds.length === 0) {
-        return;
-      }
-
-      const newPlayerIds = playerIds.filter(pid => !stalePlayerIds.includes(pid));
-
-      if (newPlayerIds.length === 0) {
-        transaction.delete(roomRef);
-        return;
-      }
-
-      stalePlayerIds.forEach((pid) => {
-        delete playerNames[pid];
-      });
-
-      const updateData = {
-        playerIds: newPlayerIds,
-        playerNames,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        hostId: newPlayerIds.includes(room.hostId) ? room.hostId : newPlayerIds[0]
-      };
-
-      if (!isStarted && newPlayerIds.length < 2) {
-        updateData.startAt = null;
-      }
-
-      stalePlayerIds.forEach((pid) => {
-        updateData[`gameState.playersData.${pid}`] = firebase.firestore.FieldValue.delete();
-        updateData[`gameState.playersReady.${pid}`] = firebase.firestore.FieldValue.delete();
-      });
-
-      transaction.update(roomRef, updateData);
-    }, "cleanupInactivePlayers");
-  } catch (e) {
-    console.error("Ошибка cleanupInactivePlayers:", e);
-  }
-}
-
-function startRoomPresence(roomId) {
-  stopRoomPresence();
-
-  let lastActionPingAt = 0;
-
-  touchRoomPresence(roomId, { markAction: true, force: true });
-
-  roomPresenceInterval = setInterval(() => {
-    if (currentRoomId !== roomId) return;
-    touchRoomPresence(roomId, { markAction: false });
-  }, ROOM_PRESENCE_PING_MS);
-
-  roomPresenceClickHandler = () => {
-    if (currentRoomId !== roomId) return;
-
-    const now = Date.now();
-    if (now - lastActionPingAt < ROOM_ACTION_PING_THROTTLE_MS) return;
-
-    lastActionPingAt = now;
-    touchRoomPresence(roomId, { markAction: true });
-  };
-
-  roomPresenceTouchHandler = () => {
-    if (currentRoomId !== roomId) return;
-
-    const now = Date.now();
-    if (now - lastActionPingAt < ROOM_ACTION_PING_THROTTLE_MS) return;
-
-    lastActionPingAt = now;
-    touchRoomPresence(roomId, { markAction: true });
-  };
-
-  roomVisibilityHandler = () => {
-    if (currentRoomId !== roomId) return;
-
-    if (!document.hidden) {
-      touchRoomPresence(roomId, { markAction: true });
-    }
-  };
-
-  roomPageHideHandler = () => {
-    if (currentRoomId !== roomId) return;
-    markRoomOffline(roomId);
-  };
-
-  document.addEventListener("click", roomPresenceClickHandler, true);
-  document.addEventListener("touchstart", roomPresenceTouchHandler, true);
-  document.addEventListener("visibilitychange", roomVisibilityHandler);
-  window.addEventListener("pagehide", roomPageHideHandler);
-  window.addEventListener("beforeunload", roomPageHideHandler);
-}
-  
 const firebaseConfig = {
   apiKey: "AIzaSyCxJb69UOCu38RvSbJVnf6jtD8VYDVHPD4",
   authDomain: "web3-bobrup.firebaseapp.com",
@@ -1247,6 +573,18 @@ const firebaseConfig = {
   appId: "1:947085067200:web:35299668725de1c965be25",
   measurementId: "G-HPXPGC87TB"
 };
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+
+let tgUser = null;
+const tgApp = window.Telegram?.WebApp || null;
+let telegramBackButtonHandler = null;
+let historyLoading = false;
+let expandedHistoryMatchId = null;
+let currentMenuView = "home";
 
 function shouldIgnoreExternalConsoleError(message) {
   const text = String(message || "").toLowerCase();
@@ -1262,12 +600,10 @@ function shouldIgnoreExternalConsoleError(message) {
 
 function reportAppError(prefix, error) {
   const message = error?.message || error?.reason?.message || error?.reason || error || "Неизвестная ошибка";
-
   if (shouldIgnoreExternalConsoleError(message)) {
     console.warn(prefix, message);
     return;
   }
-
   console.error(prefix, error);
 }
 
@@ -1282,25 +618,14 @@ window.addEventListener("error", (event) => {
 window.addEventListener("unhandledrejection", (event) => {
   const reason = event?.reason;
   const message = reason?.message || String(reason || "");
-
   if (shouldIgnoreExternalConsoleError(message)) {
     event.preventDefault();
     console.warn("Поймано внешнее promise-сообщение:", message);
     return;
   }
-
   console.error("Необработанная ошибка Promise:", reason);
   event.preventDefault();
 });
-
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
-const db = firebase.firestore();
-  
-let tgUser = null;
-const tgApp = window.Telegram?.WebApp || null;
-let telegramBackButtonHandler = null;
 
 try {
   tgUser = tgApp?.initDataUnsafe?.user || null;
@@ -1315,17 +640,16 @@ function hasTelegramSystemBackButton() {
   return !!(tgApp?.BackButton && typeof tgApp.BackButton.show === "function");
 }
 
+function getCurrentPlayer() {
+  const nicknameEl = document.getElementById("nickname");
+  const fallbackName = nicknameEl?.innerText?.trim() || "Игрок";
+  const id = tgUser?.id ? String(tgUser.id) : "guest_" + fallbackName;
+  const name = tgUser?.username || tgUser?.first_name || fallbackName;
+  return { id, name };
+}
+
 function handleTelegramAppBack() {
-  const menu = document.getElementById("menu");
-  const game = document.getElementById("game");
-  const isGameVisible = !!game && game.style.display === "block";
-  const isMenuVisible = !!menu && menu.style.display !== "none";
-
-  if (isGameVisible) {
-    return;
-  }
-
-  if (isMenuVisible && currentMenuView === "mode") {
+  if (currentMenuView === "mode") {
     exitGameMode();
   }
 }
@@ -1340,9 +664,7 @@ function syncAppBackButton(options = {}) {
     fallbackBackButton.classList.toggle("visible", shouldShow && !canUseTelegramBackButton);
   }
 
-  if (!canUseTelegramBackButton) {
-    return;
-  }
+  if (!canUseTelegramBackButton) return;
 
   try {
     if (telegramBackButtonHandler) {
@@ -1362,337 +684,6 @@ function syncAppBackButton(options = {}) {
   }
 }
 
-async function markPlayerReadyForGame(roomId) {
-  if (!roomId || currentRoomId !== roomId) return;
-
-  const { id } = getCurrentPlayer();
-  const roomRef = db.collection("rooms").doc(roomId);
-
-  try {
-    await safeRoomUpdate(roomRef, {
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      [`gameState.playersReady.${id}`]: true,
-      [`gameState.playersData.${id}.gameLoaded`]: true,
-      [`gameState.playersData.${id}.gameLoadedAt`]: Date.now()
-    }, "markPlayerReadyForGame");
-  } catch (e) {
-    console.error("Ошибка markPlayerReadyForGame:", e);
-  }
-}
-
-async function tryStartSyncedCountdown(roomId) {
-  if (!roomId || currentRoomId !== roomId) return;
-
-  const roomRef = db.collection("rooms").doc(roomId);
-
-  try {
-    await runRoomTransaction(roomRef, async (transaction) => {
-      const doc = await transaction.get(roomRef);
-      if (!doc.exists) return;
-
-      const room = doc.data();
-      if (!room || !Array.isArray(room.playerIds)) return;
-      if (!isCurrentClientRoomWriteDriver(room)) return;
-      if (room.status !== "playing" && room.gameState?.started !== true) return;
-
-      const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
-      if (countdownStartedAt) return;
-
-      const playerIds = room.playerIds.filter(Boolean);
-      if (playerIds.length === 0) return;
-
-      const playersReady = room.gameState?.playersReady || {};
-      const readyCount = playerIds.filter(pid => playersReady[pid] === true).length;
-      const allReady = readyCount === playerIds.length;
-
-      const playingStartedAtMs =
-        getRoomTimeMs(room.gameState?.playingStartedAt) ||
-        getRoomTimeMs(room.updatedAt) ||
-        Date.now();
-
-      const waitedMs = Date.now() - playingStartedAtMs;
-
-      if (!allReady && waitedMs < 1200) return;
-
-      transaction.update(roomRef, {
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        "gameState.countdownStartedAt": firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }, "tryStartSyncedCountdown");
-  } catch (e) {
-    console.error("Ошибка tryStartSyncedCountdown:", e);
-  }
-}
-
-function getCurrentPlayer() {
-  const fallbackName = document.getElementById("nickname").innerText.trim() || "Игрок";
-  const id = tgUser?.id ? String(tgUser.id) : "guest_" + fallbackName;
-  const name = tgUser?.username || tgUser?.first_name || fallbackName;
-
-  return { id, name };
-}
-
-function getRoomWriteDriverId(room) {
-  if (!room) return null;
-
-  const ids = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean) : [];
-  if (ids.length === 0) return null;
-
-  const playersData = room.gameState?.playersData || {};
-
-  if (room.hostId && ids.includes(room.hostId) && playersData?.[room.hostId]?.leftRoom !== true) {
-    return room.hostId;
-  }
-
-  const activeIds = ids.filter((pid) => playersData?.[pid]?.leftRoom !== true);
-  return activeIds[0] || ids[0];
-}
-
-function isCurrentClientRoomWriteDriver(room) {
-  const { id } = getCurrentPlayer();
-  return getRoomWriteDriverId(room) === id;
-}
-
-const currentPlayer = getCurrentPlayer();
-document.getElementById("nickname").innerText = currentPlayer.name;
-
-async function waitForRoomMembership(roomRef, playerId, attempts = 8, delayMs = 250) {
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const doc = await roomRef.get();
-      if (doc.exists) {
-        const room = doc.data() || {};
-        const ids = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean) : [];
-        if (ids.includes(playerId)) {
-          return room;
-        }
-      }
-    } catch (e) {
-      console.warn("waitForRoomMembership:", e?.message || e);
-    }
-
-    if (i < attempts - 1) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
-
-  return null;
-}
-
-function getRoomFreshnessMs(room) {
-  return getRoomTimeMs(room?.updatedAt) || getRoomTimeMs(room?.created) || 0;
-}
-
-function getRoomPlayerLastSeenMs(room, playerId) {
-  const data = room?.gameState?.playersData?.[playerId] || {};
-  return Number(data.lastSeen || 0) || getRoomFreshnessMs(room) || 0;
-}
-
-function isRoomWaitingJoinable(room) {
-  if (!room) return false;
-  if (room.status !== "waiting") return false;
-  if (room.gameState?.started === true || room.gameState?.finished === true) return false;
-  const activePlayerIds = getRenderableRoomPlayerIds(room);
-  if (activePlayerIds.length === 0 || activePlayerIds.length >= 3) return false;
-  return true;
-}
-
-function isRoomProbablyStale(room) {
-  if (!room) return true;
-
-  const now = Date.now();
-  const freshMs = getRoomFreshnessMs(room);
-  const activePlayerIds = getRenderableRoomPlayerIds(room);
-
-  if (activePlayerIds.length === 0) return true;
-
-  const hasFreshPlayer = activePlayerIds.some((pid) => {
-    const playerData = room?.gameState?.playersData?.[pid] || {};
-    const closedAt = Number(playerData.closedAt || 0) || 0;
-    const lastSeen = getRoomPlayerLastSeenMs(room, pid);
-
-    if (closedAt > 0 && now - closedAt > ROOM_OFFLINE_GRACE_MS) {
-      return false;
-    }
-
-    return lastSeen > 0 && now - lastSeen <= ROOM_OFFLINE_GRACE_MS;
-  });
-
-  if (hasFreshPlayer) {
-    return false;
-  }
-
-  if (freshMs > 0 && now - freshMs > ROOM_MAX_WAITING_LIFETIME_MS) {
-    return true;
-  }
-
-  return activePlayerIds.every((pid) => {
-    const lastSeen = getRoomPlayerLastSeenMs(room, pid);
-    return !lastSeen || now - lastSeen > ROOM_OFFLINE_GRACE_MS;
-  });
-}
-
-function buildOptimisticJoinedRoom(baseRoom, playerId, playerName) {
-  const room = JSON.parse(JSON.stringify(baseRoom || {}));
-  const playerIds = Array.isArray(room.playerIds) ? room.playerIds.filter(Boolean) : [];
-  const alreadyInRoom = playerIds.includes(playerId);
-
-  room.playerIds = alreadyInRoom ? playerIds : [...playerIds, playerId];
-  room.playerNames = { ...(room.playerNames || {}), [playerId]: playerName };
-  room.status = room.status || "waiting";
-  room.gameState = room.gameState || {};
-  room.gameState.playersReady = {
-    ...(room.gameState.playersReady || {}),
-    [playerId]: false
-  };
-  room.gameState.playersData = {
-    ...(room.gameState.playersData || {}),
-    [playerId]: {
-      ...(room.gameState.playersData?.[playerId] || {}),
-      name: playerName,
-      alive: true,
-      lost: false,
-      leftRoom: false,
-      position: 0,
-      score: 0,
-      firstObstacleResolved: false,
-      online: true,
-      lastSeen: Date.now(),
-      lastActionAt: Date.now(),
-      closedAt: null,
-      gameLoaded: false,
-      gameLoadedAt: null
-    }
-  };
-
-  return room;
-}
-
-async function cleanupRooms({ force = false } = {}) {
-  const now = Date.now();
-
-  if (!force && now - lastRoomsCleanupAt < ROOM_LIST_CLEANUP_THROTTLE_MS) {
-    return;
-  }
-
-  if (roomsCleanupPromise) {
-    return roomsCleanupPromise;
-  }
-
-  lastRoomsCleanupAt = now;
-
-  roomsCleanupPromise = (async () => {
-    try {
-      const snapshot = await db.collection("rooms").get();
-
-      for (const doc of snapshot.docs) {
-        const room = doc.data();
-
-        if (!room || room.status !== "waiting") continue;
-        if (room.gameState?.started === true || room.gameState?.finished === true) continue;
-
-        if (isRoomProbablyStale(room)) {
-          await cleanupInactivePlayers(doc.id);
-        }
-      }
-    } catch (e) {
-      console.error("Ошибка cleanupRooms:", e);
-    } finally {
-      roomsCleanupPromise = null;
-    }
-  })();
-
-  return roomsCleanupPromise;
-}
-
-async function findExistingWaitingRoomForPlayer(playerId) {
-  try {
-    const snapshot = await db.collection("rooms")
-      .where("playerIds", "array-contains", playerId)
-      .get();
-
-    const candidates = [];
-
-    for (const doc of snapshot.docs) {
-      const room = doc.data();
-      if (!isRoomWaitingJoinable(room)) continue;
-
-      const selfData = room?.gameState?.playersData?.[playerId] || {};
-      const activeIds = getRenderableRoomPlayerIds(room);
-      if (selfData.leftRoom === true || !activeIds.includes(playerId)) continue;
-
-      if (isRoomProbablyStale(room)) {
-        await cleanupInactivePlayers(doc.id);
-        continue;
-      }
-
-      candidates.push({ id: doc.id, room });
-    }
-
-    candidates.sort((a, b) => getRoomFreshnessMs(b.room) - getRoomFreshnessMs(a.room));
-
-    return candidates[0] || null;
-  } catch (e) {
-    console.error("Ошибка findExistingWaitingRoomForPlayer:", e);
-    return null;
-  }
-}
-
-async function attemptSimpleRoomJoin(roomRef, roomId, playerId, playerName) {
-  try {
-    const doc = await getRoomDocumentDirect(roomId);
-    if (!doc.exists) return null;
-
-    const room = doc.data();
-    if (!room || !isRoomWaitingJoinable(room)) return null;
-
-    const activePlayerIds = getRenderableRoomPlayerIds(room);
-    const alreadyInRoom = activePlayerIds.includes(playerId);
-
-    if (activePlayerIds.length >= 3 && !alreadyInRoom) {
-      return null;
-    }
-
-    const now = Date.now();
-    const updateData = {
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      [`playerNames.${playerId}`]: playerName,
-      [`gameState.playersReady.${playerId}`]: false,
-      [`gameState.playersData.${playerId}.name`]: playerName,
-      [`gameState.playersData.${playerId}.alive`]: true,
-      [`gameState.playersData.${playerId}.lost`]: false,
-      [`gameState.playersData.${playerId}.leftRoom`]: false,
-      [`gameState.playersData.${playerId}.position`]: 0,
-      [`gameState.playersData.${playerId}.score`]: 0,
-      [`gameState.playersData.${playerId}.firstObstacleResolved`]: false,
-      [`gameState.playersData.${playerId}.online`]: true,
-      [`gameState.playersData.${playerId}.lastSeen`]: now,
-      [`gameState.playersData.${playerId}.lastActionAt`]: now,
-      [`gameState.playersData.${playerId}.closedAt`]: null,
-      [`gameState.playersData.${playerId}.gameLoaded`]: false,
-      [`gameState.playersData.${playerId}.gameLoadedAt`]: null
-    };
-
-    if (!alreadyInRoom) {
-      updateData.playerIds = firebase.firestore.FieldValue.arrayUnion(playerId);
-    }
-
-    if ((alreadyInRoom ? activePlayerIds.length : activePlayerIds.length + 1) >= 2 && !room.startAt && !room.gameState?.started) {
-      updateData.startAt = firebase.firestore.FieldValue.serverTimestamp();
-    }
-
-    const ok = await safeRoomUpdate(roomRef, updateData, "attemptSimpleRoomJoin");
-    if (ok === false) return null;
-
-    return buildOptimisticJoinedRoom(room, playerId, playerName);
-  } catch (e) {
-    console.error("Ошибка attemptSimpleRoomJoin:", e);
-    return null;
-  }
-}
-
-let currentMenuView = "home";
-
 function setMenuView(view) {
   currentMenuView = view;
 
@@ -1701,50 +692,46 @@ function setMenuView(view) {
   const modePopup = document.getElementById("modePopup");
   const historyPanel = document.getElementById("historyPanel");
 
-  if (homeScreen) {
-    homeScreen.classList.toggle("active", view === "home");
-  }
-
-  if (bobrRunScreen) {
-    bobrRunScreen.classList.toggle("active", view === "mode");
-  }
+  if (homeScreen) homeScreen.classList.toggle("active", view === "home");
+  if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "mode");
+  if (modePopup) modePopup.classList.remove("open");
+  if (historyPanel) historyPanel.classList.remove("open");
 
   syncAppBackButton();
-
-  if (modePopup) {
-    modePopup.classList.remove("open");
-  }
-
-  if (historyPanel) {
-    historyPanel.classList.remove("open");
-  }
 }
 
 function toggleModePopup(event) {
   if (event) event.stopPropagation();
-
   const modePopup = document.getElementById("modePopup");
   if (!modePopup) return;
-
   modePopup.classList.toggle("open");
 }
 
 function closeModePopup() {
   const modePopup = document.getElementById("modePopup");
-  if (!modePopup) return;
+  if (modePopup) modePopup.classList.remove("open");
+}
 
-  modePopup.classList.remove("open");
+function enterBobrRunMode(event) {
+  if (event) event.stopPropagation();
+  setMenuView("mode");
+}
+
+function exitGameMode() {
+  closeModePopup();
+  closeHistoryPanel();
+  closeLeaderboard();
+  closeRooms();
+  setMenuView("home");
 }
 
 function toggleHistoryPanel(event) {
   if (event) event.stopPropagation();
-
   const historyPanel = document.getElementById("historyPanel");
   if (!historyPanel) return;
 
   const willOpen = !historyPanel.classList.contains("open");
   historyPanel.classList.toggle("open");
-
   if (willOpen) {
     loadGameHistory();
   }
@@ -1752,16 +739,13 @@ function toggleHistoryPanel(event) {
 
 function closeHistoryPanel() {
   const historyPanel = document.getElementById("historyPanel");
-  if (!historyPanel) return;
-
-  historyPanel.classList.remove("open");
+  if (historyPanel) historyPanel.classList.remove("open");
 }
 
 function formatHistoryDate(value) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-
   return date.toLocaleString("ru-RU", {
     day: "2-digit",
     month: "2-digit",
@@ -1780,11 +764,9 @@ function getHistoryResultMeta(item) {
   if (winnerValue === "ничья") {
     return { label: "ничья", className: "draw" };
   }
-
   if (item?.youWon) {
     return { label: "выиграл", className: "win" };
   }
-
   return { label: "проиграл", className: "lose" };
 }
 
@@ -1793,7 +775,6 @@ function toggleHistoryMatchDetails(matchId, event) {
     event.preventDefault();
     event.stopPropagation();
   }
-
   expandedHistoryMatchId = expandedHistoryMatchId === matchId ? null : matchId;
   loadGameHistory();
 }
@@ -1802,7 +783,7 @@ function renderHistoryEntries(entries) {
   const panel = document.getElementById("historyPanel");
   if (!panel) return;
 
-  const title = `<div class="history-panel-title">История игр</div>`;
+  const title = '<div class="history-panel-title">История игр</div>';
 
   if (!Array.isArray(entries) || entries.length === 0) {
     panel.innerHTML = `${title}<div class="history-scroll-area"><div class="history-panel-text">Пока нет сыгранных матчей.</div></div>`;
@@ -1846,7 +827,7 @@ function renderHistoryEntries(entries) {
     ` : "";
 
     return `
-      <div class="history-match-card" onclick="toggleHistoryMatchDetails('${matchId.replace("'", "&#39;")}', event)">
+      <div class="history-match-card" onclick="toggleHistoryMatchDetails('${matchId.replace(/'/g, "&#39;")}', event)">
         <div class="history-match-mode">Режим: ${modeLabel}</div>
         <div class="history-match-result ${resultMeta.className}">${resultMeta.label}</div>
         <div class="history-match-date">${playedAtText}</div>
@@ -1876,10 +857,7 @@ async function loadGameHistory() {
       .get();
 
     const entries = [];
-    snapshot.forEach((doc) => {
-      entries.push(doc.data() || {});
-    });
-
+    snapshot.forEach((doc) => entries.push(doc.data() || {}));
     renderHistoryEntries(entries);
   } catch (e) {
     console.error("Ошибка загрузки истории игр:", e);
@@ -1892,1268 +870,16 @@ async function loadGameHistory() {
   }
 }
 
-async function saveMatchHistoryForAllPlayers(roomId, roomData) {
-  if (!roomId || !roomData?.gameState?.finished || !Array.isArray(roomData?.gameState?.results)) {
-    return;
-  }
-
-  const results = roomData.gameState.results
-    .slice()
-    .sort((a, b) => Number(a.place || 0) - Number(b.place || 0))
-    .map(item => ({
-      place: Number(item.place || 0),
-      name: item.name || "Игрок",
-      score: Number(item.score || 0)
-    }));
-
-  const playerIds = Array.isArray(roomData.playerIds) ? roomData.playerIds.filter(Boolean) : [];
-  if (playerIds.length === 0) return;
-
-  const playedAt =
-    getRoomTimeMs(roomData.gameState?.historySavedAt) ||
-    getRoomTimeMs(roomData.updatedAt) ||
-    Date.now();
-
-  const batch = db.batch();
-
-  playerIds.forEach((pid) => {
-    const playerName =
-      roomData.playerNames?.[pid] ||
-      roomData.gameState?.playersData?.[pid]?.name ||
-      "Игрок";
-
-    const yourResult = results.find(r => r.name === playerName) || null;
-
-    const historyRef = getHistoryCollectionRef(pid).doc(roomId);
-    batch.set(historyRef, {
-      roomId,
-      playedAt,
-      mode: "Bobr Run",
-      winner: roomData.gameState.winner || "—",
-      results,
-      yourName: playerName,
-      yourPlace: yourResult?.place || null,
-      yourScore: Number(yourResult?.score || 0),
-      youWon: yourResult?.place === 1 && String(roomData.gameState.winner || "").toLowerCase() !== "ничья",
-      savedAt: Date.now()
-    }, { merge: true });
-  });
-
-  await batch.commit();
-
-  try {
-    const roomRef = db.collection("rooms").doc(roomId);
-    const roomDoc = await roomRef.get();
-
-    if (roomDoc.exists) {
-      await safeRoomUpdate(roomRef, {
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        "gameState.historySaved": true,
-        "gameState.historySavedAt": firebase.firestore.FieldValue.serverTimestamp()
-      }, "saveMatchHistoryForAllPlayers.historySaved");
-    }
-  } catch (e) {
-    console.error("Ошибка отметки сохранённой истории:", e);
-  }
-}
-
-async function ensureCurrentMatchHistorySaved(roomId, roomData) {
-  if (!roomId || !roomData?.gameState?.finished || !Array.isArray(roomData?.gameState?.results)) {
-    return;
-  }
-
-  try {
-    await saveMatchHistoryForAllPlayers(roomId, roomData);
-  } catch (e) {
-    console.error("Ошибка сохранения истории матча:", e);
-  }
-}
-
-function toggleHistoryGameDetails() {
-  toggleHistoryPanel();
-}
-
-function handleMenuBackgroundClick(event) {
-  const modePopup = document.getElementById("modePopup");
-  const mainPlayButton = document.getElementById("mainPlayButton");
-  const historyPanel = document.getElementById("historyPanel");
-  const bookButton = document.querySelector(".main-book-btn");
-
-  if (modePopup && mainPlayButton) {
-    const clickedInsidePopup = modePopup.contains(event.target);
-    const clickedPlayButton = mainPlayButton.contains(event.target);
-
-    if (!clickedInsidePopup && !clickedPlayButton) {
-      closeModePopup();
-    }
-  }
-
-  if (historyPanel && bookButton) {
-    const clickedInsideHistory = historyPanel.contains(event.target);
-    const clickedBookButton = bookButton.contains(event.target);
-
-    if (!clickedInsideHistory && !clickedBookButton) {
-      closeHistoryPanel();
-    }
-  }
-}
-
-function enterBobrRunMode(event) {
-  if (event) event.stopPropagation();
-  setMenuView("mode");
-}
-
-async function exitGameMode() {
-  closeModePopup();
-  closeHistoryPanel();
-  closeLeaderboard();
-
-  const roomIdToLeave = currentRoomId;
-
-  if (roomIdToLeave && !multiplayerGameStarted && !isLeavingRoom) {
-    try {
-      await leaveRoom(roomIdToLeave);
-    } catch (e) {
-      console.error("Ошибка при выходе из комнаты из Bobr Run:", e);
-    }
-  }
-
-  closeRooms();
-  setMenuView("home");
-}
-
-function startGame() {
-  winnerProcessing = false;
-  blockEndGameModalUntilNextMatch = false;
-  suppressEndGameModal = false;
-  document.getElementById("menu").style.display = "none";
-  document.getElementById("game").style.display = "block";
-  syncAppBackButton({ forceHide: true });
-  
-  initGame();
-}
-
-function buildEndGamePlaces(results) {
-  if (!Array.isArray(results)) return [];
-
-  return results
-    .slice()
-    .sort((a, b) => Number(a.place) - Number(b.place))
-    .map(item => ({
-      place: item.place,
-      name: item.name || "Игрок",
-      score: Number(item.score || 0)
-    }));
-}
-
-function showEndGameModal(resultData) {
-  if (!resultData || endGameShown || isClosingEndGame || endGameExitHandled || suppressEndGameModal || blockEndGameModalUntilNextMatch) {
-    return;
-  }
-
-  const modal = document.getElementById("endGameModal");
-  const titleEl = document.getElementById("endGameTitle");
-  const winnerNameEl = document.getElementById("endGameWinnerName");
-  const placesBody = document.getElementById("endGamePlacesBody");
-
-  if (!modal || !titleEl || !winnerNameEl || !placesBody) return;
-
-  const winnerLabel = String(resultData.winner || "").trim();
-  const isDraw = winnerLabel.toLowerCase() === "ничья";
-
-  titleEl.textContent = isDraw ? "Ничья" : "Победитель";
-  winnerNameEl.textContent = isDraw ? "" : (winnerLabel || "—");
-  winnerNameEl.style.display = isDraw ? "none" : "block";
-
-  placesBody.innerHTML = "";
-
-  const places = buildEndGamePlaces(resultData.results);
-
-  places.forEach(item => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${item.place}</td>
-      <td>${item.name}</td>
-      <td>${item.score}</td>
-    `;
-    placesBody.appendChild(tr);
-  });
-
-  resetEndGameUIState();
-  suppressEndGameModal = false;
-  isClosingEndGame = false;
-  modal.style.display = "flex";
-  endGameShown = true;
-}
-
-function hideEndGameModal() {
-  const modal = document.getElementById("endGameModal");
-  if (modal) {
-    modal.style.display = "none";
-    modal.style.visibility = "hidden";
-    modal.style.pointerEvents = "none";
-    modal.setAttribute("aria-hidden", "true");
-  }
-  endGameShown = false;
-}
-
-function forceCloseEndGameUI() {
-  const modal = document.getElementById("endGameModal");
-  if (!modal) return;
-
-  modal.style.display = "none";
-  modal.style.visibility = "hidden";
-  modal.style.pointerEvents = "none";
-  modal.setAttribute("aria-hidden", "true");
-  endGameShown = false;
-}
-
-function hardCloseEndGameModal() {
-  forceCloseEndGameUI();
-  setTimeout(forceCloseEndGameUI, 0);
-  setTimeout(forceCloseEndGameUI, 120);
-  setTimeout(forceCloseEndGameUI, 300);
-}
-
-function resetEndGameUIState() {
-  const modal = document.getElementById("endGameModal");
-  if (!modal) return;
-
-  modal.style.visibility = "";
-  modal.style.pointerEvents = "";
-  modal.removeAttribute("aria-hidden");
-  isClosingEndGame = false;
-}
-
-function stopEndGameWatcher() {
-  if (endGameWatcher) {
-    endGameWatcher();
-    endGameWatcher = null;
-  }
-}
-
-async function runActiveLeaveAfterLoss() {
-  blockEndGameModalUntilNextMatch = true;
-  suppressEndGameModal = true;
-  endGameExitHandled = true;
-  isClosingEndGame = true;
-  hardCloseEndGameModal();
-
-  if (typeof activeLeaveAfterLossHandler === "function") {
-    await activeLeaveAfterLossHandler();
-    return;
-  }
-
-  hardCloseEndGameModal();
-  stopEndGameWatcher();
-  currentRoomId = null;
-  resetServerClockSync();
-  stopRoomCountdown();
-  stopRoomPresence();
-  stopRoomReadyPoll();
-  stopGameCountdownStartListener();
-  multiplayerGameStarted = false;
-  endGameShown = false;
-  isClosingEndGame = false;
-  endGameExitHandled = false;
-  openEndGameForCurrentMatch = null;
-  exitEndGameForCurrentMatch = null;
-  activeLeaveAfterLossHandler = null;
-
-  const menu = document.getElementById("menu");
-  const game = document.getElementById("game");
-  const createRoomBtn = document.getElementById("createRoomBtn");
-
-  if (menu) menu.style.display = "flex";
-  if (game) game.style.display = "none";
-  if (createRoomBtn) createRoomBtn.style.display = "block";
-
-  closeRooms();
-  setMenuView("mode");
-  restoreRoomsLobby({ message: "Загрузка комнат...", keepModalOpen: false, reloadRooms: true });
-}
-
-function startRoomFinishWatcher(roomId) {
-  stopEndGameWatcher();
-  endGameExitHandled = false;
-
-  const roomRef = db.collection("rooms").doc(roomId);
-
-  endGameWatcher = roomRef.onSnapshot(async (doc) => {
-    if (!doc.exists) {
-      if (!endGameExitHandled && currentRoomId === roomId) {
-        endGameExitHandled = true;
-        await runActiveLeaveAfterLoss();
-      }
-      return;
-    }
-
-    const room = doc.data();
-    if (!room || !room.gameState) return;
-
-    if (suppressEndGameModal || isClosingEndGame || endGameExitHandled) {
-      return;
-    }
-
-    if (room.gameState.finished === true && room.gameState.winner && room.gameState.results) {
-      await ensureCurrentMatchHistorySaved(roomId, room);
-
-      const resultData = {
-        winner: room.gameState.winner,
-        results: room.gameState.results
-      };
-
-      if (blockEndGameModalUntilNextMatch) return;
-
-  if (typeof openEndGameForCurrentMatch === "function") {
-        openEndGameForCurrentMatch(resultData);
-      } else {
-        showEndGameModal(resultData);
-      }
-    }
-  });
-}
-
-async function closeEndGameAndExit() {
-  if (isClosingEndGame) return;
-
-  blockEndGameModalUntilNextMatch = true;
-  isClosingEndGame = true;
-  suppressEndGameModal = true;
-  endGameExitHandled = true;
-
-  hardCloseEndGameModal();
-  stopEndGameWatcher();
-
-  const savedExitHandler = exitEndGameForCurrentMatch;
-  openEndGameForCurrentMatch = null;
-  exitEndGameForCurrentMatch = null;
-
-  try {
-    if (typeof savedExitHandler === "function") {
-      await savedExitHandler();
-    } else {
-      await runActiveLeaveAfterLoss();
-    }
-  } finally {
-    hardCloseEndGameModal();
-    setTimeout(() => {
-      isClosingEndGame = false;
-    }, 200);
-  }
-}
-  
-
-
-
-function stopRoomsListListener() {
-  if (roomsListener) {
-    roomsListener();
-    roomsListener = null;
-  }
-
-  if (roomsPollingInterval) {
-    clearInterval(roomsPollingInterval);
-    roomsPollingInterval = null;
-  }
-}
-
-function stopCurrentRoomRealtime() {
-  if (currentRoomListener) {
-    currentRoomListener();
-    currentRoomListener = null;
-  }
-
-  if (currentRoomPollingInterval) {
-    clearInterval(currentRoomPollingInterval);
-    currentRoomPollingInterval = null;
-  }
-
-  stopRoomCountdown();
-  stopRoomPresence();
-  stopRoomReadyPoll();
-  stopGameCountdownStartListener();
-}
-
-function setCreateRoomButtonVisible(isVisible) {
-  const createBtn = document.getElementById("createRoomBtn");
-  if (!createBtn) return;
-
-  createBtn.style.display = isVisible ? "block" : "none";
-  createBtn.style.pointerEvents = "auto";
-  createBtn.style.opacity = "1";
-  createBtn.innerText = "➕ Создать комнату";
-}
-
-function setRoomsListMessage(message) {
-  const list = document.getElementById("roomsList");
-  if (list) {
-    list.innerHTML = message;
-  }
-}
-
-function getRenderableRoomPlayerIds(room) {
-  if (!room || !Array.isArray(room.playerIds)) return [];
-
-  const playersData = room.gameState?.playersData || {};
-
-  return room.playerIds.filter((pid) => {
-    if (!pid) return false;
-    const playerData = playersData[pid] || {};
-    return playerData.leftRoom !== true;
-  });
-}
-
-function getRenderableRoomPlayerNames(room) {
-  return getRenderableRoomPlayerIds(room).map((pid) => {
-    return room.playerNames?.[pid] || room.gameState?.playersData?.[pid]?.name || "Игрок";
-  });
-}
-
-async function getRoomsSnapshotDirect() {
-  return await db.collection("rooms").get();
-}
-
-async function getRoomDocumentDirect(roomId) {
-  const roomRef = db.collection("rooms").doc(roomId);
-  return await roomRef.get();
-}
-
-function sortVisibleRooms(items) {
-  return items.sort((a, b) => {
-    const aUpdated = getRoomTimeMs(a.room?.updatedAt) || getRoomTimeMs(a.room?.created) || 0;
-    const bUpdated = getRoomTimeMs(b.room?.updatedAt) || getRoomTimeMs(b.room?.created) || 0;
-
-    if (b.playersCount !== a.playersCount) {
-      return b.playersCount - a.playersCount;
-    }
-
-    return bUpdated - aUpdated;
-  });
-}
-
-function restoreRoomsLobby(options = {}) {
-  const {
-    message = "Загрузка комнат...",
-    keepModalOpen = true,
-    reloadRooms = true
-  } = options;
-
-  stopCurrentRoomRealtime();
-  stopRoomsListListener();
-
-  currentRoomId = null;
-  resetServerClockSync();
-  multiplayerGameStarted = false;
-  multiplayerStartInProgress = false;
-  isCreatingRoom = false;
-  isJoiningRoom = false;
-  isLeavingRoom = false;
-
-  const roomsModal = document.getElementById("roomsModal");
-  if (roomsModal) {
-    roomsModal.style.display = keepModalOpen ? "block" : "none";
-  }
-
-  setRoomsListMessage(message);
-  setCreateRoomButtonVisible(true);
-
-  if (reloadRooms) {
-    loadRooms();
-  }
-}
-
-function openRooms() {
-  const roomsModal = document.getElementById("roomsModal");
-  if (roomsModal) {
-    roomsModal.style.display = "block";
-  }
-
-  if (currentRoomId && !isLeavingRoom) {
-    setCreateRoomButtonVisible(false);
-    return;
-  }
-
-  setCreateRoomButtonVisible(true);
-  loadRooms();
-}
-
-function closeRooms() {
-  const roomsModal = document.getElementById("roomsModal");
-  if (roomsModal) {
-    roomsModal.style.display = "none";
-  }
-
-  if (!currentRoomId) {
-    stopRoomsListListener();
-    setRoomsListMessage("Загрузка...");
-    setCreateRoomButtonVisible(true);
-  }
-}
-
-
-async function cleanupRooms({ force = false } = {}) {
-  const now = Date.now();
-
-  if (!force && now - lastRoomsCleanupAt < ROOM_LIST_CLEANUP_THROTTLE_MS) {
-    return;
-  }
-
-  if (roomsCleanupPromise) {
-    return roomsCleanupPromise;
-  }
-
-  lastRoomsCleanupAt = now;
-
-  roomsCleanupPromise = (async () => {
-    try {
-      const snapshot = await db.collection("rooms").get();
-
-      for (const doc of snapshot.docs) {
-        const room = doc.data();
-
-        if (!room || room.status !== "waiting") continue;
-        if (room.gameState?.started === true || room.gameState?.finished === true) continue;
-
-        if (isRoomProbablyStale(room)) {
-          await cleanupInactivePlayers(doc.id);
-        }
-      }
-    } catch (e) {
-      console.error("Ошибка cleanupRooms:", e);
-    } finally {
-      roomsCleanupPromise = null;
-    }
-  })();
-
-  return roomsCleanupPromise;
-}
-
-function buildVisibleRoomItems(snapshot) {
-  const roomItems = [];
-
-  if (!snapshot) return roomItems;
-
-  snapshot.forEach((doc) => {
-    const room = doc.data();
-    if (!room) return;
-
-    const activePlayerIds = getRenderableRoomPlayerIds(room);
-    const isStarted = room.status === "playing" || room.gameState?.started === true;
-    const isFinished = room.status === "finished" || room.gameState?.finished === true;
-
-    if (room.status !== "waiting") return;
-    if (isStarted || isFinished) return;
-    if (activePlayerIds.length === 0 || activePlayerIds.length >= 3) return;
-    if (isRoomProbablyStale(room)) return;
-
-    roomItems.push({
-      id: doc.id,
-      room,
-      playersCount: activePlayerIds.length,
-      playersNames: getRenderableRoomPlayerNames(room)
-    });
-  });
-
-  return sortVisibleRooms(roomItems);
-}
-
-function renderRoomsItems(roomItems) {
-  const list = document.getElementById("roomsList");
-  if (!list) return;
-
-  list.innerHTML = "";
-
-  if (!Array.isArray(roomItems) || roomItems.length === 0) {
-    list.innerHTML = "Нет доступных комнат";
-    setCreateRoomButtonVisible(true);
-    return;
-  }
-
-  roomItems.forEach((item) => {
-    const div = document.createElement("div");
-    div.className = "roomItem";
-
-    const title = item.playersNames.length > 0
-      ? item.playersNames.join(", ")
-      : "Игрок";
-
-    div.innerHTML = `
-      <div>Комната (${item.playersCount}/3)</div>
-      <div style="margin-top:6px;font-size:14px;opacity:0.85;">${title}</div>
-    `;
-
-    div.onclick = () => {
-      if (isJoiningRoom || isCreatingRoom || isLeavingRoom || currentRoomId) return;
-      joinRoom(item.id);
-    };
-
-    list.appendChild(div);
-  });
-
-  setCreateRoomButtonVisible(true);
-}
-
-async function renderRoomsListOnce(snapshot = null) {
-  const list = document.getElementById("roomsList");
-  if (!list) return;
-
-  if (currentRoomId && !isLeavingRoom) {
-    return;
-  }
-
-  try {
-    const effectiveSnapshot = snapshot || await getRoomsSnapshotDirect();
-
-    if (currentRoomId && !isLeavingRoom) {
-      return;
-    }
-
-    const roomItems = buildVisibleRoomItems(effectiveSnapshot);
-    renderRoomsItems(roomItems);
-  } catch (error) {
-    console.error("Ошибка загрузки списка комнат:", error);
-    list.innerHTML = "Не удалось загрузить комнаты";
-    setCreateRoomButtonVisible(true);
-  }
-}
-
-async function loadRooms() {
-  const list = document.getElementById("roomsList");
-  if (!list) return;
-
-  if (currentRoomId && !isLeavingRoom) {
-    return;
-  }
-
-  stopRoomsListListener();
-  setCreateRoomButtonVisible(true);
-  list.innerHTML = "Загрузка...";
-
-  await cleanupRooms();
-  await renderRoomsListOnce();
-
-  roomsListener = db.collection("rooms").onSnapshot((snapshot) => {
-    if (currentRoomId && !isLeavingRoom) return;
-    renderRoomsListOnce(snapshot);
-  }, async (error) => {
-    console.error("Ошибка realtime списка комнат:", error);
-
-    if (currentRoomId && !isLeavingRoom) return;
-
-    try {
-      await renderRoomsListOnce();
-    } catch (e) {
-      console.error("Ошибка fallback загрузки комнат:", e);
-      setRoomsListMessage("Не удалось загрузить комнаты");
-      setCreateRoomButtonVisible(true);
-    }
-  });
-}
-
-
-
-async function createRoom() {
-  if (isCreatingRoom || isJoiningRoom || isLeavingRoom || currentRoomId) return;
-
-  const { id, name } = getCurrentPlayer();
-  const list = document.getElementById("roomsList");
-  const now = Date.now();
-
-  await cleanupRooms();
-
-  const existingRoom = await findExistingWaitingRoomForPlayer(id);
-  if (existingRoom) {
-    currentRoomId = existingRoom.id;
-    openRoomScreen(existingRoom.id, existingRoom.room);
-    return;
-  }
-
-  const roomRef = db.collection("rooms").doc();
-
-  const room = {
-    hostId: id,
-    playerIds: [id],
-    playerNames: {
-      [id]: name
-    },
-    status: "waiting",
-    created: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    startAt: null,
-    countdownLeft: null,
-    gameState: {
-      started: false,
-      finished: false,
-      winner: null,
-      countdownStartedAt: null,
-      playersReady: {
-        [id]: false
-      },
-      playersData: {
-        [id]: {
-          name,
-          alive: true,
-          lost: false,
-          leftRoom: false,
-          position: 0,
-          score: 0,
-          firstObstacleResolved: false,
-          online: true,
-          lastSeen: now,
-          lastActionAt: now,
-          closedAt: null,
-          gameLoaded: false,
-          gameLoadedAt: null
-        }
-      }
-    }
-  };
-
-  try {
-    isCreatingRoom = true;
-    stopRoomsListListener();
-    setCreateRoomButtonVisible(false);
-
-    if (list) {
-      list.innerHTML = `
-        Игроки: 1/3 <br><br>
-        ${name}
-        <br><br>
-        <div onclick="leaveRoom('${roomRef.id}')" style="background:#dc3545;padding:10px;border-radius:10px;text-align:center;">
-          Выйти из комнаты
-        </div>
-      `;
-    }
-
-    await roomRef.set(room);
-
-    let confirmedRoom = null;
-
-    try {
-      const doc = await getRoomDocumentDirect(roomRef.id);
-      if (doc.exists) {
-        confirmedRoom = doc.data();
-      }
-    } catch (e) {
-      console.warn("createRoom confirmation skipped:", e?.message || e);
-    }
-
-    currentRoomId = roomRef.id;
-    multiplayerGameStarted = false;
-    multiplayerStartInProgress = false;
-
-    openRoomScreen(roomRef.id, confirmedRoom || {
-      ...room,
-      created: now,
-      updatedAt: now
-    });
-  } catch (e) {
-    console.error("Ошибка createRoom:", e);
-
-    restoreRoomsLobby({
-      message: "Не удалось создать комнату",
-      keepModalOpen: true,
-      reloadRooms: true
-    });
-
-    if (e.code === "resource-exhausted") {
-      alert("Firebase перегружен или превышен лимит. Попробуй позже.");
-    } else {
-      alert("Ошибка создания комнаты");
-    }
-  } finally {
-    isCreatingRoom = false;
-    if (!currentRoomId) {
-      setCreateRoomButtonVisible(true);
-    }
-  }
-}
-
-async function joinRoom(roomId) {
-  if (isJoiningRoom || isCreatingRoom || isLeavingRoom || currentRoomId) return;
-
-  isJoiningRoom = true;
-
-  const { id, name } = getCurrentPlayer();
-  const roomRef = db.collection("rooms").doc(roomId);
-  const list = document.getElementById("roomsList");
-
-  setCreateRoomButtonVisible(false);
-
-  if (list) {
-    list.innerHTML = `
-      Подключение к комнате...<br><br>
-      Игрок: ${name}
-    `;
-  }
-
-  let baseRoomForOptimisticJoin = null;
-
-  try {
-    const initialDoc = await getRoomDocumentDirect(roomId);
-    if (!initialDoc.exists) {
-      throw new Error("ROOM_DELETED");
-    }
-
-    baseRoomForOptimisticJoin = initialDoc.data() || {};
-
-    if (!isRoomWaitingJoinable(baseRoomForOptimisticJoin)) {
-      throw new Error("ROOM_UNAVAILABLE");
-    }
-
-    const activeBeforeJoin = getRenderableRoomPlayerIds(baseRoomForOptimisticJoin);
-    if (activeBeforeJoin.length >= 3 && !activeBeforeJoin.includes(id)) {
-      throw new Error("ROOM_FULL");
-    }
-
-    const result = await runRoomTransaction(roomRef, async (transaction) => {
-      const doc = await transaction.get(roomRef);
-
-      if (!doc.exists) {
-        throw new Error("ROOM_DELETED");
-      }
-
-      const room = doc.data();
-      if (!room || !Array.isArray(room.playerIds)) {
-        throw new Error("ROOM_DATA_ERROR");
-      }
-
-      const activePlayerIds = getRenderableRoomPlayerIds(room);
-      const alreadyInRoom = activePlayerIds.includes(id);
-      const isStarted = room.status === "playing" || room.gameState?.started === true;
-      const isFinished = room.status === "finished" || room.gameState?.finished === true;
-
-      if (isStarted || isFinished) {
-        throw new Error("ROOM_UNAVAILABLE");
-      }
-
-      if (activePlayerIds.length >= 3 && !alreadyInRoom) {
-        throw new Error("ROOM_FULL");
-      }
-
-      const nextPlayerIds = alreadyInRoom ? [...activePlayerIds] : [...activePlayerIds, id];
-      const now = Date.now();
-
-      transaction.update(roomRef, {
-        playerIds: nextPlayerIds,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        hostId: room.hostId && nextPlayerIds.includes(room.hostId) ? room.hostId : nextPlayerIds[0],
-        ...(nextPlayerIds.length >= 2 && !room.startAt && !room.gameState?.started
-          ? { startAt: firebase.firestore.FieldValue.serverTimestamp() }
-          : {}),
-        [`playerNames.${id}`]: name,
-        [`gameState.playersReady.${id}`]: false,
-        [`gameState.playersData.${id}.name`]: name,
-        [`gameState.playersData.${id}.alive`]: true,
-        [`gameState.playersData.${id}.lost`]: false,
-        [`gameState.playersData.${id}.leftRoom`]: false,
-        [`gameState.playersData.${id}.position`]: 0,
-        [`gameState.playersData.${id}.score`]: 0,
-        [`gameState.playersData.${id}.firstObstacleResolved`]: false,
-        [`gameState.playersData.${id}.online`]: true,
-        [`gameState.playersData.${id}.lastSeen`]: now,
-        [`gameState.playersData.${id}.lastActionAt`]: now,
-        [`gameState.playersData.${id}.closedAt`]: null,
-        [`gameState.playersData.${id}.gameLoaded`]: false,
-        [`gameState.playersData.${id}.gameLoadedAt`]: null
-      });
-
-      return buildOptimisticJoinedRoom(room, id, name);
-    }, "joinRoom");
-
-    let joinedRoom = result;
-
-    if (joinedRoom === null) {
-      joinedRoom = await attemptSimpleRoomJoin(roomRef, roomId, id, name);
-    }
-
-    let confirmedRoom = null;
-
-    try {
-      confirmedRoom = await waitForRoomMembership(roomRef, id, 5, 250);
-    } catch (e) {
-      console.warn("joinRoom membership check skipped:", e?.message || e);
-    }
-
-    if (!confirmedRoom) {
-      try {
-        const latestDoc = await getRoomDocumentDirect(roomId);
-        if (latestDoc.exists) {
-          const latestRoom = latestDoc.data() || {};
-          const activeIds = getRenderableRoomPlayerIds(latestRoom);
-          if (activeIds.includes(id)) {
-            confirmedRoom = latestRoom;
-          }
-        }
-      } catch (e) {
-        console.warn("joinRoom latest room fetch skipped:", e?.message || e);
-      }
-    }
-
-    const optimisticRoom = confirmedRoom || joinedRoom || buildOptimisticJoinedRoom(baseRoomForOptimisticJoin, id, name);
-    const optimisticIds = getRenderableRoomPlayerIds(optimisticRoom);
-
-    if (!optimisticIds.includes(id)) {
-      throw new Error("JOIN_NOT_CONFIRMED");
-    }
-
-    currentRoomId = roomId;
-    multiplayerGameStarted = false;
-    multiplayerStartInProgress = false;
-    openRoomScreen(roomId, optimisticRoom);
-  } catch (e) {
-    console.error("Ошибка joinRoom:", e);
-
-    if (e.message === "ROOM_DELETED") {
-      alert("Комната уже удалена");
-    } else if (e.message === "ROOM_DATA_ERROR") {
-      alert("Ошибка данных комнаты");
-    } else if (e.message === "ROOM_UNAVAILABLE") {
-      alert("Эта комната уже недоступна");
-    } else if (e.message === "ROOM_FULL") {
-      alert("Комната заполнена");
-    } else if (e.message === "JOIN_RETRY" || e?.code === "resource-exhausted") {
-      alert("Сервер комнаты был перегружен. Попробуй ещё раз через пару секунд.");
-    } else {
-      alert("Не удалось войти в комнату. Попробуй ещё раз.");
-    }
-
-    restoreRoomsLobby({
-      message: "Загрузка комнат...",
-      keepModalOpen: true,
-      reloadRooms: true
-    });
-  } finally {
-    isJoiningRoom = false;
-    if (!currentRoomId) {
-      setCreateRoomButtonVisible(true);
-    }
-  }
-}
-
-async function tryStartRoom(roomId) {
-  const roomRef = db.collection("rooms").doc(roomId);
-
-  try {
-    await runRoomTransaction(roomRef, async (transaction) => {
-      const doc = await transaction.get(roomRef);
-      if (!doc.exists) return;
-
-      const room = doc.data();
-      if (!room || !Array.isArray(room.playerIds)) return;
-      if (!isCurrentClientRoomWriteDriver(room)) return;
-      if (room.gameState?.started || room.status === "finished") return;
-
-      const playersCount = getRenderableRoomPlayerIds(room).length;
-      const startAtMs = getRoomTimeMs(room.startAt);
-      const countdownSeconds = 120;
-      const countdownLeft = startAtMs
-        ? Math.max(0, countdownSeconds - Math.floor((getSyncedServerNowMs() - startAtMs) / 1000))
-        : null;
-
-      if (playersCount >= 3) {
-        transaction.update(roomRef, {
-          status: "playing",
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          "gameState.started": true,
-          "gameState.playingStartedAt": firebase.firestore.FieldValue.serverTimestamp()
-        });
-        return;
-      }
-
-      if (playersCount < 2) {
-        if (room.startAt) {
-          transaction.update(roomRef, {
-            startAt: null,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-        return;
-      }
-
-      if (!room.startAt) {
-        transaction.update(roomRef, {
-          startAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        return;
-      }
-
-      if (countdownLeft !== null && countdownLeft <= 0) {
-        transaction.update(roomRef, {
-          status: "playing",
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          "gameState.started": true,
-          "gameState.playingStartedAt": firebase.firestore.FieldValue.serverTimestamp()
-        });
-      }
-    }, "tryStartRoom");
-  } catch (e) {
-    console.error("Ошибка tryStartRoom:", e);
-  }
-}
-
-function startSharedRoomCountdown(roomId) {
-  if (roomHostCountdownInterval) {
-    clearInterval(roomHostCountdownInterval);
-    roomHostCountdownInterval = null;
-  }
-}
-
-
-
-function openRoomScreen(roomId, optimisticRoom = null) {
-  const screenRoomId = roomId;
-  const list = document.getElementById("roomsList");
-  const roomRef = db.collection("rooms").doc(roomId);
-
-  stopRoomsListListener();
-  stopCurrentRoomRealtime();
-
-  currentRoomId = roomId;
-  isLeavingRoom = false;
-  multiplayerGameStarted = false;
-  multiplayerStartInProgress = false;
-  resetServerClockSync();
-  setCreateRoomButtonVisible(false);
-  startRoomPresence(roomId);
-
-  let latestRoom = optimisticRoom;
-
-  function renderRoom(room) {
-    if (!list) return;
-    if (currentRoomId !== screenRoomId || isLeavingRoom) return;
-
-    if (!room || !Array.isArray(room.playerIds)) {
-      list.innerHTML = "Подключение к комнате...";
-      return;
-    }
-
-    const activePlayerIds = getRenderableRoomPlayerIds(room);
-    const playersNames = getRenderableRoomPlayerNames(room);
-    const { id: selfId } = getCurrentPlayer();
-
-    if (!activePlayerIds.includes(selfId)) {
-      restoreRoomsLobby({
-        message: "Ты вышел из комнаты",
-        keepModalOpen: true,
-        reloadRooms: true
-      });
-      return;
-    }
-
-    let timerText = "";
-    if (!room.gameState?.started && activePlayerIds.length >= 2) {
-      const startAtMs = getRoomTimeMs(room.startAt);
-      const leftSec = startAtMs
-        ? Math.max(0, 120 - Math.floor((getSyncedServerNowMs() - startAtMs) / 1000))
-        : 120;
-
-      timerText = `<br>Старт через: ${leftSec} сек`;
-    }
-
-    list.innerHTML = `
-      Игроки: ${activePlayerIds.length}/3 <br><br>
-      ${playersNames.join("<br>")}
-      ${timerText}
-      <br><br>
-      <div onclick="leaveRoom('${roomId}')" style="background:#dc3545;padding:10px;border-radius:10px;text-align:center;">
-        Выйти из комнаты
-      </div>
-    `;
-  }
-
-  async function processRoomState(room) {
-    if (!room) return;
-
-    latestRoom = room;
-    syncServerClockFromRoom(room);
-    renderRoom(room);
-
-    const isStarted = room?.gameState?.started === true || room?.status === "playing";
-    if (isStarted) {
-      stopRoomCountdown();
-
-      if (!multiplayerGameStarted) {
-        multiplayerGameStarted = true;
-        startMultiplayerGame(roomId);
-      }
-      return;
-    }
-
-    const playersCount = getRenderableRoomPlayerIds(room).length;
-    const shouldMaintainRoomStartState = playersCount >= 2 || !!room.startAt || isRoomProbablyStale(room);
-
-    if (shouldMaintainRoomStartState && isCurrentClientRoomWriteDriver(room)) {
-      await maybeRunRoomMaintenance(roomId, room);
-    }
-  }
-
-  if (list) {
-    if (optimisticRoom) {
-      renderRoom(optimisticRoom);
-    } else {
-      list.innerHTML = "Подключение к комнате...";
-    }
-  }
-
-  currentRoomListener = roomRef.onSnapshot(async (doc) => {
-    if (currentRoomId !== screenRoomId || isLeavingRoom) return;
-
-    if (!doc.exists) {
-      restoreRoomsLobby({
-        message: "Комната была удалена",
-        keepModalOpen: true,
-        reloadRooms: true
-      });
-      return;
-    }
-
-    try {
-      await processRoomState(doc.data());
-    } catch (e) {
-      console.error("Ошибка обработки комнаты:", e);
-    }
-  }, async (error) => {
-    console.error("Ошибка realtime комнаты:", error);
-
-    if (currentRoomId !== screenRoomId || isLeavingRoom) return;
-
-    try {
-      const doc = await getRoomDocumentDirect(roomId);
-
-      if (!doc.exists) {
-        restoreRoomsLobby({
-          message: "Комната была удалена",
-          keepModalOpen: true,
-          reloadRooms: true
-        });
-        return;
-      }
-
-      await processRoomState(doc.data());
-    } catch (e) {
-      console.error("Ошибка fallback комнаты:", e);
-    }
-  });
-
-  roomCountdownInterval = setInterval(() => {
-    if (currentRoomId !== screenRoomId || isLeavingRoom) return;
-    if (!latestRoom) return;
-
-    renderRoom(latestRoom);
-
-    const isStarted = latestRoom?.gameState?.started === true || latestRoom?.status === "playing";
-    if (isStarted) {
-      stopRoomCountdown();
-
-      if (!multiplayerGameStarted) {
-        multiplayerGameStarted = true;
-        startMultiplayerGame(roomId);
-      }
-    }
-  }, 1000);
-}
-
-function startMultiplayerGame(roomId) {
-  if (!roomId || multiplayerStartInProgress) return;
-
-  multiplayerStartInProgress = true;
-  closeRooms();
-  startRoomFinishWatcher(roomId);
-  startGame();
-}
-
-
-async function leaveRoom(roomId) {
-  if (!roomId || isLeavingRoom) return;
-
-  isLeavingRoom = true;
-
-  const { id } = getCurrentPlayer();
-  const roomRef = db.collection("rooms").doc(roomId);
-
-  stopCurrentRoomRealtime();
-  currentRoomId = null;
-  resetServerClockSync();
-  multiplayerGameStarted = false;
-  multiplayerStartInProgress = false;
-  setCreateRoomButtonVisible(false);
-  setRoomsListMessage("Выход из комнаты...");
-
-  try {
-    await runRoomTransaction(roomRef, async (transaction) => {
-      const doc = await transaction.get(roomRef);
-      if (!doc.exists) return;
-
-      const room = doc.data();
-      if (!room || !Array.isArray(room.playerIds)) return;
-
-      const isStarted = room.gameState?.started === true || room.status === "playing";
-      if (isStarted) {
-        throw new Error("ROOM_ALREADY_STARTED");
-      }
-
-      const activePlayerIds = getRenderableRoomPlayerIds(room);
-      const newPlayerIds = activePlayerIds.filter((pid) => pid !== id);
-
-      if (newPlayerIds.length === 0) {
-        transaction.delete(roomRef);
-        return;
-      }
-
-      const newPlayerNames = { ...(room.playerNames || {}) };
-      delete newPlayerNames[id];
-
-      const updateData = {
-        playerIds: newPlayerIds,
-        playerNames: newPlayerNames,
-        hostId: room.hostId && newPlayerIds.includes(room.hostId) ? room.hostId : newPlayerIds[0],
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        [`gameState.playersData.${id}`]: firebase.firestore.FieldValue.delete(),
-        [`gameState.playersReady.${id}`]: firebase.firestore.FieldValue.delete()
-      };
-
-      if (newPlayerIds.length < 2) {
-        updateData.startAt = null;
-      }
-
-      transaction.update(roomRef, updateData);
-    }, "leaveRoom");
-  } catch (e) {
-    if (e.message === "ROOM_ALREADY_STARTED") {
-      isLeavingRoom = false;
-      currentRoomId = roomId;
-      openRoomScreen(roomId);
-      return;
-    }
-
-    console.error("Ошибка выхода из комнаты:", e);
-  } finally {
-    restoreRoomsLobby({
-      message: "Загрузка комнат...",
-      keepModalOpen: true,
-      reloadRooms: true
-    });
-  }
-}
-
-
 async function openLeaderboard() {
   const modal = document.getElementById("leaderboardModal");
   const contentDiv = document.getElementById("leaderboardContent");
+  if (!modal || !contentDiv) return;
 
   modal.style.display = "block";
   contentDiv.innerHTML = "<p>Загрузка...</p>";
 
   try {
-    const snapshot = await db
-      .collection("leaderboard")
-      .orderBy("score", "desc")
-      .limit(10)
-      .get();
-
+    const snapshot = await db.collection("leaderboard").orderBy("score", "desc").limit(10).get();
     contentDiv.innerHTML = "";
 
     if (snapshot.empty) {
@@ -3167,9 +893,8 @@ async function openLeaderboard() {
       const row = document.createElement("div");
       row.textContent = `${index}. ${p.name || "Игрок"} — ${p.score || 0}`;
       contentDiv.appendChild(row);
-      index++;
+      index += 1;
     });
-
   } catch (e) {
     console.error("Ошибка загрузки таблицы:", e);
     contentDiv.innerHTML = "<p>Ошибка загрузки таблицы</p>";
@@ -3177,69 +902,51 @@ async function openLeaderboard() {
 }
 
 function closeLeaderboard() {
-  document.getElementById("leaderboardModal").style.display = "none";
+  const modal = document.getElementById("leaderboardModal");
+  if (modal) modal.style.display = "none";
 }
 
-async function clearLeaderboard() {
-  try {
-    const snapshot = await db.collection("leaderboard").get();
+function openRooms() {
+  const roomsModal = document.getElementById("roomsModal");
+  const roomsList = document.getElementById("roomsList");
+  const createRoomBtn = document.getElementById("createRoomBtn");
 
-    const promises = [];
-    snapshot.forEach(doc => {
-      promises.push(doc.ref.delete());
-    });
+  if (roomsList) {
+    roomsList.innerHTML = `
+      Bobr Run убран из этой версии файла.<br><br>
+      Главное меню, история игр, таблица лидеров, настройки и навигация продолжают работать.<br><br>
+      Когда ты потом вернёшь отдельный игровой модуль обратно, сюда можно будет снова подключить комнаты и запуск матчей.
+    `;
+  }
 
-    await Promise.all(promises);
-    console.log("Таблица лидеров полностью очищена");
-    alert("Таблица лидеров очищена");
-  } catch (e) {
-    console.error("Ошибка очистки таблицы лидеров:", e);
-    alert("Ошибка очистки таблицы лидеров");
+  if (createRoomBtn) {
+    createRoomBtn.textContent = "Bobr Run временно недоступен";
+  }
+
+  if (roomsModal) {
+    roomsModal.style.display = "block";
   }
 }
 
-async function saveBestScore(score) {
-  const name = document.getElementById("nickname").innerText.trim();
-  const playerId = tgUser?.id ? String(tgUser.id) : name;
-
-  try {
-    const playerRef = db.collection("leaderboard").doc(playerId);
-    const doc = await playerRef.get();
-
-    if (doc.exists) {
-      const data = doc.data();
-
-      if (score > (data.score || 0)) {
-        await playerRef.update({
-          name: name,
-          score: score,
-          date: Date.now(),
-          userId: playerId
-        });
-      }
-    } else {
-      await playerRef.set({
-        name: name,
-        score: score,
-        date: Date.now(),
-        userId: playerId
-      });
-    }
-  } catch (e) {
-    console.error("Ошибка записи:", e);
-  }
+function closeRooms() {
+  const roomsModal = document.getElementById("roomsModal");
+  if (roomsModal) roomsModal.style.display = "none";
 }
-  
+
+function showGameUnavailable() {
+  alert("Bobr Run временно убран из этой версии файла.");
+}
+
+function createRoom() { showGameUnavailable(); }
+function joinRoom() { showGameUnavailable(); }
+function leaveRoom() { closeRooms(); }
+
 function openSkins() {
   alert("Скины");
 }
 
-function openGuide() {
-  toggleHistoryPanel();
-}
-
 function openSettings() {
-  let lang = prompt("Выбери язык: ru / en");
+  const lang = prompt("Выбери язык: ru / en");
   if (lang === "en") {
     alert("Language switched to English");
   } else {
@@ -3247,1860 +954,31 @@ function openSettings() {
   }
 }
 
-// ========================
-// ИГРА
-// ========================
+function handleMenuBackgroundClick(event) {
+  const modePopup = document.getElementById("modePopup");
+  const mainPlayButton = document.getElementById("mainPlayButton");
+  const historyPanel = document.getElementById("historyPanel");
+  const bookButton = document.querySelector(".main-book-btn");
 
-function initGame() {
-
-  function fullResetMenu() {
-    blockEndGameModalUntilNextMatch = true;
-    multiplayerStartInProgress = false;
-    document.body.removeAttribute("style");
-
-    const menu = document.getElementById("menu");
-    if (menu) {
-      menu.removeAttribute("style");
-      menu.style.display = "flex";
-      menu.classList.add("menu-reset");
-
-      requestAnimationFrame(() => {
-        menu.classList.remove("menu-reset");
-      });
-    }
-
-    const gameCanvas = document.getElementById("game");
-    if (gameCanvas) {
-      gameCanvas.style.display = "none";
-    }
-
-    forceCloseEndGameUI();
-    endGameShown = false;
-    isClosingEndGame = false;
-    endGameExitHandled = false;
-    openEndGameForCurrentMatch = null;
-    exitEndGameForCurrentMatch = null;
-    closeRooms();
-    setMenuView("mode");
-    loadGameHistory();
-  }
-
-  if (window.gameInitialized) return;
-  window.gameInitialized = true;
-
-  const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
-
-  const roadLeft = 0.15;
-  const roadRight = 0.85;
-  const laneOffset = 0.2;
-  const PLAYER_SIZE = 60;
-  const REMOTE_PLAYER_SIZE = 52;
-  const REMOTE_LABEL_FONT = "bold 13px Arial";
-  const SYNC_INTERVAL_MS = 90;
-  const REMOTE_SYNC_POSITION_STEP = 0.006;
-  const REMOTE_EXTRAPOLATION_LIMIT_MS = 220;
-  const FIXED_STEP_MS = 1000 / 120;
-  const DEFAULT_SHARED_RACE = {
-    leftSpawnIntervalMs: 1200,
-    centerSpawnIntervalMs: 1500,
-    rightSpawnIntervalMs: 1800,
-    speedBase: 0.008,
-    speedGainPerTick: 0.00001
-  };
-
-  canvas.width = canvas.clientWidth || window.innerWidth;
-  canvas.height = canvas.clientHeight || window.innerHeight;
-
-  const { id: playerId, name } = getCurrentPlayer();
-
-  const beaver = new Image();
-  const log = new Image();
-
-  function loadImage(src, image) {
-    return new Promise((resolve) => {
-      image.onload = () => resolve(true);
-      image.onerror = () => {
-        console.log("Ошибка загрузки " + src);
-        resolve(false);
-      };
-      image.src = src;
-    });
-  }
-
-  function getRoadCenter() {
-    return (roadLeft + roadRight) / 2;
-  }
-
-  function getLaneCenter(slot) {
-    const roadCenter = getRoadCenter();
-    if (slot === "left") return canvas.width * (roadCenter - laneOffset);
-    if (slot === "right") return canvas.width * (roadCenter + laneOffset);
-    return canvas.width * roadCenter;
-  }
-
-  function getGroundY() {
-    return canvas.height - 150;
-  }
-
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
-
-  function truncateName(value) {
-    const text = String(value || "Игрок");
-    return text.length > 10 ? text.slice(0, 10) + "…" : text;
-  }
-
-  function getPositionRatioFromY(y) {
-    if (!canvas.height) return 0;
-    return Number((y / canvas.height).toFixed(5));
-  }
-
-  function getYFromPositionRatio(ratio) {
-    if (typeof ratio !== "number" || Number.isNaN(ratio)) {
-      return getGroundY();
-    }
-    return clamp(ratio * canvas.height, 0, getGroundY());
-  }
-
-  function quantizeRatio(value, step = REMOTE_SYNC_POSITION_STEP) {
-    const safeStep = Number(step) > 0 ? Number(step) : 0.006;
-    return Number((Math.round((Number(value || 0) / safeStep)) * safeStep).toFixed(4));
-  }
-
-  function getVelocityRatio() {
-    const safeHeight = Math.max(canvas.height || 1, 1);
-    return Number((player.dy / safeHeight).toFixed(5));
-  }
-
-  let player = {
-    x: getLaneCenter("center") - PLAYER_SIZE / 2,
-    y: getGroundY(),
-    width: PLAYER_SIZE,
-    height: PLAYER_SIZE,
-    dy: 0,
-    gravity: 0.6,
-    jump: -13,
-    grounded: true,
-    gameOver: false,
-    gameOverText: "Ты врезался!",
-    frozenX: null,
-    frozenY: null
-  };
-
-  const playerState = {
-    positionRatio: getPositionRatioFromY(player.y),
-    velocityRatio: 0,
-    alive: true,
-    grounded: true,
-    lost: false,
-    score: 0,
-    firstObstacleResolved: false,
-    crashObstacleZ: null,
-    crashPositionRatio: null
-  };
-
-  if (gameResizeHandler) {
-    window.removeEventListener("resize", gameResizeHandler);
-  }
-
-  gameResizeHandler = () => {
-    const prevHeight = canvas.height || window.innerHeight || 1;
-    const currentRatio = prevHeight ? clamp(player.y / prevHeight, 0, 1) : 0;
-    canvas.width = canvas.clientWidth || window.innerWidth;
-    canvas.height = canvas.clientHeight || window.innerHeight;
-    player.x = getLaneCenter("center") - player.width / 2;
-    player.y = clamp(currentRatio * canvas.height, 0, getGroundY());
-
-    if (player.frozenX != null) {
-      player.frozenX = player.x;
-    }
-    if (player.frozenY != null) {
-      player.frozenY = player.y;
-    }
-  };
-  window.addEventListener("resize", gameResizeHandler);
-
-  let obstacles1 = [];
-  let obstacles2 = [];
-  let obstacles3 = [];
-  let sharedRace = { ...DEFAULT_SHARED_RACE };
-  let gameSpeed = sharedRace.speedBase;
-  let lastTime = performance.now();
-  let deltaTime = 1;
-  let score = 0;
-  let firstObstacleResolved = false;
-  let gameStarted = false;
-  let startTimer = 3;
-  let showStartText = true;
-  let latestGameRoomState = null;
-  let lastCountdownSecond = null;
-  let syncedCountdownStartedAtMs = null;
-  const remoteVisualState = {};
-
-  let syncInterval = null;
-  let winnerCheckInterval = null;
-  let liveRoomStateListener = null;
-
-  let playerLost = false;
-  let frozenObstacle = null;
-  let exitBtn = { x: 0, y: 0, w: 0, h: 0 };
-  let watchBtn = { x: 0, y: 0, w: 0, h: 0 };
-  let exitToMenuBtn = { x: 0, y: 0, w: 0, h: 0 };
-  let showExitButton = false;
-
-  let spawnStarted = false;
-  let spawnAccumulator1 = 0;
-  let spawnAccumulator2 = 0;
-  let spawnAccumulator3 = 0;
-  let simulationTick = 0;
-  let lastTargetTick = 0;
-
-  function clearGameRealtimeBindings() {
-    if (liveRoomStateListener) {
-      liveRoomStateListener();
-      liveRoomStateListener = null;
-    }
-
-    if (syncInterval) {
-      clearInterval(syncInterval);
-      syncInterval = null;
-    }
-
-    if (winnerCheckInterval) {
-      clearInterval(winnerCheckInterval);
-      winnerCheckInterval = null;
+  if (modePopup && mainPlayButton) {
+    const clickedInsidePopup = modePopup.contains(event.target);
+    const clickedPlayButton = mainPlayButton.contains(event.target);
+    if (!clickedInsidePopup && !clickedPlayButton) {
+      closeModePopup();
     }
   }
 
-  async function ensureSharedRaceConfig(roomId) {
-    if (!roomId) return DEFAULT_SHARED_RACE;
-
-    const roomRef = db.collection("rooms").doc(roomId);
-
-    try {
-      const result = await runRoomTransaction(roomRef, async (transaction) => {
-        const doc = await transaction.get(roomRef);
-        if (!doc.exists) return DEFAULT_SHARED_RACE;
-
-        const room = doc.data() || {};
-        const existing = room.gameState?.sharedRace || null;
-
-        if (existing && existing.centerSpawnIntervalMs) {
-          return {
-            leftSpawnIntervalMs: Number(existing.leftSpawnIntervalMs || DEFAULT_SHARED_RACE.leftSpawnIntervalMs),
-            centerSpawnIntervalMs: Number(existing.centerSpawnIntervalMs || DEFAULT_SHARED_RACE.centerSpawnIntervalMs),
-            rightSpawnIntervalMs: Number(existing.rightSpawnIntervalMs || DEFAULT_SHARED_RACE.rightSpawnIntervalMs),
-            speedBase: Number(existing.speedBase || DEFAULT_SHARED_RACE.speedBase),
-            speedGainPerTick: Number(existing.speedGainPerTick || DEFAULT_SHARED_RACE.speedGainPerTick)
-          };
-        }
-
-        const config = { ...DEFAULT_SHARED_RACE };
-
-        transaction.update(roomRef, {
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          "gameState.sharedRace": config
-        });
-
-        return config;
-      }, "ensureSharedRaceConfig");
-
-      if (result && result.centerSpawnIntervalMs) {
-        return result;
-      }
-    } catch (e) {
-      console.error("Ошибка ensureSharedRaceConfig:", e);
-    }
-
-    return { ...DEFAULT_SHARED_RACE };
-  }
-
-  function getOrderedActivePlayerIds(room) {
-    if (!room || !Array.isArray(room.playerIds)) return [];
-    return room.playerIds.filter((pid) => {
-      if (!pid) return false;
-      const p = room.gameState?.playersData?.[pid] || {};
-      return p.leftRoom !== true;
-    });
-  }
-
-  function getRemoteSlotForPlayer(targetPlayerId) {
-    const orderedIds = getOrderedActivePlayerIds(latestGameRoomState);
-    const otherIds = orderedIds.filter((pid) => pid !== playerId);
-
-    if (otherIds.length <= 0) return null;
-    if (otherIds.length === 1) {
-      return targetPlayerId === otherIds[0] ? "left" : null;
-    }
-
-    if (otherIds[0] === targetPlayerId) return "left";
-    if (otherIds[1] === targetPlayerId) return "right";
-    return null;
-  }
-
-  function getRemotePlayersForRender() {
-    const room = latestGameRoomState;
-    if (!room?.gameState?.playersData) return [];
-
-    const activeRemoteIds = getOrderedActivePlayerIds(room)
-      .filter((pid) => pid !== playerId)
-      .slice(0, 2);
-
-    Object.keys(remoteVisualState).forEach((pid) => {
-      if (!activeRemoteIds.includes(pid)) {
-        delete remoteVisualState[pid];
-      }
-    });
-
-    const gravityRatioPerFrame = player.gravity / Math.max(canvas.height || 1, 1);
-    const maxRatio = getPositionRatioFromY(getGroundY());
-
-    return activeRemoteIds
-      .map((pid) => {
-        const data = room.gameState.playersData[pid] || {};
-        const targetRatio = typeof data.positionRatio === "number" ? data.positionRatio : 0;
-        const velocityRatio = typeof data.velocityRatio === "number" ? data.velocityRatio : 0;
-        const sourceRevision = `${data.clientUpdatedAt || 0}:${targetRatio}:${velocityRatio}:${data.grounded === true ? 1 : 0}:${data.lost === true ? 1 : 0}`;
-
-        if (!remoteVisualState[pid]) {
-          remoteVisualState[pid] = {
-            visualRatio: targetRatio,
-            sourceRevision,
-            syncedRatio: targetRatio,
-            velocityRatio,
-            grounded: data.grounded === true,
-            lastLocalSyncAt: performance.now()
-          };
-        }
-
-        const visualState = remoteVisualState[pid];
-
-        if (visualState.sourceRevision !== sourceRevision) {
-          visualState.sourceRevision = sourceRevision;
-          visualState.syncedRatio = targetRatio;
-          visualState.velocityRatio = velocityRatio;
-          visualState.grounded = data.grounded === true;
-          visualState.lastLocalSyncAt = performance.now();
-        }
-
-        let predictedRatio = targetRatio;
-
-        if (data.alive !== false && data.lost !== true && visualState.grounded !== true) {
-          const ageMs = Math.min(REMOTE_EXTRAPOLATION_LIMIT_MS, Math.max(0, performance.now() - visualState.lastLocalSyncAt));
-          const framesSinceSync = ageMs / 16.67;
-          predictedRatio = visualState.syncedRatio + (visualState.velocityRatio * framesSinceSync) + (0.5 * gravityRatioPerFrame * framesSinceSync * framesSinceSync);
-        }
-
-        predictedRatio = clamp(predictedRatio, 0, maxRatio);
-        const lerpFactor = Math.max(0.28, Math.min(0.72, 0.24 + Math.abs(predictedRatio - visualState.visualRatio) * 8));
-        visualState.visualRatio += (predictedRatio - visualState.visualRatio) * lerpFactor;
-
-        return {
-          id: pid,
-          slot: getRemoteSlotForPlayer(pid),
-          name: data.name || room.playerNames?.[pid] || "Игрок",
-          positionRatio: visualState.visualRatio,
-          alive: data.alive !== false,
-          lost: data.lost === true,
-          score: Number(data.score || 0),
-          crashObstacleZ: typeof data.crashObstacleZ === "number" ? data.crashObstacleZ : null,
-          crashPositionRatio: typeof data.crashPositionRatio === "number" ? data.crashPositionRatio : null
-        };
-      })
-      .filter(item => item.slot);
-  }
-
-  function buildObstacleDrawData(slot, obstacle) {
-    const scale = 1 - obstacle.z;
-    const size = 60 * scale;
-    const laneCenter = getLaneCenter(slot);
-    const x = canvas.width / 2 + (laneCenter - canvas.width / 2) * scale - size / 2;
-    const y = 100 + (canvas.height - 200) * scale;
-    return { x, y, size, scale };
-  }
-
-  function createObstacle(slot, z = 1, passed = false) {
-    return { slot, z, passed };
-  }
-
-  function resetSpawnState() {
-    spawnStarted = false;
-    spawnAccumulator1 = 0;
-    spawnAccumulator2 = 0;
-    spawnAccumulator3 = 0;
-  }
-
-  function spawnObstacle1() {
-    if (!gameStarted) return;
-    obstacles1.push(createObstacle("left"));
-  }
-
-  function spawnObstacle2() {
-    if (!gameStarted) return;
-    obstacles2.push(createObstacle("center", 1, false));
-  }
-
-  function spawnObstacle3() {
-    if (!gameStarted) return;
-    obstacles3.push(createObstacle("right"));
-  }
-
-  function startSpawnIfNeeded() {
-    if (spawnStarted) return;
-    spawnStarted = true;
-
-    spawnAccumulator1 = 0;
-    spawnAccumulator2 = 0;
-    spawnAccumulator3 = 0;
-
-    spawnObstacle1();
-    spawnObstacle2();
-    spawnObstacle3();
-  }
-
-  async function prepareGameAssets() {
-    await Promise.all([
-      loadImage("beaver.png", beaver),
-      loadImage("log.png", log)
-    ]);
-  }
-
-  function jump() {
-    if (player.grounded && !player.gameOver && gameStarted) {
-      player.dy = player.jump;
-      player.grounded = false;
+  if (historyPanel && bookButton) {
+    const clickedInsideHistory = historyPanel.contains(event.target);
+    const clickedBookButton = bookButton.contains(event.target);
+    if (!clickedInsideHistory && !clickedBookButton) {
+      closeHistoryPanel();
     }
   }
-
-  let lastSentSyncState = {
-    positionRatio: null,
-    velocityRatio: null,
-    grounded: null,
-    alive: null,
-    lost: null,
-    score: null,
-    firstObstacleResolved: null,
-    sentAt: 0
-  };
-
-  async function syncLocalPlayerState(force = false) {
-    if (!currentRoomId) return;
-
-    const roomRef = db.collection("rooms").doc(currentRoomId);
-    const positionRatioRaw = getPositionRatioFromY(player.y);
-    const positionRatio = quantizeRatio(positionRatioRaw);
-    const velocityRatio = getVelocityRatio();
-    const now = Date.now();
-
-    playerState.positionRatio = positionRatio;
-    playerState.velocityRatio = velocityRatio;
-    playerState.alive = !playerLost;
-    playerState.grounded = player.grounded;
-    playerState.lost = playerLost;
-    playerState.score = score;
-    playerState.firstObstacleResolved = firstObstacleResolved;
-
-    const positionChanged =
-      lastSentSyncState.positionRatio === null ||
-      Math.abs(lastSentSyncState.positionRatio - positionRatio) >= REMOTE_SYNC_POSITION_STEP;
-
-    const velocityChanged =
-      lastSentSyncState.velocityRatio === null ||
-      Math.abs(lastSentSyncState.velocityRatio - velocityRatio) >= 0.0025;
-
-    const stateChanged =
-      lastSentSyncState.grounded !== player.grounded ||
-      lastSentSyncState.alive !== !playerLost ||
-      lastSentSyncState.lost !== playerLost ||
-      lastSentSyncState.score !== score ||
-      lastSentSyncState.firstObstacleResolved !== firstObstacleResolved ||
-      velocityChanged;
-
-    const enoughTimePassed = now - lastSentSyncState.sentAt >= SYNC_INTERVAL_MS;
-
-    if (!force && !stateChanged && !(positionChanged && enoughTimePassed)) {
-      return;
-    }
-
-    const updateData = {
-      [`gameState.playersData.${playerId}.name`]: name,
-      [`gameState.playersData.${playerId}.position`]: Math.round(player.y),
-      [`gameState.playersData.${playerId}.positionRatio`]: positionRatio,
-      [`gameState.playersData.${playerId}.velocityRatio`]: velocityRatio,
-      [`gameState.playersData.${playerId}.alive`]: !playerLost,
-      [`gameState.playersData.${playerId}.grounded`]: player.grounded,
-      [`gameState.playersData.${playerId}.lost`]: playerLost,
-      [`gameState.playersData.${playerId}.score`]: score,
-      [`gameState.playersData.${playerId}.firstObstacleResolved`]: firstObstacleResolved,
-      [`gameState.playersData.${playerId}.clientUpdatedAt`]: now
-    };
-
-    if (playerLost) {
-      updateData[`gameState.playersData.${playerId}.crashObstacleZ`] = typeof playerState.crashObstacleZ === "number" ? playerState.crashObstacleZ : null;
-      updateData[`gameState.playersData.${playerId}.crashPositionRatio`] = typeof playerState.crashPositionRatio === "number" ? playerState.crashPositionRatio : null;
-    } else if (force) {
-      updateData[`gameState.playersData.${playerId}.crashObstacleZ`] = null;
-      updateData[`gameState.playersData.${playerId}.crashPositionRatio`] = null;
-    }
-
-    try {
-      const ok = await safeRoomUpdate(roomRef, updateData, "syncLocalPlayerState");
-      if (ok !== false) {
-        lastSentSyncState = {
-          positionRatio,
-          velocityRatio,
-          grounded: player.grounded,
-          alive: !playerLost,
-          lost: playerLost,
-          score,
-          firstObstacleResolved,
-          sentAt: now
-        };
-      }
-    } catch (err) {
-      console.error("Ошибка синхронизации игрока:", err);
-    }
-  }
-
-  if (currentRoomId) {
-    syncLocalPlayerState(true);
-
-    syncInterval = setInterval(() => {
-      if (!currentRoomId) return;
-      syncLocalPlayerState(false);
-    }, SYNC_INTERVAL_MS);
-
-    winnerCheckInterval = setInterval(() => {
-      if (!gameStarted || !currentRoomId || winnerProcessing) return;
-      if (!latestGameRoomState) return;
-      if (!isCurrentClientRoomWriteDriver(latestGameRoomState)) return;
-      checkWinner();
-    }, 2200);
-  }
-
-  if (gameBeforeUnloadHandler) {
-    window.removeEventListener("beforeunload", gameBeforeUnloadHandler);
-  }
-
-  gameBeforeUnloadHandler = () => {
-    clearGameRealtimeBindings();
-    stopRoomReadyPoll();
-  };
-
-  window.addEventListener("beforeunload", gameBeforeUnloadHandler);
-
-  openEndGameForCurrentMatch = function(resultData) {
-    if (suppressEndGameModal || isClosingEndGame || endGameExitHandled || blockEndGameModalUntilNextMatch) return;
-
-    player.gameOver = false;
-    showExitButton = false;
-    frozenObstacle = null;
-
-    showEndGameModal(resultData);
-  };
-
-  blockEndGameModalUntilNextMatch = false;
-  activeLeaveAfterLossHandler = leaveAfterLoss;
-
-  exitEndGameForCurrentMatch = async function() {
-    blockEndGameModalUntilNextMatch = true;
-    forceCloseEndGameUI();
-    stopEndGameWatcher();
-    endGameShown = false;
-    isClosingEndGame = true;
-    endGameExitHandled = true;
-    openEndGameForCurrentMatch = null;
-    exitEndGameForCurrentMatch = null;
-
-    await leaveAfterLoss();
-  };
-
-  if (gameCanvasClickHandler) {
-    canvas.removeEventListener("click", gameCanvasClickHandler);
-  }
-
-  gameCanvasClickHandler = (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (
-      showExitButton &&
-      x > exitToMenuBtn.x && x < exitToMenuBtn.x + exitToMenuBtn.w &&
-      y > exitToMenuBtn.y && y < exitToMenuBtn.y + exitToMenuBtn.h
-    ) {
-      leaveAfterLoss();
-      return;
-    }
-
-    if (player.gameOver) {
-      if (
-        x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
-        y > watchBtn.y && y < watchBtn.y + watchBtn.h
-      ) {
-        player.gameOver = false;
-        player.dy = 0;
-        player.grounded = true;
-
-        if (player.frozenX !== undefined && player.frozenX !== null) {
-          player.x = player.frozenX;
-          player.y = player.frozenY;
-        }
-
-        showExitButton = true;
-        return;
-      }
-
-      if (
-        x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
-        y > exitBtn.y && y < exitBtn.y + exitBtn.h
-      ) {
-        leaveAfterLoss();
-        return;
-      }
-
-      return;
-    }
-
-    jump();
-  };
-
-  canvas.addEventListener("click", gameCanvasClickHandler);
-
-  if (gameCanvasTouchHandler) {
-    canvas.removeEventListener("touchstart", gameCanvasTouchHandler);
-  }
-
-  gameCanvasTouchHandler = (e) => {
-    e.preventDefault();
-
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-
-    if (
-      showExitButton &&
-      x > exitToMenuBtn.x && x < exitToMenuBtn.x + exitToMenuBtn.w &&
-      y > exitToMenuBtn.y && y < exitToMenuBtn.y + exitToMenuBtn.h
-    ) {
-      leaveAfterLoss();
-      return;
-    }
-
-    if (player.gameOver) {
-      if (
-        x > watchBtn.x && x < watchBtn.x + watchBtn.w &&
-        y > watchBtn.y && y < watchBtn.y + watchBtn.h
-      ) {
-        player.gameOver = false;
-        player.dy = 0;
-        player.grounded = true;
-
-        if (player.frozenX !== undefined && player.frozenX !== null) {
-          player.x = player.frozenX;
-          player.y = player.frozenY;
-        }
-
-        showExitButton = true;
-        return;
-      }
-
-      if (
-        x > exitBtn.x && x < exitBtn.x + exitBtn.w &&
-        y > exitBtn.y && y < exitBtn.y + exitBtn.h
-      ) {
-        leaveAfterLoss();
-        return;
-      }
-
-      return;
-    }
-
-    jump();
-  };
-
-  canvas.addEventListener("touchstart", gameCanvasTouchHandler);
-
-  function updatePlayer() {
-    if (!player.gameOver && gameStarted) {
-      player.dy += player.gravity * deltaTime;
-      player.y += player.dy * deltaTime;
-    }
-
-    const groundY = getGroundY();
-
-    if (player.y >= groundY) {
-      player.y = groundY;
-      player.dy = 0;
-      player.grounded = true;
-    }
-
-    player.x = getLaneCenter("center") - player.width / 2;
-    playerState.positionRatio = getPositionRatioFromY(player.y);
-    playerState.velocityRatio = getVelocityRatio();
-    playerState.alive = !playerLost;
-    playerState.grounded = player.grounded;
-  }
-
-  function updateObstacleArray(arr) {
-    arr.forEach(o => {
-      o.z -= (gameSpeed + (1 - o.z) * 0.015) * deltaTime;
-    });
-    return arr.filter(o => o.z > 0);
-  }
-
-  function updateObstacles1() {
-    if (gameStarted) {
-      obstacles1 = updateObstacleArray(obstacles1);
-    }
-  }
-
-  function updateObstacles2() {
-    if (gameStarted) {
-      obstacles2 = updateObstacleArray(obstacles2);
-    }
-  }
-
-  function updateObstacles3() {
-    if (gameStarted) {
-      obstacles3 = updateObstacleArray(obstacles3);
-    }
-  }
-
-  function drawRoad() {
-    ctx.fillStyle = "#555";
-    ctx.beginPath();
-    ctx.moveTo(canvas.width * roadLeft, canvas.height);
-    ctx.lineTo(canvas.width * roadRight, canvas.height);
-    ctx.lineTo(canvas.width * (roadRight - 0.2), 0);
-    ctx.lineTo(canvas.width * (roadLeft + 0.2), 0);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  function drawObstacleSet(arr) {
-    arr.forEach(o => {
-      const drawData = buildObstacleDrawData(o.slot, o);
-      ctx.drawImage(log, drawData.x, drawData.y, drawData.size, drawData.size);
-    });
-  }
-
-  function drawObstacles1() {
-    drawObstacleSet(obstacles1);
-  }
-
-  async function handleLocalCrash(o, drawData) {
-    frozenObstacle = { x: drawData.x, y: drawData.y, size: drawData.size };
-    player.frozenX = player.x;
-    player.frozenY = player.y;
-    obstacles2 = [];
-    player.gameOverText = "Ты врезался! Счёт: " + score;
-
-    saveBestScore(score);
-
-    player.gameOver = true;
-    playerLost = true;
-    playerState.alive = false;
-    playerState.lost = true;
-    playerState.velocityRatio = 0;
-    playerState.firstObstacleResolved = true;
-    playerState.crashObstacleZ = Number(o.z.toFixed(5));
-    playerState.crashPositionRatio = getPositionRatioFromY(player.y);
-    firstObstacleResolved = true;
-
-    await syncLocalPlayerState(true);
-
-    (async () => {
-      await markPlayerAsLost();
-      await markPendingDuelFinish();
-    })();
-  }
-
-  function drawObstacles2() {
-    if (frozenObstacle) {
-      ctx.drawImage(log, frozenObstacle.x, frozenObstacle.y, frozenObstacle.size, frozenObstacle.size);
-    }
-
-    if (!player.gameOver) {
-      for (let i = 0; i < obstacles2.length; i++) {
-        const o = obstacles2[i];
-        const drawData = buildObstacleDrawData("center", o);
-
-        ctx.drawImage(log, drawData.x, drawData.y, drawData.size, drawData.size);
-
-        if (
-          drawData.scale > 0.85 &&
-          player.x < drawData.x + drawData.size &&
-          player.x + player.width > drawData.x &&
-          player.y < drawData.y + drawData.size &&
-          player.y + player.height > drawData.y
-        ) {
-          handleLocalCrash(o, drawData);
-          return;
-        }
-
-        if (!o.passed && o.z < 0.05 && !player.gameOver) {
-          o.passed = true;
-
-          if (!firstObstacleResolved) {
-            firstObstacleResolved = true;
-            playerState.firstObstacleResolved = true;
-          }
-
-          if (!player.grounded) {
-            score++;
-            playerState.score = score;
-
-            if (currentRoomId) {
-              const roomRef = db.collection("rooms").doc(currentRoomId);
-              const finalScore = score;
-
-              (async () => {
-                const duelLikelyPending =
-                  latestGameRoomState?.gameState?.pendingFinish?.active === true &&
-                  latestGameRoomState?.gameState?.pendingFinish?.winnerId === playerId &&
-                  latestGameRoomState?.gameState?.pendingFinish?.resolved !== true;
-
-                if (duelLikelyPending) {
-                  const duelResolved = await resolvePendingDuelFinishIfNeeded(roomRef, finalScore);
-                  if (duelResolved) {
-                    return;
-                  }
-                }
-
-                await safeRoomUpdate(roomRef, {
-                  [`gameState.playersData.${playerId}.score`]: finalScore,
-                  [`gameState.playersData.${playerId}.firstObstacleResolved`]: true
-                }, "drawObstacles2.scoreUpdate");
-              })().catch(err => console.error("Ошибка обновления счёта:", err));
-            }
-          }
-        }
-      }
-    } else {
-      obstacles2.forEach((o) => {
-        const drawData = buildObstacleDrawData("center", o);
-        ctx.drawImage(log, drawData.x, drawData.y, drawData.size, drawData.size);
-      });
-    }
-  }
-
-  function drawObstacles3() {
-    drawObstacleSet(obstacles3);
-  }
-
-  function drawNicknameLabel(centerX, y, text, alpha = 1) {
-    const label = truncateName(text);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.font = REMOTE_LABEL_FONT;
-    ctx.textAlign = "center";
-    const metrics = ctx.measureText(label);
-    const paddingX = 8;
-    const width = metrics.width + paddingX * 2;
-    const height = 20;
-    const boxX = centerX - width / 2;
-    const boxY = y + 58;
-
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    roundRect(ctx, boxX, boxY, width, height, 10);
-    ctx.fillStyle = "#fff";
-    ctx.fillText(label, centerX, boxY + 14);
-    ctx.restore();
-  }
-
-  function drawRemotePlayers() {
-    const remotes = getRemotePlayersForRender();
-
-    remotes.forEach((remote) => {
-      const centerX = getLaneCenter(remote.slot);
-      const y = getYFromPositionRatio(remote.positionRatio);
-      const x = centerX - REMOTE_PLAYER_SIZE / 2;
-      const alpha = remote.lost ? 0.45 : 0.95;
-
-      if (remote.lost && typeof remote.crashObstacleZ === "number") {
-        const frozenDraw = buildObstacleDrawData(remote.slot, { z: remote.crashObstacleZ });
-        ctx.save();
-        ctx.globalAlpha = 0.95;
-        ctx.drawImage(log, frozenDraw.x, frozenDraw.y, frozenDraw.size, frozenDraw.size);
-        ctx.restore();
-      }
-
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.drawImage(beaver, x, y, REMOTE_PLAYER_SIZE, REMOTE_PLAYER_SIZE);
-      ctx.restore();
-
-      drawNicknameLabel(centerX, y, remote.name, alpha);
-    });
-  }
-
-  function drawPlayer() {
-    const drawX = (frozenObstacle && !player.gameOver && player.frozenX != null) ? player.frozenX : player.x;
-    const drawY = (frozenObstacle && !player.gameOver && player.frozenY != null) ? player.frozenY : player.y;
-
-    if (playerLost) {
-      ctx.save();
-      ctx.globalAlpha = 0.45;
-      ctx.drawImage(beaver, drawX, drawY, player.width, player.height);
-      ctx.restore();
-    } else {
-      ctx.drawImage(beaver, drawX, drawY, player.width, player.height);
-    }
-
-    drawNicknameLabel(getLaneCenter("center"), drawY, name, playerLost ? 0.6 : 1);
-  }
-
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  function drawExitButton() {
-    if (!showExitButton) return;
-
-    const btnWidth = 100;
-    const btnHeight = 45;
-    const padding = 20;
-
-    const btnX = canvas.width - btnWidth - padding;
-    const btnY = canvas.height - btnHeight - padding;
-
-    exitToMenuBtn = { x: btnX, y: btnY, w: btnWidth, h: btnHeight };
-
-    ctx.fillStyle = "#dc3545";
-    roundRect(ctx, btnX, btnY, btnWidth, btnHeight, 12);
-
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("Выйти", btnX + btnWidth / 2, btnY + btnHeight / 2 + 5);
-  }
-
-  function drawGameOver() {
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const boxWidth = 300;
-    const boxHeight = 180;
-    const boxX = canvas.width / 2 - boxWidth / 2;
-    const boxY = canvas.height / 2 - boxHeight / 2;
-
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    roundRect(ctx, boxX, boxY, boxWidth, boxHeight, 25);
-
-    ctx.fillStyle = "#fff";
-    ctx.font = "22px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(player.gameOverText, canvas.width / 2, boxY + 50);
-
-    const btnWidth = 110;
-    const btnHeight = 40;
-
-    const watchX = boxX + 20;
-    const watchY = boxY + 100;
-    watchBtn = { x: watchX, y: watchY, w: btnWidth, h: btnHeight };
-
-    ctx.fillStyle = "#28a745";
-    roundRect(ctx, watchX, watchY, btnWidth, btnHeight, 15);
-    ctx.fillStyle = "#fff";
-    ctx.font = "16px Arial";
-    ctx.fillText("Смотреть", watchX + btnWidth / 2, watchY + 25);
-
-    const exitX = boxX + boxWidth - btnWidth - 20;
-    const exitY = watchY;
-    exitBtn = { x: exitX, y: exitY, w: btnWidth, h: btnHeight };
-
-    ctx.fillStyle = "#dc3545";
-    roundRect(ctx, exitX, exitY, btnWidth, btnHeight, 15);
-    ctx.fillStyle = "#fff";
-    ctx.fillText("Выйти", exitX + btnWidth / 2, exitY + 25);
-  }
-
-  function drawStartTimer() {
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = "#fff";
-    ctx.textAlign = "center";
-
-    if (!syncedCountdownStartedAtMs) {
-      const playerIds = Array.isArray(latestGameRoomState?.playerIds)
-        ? latestGameRoomState.playerIds.filter(Boolean)
-        : [];
-      const playersReady = latestGameRoomState?.gameState?.playersReady || {};
-      const readyCount = playerIds.filter(pid => playersReady[pid] === true).length;
-      const totalCount = playerIds.length || 1;
-
-      ctx.font = "bold 34px Arial";
-      ctx.fillText("Загрузка игры...", canvas.width / 2, canvas.height / 2 - 16);
-
-      ctx.font = "24px Arial";
-      ctx.fillText(`Готово игроков: ${readyCount}/${totalCount}`, canvas.width / 2, canvas.height / 2 + 26);
-      return;
-    }
-
-    if (startTimer > 0) {
-      ctx.font = "bold 80px Arial";
-      ctx.fillText(startTimer, canvas.width / 2, canvas.height / 2);
-    } else if (showStartText) {
-      ctx.font = "bold 60px Arial";
-      ctx.fillText("START", canvas.width / 2, canvas.height / 2);
-    }
-  }
-
-  async function markPlayerAsLost() {
-    if (!currentRoomId) return;
-
-    const roomRef = db.collection("rooms").doc(currentRoomId);
-
-    try {
-      await safeRoomUpdate(roomRef, {
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        [`gameState.playersData.${playerId}.name`]: name,
-        [`gameState.playersData.${playerId}.alive`]: false,
-        [`gameState.playersData.${playerId}.lost`]: true,
-        [`gameState.playersData.${playerId}.score`]: score,
-        [`gameState.playersData.${playerId}.lostAt`]: Date.now(),
-        [`gameState.playersData.${playerId}.crashObstacleZ`]: typeof playerState.crashObstacleZ === "number" ? playerState.crashObstacleZ : null,
-        [`gameState.playersData.${playerId}.crashPositionRatio`]: typeof playerState.crashPositionRatio === "number" ? playerState.crashPositionRatio : null
-      }, "markPlayerAsLost");
-    } catch (e) {
-      console.error("Ошибка отметки поражения:", e);
-    }
-  }
-
-  async function markPendingDuelFinish() {
-    if (!currentRoomId) return;
-
-    const roomRef = db.collection("rooms").doc(currentRoomId);
-
-    try {
-      const doc = await roomRef.get();
-      if (!doc.exists) return;
-
-      const room = doc.data();
-      const playersData = room?.gameState?.playersData || {};
-
-      const alivePlayers = Object.entries(playersData).filter(([_, p]) => {
-        return p && p.alive === true && p.leftRoom !== true;
-      });
-
-      const loserPlayers = Object.entries(playersData).filter(([_, p]) => {
-        return p && p.lost === true && p.leftRoom !== true;
-      });
-
-      if (alivePlayers.length === 1 && loserPlayers.length === 1) {
-        const winnerId = alivePlayers[0][0];
-        const loserId = loserPlayers[0][0];
-        const loserScore = Number(loserPlayers[0][1]?.score || 0);
-
-        await safeRoomUpdate(roomRef, {
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          "gameState.pendingFinish": {
-            active: true,
-            winnerId,
-            loserId,
-            loserScore,
-            resolved: false
-          }
-        }, "markPendingDuelFinish");
-      }
-    } catch (e) {
-      console.error("Ошибка markPendingDuelFinish:", e);
-    }
-  }
-
-  async function resolvePendingDuelFinishIfNeeded(roomRef, fallbackFinalScore) {
-    if (!roomRef || !currentRoomId) return false;
-
-    let resolved = false;
-    let resolvedResultData = null;
-    let resolvedScore = Number(fallbackFinalScore || 0);
-
-    try {
-      await runRoomTransaction(roomRef, async (transaction) => {
-        const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists) return;
-
-        const room = roomDoc.data();
-        if (!room?.gameState?.playersData) return;
-        if (room.gameState.finished === true || room.status === "finished") return;
-
-        const playersData = room.gameState.playersData || {};
-        const pendingFinish = room.gameState.pendingFinish || null;
-
-        const alivePlayers = Object.entries(playersData).filter(([_, p]) => {
-          return p && p.alive === true && p.leftRoom !== true;
-        });
-
-        const loserPlayers = Object.entries(playersData).filter(([_, p]) => {
-          return p && p.lost === true && p.leftRoom !== true;
-        });
-
-        const canResolveExistingPending =
-          pendingFinish?.active === true &&
-          pendingFinish.winnerId === playerId &&
-          pendingFinish.resolved !== true;
-
-        const isFallbackDuelState =
-          alivePlayers.length === 1 &&
-          loserPlayers.length === 1 &&
-          alivePlayers[0][0] === playerId;
-
-        if (!canResolveExistingPending && !isFallbackDuelState) {
-          return;
-        }
-
-        const loserEntry = canResolveExistingPending
-          ? loserPlayers.find(([pid]) => pid === pendingFinish.loserId) || loserPlayers[0]
-          : loserPlayers[0];
-
-        const loserId = loserEntry?.[0] || (canResolveExistingPending ? pendingFinish.loserId : null);
-        const loserData = loserEntry?.[1] || {};
-        const loserScore = canResolveExistingPending
-          ? Number(pendingFinish.loserScore || loserData.score || 0)
-          : Number(loserData.score || 0);
-
-        const winnerData = playersData[playerId] || {};
-        const winnerName = winnerData.name || room.playerNames?.[playerId] || name;
-        const loserName = loserData.name || room.playerNames?.[loserId] || "Игрок";
-
-        const finalScore = Math.max(Number(fallbackFinalScore || 0), loserScore + 1);
-        resolvedScore = finalScore;
-        score = finalScore;
-
-        const finalResults = [
-          {
-            place: 1,
-            name: winnerName,
-            score: finalScore
-          },
-          {
-            place: 2,
-            name: loserName,
-            score: loserScore
-          }
-        ];
-
-        transaction.update(roomRef, {
-          status: "finished",
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          "gameState.finished": true,
-          "gameState.started": false,
-          "gameState.winner": winnerName,
-          "gameState.results": finalResults,
-          [`gameState.playersData.${playerId}.score`]: finalScore,
-          [`gameState.playersData.${playerId}.firstObstacleResolved`]: true,
-          "gameState.pendingFinish": {
-            active: true,
-            winnerId: playerId,
-            loserId,
-            loserScore,
-            resolved: true,
-            resolvedAt: Date.now(),
-            finalWinnerScore: finalScore
-          }
-        });
-
-        resolved = true;
-        resolvedResultData = {
-          winner: winnerName,
-          results: finalResults
-        };
-      }, "resolvePendingDuelFinishIfNeeded");
-    } catch (e) {
-      console.error("Ошибка resolvePendingDuelFinishIfNeeded:", e);
-      return false;
-    }
-
-    if (!resolved) {
-      return false;
-    }
-
-    winnerProcessing = true;
-    await saveBestScore(resolvedScore);
-
-    if (resolvedResultData && !endGameShown) {
-      try {
-        const finishedDoc = await roomRef.get();
-        if (finishedDoc.exists) {
-          await ensureCurrentMatchHistorySaved(currentRoomId, finishedDoc.data());
-        }
-      } catch (e) {
-        console.error("Ошибка финального сохранения истории:", e);
-      }
-
-      showEndGameModal(resolvedResultData);
-    }
-
-    return true;
-  }
-
-  function buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish) {
-    if (!Array.isArray(allLosersSorted) || allLosersSorted.length < 2) {
-      return null;
-    }
-
-    const first = allLosersSorted[0];
-    const second = allLosersSorted[1];
-
-    if (!first || !second) return null;
-
-    const firstScore = Number(first[1]?.score || 0);
-    const secondScore = Number(second[1]?.score || 0);
-    const firstLostAt = Number(first[1]?.lostAt || 0);
-    const secondLostAt = Number(second[1]?.lostAt || 0);
-    const lostAtDiffMs = Math.abs(firstLostAt - secondLostAt);
-    const isSimultaneousCrash = firstLostAt > 0 && secondLostAt > 0 && lostAtDiffMs <= 1200;
-
-    if (firstScore !== secondScore) {
-      return null;
-    }
-
-    if (pendingFinish?.finalWinnerScore != null && !isSimultaneousCrash) {
-      return null;
-    }
-
-    const results = [
-      {
-        place: 1,
-        name: first[1]?.name || roomData.playerNames?.[first[0]] || "Игрок",
-        score: firstScore
-      },
-      {
-        place: 1,
-        name: second[1]?.name || roomData.playerNames?.[second[0]] || "Игрок",
-        score: secondScore
-      }
-    ];
-
-    if (allLosersSorted[2]) {
-      results.push({
-        place: 3,
-        name: allLosersSorted[2][1]?.name || roomData.playerNames?.[allLosersSorted[2][0]] || "Игрок",
-        score: Number(allLosersSorted[2][1]?.score || 0)
-      });
-    }
-
-    return {
-      winnerLabel: "Ничья",
-      results
-    };
-  }
-
-  
-  async function leaveAfterLoss() {
-    activeLeaveAfterLossHandler = leaveAfterLoss;
-    blockEndGameModalUntilNextMatch = true;
-    suppressEndGameModal = true;
-    endGameExitHandled = true;
-    isClosingEndGame = true;
-    isLeavingRoom = true;
-    hardCloseEndGameModal();
-    stopRoomReadyPoll();
-    hardCloseEndGameModal();
-    stopEndGameWatcher();
-    endGameShown = false;
-
-    const exitingRoomId = currentRoomId;
-    const exitingPlayerId = playerId;
-
-    currentRoomId = null;
-    resetServerClockSync();
-
-    stopCurrentRoomRealtime();
-    stopGameCountdownStartListener();
-    multiplayerGameStarted = false;
-    multiplayerStartInProgress = false;
-    resetSpawnState();
-    clearGameRealtimeBindings();
-
-    window.gameInitialized = false;
-    activeLeaveAfterLossHandler = null;
-    showExitButton = false;
-    forceCloseEndGameUI();
-    endGameShown = false;
-    isClosingEndGame = false;
-    endGameExitHandled = false;
-    openEndGameForCurrentMatch = null;
-    exitEndGameForCurrentMatch = null;
-
-    if (gameResizeHandler) {
-      window.removeEventListener("resize", gameResizeHandler);
-      gameResizeHandler = null;
-    }
-
-    if (gameBeforeUnloadHandler) {
-      window.removeEventListener("beforeunload", gameBeforeUnloadHandler);
-      gameBeforeUnloadHandler = null;
-    }
-
-    if (gameCanvasClickHandler) {
-      canvas.removeEventListener("click", gameCanvasClickHandler);
-      gameCanvasClickHandler = null;
-    }
-
-    if (gameCanvasTouchHandler) {
-      canvas.removeEventListener("touchstart", gameCanvasTouchHandler);
-      gameCanvasTouchHandler = null;
-    }
-
-    fullResetMenu();
-    setCreateRoomButtonVisible(true);
-    setRoomsListMessage("Загрузка комнат...");
-    loadRooms();
-
-    if (!exitingRoomId) {
-      isLeavingRoom = false;
-      return;
-    }
-
-    try {
-      const roomRef = db.collection("rooms").doc(exitingRoomId);
-
-      await runRoomTransaction(roomRef, async (transaction) => {
-        const doc = await transaction.get(roomRef);
-        if (!doc.exists) return;
-
-        const room = doc.data();
-        const currentIds = getRenderableRoomPlayerIds(room);
-        const newPlayers = currentIds.filter((pid) => pid !== exitingPlayerId);
-
-        if (newPlayers.length === 0) {
-          transaction.delete(roomRef);
-          return;
-        }
-
-        const newPlayerNames = { ...(room.playerNames || {}) };
-        delete newPlayerNames[exitingPlayerId];
-
-        const updateData = {
-          playerIds: newPlayers,
-          playerNames: newPlayerNames,
-          hostId: room.hostId && newPlayers.includes(room.hostId) ? room.hostId : newPlayers[0],
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          [`gameState.playersData.${exitingPlayerId}.leftRoom`]: true,
-          [`gameState.playersData.${exitingPlayerId}.online`]: false,
-          [`gameState.playersReady.${exitingPlayerId}`]: firebase.firestore.FieldValue.delete()
-        };
-
-        if (newPlayers.length < 2) {
-          updateData.startAt = null;
-        }
-
-        transaction.update(roomRef, updateData);
-      }, "leaveAfterLoss");
-    } catch (e) {
-      console.error("Ошибка выхода после поражения:", e);
-    } finally {
-      isLeavingRoom = false;
-    }
-  }
-
-  async function checkWinner() {
-    if (!currentRoomId || winnerProcessing) return;
-
-    const roomRef = db.collection("rooms").doc(currentRoomId);
-
-    try {
-      const roomDoc = await roomRef.get();
-      if (!roomDoc.exists) return;
-
-      const roomData = roomDoc.data();
-      if (!roomData?.gameState?.playersData) return;
-      if (roomData.gameState.finished) return;
-
-      const playersData = roomData.gameState.playersData;
-      const pendingFinish = roomData.gameState.pendingFinish || null;
-
-      const alivePlayers = Object.entries(playersData).filter(([_, p]) => {
-        return p && p.alive === true && p.leftRoom !== true;
-      });
-
-      const allLosersSorted = Object.entries(playersData)
-        .filter(([_, p]) => p && p.lost === true && p.leftRoom !== true)
-        .sort((a, b) => Number(b[1].lostAt || 0) - Number(a[1].lostAt || 0));
-
-      if (alivePlayers.length === 1) {
-        const winnerId = alivePlayers[0][0];
-        const winnerData = playersData[winnerId] || {};
-        const winnerName = winnerData.name || roomData.playerNames?.[winnerId] || "Игрок";
-
-        const loserEntries = allLosersSorted.filter(([pid]) => pid !== winnerId);
-
-        if (
-          pendingFinish &&
-          pendingFinish.active === true &&
-          pendingFinish.winnerId === winnerId
-        ) {
-          if (pendingFinish.resolved !== true) {
-            return;
-          }
-        }
-
-        winnerProcessing = true;
-
-        const winnerScore =
-          pendingFinish?.finalWinnerScore != null
-            ? Number(pendingFinish.finalWinnerScore)
-            : (winnerId === playerId ? score : Number(winnerData.score || 0));
-
-        if (winnerId === playerId) {
-          await saveBestScore(winnerScore);
-        }
-
-        const finalResults = [
-          {
-            place: 1,
-            name: winnerName,
-            score: winnerScore
-          }
-        ];
-
-        if (loserEntries[0]) {
-          finalResults.push({
-            place: 2,
-            name: loserEntries[0][1].name || roomData.playerNames?.[loserEntries[0][0]] || "Игрок",
-            score: Number(loserEntries[0][1].score || 0)
-          });
-        }
-
-        if (loserEntries[1]) {
-          finalResults.push({
-            place: 3,
-            name: loserEntries[1][1].name || roomData.playerNames?.[loserEntries[1][0]] || "Игрок",
-            score: Number(loserEntries[1][1].score || 0)
-          });
-        }
-
-        const wrote = await safeFinishRoom(roomRef, {
-          status: "finished",
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          "gameState.finished": true,
-          "gameState.started": false,
-          "gameState.winner": winnerName,
-          "gameState.results": finalResults,
-          "gameState.pendingFinish": firebase.firestore.FieldValue.delete(),
-          "gameState.exitRequested": firebase.firestore.FieldValue.delete(),
-          "gameState.exitRequestedAt": firebase.firestore.FieldValue.delete(),
-          [`gameState.playersData.${winnerId}.score`]: winnerScore
-        }, "checkWinner.winner1alive");
-
-        if (wrote === false) {
-          const freshDoc = await roomRef.get();
-          if (freshDoc.exists) {
-            const freshRoom = freshDoc.data();
-            if (freshRoom?.gameState?.finished && freshRoom?.gameState?.winner) {
-              showEndGameModal({
-                winner: freshRoom.gameState.winner,
-                results: freshRoom.gameState.results
-              });
-            }
-          }
-          return;
-        }
-
-        await ensureCurrentMatchHistorySaved(currentRoomId, {
-          ...roomData,
-          status: "finished",
-          gameState: {
-            ...(roomData.gameState || {}),
-            finished: true,
-            winner: winnerName,
-            results: finalResults
-          }
-        });
-
-        showEndGameModal({
-          winner: winnerName,
-          results: finalResults
-        });
-
-        return;
-      }
-
-      if (alivePlayers.length === 0 && allLosersSorted.length > 0) {
-        winnerProcessing = true;
-
-        const drawResult = buildDrawResultIfNeeded(allLosersSorted, roomData, pendingFinish);
-
-        if (drawResult) {
-          for (const item of drawResult.results) {
-            if (item.name === name) {
-              await saveBestScore(item.score);
-            }
-          }
-
-          const wrote = await safeFinishRoom(roomRef, {
-            status: "finished",
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            "gameState.finished": true,
-            "gameState.started": false,
-            "gameState.winner": drawResult.winnerLabel,
-            "gameState.results": drawResult.results,
-            "gameState.pendingFinish": firebase.firestore.FieldValue.delete(),
-            "gameState.exitRequested": firebase.firestore.FieldValue.delete(),
-            "gameState.exitRequestedAt": firebase.firestore.FieldValue.delete()
-          }, "checkWinner.draw");
-
-          if (wrote === false) {
-            const freshDoc = await roomRef.get();
-            if (freshDoc.exists) {
-              const freshRoom = freshDoc.data();
-              if (freshRoom?.gameState?.finished && freshRoom?.gameState?.winner) {
-                showEndGameModal({
-                  winner: freshRoom.gameState.winner,
-                  results: freshRoom.gameState.results
-                });
-              }
-            }
-            return;
-          }
-
-          await ensureCurrentMatchHistorySaved(currentRoomId, {
-            ...roomData,
-            status: "finished",
-            gameState: {
-              ...(roomData.gameState || {}),
-              finished: true,
-              winner: drawResult.winnerLabel,
-              results: drawResult.results
-            }
-          });
-
-          showEndGameModal({
-            winner: drawResult.winnerLabel,
-            results: drawResult.results
-          });
-
-          return;
-        }
-
-        const winnerId = allLosersSorted[0][0];
-        const winnerData = allLosersSorted[0][1] || {};
-        const winnerName = winnerData.name || roomData.playerNames?.[winnerId] || "Игрок";
-
-        const otherLosers = allLosersSorted.slice(1);
-        const winnerScore = Number(winnerData.score || 0);
-
-        if (winnerId === playerId) {
-          await saveBestScore(winnerScore);
-        }
-
-        const finalResults = [
-          {
-            place: 1,
-            name: winnerName,
-            score: winnerScore
-          }
-        ];
-
-        if (otherLosers[0]) {
-          finalResults.push({
-            place: 2,
-            name: otherLosers[0][1].name || roomData.playerNames?.[otherLosers[0][0]] || "Игрок",
-            score: Number(otherLosers[0][1].score || 0)
-          });
-        }
-
-        if (otherLosers[1]) {
-          finalResults.push({
-            place: 3,
-            name: otherLosers[1][1].name || roomData.playerNames?.[otherLosers[1][0]] || "Игрок",
-            score: Number(otherLosers[1][1].score || 0)
-          });
-        }
-
-        const wrote = await safeFinishRoom(roomRef, {
-          status: "finished",
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          "gameState.finished": true,
-          "gameState.started": false,
-          "gameState.winner": winnerName,
-          "gameState.results": finalResults,
-          "gameState.pendingFinish": firebase.firestore.FieldValue.delete(),
-          "gameState.exitRequested": firebase.firestore.FieldValue.delete(),
-          "gameState.exitRequestedAt": firebase.firestore.FieldValue.delete(),
-          [`gameState.playersData.${winnerId}.score`]: winnerScore
-        }, "checkWinner.allLost");
-
-        if (wrote === false) {
-          const freshDoc = await roomRef.get();
-          if (freshDoc.exists) {
-            const freshRoom = freshDoc.data();
-            if (freshRoom?.gameState?.finished && freshRoom?.gameState?.winner) {
-              showEndGameModal({
-                winner: freshRoom.gameState.winner,
-                results: freshRoom.gameState.results
-              });
-            }
-          }
-          return;
-        }
-
-        await ensureCurrentMatchHistorySaved(currentRoomId, {
-          ...roomData,
-          status: "finished",
-          gameState: {
-            ...(roomData.gameState || {}),
-            finished: true,
-            winner: winnerName,
-            results: finalResults
-          }
-        });
-
-        showEndGameModal({
-          winner: winnerName,
-          results: finalResults
-        });
-      }
-    } catch (e) {
-      console.error("Ошибка checkWinner:", e);
-      winnerProcessing = false;
-    }
-  }
-
-  function stepSimulation() {
-    deltaTime = FIXED_STEP_MS / 16.67;
-
-    updatePlayer();
-    updateObstacles1();
-    updateObstacles2();
-    updateObstacles3();
-
-    if (gameStarted) {
-      gameSpeed += Number(sharedRace.speedGainPerTick || DEFAULT_SHARED_RACE.speedGainPerTick);
-
-      spawnAccumulator1 += FIXED_STEP_MS;
-      while (spawnAccumulator1 >= Number(sharedRace.leftSpawnIntervalMs || DEFAULT_SHARED_RACE.leftSpawnIntervalMs)) {
-        spawnAccumulator1 -= Number(sharedRace.leftSpawnIntervalMs || DEFAULT_SHARED_RACE.leftSpawnIntervalMs);
-        spawnObstacle1();
-      }
-
-      spawnAccumulator2 += FIXED_STEP_MS;
-      while (spawnAccumulator2 >= Number(sharedRace.centerSpawnIntervalMs || DEFAULT_SHARED_RACE.centerSpawnIntervalMs)) {
-        spawnAccumulator2 -= Number(sharedRace.centerSpawnIntervalMs || DEFAULT_SHARED_RACE.centerSpawnIntervalMs);
-        spawnObstacle2();
-      }
-
-      spawnAccumulator3 += FIXED_STEP_MS;
-      while (spawnAccumulator3 >= Number(sharedRace.rightSpawnIntervalMs || DEFAULT_SHARED_RACE.rightSpawnIntervalMs)) {
-        spawnAccumulator3 -= Number(sharedRace.rightSpawnIntervalMs || DEFAULT_SHARED_RACE.rightSpawnIntervalMs);
-        spawnObstacle3();
-      }
-    }
-  }
-
-  async function startGameFlow() {
-    syncedCountdownStartedAtMs = null;
-
-    if (currentRoomId) {
-      startRoomPresence(currentRoomId);
-      await touchRoomPresence(currentRoomId, { markAction: true });
-    }
-    startTimer = 3;
-    showStartText = true;
-    gameStarted = false;
-    simulationTick = 0;
-    lastTargetTick = 0;
-    lastCountdownSecond = null;
-    resetSpawnState();
-
-    lastTime = performance.now();
-    requestAnimationFrame(loop);
-
-    try {
-      await prepareGameAssets();
-    } catch (e) {
-      console.error("Ошибка загрузки ассетов:", e);
-    }
-
-    sharedRace = await ensureSharedRaceConfig(currentRoomId);
-    gameSpeed = Number(sharedRace.speedBase || DEFAULT_SHARED_RACE.speedBase);
-    lastSentSyncState = {
-      positionRatio: null,
-      velocityRatio: null,
-      grounded: null,
-      alive: null,
-      lost: null,
-      score: null,
-      firstObstacleResolved: null,
-      sentAt: 0
-    };
-
-    await markPlayerReadyForGame(currentRoomId);
-    await touchRoomPresence(currentRoomId, { markAction: true });
-
-    stopRoomReadyPoll();
-    stopGameCountdownStartListener();
-
-    const roomRef = db.collection("rooms").doc(currentRoomId);
-
-    liveRoomStateListener = roomRef.onSnapshot(async (doc) => {
-      if (!doc.exists || !currentRoomId) return;
-
-      try {
-        const room = doc.data();
-        if (!room) return;
-
-        latestGameRoomState = room;
-        syncServerClockFromRoom(room);
-
-        const sharedFromRoom = room.gameState?.sharedRace;
-        if (sharedFromRoom?.centerSpawnIntervalMs) {
-          sharedRace = {
-            leftSpawnIntervalMs: Number(sharedFromRoom.leftSpawnIntervalMs || DEFAULT_SHARED_RACE.leftSpawnIntervalMs),
-            centerSpawnIntervalMs: Number(sharedFromRoom.centerSpawnIntervalMs || DEFAULT_SHARED_RACE.centerSpawnIntervalMs),
-            rightSpawnIntervalMs: Number(sharedFromRoom.rightSpawnIntervalMs || DEFAULT_SHARED_RACE.rightSpawnIntervalMs),
-            speedBase: Number(sharedFromRoom.speedBase || DEFAULT_SHARED_RACE.speedBase),
-            speedGainPerTick: Number(sharedFromRoom.speedGainPerTick || DEFAULT_SHARED_RACE.speedGainPerTick)
-          };
-        }
-
-        const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
-
-        if (!countdownStartedAt) {
-          if (isCurrentClientRoomWriteDriver(room)) {
-            await tryStartSyncedCountdown(currentRoomId);
-          }
-          return;
-        }
-
-        syncedCountdownStartedAtMs = countdownStartedAt;
-        multiplayerStartInProgress = false;
-      } catch (e) {
-        console.error("Ошибка liveRoomStateListener:", e);
-      }
-    });
-
-    roomReadyPollInterval = setInterval(async () => {
-      if (!currentRoomId || syncedCountdownStartedAtMs) return;
-
-      try {
-        const doc = await roomRef.get();
-        if (!doc.exists) return;
-
-        const room = doc.data();
-        if (!room) return;
-
-        latestGameRoomState = room;
-        syncServerClockFromRoom(room);
-
-        const countdownStartedAt = getRoomTimeMs(room.gameState?.countdownStartedAt);
-
-        if (!countdownStartedAt) {
-          if (isCurrentClientRoomWriteDriver(room)) {
-            await tryStartSyncedCountdown(currentRoomId);
-          }
-          return;
-        }
-
-        syncedCountdownStartedAtMs = countdownStartedAt;
-      } catch (e) {
-        console.error("Ошибка roomReadyPoll:", e);
-      }
-    }, 600);
-  }
-
-  function loop(currentTime) {
-    const frameDeltaMs = Math.min(32, Math.max(0, currentTime - lastTime));
-    lastTime = currentTime;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (syncedCountdownStartedAtMs) {
-      const nowMs = getSyncedServerNowMs();
-      const countdownElapsedMs = nowMs - (syncedCountdownStartedAtMs + GAME_READY_BUFFER_MS);
-
-      if (countdownElapsedMs < 0) {
-        startTimer = 3;
-        showStartText = true;
-        gameStarted = false;
-      } else if (countdownElapsedMs < 3000) {
-        const currentSecond = Math.max(0, 3 - Math.floor(countdownElapsedMs / 1000));
-        if (lastCountdownSecond !== currentSecond) {
-          lastCountdownSecond = currentSecond;
-        }
-
-        startTimer = currentSecond;
-        showStartText = true;
-        gameStarted = false;
-      } else {
-        if (!gameStarted) {
-          frozenObstacle = playerLost ? frozenObstacle : null;
-          obstacles1 = [];
-          obstacles2 = [];
-          obstacles3 = [];
-          gameSpeed = Number(sharedRace.speedBase || DEFAULT_SHARED_RACE.speedBase);
-          gameStarted = true;
-          showStartText = false;
-          simulationTick = 0;
-          lastTargetTick = 0;
-          resetSpawnState();
-          startSpawnIfNeeded();
-        }
-
-        const gameElapsedMs = nowMs - (syncedCountdownStartedAtMs + GAME_READY_BUFFER_MS + 3000);
-        const targetTick = Math.max(0, Math.floor(gameElapsedMs / FIXED_STEP_MS));
-        let ticksToSimulate = Math.max(0, targetTick - lastTargetTick);
-
-        if (ticksToSimulate > 0) {
-          const hardCap = Math.max(1, Math.ceil(frameDeltaMs / FIXED_STEP_MS) + 8);
-          ticksToSimulate = Math.min(ticksToSimulate, hardCap);
-        }
-
-        for (let i = 0; i < ticksToSimulate; i++) {
-          simulationTick++;
-          stepSimulation();
-        }
-
-        lastTargetTick += ticksToSimulate;
-      }
-    }
-
-    drawRoad();
-    drawObstacles1();
-    drawObstacles2();
-    drawObstacles3();
-    drawRemotePlayers();
-    drawPlayer();
-
-    if (!gameStarted) {
-      drawStartTimer();
-    }
-
-    ctx.fillStyle = "#fff";
-    ctx.font = "20px Arial";
-    ctx.textAlign = "left";
-    ctx.fillText("Score: " + score, 20, 40);
-
-    if (player.gameOver && !endGameShown) {
-      drawGameOver();
-    }
-
-    if (!endGameShown) {
-      drawExitButton();
-    }
-
-    requestAnimationFrame(loop);
-  }
-
-  startGameFlow();
 }
 
+const currentPlayer = getCurrentPlayer();
+document.getElementById("nickname").innerText = currentPlayer.name;
 setMenuView("home");
 
 window.toggleModePopup = toggleModePopup;
@@ -5116,10 +994,8 @@ window.leaveRoom = leaveRoom;
 window.openSkins = openSkins;
 window.openSettings = openSettings;
 window.toggleHistoryPanel = toggleHistoryPanel;
-window.toggleHistoryGameDetails = toggleHistoryGameDetails;
 window.toggleHistoryMatchDetails = toggleHistoryMatchDetails;
-window.closeEndGameAndExit = closeEndGameAndExit;
-
+window.showGameUnavailable = showGameUnavailable;
 </script>
 </body>
 </html>
