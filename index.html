@@ -1300,6 +1300,7 @@ const db = firebase.firestore();
   
 let tgUser = null;
 const tgApp = window.Telegram?.WebApp || null;
+let telegramBackButtonHandler = null;
 
 try {
   tgUser = tgApp?.initDataUnsafe?.user || null;
@@ -1308,6 +1309,57 @@ try {
 } catch (e) {
   reportAppError("Ошибка инициализации Telegram WebApp:", e);
   tgUser = null;
+}
+
+function hasTelegramSystemBackButton() {
+  return !!(tgApp?.BackButton && typeof tgApp.BackButton.show === "function");
+}
+
+function handleTelegramAppBack() {
+  const menu = document.getElementById("menu");
+  const game = document.getElementById("game");
+  const isGameVisible = !!game && game.style.display === "block";
+  const isMenuVisible = !!menu && menu.style.display !== "none";
+
+  if (isGameVisible) {
+    return;
+  }
+
+  if (isMenuVisible && currentMenuView === "mode") {
+    exitGameMode();
+  }
+}
+
+function syncAppBackButton(options = {}) {
+  const { forceHide = false, forceShow = false, onClick = handleTelegramAppBack } = options;
+  const shouldShow = !forceHide && (forceShow || currentMenuView === "mode");
+  const fallbackBackButton = document.getElementById("modeBackButton");
+  const canUseTelegramBackButton = hasTelegramSystemBackButton();
+
+  if (fallbackBackButton) {
+    fallbackBackButton.classList.toggle("visible", shouldShow && !canUseTelegramBackButton);
+  }
+
+  if (!canUseTelegramBackButton) {
+    return;
+  }
+
+  try {
+    if (telegramBackButtonHandler) {
+      tgApp.BackButton.offClick(telegramBackButtonHandler);
+      telegramBackButtonHandler = null;
+    }
+
+    if (shouldShow && typeof onClick === "function") {
+      telegramBackButtonHandler = onClick;
+      tgApp.BackButton.onClick(telegramBackButtonHandler);
+      tgApp.BackButton.show();
+    } else {
+      tgApp.BackButton.hide();
+    }
+  } catch (e) {
+    reportAppError("Ошибка кнопки назад Telegram:", e);
+  }
 }
 
 async function markPlayerReadyForGame(roomId) {
@@ -1646,7 +1698,6 @@ function setMenuView(view) {
 
   const homeScreen = document.getElementById("homeScreen");
   const bobrRunScreen = document.getElementById("bobrRunScreen");
-  const backButton = document.getElementById("modeBackButton");
   const modePopup = document.getElementById("modePopup");
   const historyPanel = document.getElementById("historyPanel");
 
@@ -1658,9 +1709,7 @@ function setMenuView(view) {
     bobrRunScreen.classList.toggle("active", view === "mode");
   }
 
-  if (backButton) {
-    backButton.classList.toggle("visible", view === "mode");
-  }
+  syncAppBackButton();
 
   if (modePopup) {
     modePopup.classList.remove("open");
@@ -1979,6 +2028,7 @@ function startGame() {
   suppressEndGameModal = false;
   document.getElementById("menu").style.display = "none";
   document.getElementById("game").style.display = "block";
+  syncAppBackButton({ forceHide: true });
   
   initGame();
 }
@@ -5050,6 +5100,8 @@ function initGame() {
 
   startGameFlow();
 }
+
+setMenuView("home");
 
 window.toggleModePopup = toggleModePopup;
 window.enterBobrRunMode = enterBobrRunMode;
