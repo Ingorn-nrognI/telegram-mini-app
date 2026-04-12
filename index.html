@@ -993,6 +993,147 @@ button {
   box-shadow: 0 12px 24px rgba(49, 105, 255, 0.28);
 }
 
+
+
+#homeScreen .screen-inner {
+  position: relative;
+}
+
+.home-top-flow {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 6px 2px 2px;
+  min-height: calc(100vh - var(--safe-top) - var(--safe-bottom) - 92px - 118px - 44px);
+  min-height: calc(100svh - var(--safe-top) - var(--safe-bottom) - 92px - 118px - 44px);
+}
+
+.home-top-flow::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 100%;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(88, 147, 255, 0.16), transparent 30%),
+    radial-gradient(circle at 88% 28%, rgba(49, 216, 255, 0.12), transparent 26%),
+    radial-gradient(circle at 50% 100%, rgba(121, 86, 255, 0.12), transparent 34%);
+  pointer-events: none;
+}
+
+.home-top-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 30px;
+  padding: 22px 18px 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(71, 134, 255, 0.22), transparent 35%),
+    radial-gradient(circle at 0% 100%, rgba(57, 220, 255, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(12, 19, 42, 0.72), rgba(7, 10, 24, 0.22));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  backdrop-filter: blur(8px);
+}
+
+.home-top-panel::after {
+  content: "";
+  position: absolute;
+  inset: auto -40px -52px auto;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(89, 150, 255, 0.24), transparent 72%);
+  pointer-events: none;
+}
+
+.home-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #dce7ff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.home-top-title {
+  margin: 14px 0 0;
+  font-size: 34px;
+  line-height: 1.04;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+
+.home-top-text {
+  margin: 10px 0 0;
+  max-width: 320px;
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.home-top-preview {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home-preview-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 88px;
+  padding: 14px 12px;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    linear-gradient(180deg, rgba(15, 24, 55, 0.92), rgba(8, 12, 28, 0.9));
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.22);
+}
+
+.home-preview-value {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 8px;
+}
+
+.home-preview-label {
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.home-bottom-hint {
+  position: relative;
+  padding: 0 8px 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.home-bottom-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(129, 173, 255, 0.4), rgba(255,255,255,0));
+}
+
+.home-bottom-text {
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(210, 225, 255, 0.64);
+}
+
 @media (max-width: 420px) {
   .top-bar {
     width: calc(100vw - 16px);
@@ -1023,6 +1164,21 @@ button {
   .hero-title,
   .mode-title {
     font-size: 26px;
+  }
+
+  .home-top-flow {
+    min-height: calc(100vh - var(--safe-top) - var(--safe-bottom) - 92px - 118px - 36px);
+    min-height: calc(100svh - var(--safe-top) - var(--safe-bottom) - 92px - 118px - 36px);
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .home-top-title {
+    font-size: 29px;
+  }
+
+  .home-top-preview {
+    grid-template-columns: 1fr;
   }
 
   .stats-grid {
@@ -1076,6 +1232,38 @@ button {
 
   <div id="homeScreen" class="menu-screen active">
     <div class="screen-inner">
+
+      <div class="home-top-flow">
+        <div class="home-top-panel">
+          <div class="home-kicker">✦ Главный экран</div>
+          <h2 class="home-top-title">Верхняя часть меню перед входом в Bobr World</h2>
+          <p class="home-top-text">
+            Домашний экран начинается мягче: сначала верхний участок интерфейса, а сам блок Bobr World уже естественно появляется ниже по скроллу.
+          </p>
+        </div>
+
+        <div class="home-top-preview">
+          <div class="home-preview-card">
+            <div class="home-preview-value">PvP</div>
+            <div class="home-preview-label">Плавный переход к игровому блоку ниже</div>
+          </div>
+          <div class="home-preview-card">
+            <div class="home-preview-value">UX</div>
+            <div class="home-preview-label">Bobr World слегка виден уже на первом экране</div>
+          </div>
+          <div class="home-preview-card">
+            <div class="home-preview-value">Mini App</div>
+            <div class="home-preview-label">Тот же тёмный стиль и общий домашний скролл</div>
+          </div>
+        </div>
+
+        <div class="home-bottom-hint" aria-hidden="true">
+          <div class="home-bottom-line"></div>
+          <div class="home-bottom-text">Ниже начинается Bobr World</div>
+          <div class="home-bottom-line"></div>
+        </div>
+      </div>
+
       <section class="hero-card">
         <div class="hero-topline">⚡ Новое событие</div>
         <h1 class="hero-title">Bobr World</h1>
