@@ -1130,11 +1130,6 @@ button {
   opacity: 1;
 }
 
-#bobrMascotBlock.viewer-active .mascot-fallback {
-  opacity: 0;
-  visibility: hidden;
-}
-
 .mascot-fallback {
   position: absolute;
   left: 50%;
@@ -1312,12 +1307,12 @@ button {
               loading="eager"
               camera-controls
               touch-action="pan-y"
-              orientation="0deg 90deg 90deg"
-              camera-target="0m 0.86m 0m"
-              camera-orbit="205deg 78deg 2.24m"
-              min-camera-orbit="auto 74deg 2.24m"
-              max-camera-orbit="auto 92deg 2.24m"
-              field-of-view="24deg"
+              orientation="-90deg 0deg 90deg"
+              camera-target="0m 0.72m 0m"
+              camera-orbit="180deg 78deg 2.06m"
+              min-camera-orbit="auto 78deg 2.06m"
+              max-camera-orbit="auto 78deg 2.06m"
+              field-of-view="23deg"
               shadow-intensity="0"
               exposure="1"
               environment-image="neutral"
@@ -1644,20 +1639,18 @@ let mascotInitStarted = false;
 let mascotResolvedPose = null;
 
 const MASCOT_VIEWER_STANDING_CONFIG = {
-  storageKey: "bobr_mascot_pose_v11_upright_final",
-  baseTheta: "205deg",
-  defaultOrientation: "0deg 90deg 90deg",
-  fallbackCameraTarget: "0m 0.86m 0m",
-  fallbackCameraOrbit: "205deg 78deg 2.24m",
-  fallbackMinCameraOrbit: "auto 74deg 2.24m",
-  fallbackMaxCameraOrbit: "auto 92deg 2.24m",
-  fallbackFieldOfView: "24deg",
+  storageKey: "bobr_mascot_pose_v9_locked",
+  baseTheta: "180deg",
+  lockedOrientation: "0deg 0deg 90deg",
+  safeVisibleOrientation: "0deg 0deg 90deg",
+  defaultOrientation: "0deg 0deg 90deg",
+  fallbackCameraTarget: "0m 0.76m 0m",
+  fallbackCameraOrbit: "180deg 78deg 2.04m",
+  fallbackMinCameraOrbit: "auto 74deg 2.04m",
+  fallbackMaxCameraOrbit: "auto 92deg 2.04m",
+  fallbackFieldOfView: "23deg",
   candidateOrientations: [
-    "0deg 90deg 90deg",
-    "-90deg 0deg 0deg",
-    "-90deg 180deg 0deg",
-    "0deg 0deg 90deg",
-    "0deg 180deg 90deg"
+    "0deg 0deg 90deg"
   ]
 };
 
@@ -2353,36 +2346,14 @@ function getMascotViewerDimensions(viewer) {
   }
 }
 
-function buildMascotViewerPose(viewer, orientation) {
-  const dimensions = getMascotViewerDimensions(viewer);
-
-  if (!dimensions) {
-    return {
-      orientation,
-      cameraTarget: MASCOT_VIEWER_STANDING_CONFIG.fallbackCameraTarget,
-      cameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackCameraOrbit,
-      minCameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackMinCameraOrbit,
-      maxCameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackMaxCameraOrbit,
-      fieldOfView: MASCOT_VIEWER_STANDING_CONFIG.fallbackFieldOfView
-    };
-  }
-
-  const height = Math.max(dimensions.y, 0.7);
-  const footprint = Math.max(dimensions.x, dimensions.z, 0.34);
-  const targetY = Math.max(height * 0.42, 0.26);
-  const radius = Math.max(height * 1.34, footprint * 2.15, 1.28);
-  const phi = height > 1.45 ? 80 : 78;
-  const fieldOfView = Math.min(Math.max(18, 29 - height * 3.6), 25);
-  const radiusText = `${radius.toFixed(2)}m`;
-  const phiText = `${phi}deg`;
-
+function buildMascotViewerPose(viewer, orientation = MASCOT_VIEWER_STANDING_CONFIG.lockedOrientation) {
   return {
     orientation,
-    cameraTarget: `0m ${targetY.toFixed(3)}m 0m`,
-    cameraOrbit: `${MASCOT_VIEWER_STANDING_CONFIG.baseTheta} ${phiText} ${radiusText}`,
-    minCameraOrbit: `auto ${phiText} ${radiusText}`,
-    maxCameraOrbit: `auto ${phiText} ${radiusText}`,
-    fieldOfView: `${fieldOfView.toFixed(1)}deg`
+    cameraTarget: MASCOT_VIEWER_STANDING_CONFIG.fallbackCameraTarget,
+    cameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackCameraOrbit,
+    minCameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackMinCameraOrbit,
+    maxCameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackMaxCameraOrbit,
+    fieldOfView: MASCOT_VIEWER_STANDING_CONFIG.fallbackFieldOfView
   };
 }
 
@@ -2393,59 +2364,15 @@ function scoreMascotOrientation(dimensions) {
 }
 
 async function resolveMascotViewerStandingPose(viewer) {
-  if (!viewer) {
-    return buildMascotViewerPose(null, MASCOT_VIEWER_STANDING_CONFIG.defaultOrientation);
-  }
-
-  const cachedOrientation = (() => {
-    try {
-      return localStorage.getItem(MASCOT_VIEWER_STANDING_CONFIG.storageKey) || "";
-    } catch (e) {
-      return "";
-    }
-  })();
-
-  const candidateOrientations = [
-    ...(cachedOrientation ? [cachedOrientation] : []),
-    ...MASCOT_VIEWER_STANDING_CONFIG.candidateOrientations
-  ].filter((value, index, array) => value && array.indexOf(value) === index);
-
-  let bestPose = null;
-  let bestScore = Number.NEGATIVE_INFINITY;
-
-  for (const orientation of candidateOrientations) {
-    viewer.setAttribute("orientation", orientation);
-
-    if (typeof viewer.updateFraming === "function") {
-      try {
-        viewer.updateFraming();
-      } catch (e) {
-        reportAppError("Не удалось обновить framing во время подбора ориентации:", e);
-      }
-    }
-
-    await waitMascotFrames(2);
-
-    const dimensions = getMascotViewerDimensions(viewer);
-    const score = scoreMascotOrientation(dimensions);
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestPose = buildMascotViewerPose(viewer, orientation);
-    }
-  }
-
-  if (!bestPose) {
-    bestPose = buildMascotViewerPose(viewer, MASCOT_VIEWER_STANDING_CONFIG.defaultOrientation);
-  }
+  const pose = buildMascotViewerPose(viewer, MASCOT_VIEWER_STANDING_CONFIG.lockedOrientation);
 
   try {
-    localStorage.setItem(MASCOT_VIEWER_STANDING_CONFIG.storageKey, bestPose.orientation);
+    localStorage.setItem(MASCOT_VIEWER_STANDING_CONFIG.storageKey, pose.orientation);
   } catch (e) {
     /* ignore localStorage write issues */
   }
 
-  return bestPose;
+  return pose;
 }
 
 function applyMascotViewerStandingPose(viewer, pose = mascotResolvedPose) {
@@ -2522,7 +2449,6 @@ function initHomeMascot() {
 
   function showFallback() {
     block.classList.add("is-fallback");
-    block.classList.remove("viewer-active");
     viewer.classList.remove("is-ready");
     fallback.classList.remove("is-hidden");
     setStatus("Превью персонажа", true);
@@ -2531,24 +2457,8 @@ function initHomeMascot() {
   function showViewer() {
     viewerLoaded = true;
     block.classList.remove("is-fallback");
-    block.classList.add("viewer-active");
     viewer.classList.add("is-ready");
     fallback.classList.add("is-hidden");
-
-    if (typeof viewer.dismissPoster === "function") {
-      try {
-        viewer.dismissPoster();
-      } catch (e) {
-        reportAppError("Не удалось скрыть poster model-viewer:", e);
-      }
-    }
-
-    try {
-      viewer.removeAttribute("poster");
-    } catch (e) {
-      /* ignore */
-    }
-
     setStatus("", true);
   }
 
