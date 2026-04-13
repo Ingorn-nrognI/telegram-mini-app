@@ -1130,11 +1130,6 @@ button {
   opacity: 1;
 }
 
-#bobrMascotBlock.viewer-active .mascot-fallback {
-  opacity: 0;
-  visibility: hidden;
-}
-
 .mascot-fallback {
   position: absolute;
   left: 50%;
@@ -1312,12 +1307,12 @@ button {
               loading="eager"
               camera-controls
               touch-action="pan-y"
-              orientation="0deg 28deg 90deg"
-              camera-target="0m 0.82m 0m"
-              camera-orbit="180deg 78deg 2.14m"
-              min-camera-orbit="auto 72deg 2.14m"
-              max-camera-orbit="auto 92deg 2.14m"
-              field-of-view="23deg"
+              orientation="-90deg 0deg 0deg"
+              camera-target="0m 1.02m 0m"
+              camera-orbit="180deg 78deg 4.70m"
+              min-camera-orbit="auto 74deg 4.70m"
+              max-camera-orbit="auto 92deg 4.70m"
+              field-of-view="30deg"
               shadow-intensity="0"
               exposure="1"
               environment-image="neutral"
@@ -1644,16 +1639,17 @@ let mascotInitStarted = false;
 let mascotResolvedPose = null;
 
 const MASCOT_VIEWER_STANDING_CONFIG = {
-  storageKey: "bobr_mascot_pose_v9_facefront",
+  storageKey: "bobr_mascot_pose_v9_fixed_upright",
   baseTheta: "180deg",
-  defaultOrientation: "0deg 28deg 90deg",
-  fallbackCameraTarget: "0m 0.82m 0m",
-  fallbackCameraOrbit: "180deg 78deg 2.14m",
-  fallbackMinCameraOrbit: "auto 72deg 2.14m",
-  fallbackMaxCameraOrbit: "auto 92deg 2.14m",
-  fallbackFieldOfView: "23deg",
+  safeVisibleOrientation: "-90deg 0deg 0deg",
+  defaultOrientation: "-90deg 0deg 0deg",
+  fallbackCameraTarget: "0m 1.02m 0m",
+  fallbackCameraOrbit: "180deg 78deg 4.70m",
+  fallbackMinCameraOrbit: "auto 74deg 4.70m",
+  fallbackMaxCameraOrbit: "auto 92deg 4.70m",
+  fallbackFieldOfView: "30deg",
   candidateOrientations: [
-    "0deg 28deg 90deg"
+    "-90deg 0deg 0deg"
   ]
 };
 
@@ -2365,10 +2361,10 @@ function buildMascotViewerPose(viewer, orientation) {
 
   const height = Math.max(dimensions.y, 0.7);
   const footprint = Math.max(dimensions.x, dimensions.z, 0.34);
-  const targetY = Math.max(height * 0.46, 0.34);
-  const radius = Math.max(height * 1.40, footprint * 2.25, 1.34);
-  const phi = 78;
-  const fieldOfView = Math.min(Math.max(22, 28 - height * 2.8), 24);
+  const targetY = Math.max(height * 0.42, 0.26);
+  const radius = Math.max(height * 1.34, footprint * 2.15, 1.28);
+  const phi = height > 1.45 ? 80 : 78;
+  const fieldOfView = Math.min(Math.max(18, 29 - height * 3.6), 25);
   const radiusText = `${radius.toFixed(2)}m`;
   const phiText = `${phi}deg`;
 
@@ -2376,8 +2372,8 @@ function buildMascotViewerPose(viewer, orientation) {
     orientation,
     cameraTarget: `0m ${targetY.toFixed(3)}m 0m`,
     cameraOrbit: `${MASCOT_VIEWER_STANDING_CONFIG.baseTheta} ${phiText} ${radiusText}`,
-    minCameraOrbit: `auto 72deg ${radiusText}`,
-    maxCameraOrbit: `auto 92deg ${radiusText}`,
+    minCameraOrbit: `auto ${phiText} ${radiusText}`,
+    maxCameraOrbit: `auto ${phiText} ${radiusText}`,
     fieldOfView: `${fieldOfView.toFixed(1)}deg`
   };
 }
@@ -2466,7 +2462,6 @@ function initHomeMascot() {
 
   function showFallback() {
     block.classList.add("is-fallback");
-    block.classList.remove("viewer-active");
     viewer.classList.remove("is-ready");
     fallback.classList.remove("is-hidden");
     setStatus("Превью персонажа", true);
@@ -2475,19 +2470,8 @@ function initHomeMascot() {
   function showViewer() {
     viewerLoaded = true;
     block.classList.remove("is-fallback");
-    block.classList.add("viewer-active");
     viewer.classList.add("is-ready");
     fallback.classList.add("is-hidden");
-    viewer.removeAttribute("poster");
-
-    if (typeof viewer.dismissPoster === "function") {
-      try {
-        viewer.dismissPoster();
-      } catch (e) {
-        reportAppError("Не удалось скрыть poster model-viewer:", e);
-      }
-    }
-
     setStatus("", true);
   }
 
