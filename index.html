@@ -1127,81 +1127,48 @@ button {
 }
 
 .scanner-panel-top {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 14px;
 }
 
-.scanner-pool-chip,
-.scanner-status-chip,
-.scanner-countdown-chip {
-  min-height: 34px;
+.scanner-panel-chip {
+  min-height: 38px;
   padding: 0 14px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.08);
   color: #e8f2ff;
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+  backdrop-filter: blur(10px);
 }
 
 .scanner-pool-chip {
   justify-content: flex-start;
-  min-width: 132px;
-  text-transform: none;
-  letter-spacing: 0.01em;
+  min-width: 0;
   color: #eaf4ff;
   box-shadow: inset 0 0 0 1px rgba(45, 225, 255, 0.08);
 }
 
-.scanner-status-chip.queued,
-.scanner-status-chip.waiting {
+.scanner-countdown-chip {
+  justify-content: center;
+  min-width: 86px;
+  justify-self: center;
+  letter-spacing: 0.08em;
+}
+
+.scanner-chance-chip {
+  justify-content: flex-end;
+  min-width: 0;
   color: #dff5ff;
   box-shadow: inset 0 0 0 1px rgba(45, 225, 255, 0.08);
-}
-
-.scanner-status-chip.locked,
-.scanner-status-chip.animating {
-  color: #fff4cb;
-  box-shadow: inset 0 0 0 1px rgba(255, 216, 107, 0.1);
-}
-
-.scanner-status-chip.finished {
-  color: #dbffe5;
-  box-shadow: inset 0 0 0 1px rgba(117, 245, 156, 0.1);
-}
-
-.scanner-mini-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.scanner-mini-stat {
-  padding: 12px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(17, 25, 58, 0.9), rgba(9, 13, 29, 0.96));
-  border: 1px solid rgba(255,255,255,0.06);
-}
-
-.scanner-mini-label {
-  font-size: 11px;
-  color: var(--text-dim);
-  margin-bottom: 6px;
-}
-
-.scanner-mini-value {
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
 }
 
 .scanner-canvas-shell {
@@ -1482,10 +1449,108 @@ button {
   font-weight: 800;
 }
 
+.scanner-screen-compact .screen-inner {
+  gap: 10px;
+}
+
+.scanner-screen-compact .mode-hero-card,
+.scanner-screen-compact .section-card,
+.scanner-screen-compact .banner-card {
+  padding: 14px;
+}
+
+.hero-topline,
+.section-kicker,
+.mode-kicker,
+.card-badge,
+.hero-text,
+.section-subtitle,
+.mode-subtitle,
+.info-card p,
+.banner-card p,
+.stat-label,
+.scanner-feature-badges,
+.scanner-grid-footnote,
+.scanner-summary-meta {
+  display: none !important;
+}
+
+.hero-actions,
+.mode-actions,
+.card-actions {
+  margin-top: 12px;
+}
+
+.scanner-arena-card {
+  padding: 10px !important;
+}
+
+.scanner-canvas-shell {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 26px !important;
+  margin: 0 !important;
+}
+
+.scanner-canvas-shell::before {
+  display: none !important;
+}
+
+#scannerGridCanvas {
+  aspect-ratio: 1 / 1.08;
+  border-radius: 26px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 16px 34px rgba(0, 0, 0, 0.3);
+}
+
+.scanner-overlay-badges {
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+}
+
+.scanner-result-banner {
+  margin-top: 10px;
+}
+
 @media (max-width: 420px) {
-  .scanner-mini-stats,
+  #scannerGridCanvas {
+    aspect-ratio: 1 / 1.05;
+    border-radius: 22px;
+  }
+
+  .scanner-arena-card {
+    padding: 8px !important;
+  }
+
+  .scanner-overlay-badges {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+  }
+}
+
+
+@media (max-width: 420px) {
   .scanner-control-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scanner-panel-top {
+    gap: 8px;
+  }
+
+  .scanner-panel-chip {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+
+  .scanner-countdown-chip {
+    min-width: 74px;
   }
 
   .scanner-overlay-badges {
@@ -1794,7 +1859,7 @@ button {
   </div>
 
 
-  <div id="scannerGridScreen" class="menu-screen">
+  <div id="scannerGridScreen" class="menu-screen scanner-screen-compact">
     <div class="screen-inner">
       <section class="mode-hero-card scanner-mode-hero">
         <div class="mode-kicker">🧬 Новый PvP режим</div>
@@ -1811,27 +1876,9 @@ button {
 
       <section class="section-card scanner-arena-card">
         <div class="scanner-panel-top">
-          <div id="scannerPoolChip" class="scanner-pool-chip">Пул: 0.00 TON</div>
-          <div id="scannerCountdownChip" class="scanner-countdown-chip">00:00</div>
-        </div>
-
-        <div class="scanner-mini-stats">
-          <div class="scanner-mini-stat">
-            <div class="scanner-mini-label">Банк</div>
-            <div id="scannerTotalPot" class="scanner-mini-value">0.00 TON</div>
-          </div>
-          <div class="scanner-mini-stat">
-            <div class="scanner-mini-label">Игроки</div>
-            <div id="scannerPlayersCount" class="scanner-mini-value">0</div>
-          </div>
-          <div class="scanner-mini-stat">
-            <div class="scanner-mini-label">Моя доля</div>
-            <div id="scannerMyShare" class="scanner-mini-value">0%</div>
-          </div>
-          <div class="scanner-mini-stat">
-            <div class="scanner-mini-label">Мой шанс</div>
-            <div id="scannerMyChance" class="scanner-mini-value">0%</div>
-          </div>
+          <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
+          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:00</div>
+          <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
         </div>
 
         <div class="scanner-canvas-shell">
@@ -1841,10 +1888,6 @@ button {
             <div class="scanner-overlay-badge" id="scannerGridMetaRight">RNG: ожидает раунд</div>
           </div>
         </div>
-
-        <p id="scannerGridFootnote" class="scanner-grid-footnote">
-          Выбери ставку и плотность раунда, затем запусти демонстрационный раунд. При подключении backend используй hook <span class="scanner-code">window.getScannerGridRoundResult(payload)</span>.
-        </p>
 
         <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
           <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
@@ -3531,10 +3574,7 @@ function renderScannerRound() {
   const myPlayer = getScannerMyPlayer();
   const countdown = document.getElementById("scannerCountdownChip");
   const poolChip = document.getElementById("scannerPoolChip");
-  const totalPot = document.getElementById("scannerTotalPot");
-  const playersCount = document.getElementById("scannerPlayersCount");
-  const myShare = document.getElementById("scannerMyShare");
-  const myChance = document.getElementById("scannerMyChance");
+  const chanceChip = document.getElementById("scannerChanceChip");
   const selectedStake = document.getElementById("scannerSelectedStakeValue");
   const selectedPopulation = document.getElementById("scannerSelectedPopulationValue");
   const cellsValue = document.getElementById("scannerCellsValue");
@@ -3545,12 +3585,10 @@ function renderScannerRound() {
   const resultTitle = document.getElementById("scannerResultTitle");
   const resultText = document.getElementById("scannerResultText");
 
+  const myChanceValue = formatPercent(((myPlayer?.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
   if (countdown) countdown.textContent = formatCountdownMs(scannerGridState.countdownMs || 0);
-  if (poolChip) poolChip.textContent = `Пул: ${formatTon(scannerGridState.totalPot || 0)}`;
-  if (totalPot) totalPot.textContent = formatTon(scannerGridState.totalPot || 0);
-  if (playersCount) playersCount.textContent = formatCompactNumber(scannerGridState.totalPlayers || 0);
-  if (myShare) myShare.textContent = formatPercent(myPlayer?.sharePercent || 0);
-  if (myChance) myChance.textContent = formatPercent(((myPlayer?.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
+  if (poolChip) poolChip.textContent = `Банк: ${formatTon(scannerGridState.totalPot || 0)}`;
+  if (chanceChip) chanceChip.textContent = `Мои шансы: ${myChanceValue}`;
   if (selectedStake) selectedStake.textContent = formatTon(scannerGridState.selectedStake);
   if (selectedPopulation) selectedPopulation.textContent = formatCompactNumber(scannerGridState.selectedPopulation);
   if (cellsValue) cellsValue.textContent = formatCompactNumber(SCANNER_GRID_TOTAL_CELLS);
