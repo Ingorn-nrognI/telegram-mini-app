@@ -1134,6 +1134,7 @@ button {
   margin-bottom: 14px;
 }
 
+.scanner-pool-chip,
 .scanner-status-chip,
 .scanner-countdown-chip {
   min-height: 34px;
@@ -1151,6 +1152,16 @@ button {
   text-transform: uppercase;
 }
 
+.scanner-pool-chip {
+  justify-content: flex-start;
+  min-width: 132px;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: #eaf4ff;
+  box-shadow: inset 0 0 0 1px rgba(45, 225, 255, 0.08);
+}
+
+.scanner-status-chip.queued,
 .scanner-status-chip.waiting {
   color: #dff5ff;
   box-shadow: inset 0 0 0 1px rgba(45, 225, 255, 0.08);
@@ -1800,7 +1811,7 @@ button {
 
       <section class="section-card scanner-arena-card">
         <div class="scanner-panel-top">
-          <div id="scannerStatusChip" class="scanner-status-chip">IDLE</div>
+          <div id="scannerPoolChip" class="scanner-pool-chip">Пул: 0.00 TON</div>
           <div id="scannerCountdownChip" class="scanner-countdown-chip">00:00</div>
         </div>
 
@@ -2740,10 +2751,11 @@ const SCANNER_GRID_COLS = 100;
 const SCANNER_GRID_ROWS = 100;
 const SCANNER_GRID_HISTORY_KEY = "scanner_grid_recent_rounds_v2";
 const SCANNER_STAKE_PRESETS = [2, 5, 10, 25, 50, 100, 250];
-const SCANNER_POPULATION_PRESETS = [12, 48, 150, 400, 1000];
+const SCANNER_POPULATION_PRESETS = [2, 12, 48, 150, 400, 1000];
 let scannerGridState = null;
 let scannerGridWaitingTimer = null;
 let scannerGridAnimationFrame = null;
+let scannerGridVisualFrame = null;
 let scannerGridCanvasCache = null;
 let scannerGridPath = null;
 let scannerGridResizeAttached = false;
@@ -2775,6 +2787,7 @@ function createScannerInitialState() {
     startedAt: null,
     endsAt: null,
     fullPlayers: [],
+    joinedCount: 0,
     players: [],
     totalPot: 0,
     totalPlayers: 0,
@@ -2799,6 +2812,7 @@ function createScannerInitialState() {
 function initializeScannerGridFeature() {
   scannerGridState = createScannerInitialState();
   renderScannerRound();
+  ensureScannerVisualLoop();
   if (!scannerGridResizeAttached) {
     window.addEventListener("resize", () => {
       if (currentMenuView === "scanner") {
@@ -2807,6 +2821,32 @@ function initializeScannerGridFeature() {
     });
     scannerGridResizeAttached = true;
   }
+}
+
+function ensureScannerVisualLoop() {
+  if (scannerGridVisualFrame) return;
+  const tick = () => {
+    scannerGridVisualFrame = requestAnimationFrame(tick);
+    if (currentMenuView === "scanner") {
+      renderScannerCanvas();
+    }
+  };
+  scannerGridVisualFrame = requestAnimationFrame(tick);
+}
+
+function stopScannerVisualLoop() {
+  if (scannerGridVisualFrame) {
+    cancelAnimationFrame(scannerGridVisualFrame);
+    scannerGridVisualFrame = null;
+  }
+}
+
+function hasScannerActiveArena() {
+  return Number(scannerGridState?.totalPlayers || 0) >= 2;
+}
+
+function getScannerArenaMode() {
+  return hasScannerActiveArena() ? "active" : "idle";
 }
 
 function hashString(value) {
@@ -3030,6 +3070,41 @@ function finalizeScannerPlayers(players, versionSeed) {
   };
 }
 
+function bootstrapScannerWaitingRound() {
+  stopScannerWaitingTimer();
+  stopScannerAnimation();
+  const roundId = `scanner_${Date.now()}`;
+  const fullPlayers = buildScannerRoundPlayers(scannerGridState.selectedPopulation, scannerGridState.selectedStake, roundId);
+  scannerGridState.roundId = roundId;
+  scannerGridState.fullPlayers = fullPlayers;
+  scannerGridState.joinedCount = 1;
+  scannerGridState.totalPlayers = 1;
+  scannerGridState.status = "queued";
+  scannerGridState.startedAt = null;
+  scannerGridState.endsAt = null;
+  scannerGridState.countdownMs = 0;
+  scannerGridState.winnerPlayerId = null;
+  scannerGridState.winningCellIndex = null;
+  scannerGridState.winningPlayer = null;
+  scannerGridState.lastResultSource = "ожидание 2-го игрока";
+  scannerGridState.pendingServerResult = null;
+  updateScannerVisiblePlayers(1);
+}
+
+function startScannerCountdown() {
+  if (!scannerGridState.fullPlayers.length) return;
+  stopScannerWaitingTimer();
+  scannerGridState.joinedCount = Math.max(2, scannerGridState.joinedCount || 0);
+  scannerGridState.status = "waiting";
+  scannerGridState.startedAt = Date.now();
+  scannerGridState.endsAt = scannerGridState.startedAt + 30000;
+  scannerGridState.countdownMs = 30000;
+  scannerGridState.lastResultSource = "таймер активен";
+  updateScannerVisiblePlayers(scannerGridState.joinedCount);
+  renderScannerRound();
+  scannerGridWaitingTimer = setInterval(stepScannerWaitingRound, 250);
+}
+
 function updateScannerVisiblePlayers(visibleCount) {
   if (!scannerGridState?.fullPlayers?.length) return;
   const slice = scannerGridState.fullPlayers.slice(0, Math.max(1, visibleCount));
@@ -3222,17 +3297,22 @@ async function lockScannerRound() {
 }
 
 function stepScannerWaitingRound() {
-  if (!scannerGridState.endsAt || !scannerGridState.fullPlayers.length) return;
+  if (!scannerGridState.endsAt || !scannerGridState.fullPlayers.length || scannerGridState.joinedCount < 2) return;
   const now = Date.now();
   const remaining = Math.max(0, scannerGridState.endsAt - now);
   scannerGridState.countdownMs = remaining;
   const duration = Math.max(1, scannerGridState.endsAt - scannerGridState.startedAt);
   const progress = 1 - remaining / duration;
-  const visibleCount = Math.min(
+  const targetCount = Math.min(
     scannerGridState.fullPlayers.length,
-    Math.max(1, Math.floor(progress * scannerGridState.fullPlayers.length))
+    Math.max(2, Math.floor(2 + progress * (scannerGridState.fullPlayers.length - 2)))
   );
-  updateScannerVisiblePlayers(visibleCount);
+
+  if (targetCount !== scannerGridState.joinedCount) {
+    scannerGridState.joinedCount = targetCount;
+    updateScannerVisiblePlayers(targetCount);
+  }
+
   renderScannerRound();
 
   if (remaining <= 0) {
@@ -3241,31 +3321,21 @@ function stepScannerWaitingRound() {
 }
 
 function startNewScannerRound() {
-  stopScannerWaitingTimer();
-  stopScannerAnimation();
-  const roundId = `scanner_${Date.now()}`;
-  const fullPlayers = buildScannerRoundPlayers(scannerGridState.selectedPopulation, scannerGridState.selectedStake, roundId);
-  scannerGridState.roundId = roundId;
-  scannerGridState.fullPlayers = fullPlayers;
-  scannerGridState.totalPlayers = fullPlayers.length;
-  scannerGridState.status = "waiting";
-  scannerGridState.startedAt = Date.now();
-  scannerGridState.endsAt = scannerGridState.startedAt + 12000;
-  scannerGridState.countdownMs = 12000;
-  scannerGridState.winnerPlayerId = null;
-  scannerGridState.winningCellIndex = null;
-  scannerGridState.winningPlayer = null;
-  scannerGridState.lastResultSource = "pending";
-  scannerGridState.pendingServerResult = null;
-  updateScannerVisiblePlayers(1);
+  bootstrapScannerWaitingRound();
   renderScannerRound();
-  scannerGridWaitingTimer = setInterval(stepScannerWaitingRound, 250);
 }
 
 function startOrJoinScannerRound(event) {
   if (event) event.stopPropagation();
+
   if (!scannerGridState || scannerGridState.status === "idle" || scannerGridState.status === "finished") {
     startNewScannerRound();
+    return;
+  }
+
+  if (scannerGridState.status === "queued") {
+    scannerGridState.joinedCount = 2;
+    startScannerCountdown();
     return;
   }
 
@@ -3273,7 +3343,8 @@ function startOrJoinScannerRound(event) {
     const myPlayer = scannerGridState.fullPlayers.find((player) => player.id === getCurrentPlayer().id);
     if (myPlayer) {
       myPlayer.stake = Number((myPlayer.stake + scannerGridState.selectedStake).toFixed(2));
-      stepScannerWaitingRound();
+      updateScannerVisiblePlayers(scannerGridState.joinedCount);
+      renderScannerRound();
     }
   }
 }
@@ -3391,8 +3462,8 @@ function renderScannerParticipants() {
   if (!meta || !list) return;
 
   if (!scannerGridState.players.length) {
-    meta.textContent = "Пока нет активного раунда.";
-    list.innerHTML = `<div class="scanner-empty">Запусти раунд, и здесь появятся участники, их доли банка, клетки и текущий шанс.</div>`;
+    meta.textContent = "Пока в арене нет игроков.";
+    list.innerHTML = `<div class="scanner-empty">Когда в раунд зайдёт первый игрок, здесь появятся участники. До подключения второго игрока таймер над ареной останется 00:00.</div>`;
     return;
   }
 
@@ -3438,9 +3509,14 @@ function renderScannerRecentList() {
 
 function renderScannerButtons() {
   const myPlayer = getScannerMyPlayer();
-  const joinText = scannerGridState.status === "waiting" && myPlayer
-    ? `Добавить ${formatTon(scannerGridState.selectedStake)}`
-    : "Войти в раунд";
+  let joinText = "Войти в раунд";
+
+  if (scannerGridState.status === "queued") {
+    joinText = "Подключить 2-го игрока";
+  } else if (scannerGridState.status === "waiting" && myPlayer) {
+    joinText = `Добавить ${formatTon(scannerGridState.selectedStake)}`;
+  }
+
   ["scannerJoinButton", "scannerJoinButtonHero"].forEach((id) => {
     const button = document.getElementById(id);
     if (button) button.textContent = joinText;
@@ -3454,7 +3530,7 @@ function renderScannerRound() {
 
   const myPlayer = getScannerMyPlayer();
   const countdown = document.getElementById("scannerCountdownChip");
-  const statusChip = document.getElementById("scannerStatusChip");
+  const poolChip = document.getElementById("scannerPoolChip");
   const totalPot = document.getElementById("scannerTotalPot");
   const playersCount = document.getElementById("scannerPlayersCount");
   const myShare = document.getElementById("scannerMyShare");
@@ -3470,10 +3546,7 @@ function renderScannerRound() {
   const resultText = document.getElementById("scannerResultText");
 
   if (countdown) countdown.textContent = formatCountdownMs(scannerGridState.countdownMs || 0);
-  if (statusChip) {
-    statusChip.textContent = ({ idle: "idle", waiting: "waiting", locked: "locked", animating: "scan", finished: "result" })[scannerGridState.status] || "idle";
-    statusChip.className = `scanner-status-chip ${scannerGridState.status}`;
-  }
+  if (poolChip) poolChip.textContent = `Пул: ${formatTon(scannerGridState.totalPot || 0)}`;
   if (totalPot) totalPot.textContent = formatTon(scannerGridState.totalPot || 0);
   if (playersCount) playersCount.textContent = formatCompactNumber(scannerGridState.totalPlayers || 0);
   if (myShare) myShare.textContent = formatPercent(myPlayer?.sharePercent || 0);
@@ -3481,14 +3554,16 @@ function renderScannerRound() {
   if (selectedStake) selectedStake.textContent = formatTon(scannerGridState.selectedStake);
   if (selectedPopulation) selectedPopulation.textContent = formatCompactNumber(scannerGridState.selectedPopulation);
   if (cellsValue) cellsValue.textContent = formatCompactNumber(SCANNER_GRID_TOTAL_CELLS);
-  if (metaLeft) metaLeft.textContent = `Сетка: ${SCANNER_GRID_COLS} × ${SCANNER_GRID_ROWS}`;
-  if (metaRight) metaRight.textContent = `RNG: ${scannerGridState.lastResultSource || "ожидание"}`;
+  if (metaLeft) metaLeft.textContent = getScannerArenaMode() === "idle" ? "Арена: ожидание игроков" : `Сетка: ${SCANNER_GRID_COLS} × ${SCANNER_GRID_ROWS}`;
+  if (metaRight) metaRight.textContent = ({ idle: "Лазер в ожидании", queued: "1/2 игрока", waiting: "Таймер 30 сек", locked: "Результат готов", animating: "Идёт сканирование", finished: `Победитель: ${scannerGridState.winningPlayer?.name || "—"}` })[scannerGridState.status] || "ожидание";
 
   if (footnote) {
     if (scannerGridState.status === "idle") {
-      footnote.innerHTML = `Выбери ставку и плотность раунда, затем запусти демонстрационный раунд. Для production используй hook <span class="scanner-code">window.getScannerGridRoundResult(payload)</span>.`;
+      footnote.innerHTML = `Пока в арене нет игроков: экран чёрный, лазер двигается в idle-режиме, таймер стоит на <span class="scanner-code">00:00</span>. Для production используй hook <span class="scanner-code">window.getScannerGridRoundResult(payload)</span>.`;
+    } else if (scannerGridState.status === "queued") {
+      footnote.textContent = "В арене один игрок. Таймер ещё не идёт и показывает 00:00. Как только подключится 2-й игрок, запустится отсчёт 30 секунд.";
     } else if (scannerGridState.status === "waiting") {
-      footnote.textContent = "Сетка постепенно заполняется по мере входа игроков. К моменту блокировки у каждого участника будет доля клеток, соответствующая его ставке.";
+      footnote.textContent = "В арене уже минимум 2 игрока. Идёт 30-секундный отсчёт до запуска, а новые участники продолжают подключаться в раунд.";
     } else if (scannerGridState.status === "locked") {
       footnote.textContent = "Раунд заблокирован. Победная ячейка уже определена, фронт готовит анимацию сканера.";
     } else if (scannerGridState.status === "animating") {
@@ -3514,7 +3589,7 @@ function renderScannerRound() {
   renderScannerButtons();
   renderScannerParticipants();
   renderScannerRecentList();
-  renderScannerCanvas(scannerGridState.animation.active ? undefined : 1);
+  renderScannerCanvas(scannerGridState.animation.active ? undefined : (getScannerArenaMode() === "idle" ? undefined : 1));
 }
 
 function getScannerCanvasMetrics() {
@@ -3523,8 +3598,10 @@ function getScannerCanvasMetrics() {
   const rect = canvas.getBoundingClientRect();
   const size = Math.max(240, Math.floor(rect.width || 320));
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  canvas.width = size * dpr;
-  canvas.height = size * dpr;
+  if (canvas.width !== size * dpr || canvas.height !== size * dpr) {
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+  }
   const ctx = canvas.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return { canvas, ctx, size, dpr, cellSize: size / SCANNER_GRID_COLS };
@@ -3560,13 +3637,62 @@ function renderScannerCanvas(forcedProgress) {
   const metrics = getScannerCanvasMetrics();
   if (!metrics) return;
   const { ctx, size, cellSize } = metrics;
+  const arenaMode = getScannerArenaMode();
+  const now = performance.now();
 
-  if (!scannerGridCache || scannerGridCache.version !== scannerGridState.gridVersion || scannerGridCache.size !== size) {
+  if (arenaMode === "active" && (!scannerGridCache || scannerGridCache.version !== scannerGridState.gridVersion || scannerGridCache.size !== size)) {
     scannerGridCanvasCache = buildScannerCanvasCache(size);
     scannerGridCache = { version: scannerGridState.gridVersion, size, canvas: scannerGridCanvasCache };
   }
 
   ctx.clearRect(0, 0, size, size);
+
+  if (arenaMode === "idle") {
+    const gradient = ctx.createLinearGradient(0, 0, 0, size);
+    gradient.addColorStop(0, "#02050c");
+    gradient.addColorStop(1, "#050913");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+
+    const idleT = now / 1000;
+    const cx = size * (0.5 + Math.sin(idleT * 0.55) * 0.24);
+    const cy = size * (0.5 + Math.cos(idleT * 0.82) * 0.22);
+    const angle = Math.sin(idleT * 0.47) * Math.PI;
+    const beamLength = size * 1.65;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.shadowBlur = 24;
+    ctx.shadowColor = "rgba(45, 225, 255, 0.44)";
+    ctx.strokeStyle = "rgba(45, 225, 255, 0.78)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-beamLength / 2, 0);
+    ctx.lineTo(beamLength / 2, 0);
+    ctx.stroke();
+    ctx.shadowBlur = 36;
+    ctx.strokeStyle = "rgba(255,255,255,0.52)";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(-beamLength / 2, 0);
+    ctx.lineTo(beamLength / 2, 0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,0.04)";
+    ctx.font = `${Math.max(12, size * 0.038)}px Arial`;
+    ctx.textAlign = "center";
+    ctx.fillText(scannerGridState.totalPlayers === 1 ? "Ожидание 2-го игрока" : "Арена пуста", size / 2, size - 24);
+    ctx.restore();
+    return;
+  }
+
   if (scannerGridCache?.canvas) {
     ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
   } else {
@@ -3605,8 +3731,6 @@ function renderScannerCanvas(forcedProgress) {
     const px = sample.x * size;
     const py = sample.y * size;
     const beamLength = size * 1.6;
-    const dx = Math.cos(sample.angle);
-    const dy = Math.sin(sample.angle);
 
     ctx.save();
     ctx.translate(px, py);
@@ -3659,6 +3783,7 @@ function enterScannerGridMode(event) {
   closeHistoryPanel({ preserveNav: true });
   closeLeaderboard();
   closeRooms();
+  ensureScannerVisualLoop();
   setMenuView("scanner");
   requestAnimationFrame(() => renderScannerRound());
 }
