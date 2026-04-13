@@ -999,9 +999,173 @@ button {
 
 .home-top-spacer {
   width: 100%;
-  min-height: calc(100vh - var(--safe-top) - var(--safe-bottom) - 92px - 118px - 44px);
-  min-height: calc(100svh - var(--safe-top) - var(--safe-bottom) - 92px - 118px - 44px);
+  min-height: 286px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 30px;
+  padding: 8px 0 0;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(100, 167, 255, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(14, 24, 54, 0.34), rgba(8, 12, 28, 0.04));
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 18px 36px rgba(0, 0, 0, 0.16);
+}
+
+.home-top-spacer::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  transform: translateX(-50%);
+  width: 78%;
+  height: 180px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(84, 167, 255, 0.22), rgba(84, 167, 255, 0.08) 38%, transparent 72%);
+  filter: blur(18px);
   pointer-events: none;
+}
+
+.home-top-spacer::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: 68%;
+  height: 38px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(52, 104, 255, 0.34), rgba(52, 104, 255, 0.12) 55%, transparent 78%);
+  filter: blur(12px);
+  pointer-events: none;
+}
+
+.mascot-aura {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(26px);
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.mascot-aura-left {
+  width: 110px;
+  height: 110px;
+  left: 8%;
+  top: 74px;
+  background: rgba(58, 133, 255, 0.18);
+}
+
+.mascot-aura-right {
+  width: 96px;
+  height: 96px;
+  right: 10%;
+  top: 96px;
+  background: rgba(58, 209, 255, 0.14);
+}
+
+.mascot-stage {
+  position: relative;
+  width: 100%;
+  height: 270px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  touch-action: pan-y;
+}
+
+.mascot-viewer-shell {
+  position: relative;
+  width: min(100%, 420px);
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.mascot-viewer-shell::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  width: 62%;
+  height: 24px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.12) 58%, transparent 82%);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.mascot-viewer {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  background: transparent;
+  pointer-events: none;
+  user-select: none;
+  --poster-color: transparent;
+  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.28));
+}
+
+.mascot-viewer.is-ready {
+  opacity: 1;
+}
+
+.mascot-fallback {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(100%, 330px);
+  max-width: 88%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.98;
+  transition: opacity 0.24s ease, visibility 0.24s ease;
+  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.28));
+}
+
+.mascot-fallback.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.mascot-status {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 19, 43, 0.74);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #d8e6ff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.mascot-status.is-hidden {
+  opacity: 0;
+  visibility: hidden;
 }
 
 @media (max-width: 420px) {
@@ -1037,8 +1201,30 @@ button {
   }
 
   .home-top-spacer {
-    min-height: calc(100vh - var(--safe-top) - var(--safe-bottom) - 92px - 118px - 36px);
-    min-height: calc(100svh - var(--safe-top) - var(--safe-bottom) - 92px - 118px - 36px);
+    min-height: 246px;
+    padding-top: 0;
+  }
+
+  .mascot-stage {
+    height: 232px;
+  }
+
+  .mascot-aura-left {
+    left: 2%;
+    top: 72px;
+  }
+
+  .mascot-aura-right {
+    right: 3%;
+    top: 94px;
+  }
+
+  .mascot-fallback {
+    max-width: 92%;
+  }
+
+  .mascot-status {
+    font-size: 11px;
   }
 
   .stats-grid {
@@ -1093,7 +1279,45 @@ button {
   <div id="homeScreen" class="menu-screen active">
     <div class="screen-inner">
 
-      <div class="home-top-spacer" aria-hidden="true"></div>
+      <div id="bobrMascotBlock" class="home-top-spacer" aria-label="Персонаж Bobr mascot">
+        <div class="mascot-aura mascot-aura-left"></div>
+        <div class="mascot-aura mascot-aura-right"></div>
+
+        <div class="mascot-stage">
+          <div class="mascot-viewer-shell">
+            <model-viewer
+              id="bobrMascotViewer"
+              class="mascot-viewer"
+              src="./assets/models/bobr_mascot_lowpoly.glb"
+              poster="./assets/models/bobr_mascot_preview.png"
+              alt="Low-poly 3D-модель персонажа Bobr"
+              reveal="auto"
+              loading="eager"
+              orientation="-90deg 0deg 0deg"
+              camera-target="0m 1.02m 0m"
+              camera-orbit="180deg 78deg 2.45m"
+              field-of-view="24deg"
+              shadow-intensity="0"
+              exposure="1"
+              environment-image="neutral"
+              interaction-prompt="none"
+              disable-zoom>
+            </model-viewer>
+
+            <img
+              id="bobrMascotFallback"
+              class="mascot-fallback"
+              src="./assets/models/bobr_mascot_preview.png"
+              alt="Превью персонажа Bobr"
+              loading="eager"
+              decoding="async"
+              draggable="false"
+            >
+
+            <div id="bobrMascotStatus" class="mascot-status">Загрузка персонажа...</div>
+          </div>
+        </div>
+      </div>
 
       <section class="hero-card">
         <div class="hero-topline">⚡ Новое событие</div>
@@ -1371,6 +1595,7 @@ button {
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyCxJb69UOCu38RvSbJVnf6jtD8VYDVHPD4",
@@ -1394,6 +1619,7 @@ let historyLoading = false;
 let expandedHistoryMatchId = null;
 let currentMenuView = "home";
 let currentBottomNav = "games";
+let mascotInitStarted = false;
 
 function shouldIgnoreExternalConsoleError(message) {
   const text = String(message || "").toLowerCase();
@@ -2053,9 +2279,90 @@ function handleModalBackdropClick(modalId, event) {
   }
 }
 
+function initHomeMascot() {
+  if (mascotInitStarted) return;
+  mascotInitStarted = true;
+
+  const block = document.getElementById("bobrMascotBlock");
+  const viewer = document.getElementById("bobrMascotViewer");
+  const fallback = document.getElementById("bobrMascotFallback");
+  const status = document.getElementById("bobrMascotStatus");
+
+  if (!block || !viewer || !fallback || !status) return;
+
+  let viewerLoaded = false;
+  let failTimer = null;
+
+  function setStatus(text, hidden = false) {
+    status.textContent = text;
+    status.classList.toggle("is-hidden", hidden);
+  }
+
+  function showFallback() {
+    block.classList.add("is-fallback");
+    viewer.classList.remove("is-ready");
+    fallback.classList.remove("is-hidden");
+    setStatus("Превью персонажа", true);
+  }
+
+  function showViewer() {
+    viewerLoaded = true;
+    block.classList.remove("is-fallback");
+    viewer.classList.add("is-ready");
+    fallback.classList.add("is-hidden");
+    setStatus("", true);
+  }
+
+  function clearFailTimer() {
+    if (failTimer) {
+      clearTimeout(failTimer);
+      failTimer = null;
+    }
+  }
+
+  fallback.classList.remove("is-hidden");
+  setStatus("Загрузка персонажа...", false);
+
+  failTimer = setTimeout(() => {
+    if (!viewerLoaded) {
+      showFallback();
+    }
+  }, 5000);
+
+  viewer.addEventListener("load", () => {
+    clearFailTimer();
+    showViewer();
+  });
+
+  viewer.addEventListener("error", () => {
+    clearFailTimer();
+    showFallback();
+  });
+
+  if (!window.customElements || typeof window.customElements.whenDefined !== "function") {
+    clearFailTimer();
+    showFallback();
+    return;
+  }
+
+  window.customElements.whenDefined("model-viewer")
+    .then(() => {
+      if (viewer.loaded) {
+        clearFailTimer();
+        showViewer();
+      }
+    })
+    .catch((e) => {
+      reportAppError("Ошибка инициализации model-viewer:", e);
+      clearFailTimer();
+      showFallback();
+    });
+}
+
 renderTopProfile();
 setMenuView("home");
 setActiveBottomNav("games");
+initHomeMascot();
 
 window.toggleModePopup = toggleModePopup;
 window.enterBobrRunMode = enterBobrRunMode;
@@ -2076,6 +2383,7 @@ window.showGameUnavailable = showGameUnavailable;
 window.handleBottomNav = handleBottomNav;
 window.handleMenuBackgroundClick = handleMenuBackgroundClick;
 window.handleModalBackdropClick = handleModalBackdropClick;
+window.initHomeMascot = initHomeMascot;
 </script>
 </body>
 </html>
