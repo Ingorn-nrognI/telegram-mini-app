@@ -1130,6 +1130,11 @@ button {
   opacity: 1;
 }
 
+#bobrMascotBlock.viewer-active .mascot-fallback {
+  opacity: 0;
+  visibility: hidden;
+}
+
 .mascot-fallback {
   position: absolute;
   left: 50%;
@@ -1307,11 +1312,11 @@ button {
               loading="eager"
               camera-controls
               touch-action="pan-y"
-              orientation="-90deg 0deg 90deg"
-              camera-target="0m 0.72m 0m"
-              camera-orbit="180deg 78deg 2.06m"
-              min-camera-orbit="auto 78deg 2.06m"
-              max-camera-orbit="auto 78deg 2.06m"
+              orientation="0deg 28deg 90deg"
+              camera-target="0m 0.82m 0m"
+              camera-orbit="180deg 78deg 2.14m"
+              min-camera-orbit="auto 72deg 2.14m"
+              max-camera-orbit="auto 92deg 2.14m"
               field-of-view="23deg"
               shadow-intensity="0"
               exposure="1"
@@ -1639,18 +1644,16 @@ let mascotInitStarted = false;
 let mascotResolvedPose = null;
 
 const MASCOT_VIEWER_STANDING_CONFIG = {
-  storageKey: "bobr_mascot_pose_v9_locked",
+  storageKey: "bobr_mascot_pose_v9_facefront",
   baseTheta: "180deg",
-  lockedOrientation: "0deg 0deg 90deg",
-  safeVisibleOrientation: "0deg 0deg 90deg",
-  defaultOrientation: "0deg 0deg 90deg",
-  fallbackCameraTarget: "0m 0.76m 0m",
-  fallbackCameraOrbit: "180deg 78deg 2.04m",
-  fallbackMinCameraOrbit: "auto 74deg 2.04m",
-  fallbackMaxCameraOrbit: "auto 92deg 2.04m",
+  defaultOrientation: "0deg 28deg 90deg",
+  fallbackCameraTarget: "0m 0.82m 0m",
+  fallbackCameraOrbit: "180deg 78deg 2.14m",
+  fallbackMinCameraOrbit: "auto 72deg 2.14m",
+  fallbackMaxCameraOrbit: "auto 92deg 2.14m",
   fallbackFieldOfView: "23deg",
   candidateOrientations: [
-    "0deg 0deg 90deg"
+    "0deg 28deg 90deg"
   ]
 };
 
@@ -2346,14 +2349,36 @@ function getMascotViewerDimensions(viewer) {
   }
 }
 
-function buildMascotViewerPose(viewer, orientation = MASCOT_VIEWER_STANDING_CONFIG.lockedOrientation) {
+function buildMascotViewerPose(viewer, orientation) {
+  const dimensions = getMascotViewerDimensions(viewer);
+
+  if (!dimensions) {
+    return {
+      orientation,
+      cameraTarget: MASCOT_VIEWER_STANDING_CONFIG.fallbackCameraTarget,
+      cameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackCameraOrbit,
+      minCameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackMinCameraOrbit,
+      maxCameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackMaxCameraOrbit,
+      fieldOfView: MASCOT_VIEWER_STANDING_CONFIG.fallbackFieldOfView
+    };
+  }
+
+  const height = Math.max(dimensions.y, 0.7);
+  const footprint = Math.max(dimensions.x, dimensions.z, 0.34);
+  const targetY = Math.max(height * 0.46, 0.34);
+  const radius = Math.max(height * 1.40, footprint * 2.25, 1.34);
+  const phi = 78;
+  const fieldOfView = Math.min(Math.max(22, 28 - height * 2.8), 24);
+  const radiusText = `${radius.toFixed(2)}m`;
+  const phiText = `${phi}deg`;
+
   return {
     orientation,
-    cameraTarget: MASCOT_VIEWER_STANDING_CONFIG.fallbackCameraTarget,
-    cameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackCameraOrbit,
-    minCameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackMinCameraOrbit,
-    maxCameraOrbit: MASCOT_VIEWER_STANDING_CONFIG.fallbackMaxCameraOrbit,
-    fieldOfView: MASCOT_VIEWER_STANDING_CONFIG.fallbackFieldOfView
+    cameraTarget: `0m ${targetY.toFixed(3)}m 0m`,
+    cameraOrbit: `${MASCOT_VIEWER_STANDING_CONFIG.baseTheta} ${phiText} ${radiusText}`,
+    minCameraOrbit: `auto 72deg ${radiusText}`,
+    maxCameraOrbit: `auto 92deg ${radiusText}`,
+    fieldOfView: `${fieldOfView.toFixed(1)}deg`
   };
 }
 
@@ -2364,15 +2389,7 @@ function scoreMascotOrientation(dimensions) {
 }
 
 async function resolveMascotViewerStandingPose(viewer) {
-  const pose = buildMascotViewerPose(viewer, MASCOT_VIEWER_STANDING_CONFIG.lockedOrientation);
-
-  try {
-    localStorage.setItem(MASCOT_VIEWER_STANDING_CONFIG.storageKey, pose.orientation);
-  } catch (e) {
-    /* ignore localStorage write issues */
-  }
-
-  return pose;
+  return buildMascotViewerPose(viewer, MASCOT_VIEWER_STANDING_CONFIG.defaultOrientation);
 }
 
 function applyMascotViewerStandingPose(viewer, pose = mascotResolvedPose) {
@@ -2449,6 +2466,7 @@ function initHomeMascot() {
 
   function showFallback() {
     block.classList.add("is-fallback");
+    block.classList.remove("viewer-active");
     viewer.classList.remove("is-ready");
     fallback.classList.remove("is-hidden");
     setStatus("Превью персонажа", true);
@@ -2457,8 +2475,19 @@ function initHomeMascot() {
   function showViewer() {
     viewerLoaded = true;
     block.classList.remove("is-fallback");
+    block.classList.add("viewer-active");
     viewer.classList.add("is-ready");
     fallback.classList.add("is-hidden");
+    viewer.removeAttribute("poster");
+
+    if (typeof viewer.dismissPoster === "function") {
+      try {
+        viewer.dismissPoster();
+      } catch (e) {
+        reportAppError("Не удалось скрыть poster model-viewer:", e);
+      }
+    }
+
     setStatus("", true);
   }
 
