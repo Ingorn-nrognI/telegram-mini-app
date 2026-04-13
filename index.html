@@ -1131,7 +1131,8 @@ button {
 }
 
 #bobrMascotBlock.viewer-active .mascot-fallback {
-  opacity: 0.12;
+  opacity: 0;
+  visibility: hidden;
 }
 
 .mascot-fallback {
@@ -1311,12 +1312,12 @@ button {
               loading="eager"
               camera-controls
               touch-action="pan-y"
-              orientation="0deg 0deg 90deg"
-              camera-target="0m 0.76m 0m"
-              camera-orbit="180deg 78deg 2.04m"
-              min-camera-orbit="auto 74deg 2.04m"
-              max-camera-orbit="auto 92deg 2.04m"
-              field-of-view="23deg"
+              orientation="-90deg 0deg 90deg"
+              camera-target="0m 1.02m 0m"
+              camera-orbit="205deg 78deg 4.35m"
+              min-camera-orbit="auto 74deg 4.35m"
+              max-camera-orbit="auto 92deg 4.35m"
+              field-of-view="30deg"
               shadow-intensity="0"
               exposure="1"
               environment-image="neutral"
@@ -1643,24 +1644,24 @@ let mascotInitStarted = false;
 let mascotResolvedPose = null;
 
 const MASCOT_VIEWER_STANDING_CONFIG = {
-  storageKey: "bobr_mascot_pose_v7_safe",
-  baseTheta: "180deg",
+  storageKey: "bobr_mascot_pose_v8_glb_fix",
+  baseTheta: "205deg",
   safeVisibleOrientation: "-90deg 0deg 90deg",
-  defaultOrientation: "0deg 0deg 90deg",
-  fallbackCameraTarget: "0m 0.76m 0m",
-  fallbackCameraOrbit: "180deg 78deg 2.04m",
-  fallbackMinCameraOrbit: "auto 74deg 2.04m",
-  fallbackMaxCameraOrbit: "auto 92deg 2.04m",
-  fallbackFieldOfView: "23deg",
+  defaultOrientation: "-90deg 0deg 90deg",
+  fallbackCameraTarget: "0m 1.02m 0m",
+  fallbackCameraOrbit: "205deg 78deg 4.35m",
+  fallbackMinCameraOrbit: "auto 74deg 4.35m",
+  fallbackMaxCameraOrbit: "auto 92deg 4.35m",
+  fallbackFieldOfView: "30deg",
   candidateOrientations: [
+    "-90deg 0deg 90deg",
+    "90deg 0deg 90deg",
+    "-90deg 0deg 0deg",
+    "90deg 0deg 0deg",
     "0deg 0deg 90deg",
     "0deg 180deg 90deg",
     "0deg 90deg 90deg",
-    "0deg -90deg 90deg",
-    "-90deg 0deg 90deg",
-    "90deg 0deg 90deg",
-    "0deg 0deg 0deg",
-    "0deg 180deg 0deg"
+    "0deg -90deg 90deg"
   ]
 };
 
@@ -2370,21 +2371,21 @@ function buildMascotViewerPose(viewer, orientation) {
     };
   }
 
-  const height = Math.max(dimensions.y, 0.7);
-  const footprint = Math.max(dimensions.x, dimensions.z, 0.34);
-  const targetY = Math.max(height * 0.42, 0.26);
-  const radius = Math.max(height * 1.34, footprint * 2.15, 1.28);
-  const phi = height > 1.45 ? 80 : 78;
-  const fieldOfView = Math.min(Math.max(21, 29 - height * 3.6), 24);
-  const radiusText = `${radius.toFixed(2)}m`;
-  const phiText = `${phi}deg`;
+  const height = Math.max(dimensions.y, dimensions.z, 1.8);
+  const footprint = Math.max(Math.min(dimensions.x, dimensions.z), 0.7);
+  const targetY = Math.max(Math.min(height * 0.42, 1.08), 0.92);
+  const radius = Math.max(height * 1.72, footprint * 3.1, 4.10);
+  const phi = 78;
+  const minPhi = 74;
+  const maxPhi = 92;
+  const fieldOfView = Math.max(Math.min(30, 32 - height * 0.45), 28);
 
   return {
     orientation,
     cameraTarget: `0m ${targetY.toFixed(3)}m 0m`,
-    cameraOrbit: `${MASCOT_VIEWER_STANDING_CONFIG.baseTheta} ${phiText} ${radiusText}`,
-    minCameraOrbit: `auto ${Math.max(phi - 4, 72)}deg ${radiusText}`,
-    maxCameraOrbit: `auto ${Math.min(phi + 12, 92)}deg ${radiusText}`,
+    cameraOrbit: `${MASCOT_VIEWER_STANDING_CONFIG.baseTheta} ${phi}deg ${radius.toFixed(2)}m`,
+    minCameraOrbit: `auto ${minPhi}deg ${radius.toFixed(2)}m`,
+    maxCameraOrbit: `auto ${maxPhi}deg ${radius.toFixed(2)}m`,
     fieldOfView: `${fieldOfView.toFixed(1)}deg`
   };
 }
@@ -2551,7 +2552,16 @@ function initHomeMascot() {
     block.classList.remove("is-fallback");
     block.classList.add("viewer-active");
     viewer.classList.add("is-ready");
-    fallback.classList.remove("is-hidden");
+    fallback.classList.add("is-hidden");
+
+    if (typeof viewer.dismissPoster === "function") {
+      try {
+        viewer.dismissPoster();
+      } catch (e) {
+        reportAppError("Не удалось скрыть poster model-viewer:", e);
+      }
+    }
+
     setStatus("", true);
   }
 
