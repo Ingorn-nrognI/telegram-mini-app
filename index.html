@@ -999,7 +999,7 @@ button {
 
 .home-top-spacer {
   width: 100%;
-  min-height: 286px;
+  min-height: 292px;
   position: relative;
   display: flex;
   align-items: flex-end;
@@ -1071,10 +1071,11 @@ button {
 .mascot-stage {
   position: relative;
   width: 100%;
-  height: 270px;
+  height: 278px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
+  padding-top: 8px;
   touch-action: pan-y;
 }
 
@@ -1083,10 +1084,10 @@ button {
   width: min(100%, 420px);
   height: 100%;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   overflow: visible;
-  padding-bottom: 6px;
+  padding: 0 0 12px;
   touch-action: pan-y;
 }
 
@@ -1117,8 +1118,8 @@ button {
   cursor: grab;
   -webkit-user-drag: none;
   --poster-color: transparent;
-  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.28));
-  transform: translateY(8px);
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.30));
+  transform: translateY(-12px) scale(1.03);
   transform-origin: center bottom;
 }
 
@@ -1133,7 +1134,7 @@ button {
 .mascot-fallback {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: 10px;
   transform: translateX(-50%);
   width: min(100%, 330px);
   max-width: 88%;
@@ -1144,7 +1145,7 @@ button {
   user-select: none;
   opacity: 0.98;
   transition: opacity 0.24s ease, visibility 0.24s ease;
-  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.28));
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.30));
 }
 
 .mascot-fallback.is-hidden {
@@ -1213,12 +1214,13 @@ button {
   }
 
   .home-top-spacer {
-    min-height: 246px;
+    min-height: 252px;
     padding-top: 0;
   }
 
   .mascot-stage {
-    height: 232px;
+    height: 238px;
+    padding-top: 6px;
   }
 
   .mascot-aura-left {
@@ -1307,12 +1309,12 @@ button {
               loading="eager"
               camera-controls
               touch-action="pan-y"
-              orientation="-90deg 0deg 90deg"
-              camera-target="0m 0.72m 0m"
-              camera-orbit="180deg 78deg 2.06m"
-              min-camera-orbit="auto 78deg 2.06m"
-              max-camera-orbit="auto 78deg 2.06m"
-              field-of-view="23deg"
+              orientation="0deg 180deg 0deg"
+              camera-target="0m 0.94m 0m"
+              camera-orbit="180deg 88deg 1.82m"
+              min-camera-orbit="auto 80deg 1.82m"
+              max-camera-orbit="auto 102deg 1.82m"
+              field-of-view="21deg"
               shadow-intensity="0"
               exposure="1"
               environment-image="neutral"
@@ -1639,16 +1641,25 @@ let mascotInitStarted = false;
 let mascotResolvedPose = null;
 
 const MASCOT_VIEWER_STANDING_CONFIG = {
-  storageKey: "bobr_mascot_pose_v5",
+  storageKey: "bobr_mascot_pose_v6",
   baseTheta: "180deg",
-  defaultOrientation: "-90deg 0deg 90deg",
-  fallbackCameraTarget: "0m 0.72m 0m",
-  fallbackCameraOrbit: "180deg 78deg 2.06m",
-  fallbackMinCameraOrbit: "auto 78deg 2.06m",
-  fallbackMaxCameraOrbit: "auto 78deg 2.06m",
-  fallbackFieldOfView: "23deg",
+  defaultOrientation: "0deg 180deg 0deg",
+  fallbackCameraTarget: "0m 0.94m 0m",
+  fallbackCameraOrbit: "180deg 88deg 1.82m",
+  fallbackMinCameraOrbit: "auto 80deg 1.82m",
+  fallbackMaxCameraOrbit: "auto 102deg 1.82m",
+  fallbackFieldOfView: "21deg",
   candidateOrientations: [
-    "-90deg 0deg 90deg"
+    "0deg 180deg 0deg",
+    "0deg 90deg 0deg",
+    "0deg 0deg 0deg",
+    "0deg -90deg 0deg",
+    "0deg 180deg 90deg",
+    "0deg 180deg -90deg",
+    "90deg 180deg 0deg",
+    "-90deg 180deg 0deg",
+    "90deg 0deg 0deg",
+    "-90deg 0deg 0deg"
   ]
 };
 
@@ -2360,27 +2371,29 @@ function buildMascotViewerPose(viewer, orientation) {
 
   const height = Math.max(dimensions.y, 0.7);
   const footprint = Math.max(dimensions.x, dimensions.z, 0.34);
-  const targetY = Math.max(height * 0.42, 0.26);
-  const radius = Math.max(height * 1.34, footprint * 2.15, 1.28);
-  const phi = height > 1.45 ? 80 : 78;
-  const fieldOfView = Math.min(Math.max(18, 29 - height * 3.6), 25);
+  const targetY = Math.min(Math.max(height * 0.58, 0.36), height * 0.72);
+  const radius = Math.max(height * 1.08, footprint * 1.72, 1.18);
+  const minPhi = height > 1.45 ? 80 : 78;
+  const maxPhi = height > 1.45 ? 102 : 100;
+  const defaultPhi = Math.min(Math.max((minPhi + maxPhi) / 2, 84), 90);
+  const fieldOfView = Math.min(Math.max(19, 25 - height * 1.9), 23);
   const radiusText = `${radius.toFixed(2)}m`;
-  const phiText = `${phi}deg`;
 
   return {
     orientation,
     cameraTarget: `0m ${targetY.toFixed(3)}m 0m`,
-    cameraOrbit: `${MASCOT_VIEWER_STANDING_CONFIG.baseTheta} ${phiText} ${radiusText}`,
-    minCameraOrbit: `auto ${phiText} ${radiusText}`,
-    maxCameraOrbit: `auto ${phiText} ${radiusText}`,
+    cameraOrbit: `${MASCOT_VIEWER_STANDING_CONFIG.baseTheta} ${defaultPhi.toFixed(1)}deg ${radiusText}`,
+    minCameraOrbit: `auto ${minPhi}deg ${radiusText}`,
+    maxCameraOrbit: `auto ${maxPhi}deg ${radiusText}`,
     fieldOfView: `${fieldOfView.toFixed(1)}deg`
   };
 }
 
 function scoreMascotOrientation(dimensions) {
   if (!dimensions) return Number.NEGATIVE_INFINITY;
-  const footprint = Math.max(dimensions.x, dimensions.z, 0.001);
-  return (dimensions.y / footprint) + dimensions.y * 0.15;
+  const footprint = Math.max(Math.min(dimensions.x, dimensions.z), 0.001);
+  const spreadPenalty = Math.abs(dimensions.x - dimensions.z) * 0.12;
+  return (dimensions.y / footprint) + dimensions.y * 0.22 - spreadPenalty;
 }
 
 async function resolveMascotViewerStandingPose(viewer) {
@@ -2397,6 +2410,7 @@ async function resolveMascotViewerStandingPose(viewer) {
   })();
 
   const candidateOrientations = [
+    MASCOT_VIEWER_STANDING_CONFIG.defaultOrientation,
     ...(cachedOrientation ? [cachedOrientation] : []),
     ...MASCOT_VIEWER_STANDING_CONFIG.candidateOrientations
   ].filter((value, index, array) => value && array.indexOf(value) === index);
@@ -2589,6 +2603,17 @@ renderTopProfile();
 setMenuView("home");
 setActiveBottomNav("games");
 initHomeMascot();
+
+window.addEventListener("resize", () => {
+  const viewer = document.getElementById("bobrMascotViewer");
+  if (!viewer) return;
+
+  requestAnimationFrame(() => {
+    if (mascotResolvedPose) {
+      applyMascotViewerStandingPose(viewer, mascotResolvedPose);
+    }
+  });
+});
 
 window.toggleModePopup = toggleModePopup;
 window.enterBobrRunMode = enterBobrRunMode;
