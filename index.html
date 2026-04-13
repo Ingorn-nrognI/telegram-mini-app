@@ -1068,6 +1068,428 @@ button {
     0 14px 28px rgba(0, 0, 0, 0.14);
 }
 
+
+.scanner-feature-card {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(42, 225, 255, 0.28), transparent 32%),
+    radial-gradient(circle at 0% 100%, rgba(118, 93, 255, 0.24), transparent 34%),
+    linear-gradient(135deg, rgba(9, 22, 56, 0.98), rgba(9, 14, 32, 0.96) 66%);
+}
+
+.scanner-feature-card::after,
+.scanner-mode-hero::after,
+.scanner-arena-card::after,
+.scanner-summary-card::after,
+.scanner-fairness-card::after {
+  content: "";
+  position: absolute;
+  inset: auto auto -40px -30px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(45, 225, 255, 0.2), transparent 68%);
+  pointer-events: none;
+}
+
+.scanner-feature-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.scanner-badge {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #dce7ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.scanner-mode-hero {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(61, 220, 255, 0.2), transparent 34%),
+    radial-gradient(circle at 0% 100%, rgba(110, 89, 255, 0.18), transparent 30%),
+    linear-gradient(135deg, rgba(12, 24, 62, 0.98), rgba(8, 12, 28, 0.97) 70%);
+}
+
+.scanner-arena-card,
+.scanner-summary-card,
+.scanner-fairness-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanner-panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.scanner-status-chip,
+.scanner-countdown-chip {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e8f2ff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.scanner-status-chip.waiting {
+  color: #dff5ff;
+  box-shadow: inset 0 0 0 1px rgba(45, 225, 255, 0.08);
+}
+
+.scanner-status-chip.locked,
+.scanner-status-chip.animating {
+  color: #fff4cb;
+  box-shadow: inset 0 0 0 1px rgba(255, 216, 107, 0.1);
+}
+
+.scanner-status-chip.finished {
+  color: #dbffe5;
+  box-shadow: inset 0 0 0 1px rgba(117, 245, 156, 0.1);
+}
+
+.scanner-mini-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.scanner-mini-stat {
+  padding: 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(17, 25, 58, 0.9), rgba(9, 13, 29, 0.96));
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.scanner-mini-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.scanner-mini-value {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.scanner-canvas-shell {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  padding: 12px;
+  background:
+    linear-gradient(180deg, rgba(14, 21, 48, 0.95), rgba(7, 10, 22, 0.98)),
+    radial-gradient(circle at 50% 50%, rgba(45, 225, 255, 0.08), transparent 65%);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 16px 30px rgba(0, 0, 0, 0.22);
+}
+
+.scanner-canvas-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), transparent 20%),
+    radial-gradient(circle at 50% 0%, rgba(120, 160, 255, 0.08), transparent 38%);
+  pointer-events: none;
+}
+
+#scannerGridCanvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: block;
+  aspect-ratio: 1 / 1;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(7, 12, 26, 1), rgba(4, 7, 18, 0.98));
+}
+
+.scanner-overlay-badges {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.scanner-overlay-badge {
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(6, 10, 24, 0.72);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  color: #dce7ff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.scanner-grid-footnote {
+  margin-top: 12px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.scanner-control-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scanner-control-group-title {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.scanner-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scanner-chip {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e7efff;
+  font-weight: 700;
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+
+.scanner-chip.active {
+  background: linear-gradient(135deg, rgba(104, 152, 255, 0.96), rgba(45, 225, 255, 0.88));
+  border-color: rgba(255,255,255,0.18);
+  color: #08101f;
+  box-shadow: 0 12px 24px rgba(45, 225, 255, 0.16);
+}
+
+.scanner-chip:active {
+  transform: scale(0.98);
+}
+
+.scanner-control-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.scanner-control-card {
+  padding: 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(18, 26, 58, 0.86), rgba(9, 13, 29, 0.94));
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.scanner-control-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.scanner-control-value {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.scanner-control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.scanner-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.scanner-summary-pill {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #dce7ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.scanner-player-list,
+.scanner-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scanner-player-row,
+.scanner-recent-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(19, 28, 62, 0.88), rgba(9, 13, 29, 0.94));
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.scanner-player-row.me {
+  border-color: rgba(45, 225, 255, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(45, 225, 255, 0.08);
+}
+
+.scanner-player-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
+}
+
+.scanner-player-copy,
+.scanner-recent-copy {
+  min-width: 0;
+}
+
+.scanner-player-name,
+.scanner-recent-title {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scanner-player-meta,
+.scanner-recent-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.scanner-player-stake,
+.scanner-recent-result {
+  font-size: 14px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.scanner-empty {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.04);
+  border: 1px dashed rgba(255,255,255,0.08);
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.scanner-code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #dff5ff;
+  font-size: 12px;
+  font-family: "Courier New", monospace;
+}
+
+.scanner-result-banner {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(18, 35, 84, 0.96), rgba(7, 12, 28, 0.94)),
+    radial-gradient(circle at 100% 0%, rgba(45, 225, 255, 0.12), transparent 35%);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.scanner-result-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.scanner-result-text {
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+
+.scanner-home-hub {
+  background:
+    radial-gradient(circle at 85% 0%, rgba(121, 155, 255, 0.22), transparent 35%),
+    radial-gradient(circle at 0% 100%, rgba(57, 220, 255, 0.12), transparent 32%),
+    linear-gradient(135deg, rgba(18, 29, 74, 0.98), rgba(10, 14, 32, 0.96) 66%);
+}
+
+.scanner-inline-stat {
+  color: #f2f7ff;
+  font-weight: 800;
+}
+
+@media (max-width: 420px) {
+  .scanner-mini-stats,
+  .scanner-control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scanner-overlay-badges {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    gap: 8px;
+  }
+
+  .scanner-overlay-badge {
+    font-size: 10px;
+    padding: 7px 8px;
+  }
+}
+
 @media (max-width: 420px) {
   .top-bar {
     width: calc(100vw - 16px);
@@ -1175,11 +1597,31 @@ button {
         </div>
       </div>
 
-      <section class="hero-card">
-        <div class="hero-topline">⚡ Новое событие</div>
+
+      <section class="hero-card scanner-feature-card">
+        <div class="hero-topline">🧬 Первый PvP блок</div>
+        <h1 class="hero-title">Сканер-сетка</h1>
+        <p class="hero-text">
+          Новый режим перед Bobr World: sci-fi поле из 10 000 ячеек, которое делится между всеми участниками по ставкам, а победителя выбирает сканер, который останавливается на одной финальной клетке.
+        </p>
+
+        <div class="hero-actions">
+          <button type="button" class="primary-action" onclick="enterScannerGridMode(event)">▶ Открыть режим</button>
+          <button type="button" class="secondary-action" onclick="openRooms()">🎮 Комнаты</button>
+        </div>
+
+        <div class="scanner-feature-badges">
+          <div class="scanner-badge">10000 ячеек</div>
+          <div class="scanner-badge">5–1000+ игроков</div>
+          <div class="scanner-badge">Weighted RNG + scan animation</div>
+        </div>
+      </section>
+
+      <section class="hero-card scanner-home-hub">
+        <div class="hero-topline">🌐 Главный хаб</div>
         <h1 class="hero-title">Bobr World</h1>
         <p class="hero-text">
-          Мобильный PvP-хаб в тёмном игровом стиле: режимы, история матчей, таблица лидеров, комнаты и будущая интеграция игрового модуля.
+          Главный экран Bobr World сохранён, но теперь первый слот занят новой PvP-игрой «Сканер-сетка», а остальная навигация, история, таблица лидеров и комнаты продолжают работать в общей оболочке.
         </p>
 
         <div class="hero-actions">
@@ -1227,13 +1669,25 @@ button {
 
         <div id="gamesSection" class="cards-stack" style="margin-top:14px;">
           <div class="game-card primary">
-            <div class="card-badge">⚔️ PvP режим</div>
-            <h3 class="card-title">Bobr Run</h3>
+            <div class="card-badge">🧬 Новый режим</div>
+            <h3 class="card-title">Сканер-сетка</h3>
             <p class="card-text">
-              Основной игровой режим. Сейчас рантайм убран из файла, но экран, навигация, история, комнаты и точки интеграции сохранены.
+              Первый игровой слот. Поле разбивается на 10 000 ячеек по доле ставок участников, а сканер проходит по сетке и останавливается на победной клетке.
             </p>
             <div class="card-actions">
-              <button type="button" class="card-action" onclick="enterBobrRunMode(event)">Открыть PvP</button>
+              <button type="button" class="card-action" onclick="enterScannerGridMode(event)">Открыть PvP</button>
+              <button type="button" class="card-action ghost" onclick="openRooms()">Комнаты</button>
+            </div>
+          </div>
+
+          <div class="game-card">
+            <div class="card-badge">⚔️ Архивный режим</div>
+            <h3 class="card-title">Bobr Run</h3>
+            <p class="card-text">
+              Рантайм всё ещё вынесен из файла, но экран режима, навигация, история, таблица и точки повторной интеграции сохранены.
+            </p>
+            <div class="card-actions">
+              <button type="button" class="card-action ghost" onclick="enterBobrRunMode(event)">Открыть экран</button>
               <button type="button" class="card-action ghost" onclick="openRooms()">Комнаты</button>
             </div>
           </div>
@@ -1259,7 +1713,10 @@ button {
 
         <div id="modePopup" class="mode-popup" onclick="event.stopPropagation()">
           <div class="mode-popup-inner">
-            <button type="button" class="mode-popup-btn primary" onclick="enterBobrRunMode(event)">
+            <button type="button" class="mode-popup-btn primary" onclick="enterScannerGridMode(event)">
+              🧬 Сканер-сетка
+            </button>
+            <button type="button" class="mode-popup-btn" onclick="enterBobrRunMode(event)">
               ⚔️ Bobr Run
             </button>
             <button type="button" class="mode-popup-btn" onclick="event.stopPropagation(); openRooms()">
@@ -1322,6 +1779,141 @@ button {
       <div class="history-scroll-area">
         <div class="history-panel-empty">Здесь будет история игр.</div>
       </div>
+    </div>
+  </div>
+
+
+  <div id="scannerGridScreen" class="menu-screen">
+    <div class="screen-inner">
+      <section class="mode-hero-card scanner-mode-hero">
+        <div class="mode-kicker">🧬 Новый PvP режим</div>
+        <h1 class="mode-title">Сканер-сетка</h1>
+        <p class="mode-subtitle">
+          Сетка делится между участниками пропорционально ставкам. Победитель определяется заранее через результат раунда, а фронт только красиво проводит сканер к победной клетке и подсвечивает её.
+        </p>
+
+        <div class="mode-actions">
+          <button type="button" id="scannerJoinButtonHero" class="primary-action" onclick="startOrJoinScannerRound(event)">Войти в раунд</button>
+          <button type="button" class="secondary-action" onclick="resetScannerRound(event)">Сбросить</button>
+        </div>
+      </section>
+
+      <section class="section-card scanner-arena-card">
+        <div class="scanner-panel-top">
+          <div id="scannerStatusChip" class="scanner-status-chip">IDLE</div>
+          <div id="scannerCountdownChip" class="scanner-countdown-chip">00:00</div>
+        </div>
+
+        <div class="scanner-mini-stats">
+          <div class="scanner-mini-stat">
+            <div class="scanner-mini-label">Банк</div>
+            <div id="scannerTotalPot" class="scanner-mini-value">0.00 TON</div>
+          </div>
+          <div class="scanner-mini-stat">
+            <div class="scanner-mini-label">Игроки</div>
+            <div id="scannerPlayersCount" class="scanner-mini-value">0</div>
+          </div>
+          <div class="scanner-mini-stat">
+            <div class="scanner-mini-label">Моя доля</div>
+            <div id="scannerMyShare" class="scanner-mini-value">0%</div>
+          </div>
+          <div class="scanner-mini-stat">
+            <div class="scanner-mini-label">Мой шанс</div>
+            <div id="scannerMyChance" class="scanner-mini-value">0%</div>
+          </div>
+        </div>
+
+        <div class="scanner-canvas-shell">
+          <canvas id="scannerGridCanvas"></canvas>
+          <div class="scanner-overlay-badges">
+            <div class="scanner-overlay-badge" id="scannerGridMetaLeft">Сетка: 100 × 100</div>
+            <div class="scanner-overlay-badge" id="scannerGridMetaRight">RNG: ожидает раунд</div>
+          </div>
+        </div>
+
+        <p id="scannerGridFootnote" class="scanner-grid-footnote">
+          Выбери ставку и плотность раунда, затем запусти демонстрационный раунд. При подключении backend используй hook <span class="scanner-code">window.getScannerGridRoundResult(payload)</span>.
+        </p>
+
+        <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
+          <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
+          <div id="scannerResultText" class="scanner-result-text"></div>
+        </div>
+      </section>
+
+      <section class="section-card scanner-summary-card">
+        <div class="section-heading">
+          <div>
+            <div class="section-kicker">Управление раундом</div>
+            <h2 class="section-title">Ставка и плотность</h2>
+          </div>
+        </div>
+
+        <div class="scanner-control-stack">
+          <div>
+            <div class="scanner-control-group-title">Выбери ставку</div>
+            <div id="scannerStakeChips" class="scanner-chip-row"></div>
+          </div>
+
+          <div>
+            <div class="scanner-control-group-title">Сколько игроков в раунде</div>
+            <div id="scannerPopulationChips" class="scanner-chip-row"></div>
+          </div>
+
+          <div class="scanner-control-grid">
+            <div class="scanner-control-card">
+              <div class="scanner-control-label">Моя ставка</div>
+              <div id="scannerSelectedStakeValue" class="scanner-control-value">0 TON</div>
+            </div>
+            <div class="scanner-control-card">
+              <div class="scanner-control-label">Целевой онлайн</div>
+              <div id="scannerSelectedPopulationValue" class="scanner-control-value">0</div>
+            </div>
+            <div class="scanner-control-card">
+              <div class="scanner-control-label">Ячеек в поле</div>
+              <div id="scannerCellsValue" class="scanner-control-value">10000</div>
+            </div>
+          </div>
+
+          <div class="scanner-control-actions">
+            <button type="button" id="scannerJoinButton" class="card-action" onclick="startOrJoinScannerRound(event)">Войти в раунд</button>
+            <button type="button" class="card-action ghost" onclick="resetScannerRound(event)">Сбросить</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-heading">
+          <div>
+            <div class="section-kicker">Участники</div>
+            <h2 class="section-title">Текущий раунд</h2>
+          </div>
+        </div>
+        <div id="scannerParticipantsMeta" class="section-subtitle">Пока нет активного раунда.</div>
+        <div id="scannerParticipantsList" class="scanner-player-list" style="margin-top:14px;"></div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-heading">
+          <div>
+            <div class="section-kicker">Локальная история</div>
+            <h2 class="section-title">Последние раунды</h2>
+          </div>
+        </div>
+        <div id="scannerRecentRounds" class="scanner-recent-list"></div>
+      </section>
+
+      <section class="banner-card scanner-fairness-card">
+        <h3>🛡️ Как подключить честный результат</h3>
+        <p>
+          Для production-режима верни победителя и индекс ячейки с сервера через <span class="scanner-code">window.getScannerGridRoundResult(payload)</span>. Если hook не подключён, интерфейс использует локальный weighted fallback только для демонстрации UI и анимации.
+        </p>
+        <div class="scanner-summary-meta">
+          <div class="scanner-summary-pill">Hook: winningCellIndex</div>
+          <div class="scanner-summary-pill">История: Firestore + localStorage</div>
+          <div class="scanner-summary-pill">Canvas: 100 × 100</div>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -2055,6 +2647,16 @@ function openSettings() {
   }
 }
 
+
+function closeLeaderboard() {
+  const modal = document.getElementById("leaderboardModal");
+  if (modal) modal.style.display = "none";
+
+  if (currentBottomNav === "leaderboard") {
+    setActiveBottomNav(currentMenuView === "home" ? "games" : "pvp");
+  }
+}
+
 function handleBottomNav(action, event) {
   if (event) event.stopPropagation();
 
@@ -2075,7 +2677,7 @@ function handleBottomNav(action, event) {
     }
 
     case "pvp":
-      enterBobrRunMode(event);
+      enterScannerGridMode(event);
       break;
 
     case "skins":
@@ -2132,11 +2734,1099 @@ function handleModalBackdropClick(modalId, event) {
   }
 }
 
+
+const SCANNER_GRID_TOTAL_CELLS = 10000;
+const SCANNER_GRID_COLS = 100;
+const SCANNER_GRID_ROWS = 100;
+const SCANNER_GRID_HISTORY_KEY = "scanner_grid_recent_rounds_v2";
+const SCANNER_STAKE_PRESETS = [2, 5, 10, 25, 50, 100, 250];
+const SCANNER_POPULATION_PRESETS = [12, 48, 150, 400, 1000];
+let scannerGridState = null;
+let scannerGridWaitingTimer = null;
+let scannerGridAnimationFrame = null;
+let scannerGridCanvasCache = null;
+let scannerGridPath = null;
+let scannerGridResizeAttached = false;
+const scannerGridPathOrder = (() => {
+  const indices = [];
+  for (let row = 0; row < SCANNER_GRID_ROWS; row += 1) {
+    if (row % 2 === 0) {
+      for (let col = 0; col < SCANNER_GRID_COLS; col += 1) {
+        indices.push(row * SCANNER_GRID_COLS + col);
+      }
+    } else {
+      for (let col = SCANNER_GRID_COLS - 1; col >= 0; col -= 1) {
+        indices.push(row * SCANNER_GRID_COLS + col);
+      }
+    }
+  }
+  return indices;
+})();
+
+function createScannerInitialState() {
+  return {
+    mode: "scanner-grid",
+    status: "idle",
+    roundId: null,
+    selectedStake: 25,
+    selectedPopulation: 150,
+    totalCells: SCANNER_GRID_TOTAL_CELLS,
+    countdownMs: 0,
+    startedAt: null,
+    endsAt: null,
+    fullPlayers: [],
+    players: [],
+    totalPot: 0,
+    totalPlayers: 0,
+    winnerPlayerId: null,
+    winningCellIndex: null,
+    winningPlayer: null,
+    cellOwners: [],
+    gridVersion: "idle",
+    lastResultSource: "idle",
+    recentRounds: loadScannerRecentRounds(),
+    pendingServerResult: null,
+    myPlayerId: getCurrentPlayer().id,
+    animation: {
+      active: false,
+      startTime: 0,
+      duration: 0,
+      points: []
+    }
+  };
+}
+
+function initializeScannerGridFeature() {
+  scannerGridState = createScannerInitialState();
+  renderScannerRound();
+  if (!scannerGridResizeAttached) {
+    window.addEventListener("resize", () => {
+      if (currentMenuView === "scanner") {
+        renderScannerCanvas();
+      }
+    });
+    scannerGridResizeAttached = true;
+  }
+}
+
+function hashString(value) {
+  const text = String(value || "");
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function mulberry32(seed) {
+  let t = seed >>> 0;
+  return function() {
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function formatTon(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "0.00 TON";
+  return `${number.toFixed(2)} TON`;
+}
+
+function formatPercent(value) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return "0%";
+  return `${number.toFixed(number >= 10 ? 1 : 2)}%`;
+}
+
+function formatCompactNumber(value) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return "0";
+  return new Intl.NumberFormat("ru-RU").format(number);
+}
+
+function formatCountdownMs(ms) {
+  const safe = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = String(Math.floor(safe / 60)).padStart(2, "0");
+  const seconds = String(safe % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function getScannerColorById(id, isCurrent = false) {
+  if (isCurrent) return "hsl(182 88% 58%)";
+  const hash = hashString(id);
+  const hue = hash % 360;
+  const saturation = 68 + (hash % 16);
+  const lightness = 56 + (hash % 8);
+  return `hsl(${hue} ${saturation}% ${lightness}%)`;
+}
+
+function getScannerPlayerName(index, seed) {
+  const prefix = ["Flux", "Core", "Nebula", "Vector", "Drift", "Pulse", "Nova", "Byte", "Zero", "Quantum"];
+  const suffix = ["Fox", "Wolf", "Node", "Ray", "Dash", "Pilot", "Lock", "Mint", "Shift", "Grid"];
+  const rnd = mulberry32(seed + index * 17);
+  return `${prefix[Math.floor(rnd() * prefix.length)]} ${suffix[Math.floor(rnd() * suffix.length)]}`;
+}
+
+function shuffleArray(items, rnd) {
+  const array = items.slice();
+  for (let i = array.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rnd() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function buildScannerRoundPlayers(population, myStake, roundId) {
+  const currentPlayer = getCurrentPlayer();
+  const seed = hashString(roundId);
+  const rnd = mulberry32(seed);
+  const bots = [];
+  const totalBots = Math.max(0, population - 1);
+
+  for (let i = 0; i < totalBots; i += 1) {
+    const volatility = 1 + rnd() * 1.8;
+    const base = 1.2 + rnd() * 8;
+    const curve = Math.pow(1 + rnd() * 16, 1.15) * volatility;
+    const stake = Number((base + curve).toFixed(2));
+    bots.push({
+      id: `scanner_bot_${roundId}_${i}`,
+      name: getScannerPlayerName(i, seed),
+      avatar: null,
+      stake,
+      joinedAt: Date.now() + i,
+      isMe: false
+    });
+  }
+
+  const orderedBots = shuffleArray(bots, mulberry32(seed ^ 0x9e3779b1));
+  const fullPlayers = [{
+    id: currentPlayer.id,
+    name: currentPlayer.name,
+    avatar: tgUser?.photo_url || null,
+    stake: Number(myStake),
+    joinedAt: Date.now() - 1,
+    isMe: true
+  }, ...orderedBots].map((player, index) => ({
+    ...player,
+    order: index,
+    color: getScannerColorById(player.id, player.isMe)
+  }));
+
+  return fullPlayers;
+}
+
+function allocateCells(players, totalCells) {
+  const validPlayers = players.filter((player) => Number(player.stake) > 0);
+  if (!validPlayers.length) return players.map((player) => ({ ...player, sharePercent: 0, cellCount: 0 }));
+
+  const totalStake = validPlayers.reduce((sum, player) => sum + Number(player.stake || 0), 0);
+  const canGuarantee = validPlayers.length <= totalCells;
+  const baseCounts = new Map();
+  let remainingCells = totalCells;
+
+  validPlayers.forEach((player) => {
+    const base = canGuarantee ? 1 : 0;
+    baseCounts.set(player.id, base);
+    remainingCells -= base;
+  });
+
+  const exactExtras = validPlayers.map((player, index) => {
+    const share = totalStake > 0 ? Number(player.stake || 0) / totalStake : 0;
+    const exact = remainingCells * share;
+    const whole = Math.floor(exact);
+    return {
+      index,
+      id: player.id,
+      share,
+      whole,
+      fraction: exact - whole
+    };
+  });
+
+  exactExtras.forEach((entry) => {
+    baseCounts.set(entry.id, (baseCounts.get(entry.id) || 0) + entry.whole);
+    remainingCells -= entry.whole;
+  });
+
+  exactExtras.sort((a, b) => {
+    if (b.fraction !== a.fraction) return b.fraction - a.fraction;
+    return b.share - a.share;
+  });
+
+  for (let i = 0; i < remainingCells; i += 1) {
+    const target = exactExtras[i % exactExtras.length];
+    baseCounts.set(target.id, (baseCounts.get(target.id) || 0) + 1);
+  }
+
+  return players.map((player) => {
+    const sharePercent = totalStake > 0 ? (Number(player.stake || 0) / totalStake) * 100 : 0;
+    return {
+      ...player,
+      sharePercent,
+      cellCount: baseCounts.get(player.id) || 0
+    };
+  });
+}
+
+function buildScannerCellOwners(players, totalCells, versionSeed) {
+  const owners = new Array(totalCells).fill(-1);
+  const pool = players.map((player, index) => ({
+    index,
+    remaining: player.cellCount,
+    weight: Math.max(1, player.cellCount)
+  }));
+  const rnd = mulberry32(hashString(versionSeed));
+  let currentIndex = -1;
+  let runLeft = 0;
+
+  function pickNextIndex() {
+    const active = pool.filter((item) => item.remaining > 0);
+    if (!active.length) return -1;
+    const totalRemaining = active.reduce((sum, item) => sum + item.remaining, 0);
+    let cursor = rnd() * totalRemaining;
+    for (const item of active) {
+      cursor -= item.remaining;
+      if (cursor <= 0) return item.index;
+    }
+    return active[active.length - 1].index;
+  }
+
+  function computeRunLength(targetPoolItem) {
+    if (!targetPoolItem) return 1;
+    const activePlayers = pool.filter((item) => item.remaining > 0).length;
+    const densityFactor = activePlayers <= 16 ? 9 : activePlayers <= 64 ? 5 : activePlayers <= 180 ? 3 : 1.4;
+    const proportionalFactor = Math.max(1, Math.round((targetPoolItem.remaining / totalCells) * 28));
+    return Math.max(1, Math.min(targetPoolItem.remaining, Math.round(densityFactor + proportionalFactor * rnd())));
+  }
+
+  for (let orderIndex = 0; orderIndex < totalCells; orderIndex += 1) {
+    if (currentIndex === -1 || runLeft <= 0 || pool[currentIndex].remaining <= 0) {
+      currentIndex = pickNextIndex();
+      if (currentIndex === -1) break;
+      runLeft = computeRunLength(pool[currentIndex]);
+    }
+
+    const targetCellIndex = scannerGridPathOrder[orderIndex] || orderIndex;
+    owners[targetCellIndex] = currentIndex;
+    pool[currentIndex].remaining -= 1;
+    runLeft -= 1;
+  }
+
+  return owners;
+}
+
+function finalizeScannerPlayers(players, versionSeed) {
+  const allocated = allocateCells(players, SCANNER_GRID_TOTAL_CELLS);
+  const totalPot = allocated.reduce((sum, player) => sum + Number(player.stake || 0), 0);
+  const cellOwners = buildScannerCellOwners(allocated, SCANNER_GRID_TOTAL_CELLS, versionSeed);
+  return {
+    players: allocated,
+    totalPot,
+    cellOwners,
+    totalPlayers: allocated.length,
+    gridVersion: `${versionSeed}_${allocated.length}_${totalPot.toFixed(2)}`
+  };
+}
+
+function updateScannerVisiblePlayers(visibleCount) {
+  if (!scannerGridState?.fullPlayers?.length) return;
+  const slice = scannerGridState.fullPlayers.slice(0, Math.max(1, visibleCount));
+  const finalized = finalizeScannerPlayers(slice, `${scannerGridState.roundId || "round"}_${visibleCount}`);
+  scannerGridState.players = finalized.players;
+  scannerGridState.totalPot = finalized.totalPot;
+  scannerGridState.totalPlayers = finalized.totalPlayers;
+  scannerGridState.cellOwners = finalized.cellOwners;
+  scannerGridState.gridVersion = finalized.gridVersion;
+  scannerGridCache = null;
+}
+
+function getScannerMyPlayer() {
+  return scannerGridState.players.find((player) => player.id === getCurrentPlayer().id) || null;
+}
+
+function getScannerCellCenter(cellIndex) {
+  const col = cellIndex % SCANNER_GRID_COLS;
+  const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
+  return {
+    x: (col + 0.5) / SCANNER_GRID_COLS,
+    y: (row + 0.5) / SCANNER_GRID_ROWS
+  };
+}
+
+function buildScannerPathForCell(cellIndex) {
+  const target = getScannerCellCenter(cellIndex);
+  const seed = hashString(`${scannerGridState.roundId}_${cellIndex}`);
+  const rnd = mulberry32(seed);
+  const points = [];
+  const entrances = [
+    { x: -0.12, y: rnd() * 0.9 },
+    { x: 1.12, y: rnd() * 0.9 },
+    { x: rnd() * 0.9, y: -0.12 },
+    { x: rnd() * 0.9, y: 1.12 }
+  ];
+  points.push(entrances[Math.floor(rnd() * entrances.length)]);
+  points.push({ x: rnd() * 0.9 + 0.05, y: rnd() * 0.25 + 0.05 });
+  points.push({ x: rnd() * 0.8 + 0.1, y: rnd() * 0.8 + 0.1 });
+  points.push({ x: target.x + (rnd() - 0.5) * 0.18, y: target.y + (rnd() - 0.5) * 0.18 });
+  points.push({ x: target.x + (rnd() - 0.5) * 0.05, y: target.y + (rnd() - 0.5) * 0.05 });
+  points.push(target);
+  return points;
+}
+
+function interpolateScannerPath(points, progress) {
+  if (!Array.isArray(points) || points.length < 2) return { x: 0.5, y: 0.5, angle: 0 };
+  const clamped = Math.min(1, Math.max(0, progress));
+  const segmentCount = points.length - 1;
+  const scaled = clamped * segmentCount;
+  const segmentIndex = Math.min(segmentCount - 1, Math.floor(scaled));
+  const localT = scaled - segmentIndex;
+  const easedLocal = segmentIndex === segmentCount - 1 ? 1 - Math.pow(1 - localT, 3) : localT;
+  const start = points[segmentIndex];
+  const end = points[segmentIndex + 1];
+  const x = start.x + (end.x - start.x) * easedLocal;
+  const y = start.y + (end.y - start.y) * easedLocal;
+  const angle = Math.atan2(end.y - start.y, end.x - start.x);
+  return { x, y, angle };
+}
+
+function stopScannerAnimation() {
+  if (scannerGridAnimationFrame) {
+    cancelAnimationFrame(scannerGridAnimationFrame);
+    scannerGridAnimationFrame = null;
+  }
+  if (scannerGridState) {
+    scannerGridState.animation.active = false;
+  }
+}
+
+function stopScannerWaitingTimer() {
+  if (scannerGridWaitingTimer) {
+    clearInterval(scannerGridWaitingTimer);
+    scannerGridWaitingTimer = null;
+  }
+}
+
+function requestScannerGridResultPayload() {
+  return {
+    roundId: scannerGridState.roundId,
+    totalCells: scannerGridState.totalCells,
+    totalPot: scannerGridState.totalPot,
+    players: scannerGridState.players.map((player, index) => ({
+      id: player.id,
+      nickname: player.name,
+      avatar: player.avatar || null,
+      stake: Number(player.stake || 0),
+      sharePercent: Number(player.sharePercent || 0),
+      cellCount: Number(player.cellCount || 0),
+      color: player.color,
+      joinedAt: player.joinedAt,
+      cellOwnerIndex: index
+    }))
+  };
+}
+
+function getLocalWeightedScannerResult() {
+  const owners = scannerGridState.cellOwners || [];
+  if (!owners.length) {
+    return { winningCellIndex: 0, winnerPlayerId: scannerGridState.players[0]?.id || null, source: "local-fallback" };
+  }
+  const randomArray = new Uint32Array(1);
+  if (window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(randomArray);
+  } else {
+    randomArray[0] = Math.floor(Math.random() * 4294967295);
+  }
+  const winningCellIndex = Number(randomArray[0] % owners.length);
+  const winnerPlayer = scannerGridState.players[owners[winningCellIndex]] || null;
+  return {
+    winningCellIndex,
+    winnerPlayerId: winnerPlayer?.id || null,
+    source: "local-fallback"
+  };
+}
+
+async function requestScannerGridServerResult() {
+  const payload = requestScannerGridResultPayload();
+  if (typeof window.getScannerGridRoundResult === "function") {
+    const externalResult = await window.getScannerGridRoundResult(payload);
+    if (externalResult && Number.isInteger(externalResult.winningCellIndex)) {
+      const safeIndex = Math.max(0, Math.min(scannerGridState.cellOwners.length - 1, externalResult.winningCellIndex));
+      const ownerIndex = scannerGridState.cellOwners[safeIndex];
+      return {
+        winningCellIndex: safeIndex,
+        winnerPlayerId: externalResult.winnerPlayerId || scannerGridState.players[ownerIndex]?.id || null,
+        source: externalResult.source || "external-hook"
+      };
+    }
+  }
+  return getLocalWeightedScannerResult();
+}
+
+function startScannerAnimation() {
+  stopScannerAnimation();
+  scannerGridPath = buildScannerPathForCell(scannerGridState.winningCellIndex || 0);
+  scannerGridState.animation = {
+    active: true,
+    startTime: performance.now(),
+    duration: 4300,
+    points: scannerGridPath
+  };
+  scannerGridState.status = "animating";
+  renderScannerRound();
+
+  const tick = (timestamp) => {
+    if (!scannerGridState.animation.active) return;
+    const elapsed = timestamp - scannerGridState.animation.startTime;
+    const progress = Math.min(1, elapsed / scannerGridState.animation.duration);
+    renderScannerCanvas(progress);
+
+    if (progress >= 1) {
+      scannerGridState.animation.active = false;
+      scannerGridAnimationFrame = null;
+      finalizeScannerRound();
+      return;
+    }
+
+    scannerGridAnimationFrame = requestAnimationFrame(tick);
+  };
+
+  scannerGridAnimationFrame = requestAnimationFrame(tick);
+}
+
+async function lockScannerRound() {
+  stopScannerWaitingTimer();
+  if (!scannerGridState.fullPlayers.length) return;
+  updateScannerVisiblePlayers(scannerGridState.fullPlayers.length);
+  scannerGridState.status = "locked";
+  scannerGridState.countdownMs = 0;
+  renderScannerRound();
+
+  try {
+    const result = await requestScannerGridServerResult();
+    scannerGridState.pendingServerResult = result;
+    scannerGridState.winningCellIndex = result.winningCellIndex;
+    scannerGridState.winnerPlayerId = result.winnerPlayerId;
+    scannerGridState.lastResultSource = result.source || "unknown";
+    scannerGridState.winningPlayer = scannerGridState.players.find((player) => player.id === scannerGridState.winnerPlayerId)
+      || scannerGridState.players[scannerGridState.cellOwners[scannerGridState.winningCellIndex] || 0]
+      || null;
+    startScannerAnimation();
+  } catch (error) {
+    console.error("Ошибка получения результата Сканер-сетки:", error);
+    alert("Не удалось получить результат раунда Сканер-сетки.");
+    scannerGridState.status = "waiting";
+    renderScannerRound();
+  }
+}
+
+function stepScannerWaitingRound() {
+  if (!scannerGridState.endsAt || !scannerGridState.fullPlayers.length) return;
+  const now = Date.now();
+  const remaining = Math.max(0, scannerGridState.endsAt - now);
+  scannerGridState.countdownMs = remaining;
+  const duration = Math.max(1, scannerGridState.endsAt - scannerGridState.startedAt);
+  const progress = 1 - remaining / duration;
+  const visibleCount = Math.min(
+    scannerGridState.fullPlayers.length,
+    Math.max(1, Math.floor(progress * scannerGridState.fullPlayers.length))
+  );
+  updateScannerVisiblePlayers(visibleCount);
+  renderScannerRound();
+
+  if (remaining <= 0) {
+    lockScannerRound();
+  }
+}
+
+function startNewScannerRound() {
+  stopScannerWaitingTimer();
+  stopScannerAnimation();
+  const roundId = `scanner_${Date.now()}`;
+  const fullPlayers = buildScannerRoundPlayers(scannerGridState.selectedPopulation, scannerGridState.selectedStake, roundId);
+  scannerGridState.roundId = roundId;
+  scannerGridState.fullPlayers = fullPlayers;
+  scannerGridState.totalPlayers = fullPlayers.length;
+  scannerGridState.status = "waiting";
+  scannerGridState.startedAt = Date.now();
+  scannerGridState.endsAt = scannerGridState.startedAt + 12000;
+  scannerGridState.countdownMs = 12000;
+  scannerGridState.winnerPlayerId = null;
+  scannerGridState.winningCellIndex = null;
+  scannerGridState.winningPlayer = null;
+  scannerGridState.lastResultSource = "pending";
+  scannerGridState.pendingServerResult = null;
+  updateScannerVisiblePlayers(1);
+  renderScannerRound();
+  scannerGridWaitingTimer = setInterval(stepScannerWaitingRound, 250);
+}
+
+function startOrJoinScannerRound(event) {
+  if (event) event.stopPropagation();
+  if (!scannerGridState || scannerGridState.status === "idle" || scannerGridState.status === "finished") {
+    startNewScannerRound();
+    return;
+  }
+
+  if (scannerGridState.status === "waiting") {
+    const myPlayer = scannerGridState.fullPlayers.find((player) => player.id === getCurrentPlayer().id);
+    if (myPlayer) {
+      myPlayer.stake = Number((myPlayer.stake + scannerGridState.selectedStake).toFixed(2));
+      stepScannerWaitingRound();
+    }
+  }
+}
+
+function resetScannerRound(event) {
+  if (event) event.stopPropagation();
+  stopScannerWaitingTimer();
+  stopScannerAnimation();
+  const recentRounds = scannerGridState?.recentRounds || loadScannerRecentRounds();
+  scannerGridState = {
+    ...createScannerInitialState(),
+    selectedStake: scannerGridState?.selectedStake || 25,
+    selectedPopulation: scannerGridState?.selectedPopulation || 150,
+    recentRounds
+  };
+  scannerGridCache = null;
+  renderScannerRound();
+}
+
+function setScannerStake(value) {
+  scannerGridState.selectedStake = Number(value);
+  renderScannerRound();
+}
+
+function setScannerPopulation(value) {
+  scannerGridState.selectedPopulation = Number(value);
+  renderScannerRound();
+}
+
+function saveScannerRecentRounds(items) {
+  try {
+    localStorage.setItem(SCANNER_GRID_HISTORY_KEY, JSON.stringify(items.slice(0, 8)));
+  } catch (error) {
+    console.warn("Не удалось сохранить локальную историю Сканер-сетки:", error);
+  }
+}
+
+function loadScannerRecentRounds() {
+  try {
+    const raw = localStorage.getItem(SCANNER_GRID_HISTORY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn("Не удалось загрузить локальную историю Сканер-сетки:", error);
+    return [];
+  }
+}
+
+async function persistScannerRoundHistory(summary) {
+  try {
+    const player = getCurrentPlayer();
+    await getHistoryCollectionRef(player.id).doc(summary.roomId).set({
+      roomId: summary.roomId,
+      playedAt: summary.playedAt,
+      savedAt: Date.now(),
+      mode: "Сканер-сетка",
+      winner: summary.winnerName,
+      youWon: summary.youWon,
+      results: summary.results
+    }, { merge: true });
+  } catch (error) {
+    console.warn("Не удалось сохранить историю Сканер-сетки в Firestore:", error);
+  }
+}
+
+function finalizeScannerRound() {
+  scannerGridState.status = "finished";
+  const winner = scannerGridState.winningPlayer || scannerGridState.players[0] || null;
+  const myPlayer = getScannerMyPlayer();
+  const youWon = !!winner && !!myPlayer && winner.id === myPlayer.id;
+  const playedAt = new Date().toISOString();
+  const summary = {
+    roomId: scannerGridState.roundId,
+    playedAt,
+    winnerName: winner?.name || "Неизвестно",
+    winnerStake: Number(winner?.stake || 0),
+    totalPot: Number(scannerGridState.totalPot || 0),
+    participants: Number(scannerGridState.totalPlayers || 0),
+    myStake: Number(myPlayer?.stake || 0),
+    myChance: Number(myPlayer?.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS * 100,
+    youWon,
+    resultSource: scannerGridState.lastResultSource,
+    results: scannerGridState.players
+      .slice()
+      .sort((a, b) => Number(b.stake || 0) - Number(a.stake || 0))
+      .map((player, index) => ({
+        place: index + 1,
+        name: player.name,
+        score: Number(player.stake || 0)
+      }))
+  };
+
+  const updatedHistory = [summary, ...(scannerGridState.recentRounds || [])].slice(0, 8);
+  scannerGridState.recentRounds = updatedHistory;
+  saveScannerRecentRounds(updatedHistory);
+  persistScannerRoundHistory(summary);
+  renderScannerRound();
+}
+
+function renderScannerChips(containerId, values, currentValue, clickHandlerName, suffix = "") {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = values.map((value) => `
+    <button
+      type="button"
+      class="scanner-chip ${Number(currentValue) === Number(value) ? "active" : ""}"
+      onclick="${clickHandlerName}(${Number(value)})"
+    >${value}${suffix}</button>
+  `).join("");
+}
+
+function renderScannerParticipants() {
+  const meta = document.getElementById("scannerParticipantsMeta");
+  const list = document.getElementById("scannerParticipantsList");
+  if (!meta || !list) return;
+
+  if (!scannerGridState.players.length) {
+    meta.textContent = "Пока нет активного раунда.";
+    list.innerHTML = `<div class="scanner-empty">Запусти раунд, и здесь появятся участники, их доли банка, клетки и текущий шанс.</div>`;
+    return;
+  }
+
+  const sorted = scannerGridState.players.slice().sort((a, b) => Number(b.stake || 0) - Number(a.stake || 0));
+  const limited = sorted.slice(0, 12);
+  const hiddenCount = Math.max(0, sorted.length - limited.length);
+  const myPlayer = getScannerMyPlayer();
+  meta.innerHTML = `Видимые участники: <span class="scanner-inline-stat">${formatCompactNumber(scannerGridState.totalPlayers)}</span> · Моя ставка: <span class="scanner-inline-stat">${formatTon(myPlayer?.stake || 0)}</span> · Источник результата: <span class="scanner-inline-stat">${scannerGridState.lastResultSource || "—"}</span>`;
+
+  const rows = limited.map((player) => `
+    <div class="scanner-player-row ${player.isMe ? "me" : ""}">
+      <div class="scanner-player-swatch" style="background:${player.color};"></div>
+      <div class="scanner-player-copy">
+        <div class="scanner-player-name">${player.name}${player.isMe ? " · ты" : ""}</div>
+        <div class="scanner-player-meta">Ставка ${formatTon(player.stake)} · ${formatPercent(player.sharePercent)} банка · ${formatCompactNumber(player.cellCount)} клеток</div>
+      </div>
+      <div class="scanner-player-stake">${formatPercent((player.cellCount / SCANNER_GRID_TOTAL_CELLS) * 100)}</div>
+    </div>
+  `).join("");
+
+  list.innerHTML = rows + (hiddenCount > 0 ? `<div class="scanner-empty">И ещё ${formatCompactNumber(hiddenCount)} участников скрыты, чтобы экран не превращался в кашу.</div>` : "");
+}
+
+function renderScannerRecentList() {
+  const container = document.getElementById("scannerRecentRounds");
+  if (!container) return;
+  const items = scannerGridState.recentRounds || [];
+  if (!items.length) {
+    container.innerHTML = `<div class="scanner-empty">После завершения раунда здесь появятся локальные карточки истории. Они также отправляются в твою текущую Firestore-историю.</div>`;
+    return;
+  }
+  container.innerHTML = items.slice(0, 6).map((item) => `
+    <div class="scanner-recent-card">
+      <div class="scanner-player-swatch" style="background:${item.youWon ? "hsl(145 74% 58%)" : "hsl(350 85% 67%)"};"></div>
+      <div class="scanner-recent-copy">
+        <div class="scanner-recent-title">${item.youWon ? "Победа" : "Раунд завершён"} · ${item.winnerName}</div>
+        <div class="scanner-recent-meta">${formatHistoryDate(item.playedAt)} · ${formatCompactNumber(item.participants)} игроков · банк ${formatTon(item.totalPot)} · источник ${item.resultSource}</div>
+      </div>
+      <div class="scanner-recent-result">${formatTon(item.winnerStake || 0)}</div>
+    </div>
+  `).join("");
+}
+
+function renderScannerButtons() {
+  const myPlayer = getScannerMyPlayer();
+  const joinText = scannerGridState.status === "waiting" && myPlayer
+    ? `Добавить ${formatTon(scannerGridState.selectedStake)}`
+    : "Войти в раунд";
+  ["scannerJoinButton", "scannerJoinButtonHero"].forEach((id) => {
+    const button = document.getElementById(id);
+    if (button) button.textContent = joinText;
+  });
+}
+
+function renderScannerRound() {
+  if (!scannerGridState) return;
+  renderScannerChips("scannerStakeChips", SCANNER_STAKE_PRESETS, scannerGridState.selectedStake, "setScannerStake", " TON");
+  renderScannerChips("scannerPopulationChips", SCANNER_POPULATION_PRESETS, scannerGridState.selectedPopulation, "setScannerPopulation", "");
+
+  const myPlayer = getScannerMyPlayer();
+  const countdown = document.getElementById("scannerCountdownChip");
+  const statusChip = document.getElementById("scannerStatusChip");
+  const totalPot = document.getElementById("scannerTotalPot");
+  const playersCount = document.getElementById("scannerPlayersCount");
+  const myShare = document.getElementById("scannerMyShare");
+  const myChance = document.getElementById("scannerMyChance");
+  const selectedStake = document.getElementById("scannerSelectedStakeValue");
+  const selectedPopulation = document.getElementById("scannerSelectedPopulationValue");
+  const cellsValue = document.getElementById("scannerCellsValue");
+  const metaLeft = document.getElementById("scannerGridMetaLeft");
+  const metaRight = document.getElementById("scannerGridMetaRight");
+  const footnote = document.getElementById("scannerGridFootnote");
+  const resultBanner = document.getElementById("scannerResultBanner");
+  const resultTitle = document.getElementById("scannerResultTitle");
+  const resultText = document.getElementById("scannerResultText");
+
+  if (countdown) countdown.textContent = formatCountdownMs(scannerGridState.countdownMs || 0);
+  if (statusChip) {
+    statusChip.textContent = ({ idle: "idle", waiting: "waiting", locked: "locked", animating: "scan", finished: "result" })[scannerGridState.status] || "idle";
+    statusChip.className = `scanner-status-chip ${scannerGridState.status}`;
+  }
+  if (totalPot) totalPot.textContent = formatTon(scannerGridState.totalPot || 0);
+  if (playersCount) playersCount.textContent = formatCompactNumber(scannerGridState.totalPlayers || 0);
+  if (myShare) myShare.textContent = formatPercent(myPlayer?.sharePercent || 0);
+  if (myChance) myChance.textContent = formatPercent(((myPlayer?.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
+  if (selectedStake) selectedStake.textContent = formatTon(scannerGridState.selectedStake);
+  if (selectedPopulation) selectedPopulation.textContent = formatCompactNumber(scannerGridState.selectedPopulation);
+  if (cellsValue) cellsValue.textContent = formatCompactNumber(SCANNER_GRID_TOTAL_CELLS);
+  if (metaLeft) metaLeft.textContent = `Сетка: ${SCANNER_GRID_COLS} × ${SCANNER_GRID_ROWS}`;
+  if (metaRight) metaRight.textContent = `RNG: ${scannerGridState.lastResultSource || "ожидание"}`;
+
+  if (footnote) {
+    if (scannerGridState.status === "idle") {
+      footnote.innerHTML = `Выбери ставку и плотность раунда, затем запусти демонстрационный раунд. Для production используй hook <span class="scanner-code">window.getScannerGridRoundResult(payload)</span>.`;
+    } else if (scannerGridState.status === "waiting") {
+      footnote.textContent = "Сетка постепенно заполняется по мере входа игроков. К моменту блокировки у каждого участника будет доля клеток, соответствующая его ставке.";
+    } else if (scannerGridState.status === "locked") {
+      footnote.textContent = "Раунд заблокирован. Победная ячейка уже определена, фронт готовит анимацию сканера.";
+    } else if (scannerGridState.status === "animating") {
+      footnote.textContent = "Идёт анимация сканера: победитель уже известен, луч только приводит интерфейс к финальной клетке.";
+    } else {
+      footnote.textContent = "Раунд завершён. История сохранена локально и отправлена в Firestore, если соединение доступно.";
+    }
+  }
+
+  if (resultBanner && resultTitle && resultText) {
+    if (scannerGridState.status === "finished" && scannerGridState.winningPlayer) {
+      resultBanner.style.display = "block";
+      const myWin = scannerGridState.winningPlayer.id === getCurrentPlayer().id;
+      resultTitle.textContent = myWin ? "Ты выиграл раунд" : `Победитель: ${scannerGridState.winningPlayer.name}`;
+      resultText.textContent = `${scannerGridState.winningPlayer.name} забрал ${formatTon(scannerGridState.totalPot)}. Его ставка: ${formatTon(scannerGridState.winningPlayer.stake)} · доля банка ${formatPercent(scannerGridState.winningPlayer.sharePercent)} · победная клетка #${scannerGridState.winningCellIndex}.`;
+    } else {
+      resultBanner.style.display = "none";
+      resultTitle.textContent = "";
+      resultText.textContent = "";
+    }
+  }
+
+  renderScannerButtons();
+  renderScannerParticipants();
+  renderScannerRecentList();
+  renderScannerCanvas(scannerGridState.animation.active ? undefined : 1);
+}
+
+function getScannerCanvasMetrics() {
+  const canvas = document.getElementById("scannerGridCanvas");
+  if (!canvas) return null;
+  const rect = canvas.getBoundingClientRect();
+  const size = Math.max(240, Math.floor(rect.width || 320));
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { canvas, ctx, size, dpr, cellSize: size / SCANNER_GRID_COLS };
+}
+
+function buildScannerCanvasCache(size) {
+  const cacheCanvas = document.createElement("canvas");
+  cacheCanvas.width = size;
+  cacheCanvas.height = size;
+  const ctx = cacheCanvas.getContext("2d");
+  ctx.fillStyle = "#060b17";
+  ctx.fillRect(0, 0, size, size);
+  const cellSize = size / SCANNER_GRID_COLS;
+  const owners = scannerGridState.cellOwners || [];
+  const players = scannerGridState.players || [];
+
+  for (let cellIndex = 0; cellIndex < owners.length; cellIndex += 1) {
+    const ownerIndex = owners[cellIndex];
+    if (ownerIndex < 0 || !players[ownerIndex]) continue;
+    const col = cellIndex % SCANNER_GRID_COLS;
+    const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
+    ctx.fillStyle = players[ownerIndex].color;
+    ctx.fillRect(col * cellSize, row * cellSize, Math.max(1, cellSize - 0.6), Math.max(1, cellSize - 0.6));
+  }
+
+  ctx.strokeStyle = "rgba(255,255,255,0.05)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
+  return cacheCanvas;
+}
+
+function renderScannerCanvas(forcedProgress) {
+  const metrics = getScannerCanvasMetrics();
+  if (!metrics) return;
+  const { ctx, size, cellSize } = metrics;
+
+  if (!scannerGridCache || scannerGridCache.version !== scannerGridState.gridVersion || scannerGridCache.size !== size) {
+    scannerGridCanvasCache = buildScannerCanvasCache(size);
+    scannerGridCache = { version: scannerGridState.gridVersion, size, canvas: scannerGridCanvasCache };
+  }
+
+  ctx.clearRect(0, 0, size, size);
+  if (scannerGridCache?.canvas) {
+    ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
+  } else {
+    ctx.fillStyle = "#060b17";
+    ctx.fillRect(0, 0, size, size);
+  }
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.05)";
+  ctx.lineWidth = 1;
+  for (let row = 0; row <= SCANNER_GRID_ROWS; row += 10) {
+    const y = row * cellSize;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(size, y);
+    ctx.stroke();
+  }
+  for (let col = 0; col <= SCANNER_GRID_COLS; col += 10) {
+    const x = col * cellSize;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, size);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  let progress = forcedProgress;
+  if (progress === undefined && scannerGridState.animation.active) {
+    const elapsed = performance.now() - scannerGridState.animation.startTime;
+    progress = Math.min(1, elapsed / scannerGridState.animation.duration);
+  }
+
+  if (scannerGridState.animation.active || scannerGridState.status === "finished") {
+    const points = scannerGridState.animation.points || scannerGridPath || [];
+    const sample = interpolateScannerPath(points, progress || 0);
+    const px = sample.x * size;
+    const py = sample.y * size;
+    const beamLength = size * 1.6;
+    const dx = Math.cos(sample.angle);
+    const dy = Math.sin(sample.angle);
+
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(sample.angle);
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "rgba(45, 225, 255, 0.55)";
+    ctx.strokeStyle = "rgba(45, 225, 255, 0.92)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-beamLength / 2, 0);
+    ctx.lineTo(beamLength / 2, 0);
+    ctx.stroke();
+
+    ctx.shadowBlur = 34;
+    ctx.strokeStyle = "rgba(255,255,255,0.72)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-beamLength / 2, 0);
+    ctx.lineTo(beamLength / 2, 0);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  if (Number.isInteger(scannerGridState.winningCellIndex)) {
+    const col = scannerGridState.winningCellIndex % SCANNER_GRID_COLS;
+    const row = Math.floor(scannerGridState.winningCellIndex / SCANNER_GRID_COLS);
+    const x = col * cellSize;
+    const y = row * cellSize;
+    const pulse = scannerGridState.status === "finished" ? (Math.sin(performance.now() / 180) + 1) / 2 : 0.45;
+    ctx.save();
+    ctx.shadowBlur = 26;
+    ctx.shadowColor = `rgba(255, 255, 255, ${0.35 + pulse * 0.45})`;
+    ctx.fillStyle = `rgba(255,255,255,${0.18 + pulse * 0.18})`;
+    ctx.fillRect(x, y, cellSize, cellSize);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(255,255,255,${0.65 + pulse * 0.25})`;
+    ctx.strokeRect(x + 1, y + 1, Math.max(1, cellSize - 2), Math.max(1, cellSize - 2));
+    ctx.restore();
+  }
+}
+
+function enterScannerGridMode(event) {
+  if (event) event.stopPropagation();
+  closeModePopup();
+  closeHistoryPanel({ preserveNav: true });
+  closeLeaderboard();
+  closeRooms();
+  setMenuView("scanner");
+  requestAnimationFrame(() => renderScannerRound());
+}
+
+function handleTelegramAppBack() {
+  if (currentMenuView !== "home") {
+    exitGameMode();
+  }
+}
+
+function syncAppBackButton(options = {}) {
+  const { forceHide = false, forceShow = false, onClick = handleTelegramAppBack } = options;
+  const shouldShow = !forceHide && (forceShow || currentMenuView !== "home");
+  const fallbackBackButton = document.getElementById("modeBackButton");
+  const canUseTelegramBackButton = hasTelegramSystemBackButton();
+
+  if (fallbackBackButton) {
+    fallbackBackButton.classList.toggle("visible", shouldShow && !canUseTelegramBackButton);
+  }
+
+  if (!canUseTelegramBackButton) return;
+
+  try {
+    if (telegramBackButtonHandler) {
+      tgApp.BackButton.offClick(telegramBackButtonHandler);
+      telegramBackButtonHandler = null;
+    }
+
+    if (shouldShow && typeof onClick === "function") {
+      telegramBackButtonHandler = onClick;
+      tgApp.BackButton.onClick(telegramBackButtonHandler);
+      tgApp.BackButton.show();
+    } else {
+      tgApp.BackButton.hide();
+    }
+  } catch (error) {
+    reportAppError("Ошибка кнопки назад Telegram:", error);
+  }
+}
+
+function setMenuView(view, options = {}) {
+  const { preserveNav = false, keepHistory = false } = options;
+  currentMenuView = view;
+
+  const homeScreen = document.getElementById("homeScreen");
+  const scannerGridScreen = document.getElementById("scannerGridScreen");
+  const bobrRunScreen = document.getElementById("bobrRunScreen");
+  const modePopup = document.getElementById("modePopup");
+  const historyPanel = document.getElementById("historyPanel");
+
+  if (homeScreen) homeScreen.classList.toggle("active", view === "home");
+  if (scannerGridScreen) scannerGridScreen.classList.toggle("active", view === "scanner");
+  if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "bobrRun");
+  if (modePopup) modePopup.classList.remove("open");
+  if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
+
+  if (!preserveNav) {
+    setActiveBottomNav(view === "home" ? "games" : "pvp");
+  }
+
+  syncAppBackButton();
+}
+
+function enterBobrRunMode(event) {
+  if (event) event.stopPropagation();
+  closeModePopup();
+  closeHistoryPanel({ preserveNav: true });
+  closeLeaderboard();
+  closeRooms();
+  setMenuView("bobrRun");
+}
+
+function exitGameMode() {
+  closeModePopup();
+  closeHistoryPanel();
+  closeLeaderboard();
+  closeRooms();
+  setMenuView("home");
+}
+
+function openRooms() {
+  closeModePopup();
+  const roomsModal = document.getElementById("roomsModal");
+  const roomsList = document.getElementById("roomsList");
+  const createRoomBtn = document.getElementById("createRoomBtn");
+  const modeLabel = currentMenuView === "scanner" ? "Сканер-сетка" : currentMenuView === "bobrRun" ? "Bobr Run" : "игровой режим";
+
+  if (roomsList) {
+    roomsList.innerHTML = `
+      <div class="rooms-note">
+        Для режима «${modeLabel}» оболочка комнат уже есть, но реальный online-runtime ещё не подключён.<br><br>
+        Главное меню, история, таблица лидеров, переходы и новый экран Сканер-сетки продолжают работать.<br><br>
+        Когда подключишь серверные комнаты, сюда можно вернуть листинг, вход в матч и синхронизацию игроков.
+      </div>
+    `;
+  }
+
+  if (createRoomBtn) {
+    createRoomBtn.textContent = `Комнаты ${modeLabel} пока не подключены`;
+  }
+
+  if (roomsModal) {
+    roomsModal.style.display = "flex";
+  }
+}
+
+function showGameUnavailable() {
+  const modeLabel = currentMenuView === "scanner" ? "Сканер-сетка" : "Bobr Run";
+  alert(`${modeLabel}: online-runtime пока не подключён.`);
+}
+
+function handleBottomNav(action, event) {
+  if (event) event.stopPropagation();
+
+  switch (action) {
+    case "leaderboard":
+      openLeaderboard();
+      break;
+
+    case "games": {
+      const modePopup = document.getElementById("modePopup");
+      const isOpen = !!modePopup?.classList.contains("open");
+      if (currentMenuView === "home" && isOpen) {
+        closeModePopup();
+      } else {
+        openGamesMenu();
+      }
+      break;
+    }
+
+    case "pvp":
+      enterScannerGridMode(event);
+      break;
+
+    case "skins":
+      openSkins();
+      break;
+
+    case "history": {
+      const historyPanel = document.getElementById("historyPanel");
+      const isOpen = !!historyPanel?.classList.contains("open");
+      if (currentMenuView === "home" && isOpen) {
+        closeHistoryPanel();
+      } else {
+        openRecentHistory();
+      }
+      break;
+    }
+
+    default:
+      break;
+  }
+}
+
+window.setScannerStake = setScannerStake;
+window.setScannerPopulation = setScannerPopulation;
+window.startOrJoinScannerRound = startOrJoinScannerRound;
+window.resetScannerRound = resetScannerRound;
+window.enterScannerGridMode = enterScannerGridMode;
+
+initializeScannerGridFeature();
+
 renderTopProfile();
 setMenuView("home");
 setActiveBottomNav("games");
 
 window.toggleModePopup = toggleModePopup;
+window.enterScannerGridMode = enterScannerGridMode;
 window.enterBobrRunMode = enterBobrRunMode;
 window.exitGameMode = exitGameMode;
 window.openLeaderboard = openLeaderboard;
