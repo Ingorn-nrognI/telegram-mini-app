@@ -1307,12 +1307,12 @@ button {
               loading="eager"
               camera-controls
               touch-action="pan-y"
-              orientation="-90deg 0deg 0deg"
-              camera-target="0m 0.58m 0m"
-              camera-orbit="180deg 78deg 2.18m"
-              min-camera-orbit="auto 78deg 2.18m"
-              max-camera-orbit="auto 78deg 2.18m"
-              field-of-view="24deg"
+              orientation="-90deg 0deg 90deg"
+              camera-target="0m 0.72m 0m"
+              camera-orbit="180deg 78deg 2.06m"
+              min-camera-orbit="auto 78deg 2.06m"
+              max-camera-orbit="auto 78deg 2.06m"
+              field-of-view="23deg"
               shadow-intensity="0"
               exposure="1"
               environment-image="neutral"
@@ -1639,22 +1639,16 @@ let mascotInitStarted = false;
 let mascotResolvedPose = null;
 
 const MASCOT_VIEWER_STANDING_CONFIG = {
-  storageKey: "bobr_mascot_pose_v4",
+  storageKey: "bobr_mascot_pose_v5",
   baseTheta: "180deg",
-  defaultOrientation: "-90deg 0deg 0deg",
-  fallbackCameraTarget: "0m 0.58m 0m",
-  fallbackCameraOrbit: "180deg 78deg 2.18m",
-  fallbackMinCameraOrbit: "auto 78deg 2.18m",
-  fallbackMaxCameraOrbit: "auto 78deg 2.18m",
-  fallbackFieldOfView: "24deg",
+  defaultOrientation: "-90deg 0deg 90deg",
+  fallbackCameraTarget: "0m 0.72m 0m",
+  fallbackCameraOrbit: "180deg 78deg 2.06m",
+  fallbackMinCameraOrbit: "auto 78deg 2.06m",
+  fallbackMaxCameraOrbit: "auto 78deg 2.06m",
+  fallbackFieldOfView: "23deg",
   candidateOrientations: [
-    "-90deg 0deg 0deg",
-    "90deg 0deg 0deg",
-    "0deg 0deg 0deg",
-    "0deg 0deg 90deg",
-    "0deg 0deg -90deg",
-    "-90deg 0deg 90deg",
-    "-90deg 0deg -90deg"
+    "-90deg 0deg 90deg"
   ]
 };
 
