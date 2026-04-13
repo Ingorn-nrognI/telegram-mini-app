@@ -1085,6 +1085,8 @@ button {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  overflow: visible;
+  padding-bottom: 6px;
 }
 
 .mascot-viewer-shell::before {
@@ -1112,6 +1114,8 @@ button {
   user-select: none;
   --poster-color: transparent;
   filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.28));
+  transform: translateY(6px);
+  transform-origin: center bottom;
 }
 
 .mascot-viewer.is-ready {
@@ -1293,10 +1297,10 @@ button {
               alt="Low-poly 3D-модель персонажа Bobr"
               reveal="auto"
               loading="eager"
-              orientation="-90deg 0deg 0deg"
-              camera-target="0m 1.02m 0m"
-              camera-orbit="180deg 78deg 2.45m"
-              field-of-view="24deg"
+              orientation="0deg 0deg 0deg"
+              camera-target="0m 0.78m 0m"
+              camera-orbit="180deg 82deg 2.05m"
+              field-of-view="22deg"
               shadow-intensity="0"
               exposure="1"
               environment-image="neutral"
@@ -1620,6 +1624,13 @@ let expandedHistoryMatchId = null;
 let currentMenuView = "home";
 let currentBottomNav = "games";
 let mascotInitStarted = false;
+
+const MASCOT_VIEWER_STANDING_CONFIG = {
+  orientation: "0deg 0deg 0deg",
+  cameraTarget: "0m 0.78m 0m",
+  cameraOrbit: "180deg 82deg 2.05m",
+  fieldOfView: "22deg"
+};
 
 function shouldIgnoreExternalConsoleError(message) {
   const text = String(message || "").toLowerCase();
@@ -2279,6 +2290,25 @@ function handleModalBackdropClick(modalId, event) {
   }
 }
 
+function applyMascotViewerStandingPose(viewer) {
+  if (!viewer) return;
+
+  viewer.setAttribute("orientation", MASCOT_VIEWER_STANDING_CONFIG.orientation);
+  viewer.setAttribute("camera-target", MASCOT_VIEWER_STANDING_CONFIG.cameraTarget);
+  viewer.setAttribute("camera-orbit", MASCOT_VIEWER_STANDING_CONFIG.cameraOrbit);
+  viewer.setAttribute("field-of-view", MASCOT_VIEWER_STANDING_CONFIG.fieldOfView);
+
+  if (typeof viewer.updateFraming === "function") {
+    requestAnimationFrame(() => {
+      try {
+        viewer.updateFraming();
+      } catch (e) {
+        reportAppError("Не удалось обновить framing модели:", e);
+      }
+    });
+  }
+}
+
 function initHomeMascot() {
   if (mascotInitStarted) return;
   mascotInitStarted = true;
@@ -2292,6 +2322,8 @@ function initHomeMascot() {
 
   let viewerLoaded = false;
   let failTimer = null;
+
+  applyMascotViewerStandingPose(viewer);
 
   function setStatus(text, hidden = false) {
     status.textContent = text;
@@ -2330,6 +2362,7 @@ function initHomeMascot() {
   }, 5000);
 
   viewer.addEventListener("load", () => {
+    applyMascotViewerStandingPose(viewer);
     clearFailTimer();
     showViewer();
   });
