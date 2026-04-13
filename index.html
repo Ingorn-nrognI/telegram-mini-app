@@ -1449,8 +1449,37 @@ button {
   font-weight: 800;
 }
 
+.scanner-unified-card {
+  padding: 10px !important;
+}
+
+.scanner-control-divider {
+  height: 1px;
+  margin: 12px 0 14px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.12), rgba(255,255,255,0.04));
+}
+
+.scanner-inline-section-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 2px 12px;
+}
+
+.scanner-control-actions-single {
+  justify-content: flex-end;
+}
+
+.scanner-control-actions-single .card-action {
+  min-width: 120px;
+}
+
 .scanner-screen-compact .screen-inner {
   gap: 10px;
+}
+
+.scanner-screen-compact .section-card {
+  padding: 12px;
 }
 
 .scanner-screen-compact .mode-hero-card,
@@ -1861,20 +1890,7 @@ button {
 
   <div id="scannerGridScreen" class="menu-screen scanner-screen-compact">
     <div class="screen-inner">
-      <section class="mode-hero-card scanner-mode-hero">
-        <div class="mode-kicker">🧬 Новый PvP режим</div>
-        <h1 class="mode-title">Сканер-сетка</h1>
-        <p class="mode-subtitle">
-          Сетка делится между участниками пропорционально ставкам. Победитель определяется заранее через результат раунда, а фронт только красиво проводит сканер к победной клетке и подсвечивает её.
-        </p>
-
-        <div class="mode-actions">
-          <button type="button" id="scannerJoinButtonHero" class="primary-action" onclick="startOrJoinScannerRound(event)">Войти в раунд</button>
-          <button type="button" class="secondary-action" onclick="resetScannerRound(event)">Сбросить</button>
-        </div>
-      </section>
-
-      <section class="section-card scanner-arena-card">
+      <section class="section-card scanner-arena-card scanner-unified-card">
         <div class="scanner-panel-top">
           <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
           <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:00</div>
@@ -1893,15 +1909,10 @@ button {
           <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
           <div id="scannerResultText" class="scanner-result-text"></div>
         </div>
-      </section>
 
-      <section class="section-card scanner-summary-card">
-        <div class="section-heading">
-          <div>
-            <div class="section-kicker">Управление раундом</div>
-            <h2 class="section-title">Ставка и плотность</h2>
-          </div>
-        </div>
+        <div class="scanner-control-divider"></div>
+
+        <div class="scanner-inline-section-title">Ставка и плотность</div>
 
         <div class="scanner-control-stack">
           <div>
@@ -1929,8 +1940,7 @@ button {
             </div>
           </div>
 
-          <div class="scanner-control-actions">
-            <button type="button" id="scannerJoinButton" class="card-action" onclick="startOrJoinScannerRound(event)">Войти в раунд</button>
+          <div class="scanner-control-actions scanner-control-actions-single">
             <button type="button" class="card-action ghost" onclick="resetScannerRound(event)">Сбросить</button>
           </div>
         </div>
@@ -1939,34 +1949,10 @@ button {
       <section class="section-card">
         <div class="section-heading">
           <div>
-            <div class="section-kicker">Участники</div>
-            <h2 class="section-title">Текущий раунд</h2>
-          </div>
-        </div>
-        <div id="scannerParticipantsMeta" class="section-subtitle">Пока нет активного раунда.</div>
-        <div id="scannerParticipantsList" class="scanner-player-list" style="margin-top:14px;"></div>
-      </section>
-
-      <section class="section-card">
-        <div class="section-heading">
-          <div>
-            <div class="section-kicker">Локальная история</div>
             <h2 class="section-title">Последние раунды</h2>
           </div>
         </div>
         <div id="scannerRecentRounds" class="scanner-recent-list"></div>
-      </section>
-
-      <section class="banner-card scanner-fairness-card">
-        <h3>🛡️ Как подключить честный результат</h3>
-        <p>
-          Для production-режима верни победителя и индекс ячейки с сервера через <span class="scanner-code">window.getScannerGridRoundResult(payload)</span>. Если hook не подключён, интерфейс использует локальный weighted fallback только для демонстрации UI и анимации.
-        </p>
-        <div class="scanner-summary-meta">
-          <div class="scanner-summary-pill">Hook: winningCellIndex</div>
-          <div class="scanner-summary-pill">История: Firestore + localStorage</div>
-          <div class="scanner-summary-pill">Canvas: 100 × 100</div>
-        </div>
       </section>
     </div>
   </div>
@@ -2800,8 +2786,10 @@ let scannerGridWaitingTimer = null;
 let scannerGridAnimationFrame = null;
 let scannerGridVisualFrame = null;
 let scannerGridCanvasCache = null;
+let scannerGridCache = null;
 let scannerGridPath = null;
 let scannerGridResizeAttached = false;
+let scannerGridAutoJoinTimer = null;
 const scannerGridPathOrder = (() => {
   const indices = [];
   for (let row = 0; row < SCANNER_GRID_ROWS; row += 1) {
@@ -2882,6 +2870,23 @@ function stopScannerVisualLoop() {
     cancelAnimationFrame(scannerGridVisualFrame);
     scannerGridVisualFrame = null;
   }
+}
+
+function stopScannerAutoJoinTimer() {
+  if (scannerGridAutoJoinTimer) {
+    clearTimeout(scannerGridAutoJoinTimer);
+    scannerGridAutoJoinTimer = null;
+  }
+}
+
+function scheduleScannerAutoJoin() {
+  stopScannerAutoJoinTimer();
+  scannerGridAutoJoinTimer = setTimeout(() => {
+    scannerGridAutoJoinTimer = null;
+    if (!scannerGridState || scannerGridState.status !== "queued" || !scannerGridState.fullPlayers.length || scannerGridState.fullPlayers.length < 2) return;
+    scannerGridState.joinedCount = 2;
+    startScannerCountdown();
+  }, 1500);
 }
 
 function hasScannerActiveArena() {
@@ -3132,11 +3137,13 @@ function bootstrapScannerWaitingRound() {
   scannerGridState.lastResultSource = "ожидание 2-го игрока";
   scannerGridState.pendingServerResult = null;
   updateScannerVisiblePlayers(1);
+  scheduleScannerAutoJoin();
 }
 
 function startScannerCountdown() {
   if (!scannerGridState.fullPlayers.length) return;
   stopScannerWaitingTimer();
+  stopScannerAutoJoinTimer();
   scannerGridState.joinedCount = Math.max(2, scannerGridState.joinedCount || 0);
   scannerGridState.status = "waiting";
   scannerGridState.startedAt = Date.now();
@@ -3224,6 +3231,7 @@ function stopScannerWaitingTimer() {
     clearInterval(scannerGridWaitingTimer);
     scannerGridWaitingTimer = null;
   }
+  stopScannerAutoJoinTimer();
 }
 
 function requestScannerGridResultPayload() {
@@ -3412,6 +3420,28 @@ function setScannerStake(value) {
   renderScannerRound();
 }
 
+function setScannerStakeAndJoin(value) {
+  const stakeValue = Number(value);
+  scannerGridState.selectedStake = stakeValue;
+
+  if (!scannerGridState || scannerGridState.status === "idle" || scannerGridState.status === "finished") {
+    startNewScannerRound();
+    return;
+  }
+
+  if (scannerGridState.status === "queued" || scannerGridState.status === "waiting") {
+    const myPlayer = scannerGridState.fullPlayers.find((player) => player.id === getCurrentPlayer().id);
+    if (myPlayer) {
+      myPlayer.stake = Number((myPlayer.stake + stakeValue).toFixed(2));
+      updateScannerVisiblePlayers(Math.max(1, scannerGridState.joinedCount || 1));
+    }
+    renderScannerRound();
+    return;
+  }
+
+  renderScannerRound();
+}
+
 function setScannerPopulation(value) {
   scannerGridState.selectedPopulation = Number(value);
   renderScannerRound();
@@ -3490,11 +3520,12 @@ function finalizeScannerRound() {
 function renderScannerChips(containerId, values, currentValue, clickHandlerName, suffix = "") {
   const container = document.getElementById(containerId);
   if (!container) return;
+  const handlerName = containerId === "scannerStakeChips" ? "setScannerStakeAndJoin" : clickHandlerName;
   container.innerHTML = values.map((value) => `
     <button
       type="button"
       class="scanner-chip ${Number(currentValue) === Number(value) ? "active" : ""}"
-      onclick="${clickHandlerName}(${Number(value)})"
+      onclick="${handlerName}(${Number(value)})"
     >${value}${suffix}</button>
   `).join("");
 }
@@ -3977,6 +4008,7 @@ function handleBottomNav(action, event) {
 }
 
 window.setScannerStake = setScannerStake;
+window.setScannerStakeAndJoin = setScannerStakeAndJoin;
 window.setScannerPopulation = setScannerPopulation;
 window.startOrJoinScannerRound = startOrJoinScannerRound;
 window.resetScannerRound = resetScannerRound;
