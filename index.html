@@ -4712,6 +4712,173 @@ function drawScannerGridLines(ctx, size, cellSize) {
   ctx.restore();
 }
 
+function drawScannerBeam(ctx, length, options = {}) {
+  const safeLength = Math.max(0, Number(length) || 0);
+  if (!safeLength) return;
+
+  const beamColor = options.beamColor || "rgba(45, 225, 255, 0.78)";
+  const innerColor = options.innerColor || "rgba(255,255,255,0.92)";
+  const glowWidth = Math.max(1, Number(options.glowWidth) || 10);
+  const coreWidth = Math.max(0.6, Number(options.coreWidth) || 2.8);
+  const innerWidth = Math.max(0.3, Number(options.innerWidth) || 0.9);
+  const glowBlur = Math.max(0, Number(options.glowBlur) || 24);
+  const coreBlur = Math.max(0, Number(options.coreBlur) || 10);
+  const centerGap = Math.max(0, Number(options.centerGap) || 0);
+  const halfLength = safeLength / 2;
+  const gapHalf = Math.min(halfLength - 2, centerGap / 2);
+
+  const segments = gapHalf > 0
+    ? [
+        { from: -halfLength, to: -gapHalf },
+        { from: gapHalf, to: halfLength }
+      ]
+    : [{ from: -halfLength, to: halfLength }];
+
+  const drawSegment = (from, to, width, color, blur, alpha = 1) => {
+    if (!Number.isFinite(from) || !Number.isFinite(to) || Math.abs(to - from) < 0.5) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.shadowBlur = blur;
+    ctx.shadowColor = color;
+    ctx.beginPath();
+    ctx.moveTo(from, 0);
+    ctx.lineTo(to, 0);
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  ctx.save();
+  const halo = ctx.createLinearGradient(-halfLength, 0, halfLength, 0);
+  halo.addColorStop(0, "rgba(45, 225, 255, 0)");
+  halo.addColorStop(0.18, "rgba(45, 225, 255, 0.12)");
+  halo.addColorStop(0.5, "rgba(45, 225, 255, 0.22)");
+  halo.addColorStop(0.82, "rgba(45, 225, 255, 0.12)");
+  halo.addColorStop(1, "rgba(45, 225, 255, 0)");
+  ctx.fillStyle = halo;
+
+  if (gapHalf > 0) {
+    ctx.fillRect(-halfLength, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
+    ctx.fillRect(gapHalf, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
+  } else {
+    ctx.fillRect(-halfLength, -glowWidth * 0.55, safeLength, glowWidth * 1.1);
+  }
+  ctx.restore();
+
+  segments.forEach((segment) => {
+    drawSegment(segment.from, segment.to, glowWidth, beamColor, glowBlur, 0.38);
+    drawSegment(segment.from, segment.to, coreWidth, beamColor, coreBlur, 0.96);
+    drawSegment(segment.from, segment.to, innerWidth, innerColor, 0, 0.98);
+  });
+}
+
+function drawScannerReticle(ctx, x, y, radius, options = {}) {
+  const safeRadius = Math.max(4, Number(radius) || 0);
+  const alpha = Math.max(0, Math.min(1, Number(options.alpha) || 1));
+  const plusScale = Math.max(0.2, Number(options.plusScale) || 0.72);
+  const plusColor = options.plusColor || "rgba(7, 11, 18, 0.96)";
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = alpha;
+
+  ctx.shadowBlur = safeRadius * 1.45;
+  ctx.shadowColor = "rgba(45, 225, 255, 0.36)";
+  ctx.fillStyle = "rgba(45, 225, 255, 0.12)";
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius * 1.18, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "rgba(255,255,255,0.86)";
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius * 0.24, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.lineWidth = Math.max(1.4, safeRadius * 0.18);
+  ctx.strokeStyle = "rgba(255,255,255,0.94)";
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius * 0.72, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.lineWidth = Math.max(1, safeRadius * 0.08);
+  ctx.strokeStyle = "rgba(45, 225, 255, 0.92)";
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const plusLength = safeRadius * plusScale;
+  ctx.lineCap = "round";
+  ctx.lineWidth = Math.max(1.2, safeRadius * 0.16);
+  ctx.strokeStyle = plusColor;
+  ctx.beginPath();
+  ctx.moveTo(-plusLength, 0);
+  ctx.lineTo(plusLength, 0);
+  ctx.moveTo(0, -plusLength);
+  ctx.lineTo(0, plusLength);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawScannerLens(ctx, sourceCanvas, x, y, radius, surfaceSize, options = {}) {
+  if (!sourceCanvas) return;
+
+  const safeRadius = Math.max(8, Number(radius) || 0);
+  const zoom = Math.max(1, Number(options.zoom) || 1.8);
+  const alpha = Math.max(0, Math.min(1, Number(options.alpha) || 1));
+  const size = Math.max(1, Number(surfaceSize) || sourceCanvas.width || 1);
+  const lensDiameter = safeRadius * 2;
+  const sampleSize = lensDiameter / zoom;
+  const safeX = Math.max(0, Math.min(size, Number(x) || 0));
+  const safeY = Math.max(0, Math.min(size, Number(y) || 0));
+  const sx = Math.max(0, Math.min(size - sampleSize, safeX - sampleSize / 2));
+  const sy = Math.max(0, Math.min(size - sampleSize, safeY - sampleSize / 2));
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.beginPath();
+  ctx.arc(safeX, safeY, safeRadius, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(sourceCanvas, sx, sy, sampleSize, sampleSize, safeX - safeRadius, safeY - safeRadius, lensDiameter, lensDiameter);
+
+  const gloss = ctx.createRadialGradient(
+    safeX - safeRadius * 0.32,
+    safeY - safeRadius * 0.32,
+    safeRadius * 0.12,
+    safeX,
+    safeY,
+    safeRadius
+  );
+  gloss.addColorStop(0, "rgba(255,255,255,0.38)");
+  gloss.addColorStop(0.28, "rgba(255,255,255,0.14)");
+  gloss.addColorStop(1, "rgba(45,225,255,0.03)");
+  ctx.fillStyle = gloss;
+  ctx.fillRect(safeX - safeRadius, safeY - safeRadius, lensDiameter, lensDiameter);
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.shadowBlur = safeRadius * 0.85;
+  ctx.shadowColor = "rgba(45, 225, 255, 0.34)";
+  ctx.lineWidth = Math.max(2, safeRadius * 0.12);
+  ctx.strokeStyle = "rgba(255,255,255,0.94)";
+  ctx.beginPath();
+  ctx.arc(safeX, safeY, safeRadius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = Math.max(1, safeRadius * 0.06);
+  ctx.strokeStyle = "rgba(45,225,255,0.88)";
+  ctx.beginPath();
+  ctx.arc(safeX, safeY, Math.max(2, safeRadius - Math.max(2, safeRadius * 0.18)), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawScannerIdleArena(ctx, size, now) {
   const gradient = ctx.createLinearGradient(0, 0, 0, size);
   gradient.addColorStop(0, "#02050c");
