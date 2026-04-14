@@ -1449,6 +1449,168 @@ button {
   font-weight: 800;
 }
 
+.scanner-unified-card {
+  padding: 10px !important;
+}
+
+.scanner-control-divider {
+  height: 1px;
+  margin: 12px 0 14px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.12), rgba(255,255,255,0.04));
+}
+
+.scanner-inline-section-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 2px 12px;
+}
+
+.scanner-control-actions-single {
+  justify-content: flex-end;
+}
+
+.scanner-control-actions-single .card-action {
+  min-width: 120px;
+}
+
+.scanner-screen-compact .screen-inner {
+  gap: 10px;
+}
+
+.hero-topline,
+.hero-text,
+.section-kicker,
+.section-subtitle,
+.card-badge,
+.card-text,
+.mode-kicker,
+.mode-subtitle,
+.info-card p,
+.banner-card p,
+.stat-label,
+.scanner-feature-badges,
+.rooms-note {
+  display: none !important;
+}
+
+.hero-card,
+.section-card,
+.mode-hero-card,
+.game-card,
+.stat-card,
+.info-card,
+.banner-card {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.cards-stack > .game-card,
+.two-column-grid > .info-card,
+.stats-grid > .stat-card {
+  min-height: auto;
+}
+
+.stats-grid {
+  gap: 8px;
+}
+
+.stat-card {
+  padding: 12px;
+}
+
+.rooms-note.compact-note {
+  display: block !important;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.scanner-screen-compact .section-card {
+  padding: 12px;
+}
+
+.scanner-screen-compact .mode-hero-card,
+.scanner-screen-compact .section-card,
+.scanner-screen-compact .banner-card {
+  padding: 14px;
+}
+
+.hero-topline,
+.section-kicker,
+.mode-kicker,
+.card-badge,
+.hero-text,
+.section-subtitle,
+.mode-subtitle,
+.info-card p,
+.banner-card p,
+.stat-label,
+.scanner-feature-badges,
+.scanner-grid-footnote,
+.scanner-summary-meta {
+  display: none !important;
+}
+
+.hero-actions,
+.mode-actions,
+.card-actions {
+  margin-top: 10px;
+}
+
+.scanner-arena-card {
+  padding: 10px !important;
+}
+
+.scanner-canvas-shell {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 26px !important;
+  margin: 0 !important;
+}
+
+.scanner-canvas-shell::before {
+  display: none !important;
+}
+
+#scannerGridCanvas {
+  aspect-ratio: 1 / 1.08;
+  border-radius: 26px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 16px 34px rgba(0, 0, 0, 0.3);
+}
+
+.scanner-overlay-badges {
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+}
+
+.scanner-result-banner {
+  margin-top: 10px;
+}
+
+@media (max-width: 420px) {
+  #scannerGridCanvas {
+    aspect-ratio: 1 / 1.05;
+    border-radius: 22px;
+  }
+
+  .scanner-arena-card {
+    padding: 8px !important;
+  }
+
+  .scanner-overlay-badges {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+  }
+}
+
+
 @media (max-width: 420px) {
   .scanner-control-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1768,28 +1930,15 @@ button {
         <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">✕</button>
       </div>
       <div class="history-scroll-area">
-        <div class="history-panel-empty">Здесь будет история игр.</div>
+        <div class="history-panel-empty">История пуста.</div>
       </div>
     </div>
   </div>
 
 
-  <div id="scannerGridScreen" class="menu-screen">
+  <div id="scannerGridScreen" class="menu-screen scanner-screen-compact">
     <div class="screen-inner">
-      <section class="mode-hero-card scanner-mode-hero">
-        <div class="mode-kicker">🧬 Новый PvP режим</div>
-        <h1 class="mode-title">Сканер-сетка</h1>
-        <p class="mode-subtitle">
-          Сетка делится между участниками пропорционально ставкам. Победитель определяется заранее через результат раунда, а фронт только красиво проводит сканер к победной клетке и подсвечивает её.
-        </p>
-
-        <div class="mode-actions">
-          <button type="button" id="scannerJoinButtonHero" class="primary-action" onclick="startOrJoinScannerRound(event)">Войти в раунд</button>
-          <button type="button" class="secondary-action" onclick="resetScannerRound(event)">Сбросить</button>
-        </div>
-      </section>
-
-      <section class="section-card scanner-arena-card">
+      <section class="section-card scanner-arena-card scanner-unified-card">
         <div class="scanner-panel-top">
           <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
           <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:00</div>
@@ -1804,23 +1953,14 @@ button {
           </div>
         </div>
 
-        <p id="scannerGridFootnote" class="scanner-grid-footnote">
-          Выбери ставку и плотность раунда, затем запусти демонстрационный раунд. При подключении backend используй hook <span class="scanner-code">window.getScannerGridRoundResult(payload)</span>.
-        </p>
-
         <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
           <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
           <div id="scannerResultText" class="scanner-result-text"></div>
         </div>
-      </section>
 
-      <section class="section-card scanner-summary-card">
-        <div class="section-heading">
-          <div>
-            <div class="section-kicker">Управление раундом</div>
-            <h2 class="section-title">Ставка и плотность</h2>
-          </div>
-        </div>
+        <div class="scanner-control-divider"></div>
+
+        <div class="scanner-inline-section-title">Ставка и плотность</div>
 
         <div class="scanner-control-stack">
           <div>
@@ -1848,8 +1988,7 @@ button {
             </div>
           </div>
 
-          <div class="scanner-control-actions">
-            <button type="button" id="scannerJoinButton" class="card-action" onclick="startOrJoinScannerRound(event)">Войти в раунд</button>
+          <div class="scanner-control-actions scanner-control-actions-single">
             <button type="button" class="card-action ghost" onclick="resetScannerRound(event)">Сбросить</button>
           </div>
         </div>
@@ -1858,34 +1997,10 @@ button {
       <section class="section-card">
         <div class="section-heading">
           <div>
-            <div class="section-kicker">Участники</div>
-            <h2 class="section-title">Текущий раунд</h2>
-          </div>
-        </div>
-        <div id="scannerParticipantsMeta" class="section-subtitle">Пока нет активного раунда.</div>
-        <div id="scannerParticipantsList" class="scanner-player-list" style="margin-top:14px;"></div>
-      </section>
-
-      <section class="section-card">
-        <div class="section-heading">
-          <div>
-            <div class="section-kicker">Локальная история</div>
             <h2 class="section-title">Последние раунды</h2>
           </div>
         </div>
         <div id="scannerRecentRounds" class="scanner-recent-list"></div>
-      </section>
-
-      <section class="banner-card scanner-fairness-card">
-        <h3>🛡️ Как подключить честный результат</h3>
-        <p>
-          Для production-режима верни победителя и индекс ячейки с сервера через <span class="scanner-code">window.getScannerGridRoundResult(payload)</span>. Если hook не подключён, интерфейс использует локальный weighted fallback только для демонстрации UI и анимации.
-        </p>
-        <div class="scanner-summary-meta">
-          <div class="scanner-summary-pill">Hook: winningCellIndex</div>
-          <div class="scanner-summary-pill">История: Firestore + localStorage</div>
-          <div class="scanner-summary-pill">Canvas: 100 × 100</div>
-        </div>
       </section>
     </div>
   </div>
@@ -2572,11 +2687,7 @@ function openRooms() {
 
   if (roomsList) {
     roomsList.innerHTML = `
-      <div class="rooms-note">
-        Bobr Run убран из этой версии файла.<br><br>
-        Главное меню, история игр, таблица лидеров, настройки и навигация продолжают работать.<br><br>
-        Когда ты потом вернёшь отдельный игровой модуль обратно, сюда можно будет снова подключить комнаты и запуск матчей.
-      </div>
+      <div class="rooms-note compact-note">Комнаты пока не подключены.</div>
     `;
   }
 
@@ -2595,7 +2706,7 @@ function closeRooms() {
 }
 
 function showGameUnavailable() {
-  alert("Bobr Run временно убран из этой версии файла.");
+  alert("Режим временно недоступен.");
 }
 
 function createRoom() { showGameUnavailable(); }
@@ -2719,8 +2830,10 @@ let scannerGridWaitingTimer = null;
 let scannerGridAnimationFrame = null;
 let scannerGridVisualFrame = null;
 let scannerGridCanvasCache = null;
+let scannerGridCache = null;
 let scannerGridPath = null;
 let scannerGridResizeAttached = false;
+let scannerGridAutoJoinTimer = null;
 const scannerGridPathOrder = (() => {
   const indices = [];
   for (let row = 0; row < SCANNER_GRID_ROWS; row += 1) {
@@ -2801,6 +2914,23 @@ function stopScannerVisualLoop() {
     cancelAnimationFrame(scannerGridVisualFrame);
     scannerGridVisualFrame = null;
   }
+}
+
+function stopScannerAutoJoinTimer() {
+  if (scannerGridAutoJoinTimer) {
+    clearTimeout(scannerGridAutoJoinTimer);
+    scannerGridAutoJoinTimer = null;
+  }
+}
+
+function scheduleScannerAutoJoin() {
+  stopScannerAutoJoinTimer();
+  scannerGridAutoJoinTimer = setTimeout(() => {
+    scannerGridAutoJoinTimer = null;
+    if (!scannerGridState || scannerGridState.status !== "queued" || !scannerGridState.fullPlayers.length || scannerGridState.fullPlayers.length < 2) return;
+    scannerGridState.joinedCount = 2;
+    startScannerCountdown();
+  }, 1500);
 }
 
 function hasScannerActiveArena() {
@@ -3051,11 +3181,13 @@ function bootstrapScannerWaitingRound() {
   scannerGridState.lastResultSource = "ожидание 2-го игрока";
   scannerGridState.pendingServerResult = null;
   updateScannerVisiblePlayers(1);
+  scheduleScannerAutoJoin();
 }
 
 function startScannerCountdown() {
   if (!scannerGridState.fullPlayers.length) return;
   stopScannerWaitingTimer();
+  stopScannerAutoJoinTimer();
   scannerGridState.joinedCount = Math.max(2, scannerGridState.joinedCount || 0);
   scannerGridState.status = "waiting";
   scannerGridState.startedAt = Date.now();
@@ -3092,100 +3224,95 @@ function getScannerCellCenter(cellIndex) {
   };
 }
 
-function clampScannerPoint(value, min = -0.12, max = 1.12) {
-  return Math.max(min, Math.min(max, value));
-}
-
 function buildScannerPathForCell(cellIndex) {
   const target = getScannerCellCenter(cellIndex);
   const seed = hashString(`${scannerGridState.roundId}_${cellIndex}`);
   const rnd = mulberry32(seed);
   const points = [];
-  const loops = 14;
-  const phaseX = rnd() * Math.PI * 2;
-  const phaseY = rnd() * Math.PI * 2;
-  const freqX = 2.8 + rnd() * 1.35;
-  const freqY = 2.2 + rnd() * 1.2;
-  const ampX = 0.28 + rnd() * 0.14;
-  const ampY = 0.24 + rnd() * 0.16;
-  const swirlX = 0.06 + rnd() * 0.05;
-  const swirlY = 0.05 + rnd() * 0.05;
+  const entrances = [
+    { x: -0.14, y: 0.08 + rnd() * 0.84 },
+    { x: 1.14, y: 0.08 + rnd() * 0.84 },
+    { x: 0.08 + rnd() * 0.84, y: -0.14 },
+    { x: 0.08 + rnd() * 0.84, y: 1.14 }
+  ];
 
-  for (let i = 0; i < loops; i += 1) {
-    const t = i / (loops - 1);
-    const settle = Math.pow(t, 1.7);
-    const orbitalX = 0.5 + Math.sin(phaseX + t * Math.PI * freqX) * ampX * (1 - t * 0.18) + Math.cos(phaseY + t * Math.PI * 1.35) * swirlX;
-    const orbitalY = 0.5 + Math.cos(phaseY + t * Math.PI * freqY) * ampY * (1 - t * 0.16) + Math.sin(phaseX + t * Math.PI * 1.18) * swirlY;
-    const settleMix = t < 0.72 ? 0 : Math.pow((t - 0.72) / 0.28, 2.1);
+  points.push(entrances[Math.floor(rnd() * entrances.length)]);
+
+  const sweepCount = 12;
+  for (let i = 0; i < sweepCount; i += 1) {
+    const t = (i + 1) / (sweepCount + 1);
+    const approach = Math.max(0, (t - 0.58) / 0.42);
+    const wanderRadius = 0.22 * (1 - approach);
+    const baseX = 0.08 + rnd() * 0.84;
+    const baseY = 0.08 + rnd() * 0.84;
+    const blendX = baseX * (1 - approach) + target.x * approach;
+    const blendY = baseY * (1 - approach) + target.y * approach;
+
     points.push({
-      x: clampScannerPoint(orbitalX * (1 - settleMix) + target.x * settleMix),
-      y: clampScannerPoint(orbitalY * (1 - settleMix) + target.y * settleMix)
+      x: Math.max(-0.08, Math.min(1.08, blendX + (rnd() - 0.5) * wanderRadius)),
+      y: Math.max(-0.08, Math.min(1.08, blendY + (rnd() - 0.5) * wanderRadius))
     });
   }
 
-  points.push(
-    {
-      x: clampScannerPoint(target.x + (rnd() - 0.5) * 0.08),
-      y: clampScannerPoint(target.y + (rnd() - 0.5) * 0.08)
-    },
-    {
-      x: clampScannerPoint(target.x + (rnd() - 0.5) * 0.02),
-      y: clampScannerPoint(target.y + (rnd() - 0.5) * 0.02)
-    },
-    target,
-    target
-  );
-
+  points.push({
+    x: target.x + (rnd() - 0.5) * 0.07,
+    y: target.y + (rnd() - 0.5) * 0.07
+  });
+  points.push({
+    x: target.x + (rnd() - 0.5) * 0.025,
+    y: target.y + (rnd() - 0.5) * 0.025
+  });
+  points.push(target);
   return points;
 }
 
 function interpolateScannerPath(points, progress) {
   if (!Array.isArray(points) || points.length < 2) return { x: 0.5, y: 0.5, angle: 0 };
-  const clamped = Math.min(1, Math.max(0, progress));
-  const eased = clamped < 0.84
-    ? 1 - Math.pow(1 - clamped / 0.84, 1.55) * 0.16
-    : 0.84 + (1 - Math.pow(1 - (clamped - 0.84) / 0.16, 3)) * 0.16;
-  const segmentCount = points.length - 1;
-  const scaled = Math.min(segmentCount - 0.0001, eased * segmentCount);
-  const segmentIndex = Math.floor(scaled);
-  const t = scaled - segmentIndex;
-  const p0 = points[Math.max(0, segmentIndex - 1)] || points[0];
-  const p1 = points[segmentIndex] || points[0];
-  const p2 = points[Math.min(points.length - 1, segmentIndex + 1)] || points[points.length - 1];
-  const p3 = points[Math.min(points.length - 1, segmentIndex + 2)] || points[points.length - 1];
-  const t2 = t * t;
-  const t3 = t2 * t;
+
+  const clamp = (value) => Math.max(0, Math.min(1, value));
+  const clamped = clamp(progress);
+  const segmentFloat = clamped * (points.length - 1);
+  const segmentIndex = Math.min(points.length - 2, Math.floor(segmentFloat));
+  const t = segmentFloat - segmentIndex;
+
+  const p0 = points[Math.max(0, segmentIndex - 1)];
+  const p1 = points[segmentIndex];
+  const p2 = points[Math.min(points.length - 1, segmentIndex + 1)];
+  const p3 = points[Math.min(points.length - 1, segmentIndex + 2)];
+
+  const tt = t * t;
+  const ttt = tt * t;
 
   const x = 0.5 * (
     (2 * p1.x) +
     (-p0.x + p2.x) * t +
-    (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
-    (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
+    (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * tt +
+    (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * ttt
   );
 
   const y = 0.5 * (
     (2 * p1.y) +
     (-p0.y + p2.y) * t +
-    (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
-    (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
+    (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * tt +
+    (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * ttt
   );
 
   const dx = 0.5 * (
     (-p0.x + p2.x) +
     2 * (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t +
-    3 * (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t2
+    3 * (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * tt
   );
 
   const dy = 0.5 * (
     (-p0.y + p2.y) +
     2 * (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t +
-    3 * (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t2
+    3 * (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * tt
   );
 
   return {
-    x: clampScannerPoint(x),
-    y: clampScannerPoint(y),
-    angle: Math.atan2(dy, dx)
+    x: Math.max(-0.18, Math.min(1.18, x)),
+    y: Math.max(-0.18, Math.min(1.18, y)),
+    angle: Math.atan2(dy || 0.0001, dx || 0.0001)
   };
 }
 
@@ -3204,6 +3331,7 @@ function stopScannerWaitingTimer() {
     clearInterval(scannerGridWaitingTimer);
     scannerGridWaitingTimer = null;
   }
+  stopScannerAutoJoinTimer();
 }
 
 function requestScannerGridResultPayload() {
@@ -3392,6 +3520,28 @@ function setScannerStake(value) {
   renderScannerRound();
 }
 
+function setScannerStakeAndJoin(value) {
+  const stakeValue = Number(value);
+  scannerGridState.selectedStake = stakeValue;
+
+  if (!scannerGridState || scannerGridState.status === "idle" || scannerGridState.status === "finished") {
+    startNewScannerRound();
+    return;
+  }
+
+  if (scannerGridState.status === "queued" || scannerGridState.status === "waiting") {
+    const myPlayer = scannerGridState.fullPlayers.find((player) => player.id === getCurrentPlayer().id);
+    if (myPlayer) {
+      myPlayer.stake = Number((myPlayer.stake + stakeValue).toFixed(2));
+      updateScannerVisiblePlayers(Math.max(1, scannerGridState.joinedCount || 1));
+    }
+    renderScannerRound();
+    return;
+  }
+
+  renderScannerRound();
+}
+
 function setScannerPopulation(value) {
   scannerGridState.selectedPopulation = Number(value);
   renderScannerRound();
@@ -3470,11 +3620,12 @@ function finalizeScannerRound() {
 function renderScannerChips(containerId, values, currentValue, clickHandlerName, suffix = "") {
   const container = document.getElementById(containerId);
   if (!container) return;
+  const handlerName = containerId === "scannerStakeChips" ? "setScannerStakeAndJoin" : clickHandlerName;
   container.innerHTML = values.map((value) => `
     <button
       type="button"
       class="scanner-chip ${Number(currentValue) === Number(value) ? "active" : ""}"
-      onclick="${clickHandlerName}(${Number(value)})"
+      onclick="${handlerName}(${Number(value)})"
     >${value}${suffix}</button>
   `).join("");
 }
@@ -3515,7 +3666,7 @@ function renderScannerRecentList() {
   if (!container) return;
   const items = scannerGridState.recentRounds || [];
   if (!items.length) {
-    container.innerHTML = `<div class="scanner-empty">После завершения раунда здесь появятся локальные карточки истории. Они также отправляются в твою текущую Firestore-историю.</div>`;
+    container.innerHTML = `<div class="scanner-empty">История пуста.</div>`;
     return;
   }
   container.innerHTML = items.slice(0, 6).map((item) => `
@@ -3748,31 +3899,40 @@ function renderScannerCanvas(forcedProgress) {
     const sample = interpolateScannerPath(points, progress || 0);
     const px = sample.x * size;
     const py = sample.y * size;
-    const beamLength = size * 1.6;
+    const beamLength = size * 1.72;
+    const wobble = Math.sin((progress || 0) * Math.PI * 10) * (scannerGridState.status === "finished" ? 0.015 : 0.09) * (1 - Math.min(1, (progress || 0) * 0.92));
 
     ctx.save();
     ctx.translate(px, py);
-    ctx.rotate(sample.angle);
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = "rgba(45, 225, 255, 0.55)";
-    ctx.strokeStyle = "rgba(45, 225, 255, 0.92)";
-    ctx.lineWidth = 5;
+    ctx.rotate(sample.angle + wobble);
+
+    const beamGradient = ctx.createLinearGradient(-beamLength / 2, 0, beamLength / 2, 0);
+    beamGradient.addColorStop(0, "rgba(45,225,255,0.05)");
+    beamGradient.addColorStop(0.18, "rgba(45,225,255,0.55)");
+    beamGradient.addColorStop(0.5, "rgba(255,255,255,0.98)");
+    beamGradient.addColorStop(0.82, "rgba(45,225,255,0.55)");
+    beamGradient.addColorStop(1, "rgba(45,225,255,0.05)");
+
+    ctx.shadowBlur = 28;
+    ctx.shadowColor = "rgba(45, 225, 255, 0.58)";
+    ctx.strokeStyle = beamGradient;
+    ctx.lineWidth = 5.2;
     ctx.beginPath();
     ctx.moveTo(-beamLength / 2, 0);
     ctx.lineTo(beamLength / 2, 0);
     ctx.stroke();
 
-    ctx.shadowBlur = 34;
-    ctx.strokeStyle = "rgba(255,255,255,0.72)";
-    ctx.lineWidth = 1.5;
+    ctx.shadowBlur = 42;
+    ctx.strokeStyle = "rgba(255,255,255,0.78)";
+    ctx.lineWidth = 1.35;
     ctx.beginPath();
     ctx.moveTo(-beamLength / 2, 0);
     ctx.lineTo(beamLength / 2, 0);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.fillStyle = "rgba(255,255,255,0.95)";
-    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.96)";
+    ctx.arc(0, 0, 6.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -3890,13 +4050,7 @@ function openRooms() {
   const modeLabel = currentMenuView === "scanner" ? "Сканер-сетка" : currentMenuView === "bobrRun" ? "Bobr Run" : "игровой режим";
 
   if (roomsList) {
-    roomsList.innerHTML = `
-      <div class="rooms-note">
-        Для режима «${modeLabel}» оболочка комнат уже есть, но реальный online-runtime ещё не подключён.<br><br>
-        Главное меню, история, таблица лидеров, переходы и новый экран Сканер-сетки продолжают работать.<br><br>
-        Когда подключишь серверные комнаты, сюда можно вернуть листинг, вход в матч и синхронизацию игроков.
-      </div>
-    `;
+    roomsList.innerHTML = `<div class="rooms-note compact-note">Комнаты ${modeLabel} пока не подключены.</div>`;
   }
 
   if (createRoomBtn) {
@@ -3910,7 +4064,7 @@ function openRooms() {
 
 function showGameUnavailable() {
   const modeLabel = currentMenuView === "scanner" ? "Сканер-сетка" : "Bobr Run";
-  alert(`${modeLabel}: online-runtime пока не подключён.`);
+  alert(`${modeLabel} пока недоступен.`);
 }
 
 function handleBottomNav(action, event) {
@@ -3957,6 +4111,7 @@ function handleBottomNav(action, event) {
 }
 
 window.setScannerStake = setScannerStake;
+window.setScannerStakeAndJoin = setScannerStakeAndJoin;
 window.setScannerPopulation = setScannerPopulation;
 window.startOrJoinScannerRound = startOrJoinScannerRound;
 window.resetScannerRound = resetScannerRound;
