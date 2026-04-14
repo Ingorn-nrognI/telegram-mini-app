@@ -2155,6 +2155,8 @@ let expandedHistoryMatchId = null;
 let currentMenuView = "home";
 let currentBottomNav = "games";
 let homeScreenContext = "games";
+let homeInitialGameScrollApplied = false;
+let homeInitialGameScrollScheduled = false;
 function shouldIgnoreExternalConsoleError(message) {
   const text = String(message || "").toLowerCase();
   return (
@@ -2354,6 +2356,77 @@ function scrollHomeToSection(sectionId) {
     top: Math.max(offset, 0),
     behavior: "smooth"
   });
+}
+
+function getHomeSectionStartScrollTop(sectionId, extraOffset = -10) {
+  const homeScreen = document.getElementById("homeScreen");
+  const section = document.getElementById(sectionId);
+  if (!homeScreen || !section) return null;
+
+  const homeRect = homeScreen.getBoundingClientRect();
+  const sectionRect = section.getBoundingClientRect();
+  return Math.max(0, sectionRect.top - homeRect.top + homeScreen.scrollTop + extraOffset);
+}
+
+function scrollHomeToSectionImmediately(sectionId, extraOffset = -10) {
+  const homeScreen = document.getElementById("homeScreen");
+  const targetTop = getHomeSectionStartScrollTop(sectionId, extraOffset);
+  if (!homeScreen || targetTop === null) return false;
+
+  if (Math.abs(homeScreen.scrollTop - targetTop) > 1) {
+    homeScreen.scrollTop = targetTop;
+  }
+
+  return Math.abs(homeScreen.scrollTop - targetTop) <= 2;
+}
+
+function applyInitialHomeGameScroll(force = false) {
+  if (homeInitialGameScrollApplied && !force) return true;
+  if (currentMenuView !== "home") return false;
+
+  const homeScreen = document.getElementById("homeScreen");
+  const spacerBlock = document.getElementById("bobrMascotBlock");
+  const gameBlock = document.getElementById("scannerHomeBlock");
+  if (!homeScreen || !spacerBlock || !gameBlock) return false;
+
+  const aligned = scrollHomeToSectionImmediately("scannerHomeBlock", -10);
+  const homeRect = homeScreen.getBoundingClientRect();
+  const spacerRect = spacerBlock.getBoundingClientRect();
+  const gameRect = gameBlock.getBoundingClientRect();
+  const spacerHiddenAboveView = spacerRect.bottom <= homeRect.top + 16;
+  const gameStartsInView = gameRect.top <= homeRect.top + 18;
+
+  if (aligned && spacerHiddenAboveView && gameStartsInView) {
+    homeInitialGameScrollApplied = true;
+    return true;
+  }
+
+  return false;
+}
+
+function scheduleInitialHomeGameScroll() {
+  if (homeInitialGameScrollApplied || homeInitialGameScrollScheduled) return;
+
+  const retryDelays = [0, 50, 140, 280, 420];
+  let attemptIndex = 0;
+  homeInitialGameScrollScheduled = true;
+
+  const runAttempt = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const done = applyInitialHomeGameScroll(attemptIndex === retryDelays.length - 1);
+        if (done || attemptIndex >= retryDelays.length - 1) {
+          homeInitialGameScrollScheduled = false;
+          return;
+        }
+
+        attemptIndex += 1;
+        setTimeout(runAttempt, retryDelays[attemptIndex]);
+      });
+    });
+  };
+
+  runAttempt();
 }
 
 function setMenuView(view, options = {}) {
@@ -4142,6 +4215,13 @@ renderTopProfile();
 homeScreenContext = "games";
 setMenuView("home");
 setActiveBottomNav("games");
+scheduleInitialHomeGameScroll();
+window.addEventListener("load", scheduleInitialHomeGameScroll, { once: true });
+window.addEventListener("pageshow", () => {
+  if (!homeInitialGameScrollApplied && currentMenuView === "home") {
+    scheduleInitialHomeGameScroll();
+  }
+});
 
 window.toggleModePopup = toggleModePopup;
 window.enterScannerGridMode = enterScannerGridMode;
