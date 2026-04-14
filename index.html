@@ -1474,6 +1474,35 @@ button {
   min-width: 120px;
 }
 
+.scanner-home-main-block {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(61, 220, 255, 0.18), transparent 34%),
+    radial-gradient(circle at 0% 100%, rgba(110, 89, 255, 0.16), transparent 30%),
+    linear-gradient(135deg, rgba(12, 24, 62, 0.98), rgba(8, 12, 28, 0.97) 72%);
+}
+
+.scanner-home-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.scanner-home-heading-row .scanner-inline-section-title {
+  margin: 0;
+}
+
+.scanner-home-heading-row-bottom {
+  margin-bottom: 12px;
+}
+
+.scanner-home-join-btn,
+.scanner-home-reset-btn {
+  min-width: 132px;
+}
+
 .scanner-screen-compact .screen-inner {
   gap: 10px;
 }
@@ -1700,6 +1729,11 @@ button {
   .bottom-btn .nav-label {
     font-size: 10px;
   }
+
+  .scanner-home-join-btn,
+  .scanner-home-reset-btn {
+    width: 100%;
+  }
 }
 
 
@@ -1750,31 +1784,78 @@ button {
         </div>
       </div>
 
-
-      <section class="hero-card scanner-feature-card">
-        <div class="hero-topline">🧬 Первый PvP блок</div>
-        <h1 class="hero-title">Сканер-сетка</h1>
-        <p class="hero-text">
-          Новый режим перед Bobr World: sci-fi поле из 10 000 ячеек, которое делится между всеми участниками по ставкам, а победителя выбирает сканер, который останавливается на одной финальной клетке.
-        </p>
-
-        <div class="hero-actions">
-          <button type="button" class="primary-action" onclick="enterScannerGridMode(event)">▶ Открыть режим</button>
-          <button type="button" class="secondary-action" onclick="openRooms()">🎮 Комнаты</button>
+      <section id="scannerHomeBlock" class="section-card scanner-arena-card scanner-unified-card scanner-home-main-block">
+        <div class="scanner-panel-top">
+          <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
+          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:00</div>
+          <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
         </div>
 
-        <div class="scanner-feature-badges">
-          <div class="scanner-badge">10000 ячеек</div>
-          <div class="scanner-badge">5–1000+ игроков</div>
-          <div class="scanner-badge">Weighted RNG + scan animation</div>
+        <div class="scanner-canvas-shell">
+          <canvas id="scannerGridCanvas"></canvas>
+          <div class="scanner-overlay-badges">
+            <div class="scanner-overlay-badge" id="scannerGridMetaLeft">Арена: ожидание игроков</div>
+            <div class="scanner-overlay-badge" id="scannerGridMetaRight">Лазер в ожидании</div>
+          </div>
         </div>
+
+        <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
+          <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
+          <div id="scannerResultText" class="scanner-result-text"></div>
+        </div>
+
+        <div class="scanner-control-divider"></div>
+
+        <div class="scanner-home-heading-row">
+          <div class="scanner-inline-section-title">Ставки и плотность</div>
+          <button type="button" id="scannerJoinButton" class="card-action scanner-home-join-btn" onclick="startOrJoinScannerRound(event)">Войти в раунд</button>
+        </div>
+
+        <div class="scanner-control-stack">
+          <div>
+            <div class="scanner-control-group-title">Выбери ставку</div>
+            <div id="scannerStakeChips" class="scanner-chip-row"></div>
+          </div>
+
+          <div>
+            <div class="scanner-control-group-title">Плотность раунда</div>
+            <div id="scannerPopulationChips" class="scanner-chip-row"></div>
+          </div>
+
+          <div class="scanner-control-grid">
+            <div class="scanner-control-card">
+              <div class="scanner-control-label">Моя ставка</div>
+              <div id="scannerSelectedStakeValue" class="scanner-control-value">0 TON</div>
+            </div>
+            <div class="scanner-control-card">
+              <div class="scanner-control-label">Плотность</div>
+              <div id="scannerSelectedPopulationValue" class="scanner-control-value">0</div>
+            </div>
+            <div class="scanner-control-card">
+              <div class="scanner-control-label">Ячеек в поле</div>
+              <div id="scannerCellsValue" class="scanner-control-value">10000</div>
+            </div>
+          </div>
+
+          <div class="scanner-control-actions">
+            <button type="button" class="card-action ghost scanner-home-reset-btn" onclick="resetScannerRound(event)">Сбросить</button>
+          </div>
+        </div>
+
+        <div class="scanner-control-divider"></div>
+
+        <div class="scanner-home-heading-row scanner-home-heading-row-bottom">
+          <div class="scanner-inline-section-title">Последние раунды</div>
+        </div>
+
+        <div id="scannerRecentRounds" class="scanner-recent-list"></div>
       </section>
 
       <section class="hero-card scanner-home-hub">
         <div class="hero-topline">🌐 Главный хаб</div>
         <h1 class="hero-title">Bobr World</h1>
         <p class="hero-text">
-          Главный экран Bobr World сохранён, но теперь первый слот занят новой PvP-игрой «Сканер-сетка», а остальная навигация, история, таблица лидеров и комнаты продолжают работать в общей оболочке.
+          Главный экран Bobr World сохранён, а игровой PvP-блок теперь встроен прямо сюда: ставки, плотность, последние раунды, история, таблица лидеров и остальная навигация продолжают работать в общей оболочке.
         </p>
 
         <div class="hero-actions">
@@ -1821,17 +1902,6 @@ button {
         </p>
 
         <div id="gamesSection" class="cards-stack" style="margin-top:14px;">
-          <div class="game-card primary">
-            <div class="card-badge">🧬 Новый режим</div>
-            <h3 class="card-title">Сканер-сетка</h3>
-            <p class="card-text">
-              Первый игровой слот. Поле разбивается на 10 000 ячеек по доле ставок участников, а сканер проходит по сетке и останавливается на победной клетке.
-            </p>
-            <div class="card-actions">
-              <button type="button" class="card-action" onclick="enterScannerGridMode(event)">Открыть PvP</button>
-              <button type="button" class="card-action ghost" onclick="openRooms()">Комнаты</button>
-            </div>
-          </div>
 
           <div class="game-card">
             <div class="card-badge">⚔️ Архивный режим</div>
@@ -1932,76 +2002,6 @@ button {
       <div class="history-scroll-area">
         <div class="history-panel-empty">История пуста.</div>
       </div>
-    </div>
-  </div>
-
-
-  <div id="scannerGridScreen" class="menu-screen scanner-screen-compact">
-    <div class="screen-inner">
-      <section class="section-card scanner-arena-card scanner-unified-card">
-        <div class="scanner-panel-top">
-          <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
-          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:00</div>
-          <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
-        </div>
-
-        <div class="scanner-canvas-shell">
-          <canvas id="scannerGridCanvas"></canvas>
-          <div class="scanner-overlay-badges">
-            <div class="scanner-overlay-badge" id="scannerGridMetaLeft">Сетка: 100 × 100</div>
-            <div class="scanner-overlay-badge" id="scannerGridMetaRight">RNG: ожидает раунд</div>
-          </div>
-        </div>
-
-        <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
-          <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
-          <div id="scannerResultText" class="scanner-result-text"></div>
-        </div>
-
-        <div class="scanner-control-divider"></div>
-
-        <div class="scanner-inline-section-title">Ставка и плотность</div>
-
-        <div class="scanner-control-stack">
-          <div>
-            <div class="scanner-control-group-title">Выбери ставку</div>
-            <div id="scannerStakeChips" class="scanner-chip-row"></div>
-          </div>
-
-          <div>
-            <div class="scanner-control-group-title">Сколько игроков в раунде</div>
-            <div id="scannerPopulationChips" class="scanner-chip-row"></div>
-          </div>
-
-          <div class="scanner-control-grid">
-            <div class="scanner-control-card">
-              <div class="scanner-control-label">Моя ставка</div>
-              <div id="scannerSelectedStakeValue" class="scanner-control-value">0 TON</div>
-            </div>
-            <div class="scanner-control-card">
-              <div class="scanner-control-label">Целевой онлайн</div>
-              <div id="scannerSelectedPopulationValue" class="scanner-control-value">0</div>
-            </div>
-            <div class="scanner-control-card">
-              <div class="scanner-control-label">Ячеек в поле</div>
-              <div id="scannerCellsValue" class="scanner-control-value">10000</div>
-            </div>
-          </div>
-
-          <div class="scanner-control-actions scanner-control-actions-single">
-            <button type="button" class="card-action ghost" onclick="resetScannerRound(event)">Сбросить</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="section-card">
-        <div class="section-heading">
-          <div>
-            <h2 class="section-title">Последние раунды</h2>
-          </div>
-        </div>
-        <div id="scannerRecentRounds" class="scanner-recent-list"></div>
-      </section>
     </div>
   </div>
 
@@ -2154,6 +2154,7 @@ let historyLoading = false;
 let expandedHistoryMatchId = null;
 let currentMenuView = "home";
 let currentBottomNav = "games";
+let homeScreenContext = "games";
 function shouldIgnoreExternalConsoleError(message) {
   const text = String(message || "").toLowerCase();
   return (
@@ -2324,6 +2325,16 @@ function setActiveBottomNav(navName) {
   });
 }
 
+function getPreferredHomeNav() {
+  return homeScreenContext === "pvp" ? "pvp" : "games";
+}
+
+function getActiveModeLabel() {
+  if (currentMenuView === "bobrRun" || currentMenuView === "mode") return "Bobr Run";
+  if (homeScreenContext === "pvp") return "Сканер-сетка";
+  return "игровой режим";
+}
+
 function scrollHomeToTop() {
   const homeScreen = document.getElementById("homeScreen");
   if (!homeScreen) return;
@@ -2382,6 +2393,7 @@ function toggleModePopup(event) {
   modePopup.classList.remove("open");
 
   if (willOpen) {
+    homeScreenContext = "games";
     setActiveBottomNav("games");
     requestAnimationFrame(() => {
       scrollHomeToSection("gamesSection");
@@ -2416,6 +2428,7 @@ function openGamesMenu() {
   closeLeaderboard();
   closeRooms();
   setMenuView("home", { preserveNav: true });
+  homeScreenContext = "games";
   setActiveBottomNav("games");
   closeHistoryPanel({ preserveNav: true });
 
@@ -2461,7 +2474,7 @@ function toggleHistoryPanel(event) {
     setActiveBottomNav("history");
     loadGameHistory();
   } else if (currentBottomNav === "history") {
-    setActiveBottomNav(currentMenuView === "mode" ? "pvp" : "games");
+    setActiveBottomNav(currentMenuView === "home" ? getPreferredHomeNav() : "pvp");
   }
 }
 
@@ -2474,7 +2487,7 @@ function closeHistoryPanel(options = {}) {
   historyPanel.classList.remove("open");
 
   if (wasOpen && !preserveNav && currentBottomNav === "history") {
-    setActiveBottomNav(currentMenuView === "mode" ? "pvp" : "games");
+    setActiveBottomNav(currentMenuView === "home" ? getPreferredHomeNav() : "pvp");
   }
 }
 
@@ -2737,7 +2750,7 @@ function closeLeaderboard() {
   if (modal) modal.style.display = "none";
 
   if (currentBottomNav === "leaderboard") {
-    setActiveBottomNav(currentMenuView === "home" ? "games" : "pvp");
+    setActiveBottomNav(currentMenuView === "home" ? getPreferredHomeNav() : "pvp");
   }
 }
 
@@ -2884,13 +2897,17 @@ function createScannerInitialState() {
   };
 }
 
+function shouldRenderScannerCanvasLive() {
+  return currentMenuView === "home";
+}
+
 function initializeScannerGridFeature() {
   scannerGridState = createScannerInitialState();
   renderScannerRound();
   ensureScannerVisualLoop();
   if (!scannerGridResizeAttached) {
     window.addEventListener("resize", () => {
-      if (currentMenuView === "scanner") {
+      if (shouldRenderScannerCanvasLive()) {
         renderScannerCanvas();
       }
     });
@@ -2902,7 +2919,7 @@ function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
   const tick = () => {
     scannerGridVisualFrame = requestAnimationFrame(tick);
-    if (currentMenuView === "scanner") {
+    if (shouldRenderScannerCanvasLive()) {
       renderScannerCanvas();
     }
   };
@@ -3962,8 +3979,13 @@ function enterScannerGridMode(event) {
   closeLeaderboard();
   closeRooms();
   ensureScannerVisualLoop();
-  setMenuView("scanner");
-  requestAnimationFrame(() => renderScannerRound());
+  homeScreenContext = "pvp";
+  setMenuView("home", { preserveNav: true });
+  setActiveBottomNav("pvp");
+  requestAnimationFrame(() => {
+    scrollHomeToSection("scannerHomeBlock");
+    renderScannerRound();
+  });
 }
 
 function handleTelegramAppBack() {
@@ -4007,19 +4029,17 @@ function setMenuView(view, options = {}) {
   currentMenuView = view;
 
   const homeScreen = document.getElementById("homeScreen");
-  const scannerGridScreen = document.getElementById("scannerGridScreen");
   const bobrRunScreen = document.getElementById("bobrRunScreen");
   const modePopup = document.getElementById("modePopup");
   const historyPanel = document.getElementById("historyPanel");
 
   if (homeScreen) homeScreen.classList.toggle("active", view === "home");
-  if (scannerGridScreen) scannerGridScreen.classList.toggle("active", view === "scanner");
   if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "bobrRun");
   if (modePopup) modePopup.classList.remove("open");
   if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
 
   if (!preserveNav) {
-    setActiveBottomNav(view === "home" ? "games" : "pvp");
+    setActiveBottomNav(view === "home" ? getPreferredHomeNav() : "pvp");
   }
 
   syncAppBackButton();
@@ -4047,7 +4067,7 @@ function openRooms() {
   const roomsModal = document.getElementById("roomsModal");
   const roomsList = document.getElementById("roomsList");
   const createRoomBtn = document.getElementById("createRoomBtn");
-  const modeLabel = currentMenuView === "scanner" ? "Сканер-сетка" : currentMenuView === "bobrRun" ? "Bobr Run" : "игровой режим";
+  const modeLabel = getActiveModeLabel();
 
   if (roomsList) {
     roomsList.innerHTML = `<div class="rooms-note compact-note">Комнаты ${modeLabel} пока не подключены.</div>`;
@@ -4063,8 +4083,7 @@ function openRooms() {
 }
 
 function showGameUnavailable() {
-  const modeLabel = currentMenuView === "scanner" ? "Сканер-сетка" : "Bobr Run";
-  alert(`${modeLabel} пока недоступен.`);
+  alert(`${getActiveModeLabel()} пока недоступен.`);
 }
 
 function handleBottomNav(action, event) {
@@ -4120,6 +4139,7 @@ window.enterScannerGridMode = enterScannerGridMode;
 initializeScannerGridFeature();
 
 renderTopProfile();
+homeScreenContext = "games";
 setMenuView("home");
 setActiveBottomNav("games");
 
