@@ -2311,6 +2311,8 @@ const scannerGridState = {
   lastResultSource: "firestore-shared",
   renderSeed: "idle",
   transientMessage: "",
+  transientMessageType: "info",
+  transientMessageExpiresAt: 0,
   animation: {
     active: false,
     roundId: null,
@@ -2327,7 +2329,11 @@ const scannerRealtime = {
   unsubHistory: null,
   heartbeatTimer: null,
   lifecycleTimer: null,
+  noticeTimer: null,
   activeRoundId: null,
+  runtimeData: null,
+  roundData: null,
+  participants: [],
   isJoinBusy: false,
   lifecycleBusy: false,
   pruneBusy: false,
@@ -3503,7 +3509,61 @@ function stopScannerLifecycleTimer() {
   }
 }
 
+function getActiveScannerTransientMessage() {
+  if (!scannerGridState.transientMessage) return "";
+  if (scannerGridState.transientMessageExpiresAt && Date.now() >= scannerGridState.transientMessageExpiresAt) {
+    scannerGridState.transientMessage = "";
+    scannerGridState.transientMessageType = "info";
+    scannerGridState.transientMessageExpiresAt = 0;
+    if (scannerRealtime.noticeTimer) {
+      clearTimeout(scannerRealtime.noticeTimer);
+      scannerRealtime.noticeTimer = null;
+    }
+    return "";
+  }
+  return scannerGridState.transientMessage;
+}
+
+function clearScannerTransientMessage(options = {}) {
+  const { render = true } = options;
+  scannerGridState.transientMessage = "";
+  scannerGridState.transientMessageType = "info";
+  scannerGridState.transientMessageExpiresAt = 0;
+  if (scannerRealtime.noticeTimer) {
+    clearTimeout(scannerRealtime.noticeTimer);
+    scannerRealtime.noticeTimer = null;
+  }
+  if (render) {
+    renderScannerRound();
+  }
+}
+
+function setScannerTransientMessage(message, options = {}) {
+  const { type = "info", timeoutMs = 5000, render = true } = options;
+  scannerGridState.transientMessage = String(message || "").trim();
+  scannerGridState.transientMessageType = type;
+  scannerGridState.transientMessageExpiresAt = timeoutMs > 0 ? Date.now() + timeoutMs : 0;
+
+  if (scannerRealtime.noticeTimer) {
+    clearTimeout(scannerRealtime.noticeTimer);
+    scannerRealtime.noticeTimer = null;
+  }
+
+  if (timeoutMs > 0 && scannerGridState.transientMessage) {
+    scannerRealtime.noticeTimer = setTimeout(() => {
+      clearScannerTransientMessage();
+    }, timeoutMs);
+  }
+
+  if (render) {
+    renderScannerRound();
+  }
+}
+
 function getScannerNowMessage() {
+  const notice = getActiveScannerTransientMessage();
+  if (notice) return notice;
+
   const round = scannerGridState.roundData;
   if (!round) return "Общий раунд пока не создан.";
 
@@ -3553,8 +3613,8 @@ function getScannerStatusText(round) {
 function syncScannerDerivedState() {
   const currentPlayer = getCurrentPlayer();
   scannerGridState.myPlayerId = currentPlayer.id;
-  const round = scannerRealtime.roundData;
-  const participants = scannerRealtime.participants.slice();
+  const round = scannerRealtime.roundData || null;
+  const participants = Array.isArray(scannerRealtime.participants) ? scannerRealtime.participants.slice() : [];
   scannerGridState.roundData = round;
   scannerGridState.roundId = round?.id || null;
   scannerGridState.roundStatus = round?.status || "idle";
@@ -3658,6 +3718,7 @@ function computeDeterministicRoundResult(round, participants) {
 async function joinOrCreateScannerRound() {
   if (scannerRealtime.isJoinBusy) return;
   scannerRealtime.isJoinBusy = true;
+  renderScannerButtons();
 
   try {
     const player = getCurrentPlayer();
@@ -3666,32 +3727,49 @@ async function joinOrCreateScannerRound() {
     const runtimeRef = scannerRuntimeRef();
     let joinedRoundId = null;
 
+    if (!Number.isFinite(stakeToAdd) || stakeToAdd <= 0) {
+      throw new Error("Выбери корректную ставку перед входом в раунд.");
+    }
+
     await db.runTransaction(async (tx) => {
       const runtimeSnap = await tx.get(runtimeRef);
       const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
       const runtimeRoundId = runtimeData.activeRoundId || null;
-      let roundRef = null;
-      let roundSnap = null;
-      let roundData = null;
-      const nowMs = Date.now();
+
+      let targetRoundRef = null;
+      let targetRoundData = null;
+      let targetRoundSnap = null;
 
       if (runtimeRoundId) {
-        roundRef = scannerRoundRef(runtimeRoundId);
-        roundSnap = await tx.get(roundRef);
-        if (roundSnap.exists) {
-          roundData = roundSnap.data() || {};
+        targetRoundRef = scannerRoundRef(runtimeRoundId);
+        targetRoundSnap = await tx.get(targetRoundRef);
+        if (targetRoundSnap.exists) {
+          targetRoundData = targetRoundSnap.data() || {};
+        } else {
+          targetRoundRef = null;
+          targetRoundData = null;
         }
       }
 
-      const reusableRound = roundData && ["waiting", "countdown"].includes(roundData.status || "")
-        ? Number(roundData.participantCount || 0) < Number(roundData.maxPlayers || desiredMaxPlayers || 2)
-        : false;
+      const currentStatus = String(targetRoundData?.status || runtimeData.status || "idle");
+      const hasReusableLobby = !!(
+        targetRoundRef &&
+        targetRoundData &&
+        ["waiting", "countdown"].includes(currentStatus)
+      );
 
-      if (!reusableRound) {
-        const newRoundRef = scannerRoundsCollection().doc(`scanner_${nowMs}_${Math.random().toString(36).slice(2, 8)}`);
-        roundRef = newRoundRef;
-        joinedRoundId = newRoundRef.id;
-        roundData = {
+      let createNewRound = false;
+      if (!hasReusableLobby) {
+        if (targetRoundRef && targetRoundData && ["active", "finished", "preparing_next_round"].includes(currentStatus)) {
+          if (currentStatus === "active") {
+            throw new Error("Общий раунд уже идёт. Дождись следующего общего входа.");
+          }
+          throw new Error("Текущий раунд ещё завершается. Новая lobby откроется автоматически.");
+        }
+        createNewRound = true;
+        const nowMs = Date.now();
+        targetRoundRef = scannerRoundsCollection().doc(`scanner_${nowMs}_${Math.random().toString(36).slice(2, 8)}`);
+        targetRoundData = {
           mode: "scanner-grid",
           status: "waiting",
           totalPot: 0,
@@ -3718,34 +3796,40 @@ async function joinOrCreateScannerRound() {
           version: 1,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
-
-        tx.set(roundRef, roundData, { merge: true });
-        tx.set(runtimeRef, {
-          mode: "scanner-grid",
-          activeRoundId: newRoundRef.id,
-          status: "waiting",
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      } else {
-        joinedRoundId = roundRef.id;
       }
 
-      const participantRef = scannerParticipantsCollection(joinedRoundId).doc(player.id);
+      const participantRef = scannerParticipantsCollection(targetRoundRef.id).doc(player.id);
       const participantSnap = await tx.get(participantRef);
       const participantData = participantSnap.exists ? (participantSnap.data() || {}) : null;
 
-      if (roundData.status === "active" || roundData.status === "finished" || roundData.status === "preparing_next_round") {
+      const targetStatus = String(targetRoundData?.status || "waiting");
+      if (["active", "finished", "preparing_next_round"].includes(targetStatus)) {
         throw new Error("Текущий общий раунд уже закрыт для входа.");
       }
 
-      const previousStake = participantData && participantData.status !== "left"
+      const currentParticipantCount = Number(targetRoundData?.participantCount || 0);
+      const maxPlayers = Math.max(2, Number(targetRoundData?.maxPlayers || desiredMaxPlayers || 2));
+      const participantAlreadyInside = !!(participantData && participantData.status !== "left");
+      const isRoundFullForNewJoin = !participantAlreadyInside && currentParticipantCount >= maxPlayers;
+
+      if (isRoundFullForNewJoin) {
+        throw new Error("Текущая общая lobby уже заполнена. Дождись следующего раунда.");
+      }
+
+      joinedRoundId = targetRoundRef.id;
+
+      const previousStake = participantAlreadyInside
         ? normalizeStakeValue(participantData.stake)
         : 0;
       const nextStake = normalizeStakeValue(previousStake + stakeToAdd);
       const isRejoinFromLeft = participantData?.status === "left";
       const isNewParticipant = !participantSnap.exists || isRejoinFromLeft;
-      const nextParticipantCount = Math.max(0, Number(roundData.participantCount || 0) + (isNewParticipant ? 1 : 0));
-      const nextTotalPot = normalizeStakeValue(Number(roundData.totalPot || 0) + (nextStake - previousStake));
+      const nextParticipantCount = Math.max(0, currentParticipantCount + (isNewParticipant ? 1 : 0));
+      const nextTotalPot = normalizeStakeValue(Number(targetRoundData?.totalPot || 0) + (nextStake - previousStake));
+
+      if (createNewRound) {
+        tx.set(targetRoundRef, targetRoundData, { merge: true });
+      }
 
       tx.set(participantRef, {
         playerId: player.id,
@@ -3761,12 +3845,12 @@ async function joinOrCreateScannerRound() {
       const roundUpdate = {
         totalPot: nextTotalPot,
         participantCount: nextParticipantCount,
+        maxPlayers,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        version: Number(roundData.version || 0) + 1,
-        maxPlayers: Number(roundData.maxPlayers || desiredMaxPlayers || 2)
+        version: Number(targetRoundData?.version || 0) + 1
       };
 
-      if (nextParticipantCount >= 2 && (roundData.status === "waiting" || !roundData.status)) {
+      if (nextParticipantCount >= 2 && (targetStatus === "waiting" || !targetStatus)) {
         roundUpdate.status = "countdown";
         roundUpdate.countdownStartedAt = createTimestampFromNow(0);
         roundUpdate.countdownEndsAt = createTimestampFromNow(SCANNER_COUNTDOWN_MS);
@@ -3774,23 +3858,29 @@ async function joinOrCreateScannerRound() {
         roundUpdate.activeEndsAt = null;
       }
 
-      tx.set(roundRef, roundUpdate, { merge: true });
+      tx.set(targetRoundRef, roundUpdate, { merge: true });
       tx.set(runtimeRef, {
+        mode: "scanner-grid",
         activeRoundId: joinedRoundId,
-        status: roundUpdate.status || roundData.status || "waiting",
+        status: roundUpdate.status || targetStatus || "waiting",
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
     });
 
     if (joinedRoundId) {
-      scannerGridState.transientMessage = "Ты подключён к общему PvP-раунду.";
+      setScannerTransientMessage("Ты подключён к общему PvP-раунду.", { type: "success", timeoutMs: 4000, render: false });
       enterScannerGridMode();
+      renderScannerRound();
     }
   } catch (error) {
-    console.error("Не удалось войти в общий раунд:", error);
-    alert(error?.message || "Не удалось войти в общий раунд.");
+    reportAppError("Не удалось войти в общий раунд:", error);
+    setScannerTransientMessage(error?.message || "Не удалось войти в общий раунд.", {
+      type: "error",
+      timeoutMs: 6000
+    });
   } finally {
     scannerRealtime.isJoinBusy = false;
+    renderScannerButtons();
   }
 }
 
@@ -4140,12 +4230,18 @@ async function startOrJoinScannerRound(event) {
   const currentParticipant = getScannerParticipantById(currentPlayer.id);
 
   if (status === "active") {
-    alert("Общий раунд уже идёт. Дождись следующего раунда.");
+    setScannerTransientMessage("Общий раунд уже идёт. Дождись следующей lobby.", {
+      type: "info",
+      timeoutMs: 5000
+    });
     return;
   }
 
   if (status === "finished" || status === "preparing_next_round") {
-    alert("Сейчас показывается результат текущего общего раунда. Следующая lobby откроется автоматически.");
+    setScannerTransientMessage("Сейчас показывается результат текущего общего раунда. Следующая lobby откроется автоматически.", {
+      type: "info",
+      timeoutMs: 5000
+    });
     return;
   }
 
@@ -4206,7 +4302,7 @@ function renderScannerParticipants() {
   if (!meta || !list) return;
 
   if (!scannerGridState.players.length) {
-    meta.textContent = scannerGridState.transientMessage || "Подключись к раунду, чтобы увидеть общий список участников.";
+    meta.textContent = getActiveScannerTransientMessage() || "Подключись к раунду, чтобы увидеть общий список участников.";
     list.innerHTML = `<div class="scanner-empty">Пока в общем раунде нет игроков.</div>`;
     return;
   }
@@ -4290,6 +4386,11 @@ function renderScannerButtons() {
     disabled = true;
   } else if (scannerGridState.status === "preparing_next_round") {
     text = "Подготовка";
+    disabled = true;
+  }
+
+  if (scannerRealtime.isJoinBusy) {
+    text = "Подключение...";
     disabled = true;
   }
 
@@ -4794,6 +4895,7 @@ function subscribeScannerRound(roundId) {
   }
 
   scannerRealtime.roundData = null;
+  scannerRealtime.participants = [];
   scannerRealtime.activeRoundId = roundId || null;
   subscribeScannerParticipants(null);
 
@@ -4823,6 +4925,7 @@ function subscribeScannerRuntime() {
 
   scannerRealtime.unsubRuntime = scannerRuntimeRef().onSnapshot((snapshot) => {
     const data = snapshot.exists ? (snapshot.data() || {}) : {};
+    scannerRealtime.runtimeData = data;
     const activeRoundId = data.activeRoundId || null;
     if (scannerRealtime.activeRoundId !== activeRoundId) {
       subscribeScannerRound(activeRoundId);
