@@ -2353,6 +2353,15 @@ let scannerGridTransitionCache = null;
 let scannerGridPath = null;
 let scannerGridResizeAttached = false;
 const scannerAvatarCache = new Map();
+const scannerProfileAvatarCache = new Map();
+const scannerBeamMotionState = {
+  modeKey: "",
+  segmentIndex: 0,
+  path: [],
+  startedAt: 0,
+  duration: 0,
+  lastPoint: { x: 0.5, y: 0.5, angle: 0 }
+};
 
 function shouldIgnoreExternalConsoleError(message) {
   const text = String(message || "").toLowerCase();
@@ -2458,25 +2467,104 @@ function formatBalance(value) {
   return `${number.toFixed(2)} TON`;
 }
 
+function escapeCssUrl(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"');
+}
+
+function setAvatarFallback(element, fallbackText) {
+  if (!element) return;
+  element.style.backgroundImage = "";
+  element.style.color = "#ffffff";
+  element.textContent = fallbackText;
+}
+
+function setAvatarPhoto(element, avatarUrl) {
+  if (!element) return;
+  element.style.backgroundImage = `url("${escapeCssUrl(avatarUrl)}")`;
+  element.style.color = "transparent";
+  element.textContent = "";
+}
+
+function resolveProfileAvatarSource(avatarUrl) {
+  const normalizedUrl = String(avatarUrl || "").trim();
+  if (!normalizedUrl) {
+    return Promise.resolve({ ok: false, url: "" });
+  }
+
+  const cached = scannerProfileAvatarCache.get(normalizedUrl);
+  if (cached) {
+    if (cached.status === "loaded") {
+      return Promise.resolve({ ok: true, url: normalizedUrl });
+    }
+    if (cached.status === "error") {
+      return Promise.resolve({ ok: false, url: normalizedUrl });
+    }
+    return cached.promise;
+  }
+
+  const entry = {
+    status: "loading",
+    promise: null
+  };
+
+  entry.promise = new Promise((resolve) => {
+    const image = new Image();
+    image.referrerPolicy = "no-referrer";
+    image.onload = () => {
+      entry.status = "loaded";
+      resolve({ ok: true, url: normalizedUrl });
+    };
+    image.onerror = () => {
+      entry.status = "error";
+      resolve({ ok: false, url: normalizedUrl });
+    };
+    image.src = normalizedUrl;
+  });
+
+  scannerProfileAvatarCache.set(normalizedUrl, entry);
+  return entry.promise;
+}
+
+function applyProfileAvatar(element, avatarUrl, fallbackText) {
+  if (!element) return;
+
+  const requestId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  element.dataset.avatarRequestId = requestId;
+  setAvatarFallback(element, fallbackText);
+
+  const normalizedUrl = String(avatarUrl || "").trim();
+  if (!normalizedUrl) return;
+
+  resolveProfileAvatarSource(normalizedUrl)
+    .then((result) => {
+      if (!element.isConnected || element.dataset.avatarRequestId !== requestId) return;
+      if (result.ok) {
+        setAvatarPhoto(element, normalizedUrl);
+      } else {
+        setAvatarFallback(element, fallbackText);
+      }
+    })
+    .catch(() => {
+      if (!element.isConnected || element.dataset.avatarRequestId !== requestId) return;
+      setAvatarFallback(element, fallbackText);
+    });
+}
+
 function renderTopProfile() {
   const currentPlayer = getCurrentPlayer();
   const nicknameEl = document.getElementById("nickname");
   const avatarEl = document.getElementById("profileAvatar");
   const balanceEl = document.getElementById("balanceValue");
+  const fallbackInitial = getPlayerInitial(currentPlayer.name);
 
   if (nicknameEl) {
     nicknameEl.innerText = currentPlayer.name;
   }
 
   if (avatarEl) {
-    if (currentPlayer.avatar) {
-      avatarEl.style.backgroundImage = `url("${currentPlayer.avatar}")`;
-      avatarEl.style.color = "transparent";
-      avatarEl.textContent = "";
-    } else {
-      avatarEl.style.backgroundImage = "";
-      avatarEl.textContent = getPlayerInitial(currentPlayer.name);
-    }
+    applyProfileAvatar(avatarEl, currentPlayer.avatar, fallbackInitial);
   }
 
   if (balanceEl) {
@@ -3455,8 +3543,8 @@ function getScannerAvatarEntry(src) {
     error: false
   };
 
-  image.crossOrigin = "anonymous";
   image.referrerPolicy = "no-referrer";
+  image.decoding = "async";
   image.onload = () => {
     entry.loaded = true;
     entry.error = false;
@@ -3570,17 +3658,107 @@ function buildScannerPathForCell(cellIndex, seedValue) {
   return points;
 }
 
-function buildScannerRoamingPath(seedValue) {
+function buildScannerRoamingPath(seedValue, startPoint = null) {
   const rnd = mulberry32(hashString(`roam_${seedValue}`));
   const points = [];
-  const count = 18;
+  const safeStart = startPoint && Number.isFinite(startPoint.x) && Number.isFinite(startPoint.y)
+    ? {
+        x: Math.max(0.06, Math.min(0.94, startPoint.x)),
+        y: Math.max(0.06, Math.min(0.94, startPoint.y))
+      }
+    : {
+        x: 0.08 + rnd() * 0.84,
+        y: 0.08 + rnd() * 0.84
+      };
+
+  points.push(safeStart);
+
+  const count = 12 + Math.floor(rnd() * 6);
   for (let i = 0; i < count; i += 1) {
+    const edgeBias = i % 4 === 0 ? 0.06 : 0.1;
     points.push({
-      x: 0.08 + rnd() * 0.84,
-      y: 0.08 + rnd() * 0.84
+      x: edgeBias + rnd() * (1 - edgeBias * 2),
+      y: edgeBias + rnd() * (1 - edgeBias * 2)
     });
   }
+
+  if (points.length < 2) {
+    points.push({
+      x: Math.max(0.06, Math.min(0.94, safeStart.x + 0.08)),
+      y: safeStart.y
+    });
+  }
+
   return points;
+}
+
+function getScannerAmbientBeamSample(now, seedValue = "idle") {
+  const seed = hashString(`ambient_${seedValue}`);
+  const t = now / 1000;
+  const phaseA = (seed % 360) * (Math.PI / 180);
+  const phaseB = ((seed >> 3) % 360) * (Math.PI / 180);
+  const phaseC = ((seed >> 6) % 360) * (Math.PI / 180);
+
+  const x = 0.5
+    + Math.sin(t * 0.55 + phaseA) * 0.24
+    + Math.sin(t * 0.18 + phaseB) * 0.035;
+  const y = 0.5
+    + Math.cos(t * 0.82 + phaseB) * 0.22
+    + Math.sin(t * 0.26 + phaseC) * 0.028;
+  const angle = Math.sin(t * 0.47 + phaseC) * Math.PI + Math.cos(t * 0.19 + phaseA) * 0.18;
+
+  return {
+    x: Math.max(-0.16, Math.min(1.16, x)),
+    y: Math.max(-0.16, Math.min(1.16, y)),
+    angle
+  };
+}
+
+function getScannerRoamingDuration(seedValue, minDuration = 5600, maxDuration = 8600) {
+  const safeMin = Math.max(1200, Number(minDuration) || 5600);
+  const safeMax = Math.max(safeMin + 1, Number(maxDuration) || 8600);
+  const spread = safeMax - safeMin;
+  return safeMin + (hashString(`duration_${seedValue}`) % spread);
+}
+
+function getScannerRoamingBeamSample(modeKey, seedValue, options = {}) {
+  const now = performance.now();
+  const fullKey = `${modeKey}::${seedValue}`;
+  const minDuration = Number(options.minDuration) || 5600;
+  const maxDuration = Number(options.maxDuration) || 8600;
+
+  if (
+    scannerBeamMotionState.modeKey !== fullKey ||
+    !Array.isArray(scannerBeamMotionState.path) ||
+    scannerBeamMotionState.path.length < 2
+  ) {
+    scannerBeamMotionState.modeKey = fullKey;
+    scannerBeamMotionState.segmentIndex = 0;
+    scannerBeamMotionState.startedAt = now;
+    scannerBeamMotionState.path = buildScannerRoamingPath(
+      `${fullKey}_0`,
+      scannerBeamMotionState.lastPoint
+    );
+    scannerBeamMotionState.duration = getScannerRoamingDuration(`${fullKey}_0`, minDuration, maxDuration);
+  }
+
+  let progress = scannerBeamMotionState.duration > 0
+    ? (now - scannerBeamMotionState.startedAt) / scannerBeamMotionState.duration
+    : 1;
+
+  if (progress >= 1) {
+    scannerBeamMotionState.lastPoint = interpolateScannerPath(scannerBeamMotionState.path, 1);
+    scannerBeamMotionState.segmentIndex += 1;
+    const segmentKey = `${fullKey}_${scannerBeamMotionState.segmentIndex}`;
+    scannerBeamMotionState.path = buildScannerRoamingPath(segmentKey, scannerBeamMotionState.lastPoint);
+    scannerBeamMotionState.startedAt = now;
+    scannerBeamMotionState.duration = getScannerRoamingDuration(segmentKey, minDuration, maxDuration);
+    progress = 0;
+  }
+
+  const sample = interpolateScannerPath(scannerBeamMotionState.path, Math.max(0, Math.min(1, progress)));
+  scannerBeamMotionState.lastPoint = sample;
+  return sample;
 }
 
 function interpolateScannerPath(points, progress) {
@@ -4886,10 +5064,10 @@ function drawScannerIdleArena(ctx, size, now) {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
 
-  const idleT = now / 1000;
-  const cx = size * (0.5 + Math.sin(idleT * 0.55) * 0.24);
-  const cy = size * (0.5 + Math.cos(idleT * 0.82) * 0.22);
-  const angle = Math.sin(idleT * 0.47) * Math.PI;
+  const idleSample = getScannerAmbientBeamSample(now, "idle");
+  const cx = size * idleSample.x;
+  const cy = size * idleSample.y;
+  const angle = idleSample.angle;
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
 
@@ -5166,16 +5344,24 @@ function renderScannerCanvas() {
     }
   } else {
     const roundSeed = scannerGridState.renderSeed || scannerGridState.roundId || "idle";
-    const roamPoints = buildScannerRoamingPath(`${roundSeed}_${roundStatus}`);
-    const duration = roundStatus === "active" ? SCANNER_ACTIVE_MS : SCANNER_COUNTDOWN_MS;
-    const startedAtMs = roundStatus === "active"
-      ? tsToMs(scannerGridState.roundData?.activeStartedAt)
-      : tsToMs(scannerGridState.roundData?.countdownStartedAt);
-    const progress = duration > 0 && startedAtMs > 0 ? ((Date.now() - startedAtMs) % duration) / duration : ((now / 1000) % 1);
-    beamSample = interpolateScannerPath(roamPoints, progress);
+    const isSinglePlayerLobby = roundStatus === "waiting" && scannerGridState.totalPlayers <= 1;
+
+    if (isSinglePlayerLobby) {
+      beamSample = getScannerAmbientBeamSample(now, `${roundSeed}_single_waiting`);
+    } else {
+      beamSample = getScannerRoamingBeamSample(
+        roundStatus,
+        `${roundSeed}_${scannerGridState.roundId || "idle"}_${scannerGridState.totalPlayers}_${scannerGridState.gridVersion}`,
+        {
+          minDuration: roundStatus === "active" ? 5200 : 6200,
+          maxDuration: roundStatus === "active" ? 9200 : 9800
+        }
+      );
+    }
+
     const px = beamSample.x * size;
     const py = beamSample.y * size;
-    const beamLength = size * 4.4;
+    const beamLength = size * (isSinglePlayerLobby ? 4.6 : 4.4);
     const reticleRadius = Math.max(10.2, size * 0.031);
 
     ctx.save();
