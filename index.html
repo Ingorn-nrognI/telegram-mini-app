@@ -1475,6 +1475,12 @@ button {
 }
 
 .scanner-home-main-block {
+  width: min(calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px), 540px);
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px);
+  margin-left: auto;
+  margin-right: auto;
+  left: 50%;
+  transform: translateX(-50%);
   background:
     radial-gradient(circle at 100% 0%, rgba(61, 220, 255, 0.18), transparent 34%),
     radial-gradient(circle at 0% 100%, rgba(110, 89, 255, 0.16), transparent 30%),
@@ -1588,7 +1594,8 @@ button {
 }
 
 .scanner-arena-card {
-  padding: 10px !important;
+  padding: 8px !important;
+  border-radius: 28px !important;
 }
 
 .scanner-canvas-shell {
@@ -1596,7 +1603,7 @@ button {
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
-  border-radius: 26px !important;
+  border-radius: 28px !important;
   margin: 0 !important;
 }
 
@@ -1605,8 +1612,8 @@ button {
 }
 
 #scannerGridCanvas {
-  aspect-ratio: 1 / 1.08;
-  border-radius: 26px;
+  aspect-ratio: 1 / 1;
+  border-radius: 28px;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.04),
     0 16px 34px rgba(0, 0, 0, 0.3);
@@ -1624,12 +1631,14 @@ button {
 
 @media (max-width: 420px) {
   #scannerGridCanvas {
-    aspect-ratio: 1 / 1.05;
-    border-radius: 22px;
+    aspect-ratio: 1 / 1;
+    border-radius: 24px;
   }
 
   .scanner-arena-card {
-    padding: 8px !important;
+    width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 8px);
+    max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 8px);
+    padding: 6px !important;
   }
 
   .scanner-overlay-badges {
@@ -3892,6 +3901,171 @@ function buildScannerCanvasCache(size) {
   return cacheCanvas;
 }
 
+
+function drawScannerBeam(ctx, beamLength, options = {}) {
+  const {
+    glowWidth = 16,
+    coreWidth = 5.4,
+    innerWidth = 1.45,
+    glowBlur = 34,
+    coreBlur = 18,
+    beamColor = "rgba(45, 225, 255, 0.82)",
+    innerColor = "rgba(255,255,255,0.94)"
+  } = options;
+
+  const glowGradient = ctx.createLinearGradient(-beamLength / 2, 0, beamLength / 2, 0);
+  glowGradient.addColorStop(0, "rgba(45,225,255,0)");
+  glowGradient.addColorStop(0.12, "rgba(45,225,255,0.18)");
+  glowGradient.addColorStop(0.32, "rgba(45,225,255,0.6)");
+  glowGradient.addColorStop(0.5, beamColor);
+  glowGradient.addColorStop(0.68, "rgba(45,225,255,0.6)");
+  glowGradient.addColorStop(0.88, "rgba(45,225,255,0.18)");
+  glowGradient.addColorStop(1, "rgba(45,225,255,0)");
+
+  const innerGradient = ctx.createLinearGradient(-beamLength / 2, 0, beamLength / 2, 0);
+  innerGradient.addColorStop(0, "rgba(255,255,255,0)");
+  innerGradient.addColorStop(0.18, "rgba(255,255,255,0.18)");
+  innerGradient.addColorStop(0.5, innerColor);
+  innerGradient.addColorStop(0.82, "rgba(255,255,255,0.18)");
+  innerGradient.addColorStop(1, "rgba(255,255,255,0)");
+
+  ctx.save();
+  ctx.lineCap = "round";
+
+  ctx.shadowBlur = glowBlur;
+  ctx.shadowColor = "rgba(45, 225, 255, 0.46)";
+  ctx.strokeStyle = glowGradient;
+  ctx.lineWidth = glowWidth;
+  ctx.beginPath();
+  ctx.moveTo(-beamLength / 2, 0);
+  ctx.lineTo(beamLength / 2, 0);
+  ctx.stroke();
+
+  ctx.shadowBlur = coreBlur;
+  ctx.shadowColor = "rgba(45, 225, 255, 0.62)";
+  ctx.strokeStyle = glowGradient;
+  ctx.lineWidth = coreWidth;
+  ctx.beginPath();
+  ctx.moveTo(-beamLength / 2, 0);
+  ctx.lineTo(beamLength / 2, 0);
+  ctx.stroke();
+
+  ctx.shadowBlur = 26;
+  ctx.shadowColor = "rgba(255,255,255,0.34)";
+  ctx.strokeStyle = innerGradient;
+  ctx.lineWidth = innerWidth;
+  ctx.beginPath();
+  ctx.moveTo(-beamLength / 2, 0);
+  ctx.lineTo(beamLength / 2, 0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawScannerReticle(ctx, x, y, radius, options = {}) {
+  const alpha = Math.max(0, Math.min(1, options.alpha ?? 1));
+  const plusScale = Math.max(0.65, options.plusScale ?? 1);
+  const glow = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius * 1.8);
+  glow.addColorStop(0, `rgba(255,255,255,${0.22 * alpha})`);
+  glow.addColorStop(0.45, `rgba(90,220,255,${0.18 * alpha})`);
+  glow.addColorStop(1, "rgba(90,220,255,0)");
+
+  ctx.save();
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x, y, radius * 1.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  const fillGradient = ctx.createRadialGradient(x - radius * 0.15, y - radius * 0.2, radius * 0.2, x, y, radius);
+  fillGradient.addColorStop(0, `rgba(255,255,255,${0.34 * alpha})`);
+  fillGradient.addColorStop(0.45, `rgba(118,228,255,${0.18 * alpha})`);
+  fillGradient.addColorStop(1, `rgba(70,170,255,${0.08 * alpha})`);
+
+  ctx.fillStyle = fillGradient;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = `rgba(210,246,255,${0.46 * alpha})`;
+  ctx.lineWidth = Math.max(1, radius * 0.08);
+  ctx.beginPath();
+  ctx.arc(x, y, Math.max(1.5, radius - ctx.lineWidth * 0.7), 0, Math.PI * 2);
+  ctx.stroke();
+
+  const crossSize = radius * 0.54 * plusScale;
+  const crossInset = radius * 0.17;
+  ctx.strokeStyle = `rgba(240,250,255,${0.84 * alpha})`;
+  ctx.lineWidth = Math.max(1, radius * 0.13);
+  ctx.lineCap = "round";
+
+  ctx.beginPath();
+  ctx.moveTo(x - crossSize + crossInset, y);
+  ctx.lineTo(x + crossSize - crossInset, y);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x, y - crossSize + crossInset);
+  ctx.lineTo(x, y + crossSize - crossInset);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawScannerLens(ctx, baseCanvas, x, y, radius, size, options = {}) {
+  if (!baseCanvas || radius <= 0) return;
+  const zoom = Math.max(1.2, options.zoom ?? 1.8);
+  const alpha = Math.max(0, Math.min(1, options.alpha ?? 1));
+  const sourceRadius = radius / zoom;
+  const sourceSize = sourceRadius * 2;
+
+  const sx = Math.max(0, Math.min(size - sourceSize, x - sourceRadius));
+  const sy = Math.max(0, Math.min(size - sourceSize, y - sourceRadius));
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(baseCanvas, sx, sy, sourceSize, sourceSize, x - radius, y - radius, radius * 2, radius * 2);
+
+  const sheen = ctx.createRadialGradient(x - radius * 0.35, y - radius * 0.35, radius * 0.1, x, y, radius);
+  sheen.addColorStop(0, `rgba(255,255,255,${0.16 * alpha})`);
+  sheen.addColorStop(0.55, `rgba(90,220,255,${0.08 * alpha})`);
+  sheen.addColorStop(1, "rgba(20,40,64,0)");
+  ctx.fillStyle = sheen;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.shadowBlur = 28;
+  ctx.shadowColor = `rgba(60,220,255,${0.28 * alpha})`;
+  ctx.strokeStyle = `rgba(170,238,255,${0.54 * alpha})`;
+  ctx.lineWidth = Math.max(1.2, radius * 0.08);
+  ctx.beginPath();
+  ctx.arc(x, y, Math.max(1.5, radius - ctx.lineWidth * 0.6), 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = `rgba(255,255,255,${0.18 * alpha})`;
+  ctx.lineWidth = Math.max(0.8, radius * 0.03);
+  ctx.beginPath();
+  ctx.arc(x, y, radius * 0.68, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(255,255,255,${0.12 * alpha})`;
+  ctx.beginPath();
+  ctx.moveTo(x - radius * 0.72, y);
+  ctx.lineTo(x + radius * 0.72, y);
+  ctx.moveTo(x, y - radius * 0.72);
+  ctx.lineTo(x, y + radius * 0.72);
+  ctx.stroke();
+  ctx.restore();
+
+  drawScannerReticle(ctx, x, y, Math.max(8.5, radius * 0.26), {
+    alpha: Math.min(1, 0.88 + alpha * 0.18),
+    plusScale: 0.86
+  });
+}
+
 function renderScannerCanvas(forcedProgress) {
   const metrics = getScannerCanvasMetrics();
   if (!metrics) return;
@@ -3917,29 +4091,28 @@ function renderScannerCanvas(forcedProgress) {
     const cx = size * (0.5 + Math.sin(idleT * 0.55) * 0.24);
     const cy = size * (0.5 + Math.cos(idleT * 0.82) * 0.22);
     const angle = Math.sin(idleT * 0.47) * Math.PI;
-    const beamLength = size * 1.65;
+    const beamLength = size * 4.6;
 
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(angle);
-    ctx.shadowBlur = 24;
-    ctx.shadowColor = "rgba(45, 225, 255, 0.44)";
-    ctx.strokeStyle = "rgba(45, 225, 255, 0.78)";
-    ctx.lineWidth = 5;
+    drawScannerBeam(ctx, beamLength, {
+      glowWidth: 14,
+      coreWidth: 4.6,
+      innerWidth: 1.25,
+      glowBlur: 32,
+      coreBlur: 18,
+      beamColor: "rgba(45, 225, 255, 0.74)",
+      innerColor: "rgba(255,255,255,0.88)"
+    });
+
+    const idleDot = ctx.createRadialGradient(0, 0, 1, 0, 0, 8);
+    idleDot.addColorStop(0, "rgba(255,255,255,0.92)");
+    idleDot.addColorStop(0.58, "rgba(130,233,255,0.52)");
+    idleDot.addColorStop(1, "rgba(130,233,255,0)");
+    ctx.fillStyle = idleDot;
     ctx.beginPath();
-    ctx.moveTo(-beamLength / 2, 0);
-    ctx.lineTo(beamLength / 2, 0);
-    ctx.stroke();
-    ctx.shadowBlur = 36;
-    ctx.strokeStyle = "rgba(255,255,255,0.52)";
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(-beamLength / 2, 0);
-    ctx.lineTo(beamLength / 2, 0);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -3984,47 +4157,50 @@ function renderScannerCanvas(forcedProgress) {
     progress = Math.min(1, elapsed / scannerGridState.animation.duration);
   }
 
-  if (scannerGridState.animation.active || scannerGridState.status === "finished") {
+  const isScannerActive = scannerGridState.animation.active || scannerGridState.status === "finished";
+  if (isScannerActive) {
     const points = scannerGridState.animation.points || scannerGridPath || [];
-    const sample = interpolateScannerPath(points, progress || 0);
+    const scanProgress = Math.max(0, Math.min(1, progress || 0));
+    const sample = interpolateScannerPath(points, scanProgress);
     const px = sample.x * size;
     const py = sample.y * size;
-    const beamLength = size * 1.72;
-    const wobble = Math.sin((progress || 0) * Math.PI * 10) * (scannerGridState.status === "finished" ? 0.015 : 0.09) * (1 - Math.min(1, (progress || 0) * 0.92));
+    const beamLength = size * 4.8;
+    const wobbleStrength = scannerGridState.status === "finished" ? 0.01 : 0.06 * (1 - Math.min(1, scanProgress * 0.92));
+    const wobble = Math.sin(scanProgress * Math.PI * 10) * wobbleStrength;
+
+    let finalLensPhase = (scanProgress - 0.75) / 0.25;
+    finalLensPhase = Math.max(0, Math.min(1, finalLensPhase));
+    finalLensPhase = finalLensPhase * finalLensPhase * (3 - 2 * finalLensPhase);
 
     ctx.save();
     ctx.translate(px, py);
     ctx.rotate(sample.angle + wobble);
-
-    const beamGradient = ctx.createLinearGradient(-beamLength / 2, 0, beamLength / 2, 0);
-    beamGradient.addColorStop(0, "rgba(45,225,255,0.05)");
-    beamGradient.addColorStop(0.18, "rgba(45,225,255,0.55)");
-    beamGradient.addColorStop(0.5, "rgba(255,255,255,0.98)");
-    beamGradient.addColorStop(0.82, "rgba(45,225,255,0.55)");
-    beamGradient.addColorStop(1, "rgba(45,225,255,0.05)");
-
-    ctx.shadowBlur = 28;
-    ctx.shadowColor = "rgba(45, 225, 255, 0.58)";
-    ctx.strokeStyle = beamGradient;
-    ctx.lineWidth = 5.2;
-    ctx.beginPath();
-    ctx.moveTo(-beamLength / 2, 0);
-    ctx.lineTo(beamLength / 2, 0);
-    ctx.stroke();
-
-    ctx.shadowBlur = 42;
-    ctx.strokeStyle = "rgba(255,255,255,0.78)";
-    ctx.lineWidth = 1.35;
-    ctx.beginPath();
-    ctx.moveTo(-beamLength / 2, 0);
-    ctx.lineTo(beamLength / 2, 0);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.fillStyle = "rgba(255,255,255,0.96)";
-    ctx.arc(0, 0, 6.5, 0, Math.PI * 2);
-    ctx.fill();
+    drawScannerBeam(ctx, beamLength, {
+      glowWidth: 17,
+      coreWidth: 5.5,
+      innerWidth: 1.45,
+      glowBlur: 36,
+      coreBlur: 20,
+      beamColor: "rgba(45, 225, 255, 0.82)",
+      innerColor: "rgba(255,255,255,0.96)"
+    });
     ctx.restore();
+
+    const baseDotRadius = Math.max(8.5, size * 0.026);
+    const lensRadius = baseDotRadius + finalLensPhase * Math.max(26, size * 0.11);
+    const lensAlpha = 0.25 + finalLensPhase * 0.75;
+
+    if (finalLensPhase > 0.001 && scannerGridCache?.canvas) {
+      drawScannerLens(ctx, scannerGridCache.canvas, px, py, lensRadius, size, {
+        zoom: 1.7 + finalLensPhase * 0.65,
+        alpha: lensAlpha
+      });
+    } else {
+      drawScannerReticle(ctx, px, py, baseDotRadius, {
+        alpha: 0.88,
+        plusScale: 0.82
+      });
+    }
   }
 
   if (Number.isInteger(scannerGridState.winningCellIndex)) {
