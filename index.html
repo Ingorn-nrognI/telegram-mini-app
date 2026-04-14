@@ -1504,6 +1504,52 @@ button {
   margin-bottom: 12px;
 }
 
+.scanner-recent-heading-row {
+  align-items: center;
+}
+
+.scanner-recent-heading-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.scanner-recent-toggle {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e7efff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  transition: transform 0.16s ease, opacity 0.16s ease, background 0.16s ease;
+}
+
+.scanner-recent-toggle:active {
+  transform: scale(0.96);
+}
+
+.scanner-recent-toggle[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.scanner-recent-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.scanner-recent-toggle.is-open .scanner-recent-toggle-icon {
+  transform: rotate(180deg);
+}
+
 .scanner-home-join-btn,
 .scanner-home-reset-btn {
   min-width: 132px;
@@ -1853,8 +1899,18 @@ button {
 
         <div class="scanner-control-divider"></div>
 
-        <div class="scanner-home-heading-row scanner-home-heading-row-bottom">
-          <div class="scanner-inline-section-title">Последние раунды</div>
+        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-recent-heading-row">
+          <div class="scanner-inline-section-title scanner-recent-heading-title">Последние раунды</div>
+          <button
+            type="button"
+            id="scannerRecentToggle"
+            class="scanner-recent-toggle"
+            onclick="toggleScannerRecentRounds(event)"
+            aria-label="Показать последние раунды"
+            aria-expanded="false"
+          >
+            <span id="scannerRecentToggleIcon" class="scanner-recent-toggle-icon">▾</span>
+          </button>
         </div>
 
         <div id="scannerRecentRounds" class="scanner-recent-list"></div>
@@ -2970,6 +3026,7 @@ function createScannerInitialState() {
     recentRounds: loadScannerRecentRounds(),
     pendingServerResult: null,
     myPlayerId: getCurrentPlayer().id,
+    recentRoundsExpanded: false,
     animation: {
       active: false,
       startTime: 0,
@@ -3646,6 +3703,15 @@ function setScannerPopulation(value) {
   renderScannerRound();
 }
 
+function toggleScannerRecentRounds(event) {
+  if (event) event.stopPropagation();
+  if (!scannerGridState) return;
+  const totalRecent = Array.isArray(scannerGridState.recentRounds) ? scannerGridState.recentRounds.length : 0;
+  if (totalRecent <= 1) return;
+  scannerGridState.recentRoundsExpanded = !scannerGridState.recentRoundsExpanded;
+  renderScannerRecentList();
+}
+
 function saveScannerRecentRounds(items) {
   try {
     localStorage.setItem(SCANNER_GRID_HISTORY_KEY, JSON.stringify(items.slice(0, 8)));
@@ -3762,13 +3828,28 @@ function renderScannerParticipants() {
 
 function renderScannerRecentList() {
   const container = document.getElementById("scannerRecentRounds");
+  const toggleButton = document.getElementById("scannerRecentToggle");
   if (!container) return;
+
   const items = scannerGridState.recentRounds || [];
+  const expanded = !!scannerGridState.recentRoundsExpanded;
+  const canExpand = items.length > 1;
+  const visibleCount = expanded ? 5 : 1;
+  const visibleItems = items.slice(0, visibleCount);
+
+  if (toggleButton) {
+    toggleButton.disabled = !canExpand;
+    toggleButton.classList.toggle("is-open", expanded && canExpand);
+    toggleButton.setAttribute("aria-expanded", String(expanded && canExpand));
+    toggleButton.setAttribute("aria-label", expanded && canExpand ? "Скрыть последние раунды" : "Показать последние раунды");
+  }
+
   if (!items.length) {
     container.innerHTML = `<div class="scanner-empty">История пуста.</div>`;
     return;
   }
-  container.innerHTML = items.slice(0, 6).map((item) => `
+
+  container.innerHTML = visibleItems.map((item) => `
     <div class="scanner-recent-card">
       <div class="scanner-player-swatch" style="background:${item.youWon ? "hsl(145 74% 58%)" : "hsl(350 85% 67%)"};"></div>
       <div class="scanner-recent-copy">
@@ -4393,6 +4474,7 @@ window.setScannerStakeAndJoin = setScannerStakeAndJoin;
 window.setScannerPopulation = setScannerPopulation;
 window.startOrJoinScannerRound = startOrJoinScannerRound;
 window.resetScannerRound = resetScannerRound;
+window.toggleScannerRecentRounds = toggleScannerRecentRounds;
 window.enterScannerGridMode = enterScannerGridMode;
 
 initializeScannerGridFeature();
