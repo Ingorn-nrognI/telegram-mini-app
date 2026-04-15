@@ -2341,6 +2341,7 @@ const scannerRealtime = {
   runtimeReady: false,
   roundReady: false,
   participantsReady: true,
+  participantsError: false,
   bootStartedAt: Date.now(),
   isJoinBusy: false,
   lifecycleBusy: false,
@@ -3955,7 +3956,9 @@ function getScannerNowMessage() {
   if (notice) return notice;
 
   const round = scannerGridState.roundData;
-  if (!round) return "Общий раунд пока не создан.";
+  if (!round || scannerGridState.totalPlayers <= 0) {
+    return "Общий PvP-раунд пока не создан. Выбери ставку и нажми «Войти в раунд», чтобы создать lobby.";
+  }
   if (round?.id && !scannerRealtime.participantsReady && ["waiting", "countdown", "active"].includes(scannerGridState.status)) {
     return "Синхронизируем подтверждённых участников общего раунда. До прихода snapshot арена остаётся нейтральной.";
   }
@@ -3966,7 +3969,7 @@ function getScannerNowMessage() {
     }
     return scannerGridState.totalPlayers >= 1
       ? `В lobby уже ${formatCompactNumber(scannerGridState.totalPlayers)} игрок(ов). До старта арена поделена на крупные долевые зоны, нужен ещё минимум один реальный игрок для запуска общего отсчёта.`
-      : "Раунд готов к старту, но в нём пока нет игроков.";
+      : "Общий PvP-раунд пока не создан. Выбери ставку и нажми «Войти в раунд», чтобы создать lobby.";
   }
 
   if (scannerGridState.status === "countdown") {
@@ -4015,13 +4018,14 @@ function syncScannerDerivedState() {
   const round = scannerRealtime.roundData || null;
   const participantsSnapshot = Array.isArray(scannerRealtime.participants) ? scannerRealtime.participants.slice() : [];
   const roundStatus = String(round?.status || "idle");
-  const participantsReady = !round?.id || !!scannerRealtime.participantsReady;
+  const participantsReady = !round?.id || (!!scannerRealtime.participantsReady && !scannerRealtime.participantsError);
   const shouldHoldNeutralArena = !!(
     round &&
     !participantsReady &&
     ["waiting", "countdown", "active"].includes(roundStatus)
   );
   const renderParticipants = participantsReady ? getRoundParticipantsForRender(round, participantsSnapshot) : [];
+  const realParticipantCount = renderParticipants.length;
 
   scannerGridState.roundData = round;
   scannerGridState.roundId = round?.id || null;
@@ -4044,6 +4048,7 @@ function syncScannerDerivedState() {
       totalPot: 0,
       countdownMs: 0
     });
+    scannerGridState.renderSeed = "idle";
     return;
   }
 
@@ -4064,10 +4069,32 @@ function syncScannerDerivedState() {
   }
 
   if (shouldHoldNeutralArena) {
+    scannerGridState.participants = [];
+    scannerGridState.myParticipationStatus = "none";
+    scannerGridState.myJoinedRoundId = null;
+    scannerGridState.roundStatus = "idle";
+    scannerGridState.renderSeed = "idle";
     resetScannerRoundVisualState({
-      status: roundStatus,
-      totalPot: Number(round.totalPot || 0),
-      countdownMs
+      status: "idle",
+      totalPot: 0,
+      countdownMs: 0
+    });
+    return;
+  }
+
+  if (participantsReady && realParticipantCount === 0) {
+    scannerGridState.roundData = null;
+    scannerGridState.roundId = null;
+    scannerGridState.roundStatus = "idle";
+    scannerGridState.participants = [];
+    scannerGridState.maxPlayers = Number(scannerGridState.selectedPopulation || 0);
+    scannerGridState.myParticipationStatus = "none";
+    scannerGridState.myJoinedRoundId = null;
+    scannerGridState.renderSeed = "idle";
+    resetScannerRoundVisualState({
+      status: "idle",
+      totalPot: 0,
+      countdownMs: 0
     });
     return;
   }
@@ -4076,7 +4103,7 @@ function syncScannerDerivedState() {
   const previewVersion = `${finalized.gridVersion}_preview_${round.status || "idle"}_${round.updatedAt ? tsToMs(round.updatedAt) : 0}`;
   scannerGridState.players = finalized.players;
   scannerGridState.totalPlayers = finalized.totalPlayers;
-  scannerGridState.totalPot = Number(round.totalPot || finalized.totalPot || 0);
+  scannerGridState.totalPot = normalizeStakeValue(finalized.totalPot);
   scannerGridState.countdownMs = countdownMs;
   scannerGridState.cellOwners = finalized.cellOwners;
   scannerGridState.gridVersion = `${finalized.gridVersion}_${round.status || "idle"}_${round.updatedAt ? tsToMs(round.updatedAt) : 0}`;
@@ -4169,7 +4196,42 @@ async function joinOrCreateScannerRound() {
         }
       }
 
-      const currentStatus = String(targetRoundData?.status || runtimeData.status || "idle");
+      const runtimeRoundKnownEmpty = !!(
+        runtimeRoundId &&
+        targetRoundRef &&
+        targetRoundData &&
+        scannerRealtime.activeRoundId === runtimeRoundId &&
+        scannerRealtime.participantsReady &&
+        !scannerRealtime.participantsError &&
+        getRoundParticipantsForRender({ id: runtimeRoundId, ...targetRoundData }, scannerRealtime.participants).length === 0
+      );
+
+      if (runtimeRoundKnownEmpty) {
+        tx.set(targetRoundRef, {
+          status: "idle",
+          totalPot: 0,
+          participantCount: 0,
+          countdownStartedAt: null,
+          countdownEndsAt: null,
+          activeStartedAt: null,
+          activeEndsAt: null,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          version: Number(targetRoundData?.version || 0) + 1,
+          cleanupReason: "empty_participants_snapshot"
+        }, { merge: true });
+
+        tx.set(runtimeRef, {
+          mode: "scanner-grid",
+          activeRoundId: null,
+          status: "idle",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        targetRoundRef = null;
+        targetRoundData = null;
+      }
+
+      const currentStatus = String(targetRoundData?.status || (runtimeRoundKnownEmpty ? "idle" : runtimeData.status) || "idle");
       const hasReusableLobby = !!(
         targetRoundRef &&
         targetRoundData &&
@@ -4413,6 +4475,7 @@ async function ensureScannerRoundLifecycle() {
   if (scannerRealtime.lifecycleBusy) return;
   const round = scannerRealtime.roundData;
   if (!round || !round.id) return;
+  if (!scannerRealtime.participantsReady || scannerRealtime.participantsError) return;
 
   scannerRealtime.lifecycleBusy = true;
   try {
@@ -4423,6 +4486,43 @@ async function ensureScannerRoundLifecycle() {
     const nowMs = Date.now();
     const renderParticipants = getRoundParticipantsForRender(round, scannerRealtime.participants);
     const participantCount = renderParticipants.length;
+    const actualTotalPot = normalizeStakeValue(
+      renderParticipants.reduce((sum, participant) => sum + normalizeStakeValue(participant.stake), 0)
+    );
+
+    if (participantCount === 0) {
+      await db.runTransaction(async (tx) => {
+        const runtimeSnap = await tx.get(runtimeRef);
+        const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
+        const snap = await tx.get(roundRef);
+        if (!snap.exists) return;
+        const data = snap.data() || {};
+        const runtimePointsHere = !runtimeData.activeRoundId || runtimeData.activeRoundId === roundId;
+
+        tx.set(roundRef, {
+          status: "idle",
+          totalPot: 0,
+          participantCount: 0,
+          countdownStartedAt: null,
+          countdownEndsAt: null,
+          activeStartedAt: null,
+          activeEndsAt: null,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          version: Number(data.version || 0) + 1,
+          cleanupReason: "empty_participants_snapshot"
+        }, { merge: true });
+
+        if (runtimePointsHere) {
+          tx.set(runtimeRef, {
+            mode: "scanner-grid",
+            activeRoundId: null,
+            status: "idle",
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        }
+      });
+      return;
+    }
 
     if (["waiting", "countdown"].includes(roundStatus)) {
       await pruneStaleLobbyParticipants();
@@ -4434,10 +4534,12 @@ async function ensureScannerRoundLifecycle() {
         if (!snap.exists) return;
         const data = snap.data() || {};
         if ((data.status || "waiting") !== "waiting") return;
-        if (Number(data.participantCount || 0) < 2) return;
+        if (participantCount < 2) return;
 
         tx.set(roundRef, {
           status: "countdown",
+          totalPot: actualTotalPot,
+          participantCount,
           countdownStartedAt: createTimestampFromNow(0),
           countdownEndsAt: createTimestampFromNow(SCANNER_COUNTDOWN_MS),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -4460,9 +4562,11 @@ async function ensureScannerRoundLifecycle() {
           if (!snap.exists) return;
           const data = snap.data() || {};
           if ((data.status || "") !== "countdown") return;
-          if (Number(data.participantCount || 0) >= 2) return;
+          if (participantCount >= 2) return;
           tx.set(roundRef, {
             status: "waiting",
+            totalPot: actualTotalPot,
+            participantCount,
             countdownStartedAt: null,
             countdownEndsAt: null,
             activeStartedAt: null,
@@ -4485,9 +4589,11 @@ async function ensureScannerRoundLifecycle() {
           if (!snap.exists) return;
           const data = snap.data() || {};
           if ((data.status || "") !== "countdown") return;
-          if (Number(data.participantCount || 0) < 2) return;
+          if (participantCount < 2) return;
           tx.set(roundRef, {
             status: "active",
+            totalPot: actualTotalPot,
+            participantCount,
             activeStartedAt: createTimestampFromNow(0),
             activeEndsAt: createTimestampFromNow(SCANNER_ACTIVE_MS),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -4822,14 +4928,20 @@ function renderScannerButtons() {
 }
 
 function getScannerRoundOverlayLeft() {
-  if (scannerGridState.status === "idle") return "Арена: ожидание общего раунда";
+  if (scannerGridState.status === "idle" || scannerGridState.totalPlayers <= 0) {
+    return "Арена: ожидание игроков";
+  }
   return `Игроки: ${formatCompactNumber(scannerGridState.totalPlayers)} / ${formatCompactNumber(scannerGridState.maxPlayers || 0)}`;
 }
 
 function getScannerRoundOverlayRight() {
+  if (scannerGridState.totalPlayers <= 0) {
+    return "Лазер в ожидании";
+  }
+
   switch (scannerGridState.status) {
     case "waiting":
-      return "Ожидание 2-го игрока";
+      return scannerGridState.totalPlayers === 1 ? "Ожидание 2-го игрока" : "Ожидание старта";
     case "countdown":
       return "Крупные долевые зоны";
     case "active":
@@ -5457,6 +5569,7 @@ function subscribeScannerParticipants(roundId) {
 
   scannerRealtime.participants = [];
   scannerRealtime.participantsReady = !roundId;
+  scannerRealtime.participantsError = false;
 
   if (!roundId) {
     syncScannerDerivedState();
@@ -5471,12 +5584,14 @@ function subscribeScannerParticipants(roundId) {
       snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
       scannerRealtime.participants = items;
       scannerRealtime.participantsReady = true;
+      scannerRealtime.participantsError = false;
       syncScannerDerivedState();
       renderScannerRound();
     }, (error) => {
       console.error("Ошибка подписки на участников раунда:", error);
       scannerRealtime.participants = [];
-      scannerRealtime.participantsReady = true;
+      scannerRealtime.participantsReady = false;
+      scannerRealtime.participantsError = true;
       syncScannerDerivedState();
       renderScannerRound();
     });
@@ -5492,6 +5607,7 @@ function subscribeScannerRound(roundId) {
   scannerRealtime.roundReady = !roundId;
   scannerRealtime.participants = [];
   scannerRealtime.participantsReady = !roundId;
+  scannerRealtime.participantsError = false;
   scannerRealtime.activeRoundId = roundId || null;
   subscribeScannerParticipants(null);
 
@@ -5539,6 +5655,7 @@ function subscribeScannerRuntime() {
       scannerRealtime.roundReady = true;
       scannerRealtime.participants = [];
       scannerRealtime.participantsReady = true;
+      scannerRealtime.participantsError = false;
       syncScannerDerivedState();
       renderScannerRound();
     }
