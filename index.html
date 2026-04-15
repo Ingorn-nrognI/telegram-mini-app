@@ -2265,6 +2265,103 @@ button {
   box-shadow: 0 12px 24px rgba(45, 225, 255, 0.18), inset 0 1px 0 rgba(255,255,255,0.22);
 }
 
+
+
+.scanner-bet-bar.is-betting-locked {
+  background:
+    linear-gradient(180deg, rgba(35, 42, 56, 0.92), rgba(13, 17, 27, 0.96));
+  border-color: rgba(255,255,255,0.06);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.scanner-bet-bar.is-betting-locked .scanner-bet-btn,
+.scanner-bet-btn.is-locked,
+.scanner-bet-btn:disabled.is-locked {
+  opacity: 0.56;
+  cursor: default;
+  color: rgba(225, 232, 244, 0.58);
+  background: linear-gradient(180deg, rgba(71, 78, 94, 0.44), rgba(33, 38, 50, 0.58));
+  border-color: rgba(255,255,255,0.05);
+  box-shadow: none;
+  filter: grayscale(1);
+}
+
+.scanner-bet-bar.is-betting-locked .scanner-bet-main,
+.scanner-bet-bar.is-betting-locked .scanner-bet-edit,
+.scanner-bet-bar.is-betting-locked .scanner-bet-quick.active {
+  color: rgba(225, 232, 244, 0.58);
+  background: linear-gradient(180deg, rgba(71, 78, 94, 0.44), rgba(33, 38, 50, 0.58));
+  border-color: rgba(255,255,255,0.05);
+  box-shadow: none;
+}
+
+.insufficient-balance-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 6, 18, 0.34);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.insufficient-balance-modal.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.insufficient-balance-card {
+  width: min(calc(100vw - 32px), 360px);
+  border-radius: 24px;
+  padding: 18px 16px 16px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(45, 225, 255, 0.18), transparent 35%),
+    linear-gradient(180deg, rgba(12, 20, 47, 0.98), rgba(6, 10, 24, 0.98));
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 24px 44px rgba(0, 0, 0, 0.55), 0 0 28px rgba(45, 225, 255, 0.12);
+}
+
+.insufficient-balance-icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(45, 225, 255, 0.12);
+  border: 1px solid rgba(45, 225, 255, 0.22);
+  color: #dff9ff;
+  font-size: 22px;
+}
+
+.insufficient-balance-text {
+  color: #f3f8ff;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+
+.insufficient-balance-close {
+  min-height: 42px;
+  margin-top: 14px;
+  padding: 0 18px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(104, 152, 255, 0.98), rgba(45, 225, 255, 0.9));
+  color: #06101f;
+  font-weight: 900;
+  box-shadow: 0 12px 24px rgba(45, 225, 255, 0.16), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
 @media (max-width: 420px) {
   .scanner-bet-bar {
     width: calc(100vw - 16px);
@@ -2675,6 +2772,21 @@ button {
     </div>
   </div>
 
+
+
+  <div
+    id="insufficientBalanceModal"
+    class="insufficient-balance-modal"
+    onclick="hideInsufficientBalanceModal(event)"
+    aria-hidden="true"
+  >
+    <div class="insufficient-balance-card" onclick="event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="insufficient-balance-icon">💎</div>
+      <div class="insufficient-balance-text">Для ставки не хватает баланса. Пополните свой баланс и повторите попытку.</div>
+      <button type="button" class="insufficient-balance-close" onclick="hideInsufficientBalanceModal(event)">Понятно</button>
+    </div>
+  </div>
+
   <div class="bottom-bar">
     <button
       type="button"
@@ -2774,6 +2886,12 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
+const DEMO_TON_START_BALANCE = 1000;
+const INSUFFICIENT_BALANCE_MESSAGE = "Для ставки не хватает баланса. Пополните свой баланс и повторите попытку.";
+let currentDemoTonBalance = 0;
+let currentDemoTonBalanceLoaded = false;
+let currentUserBalanceUnsub = null;
+let insufficientBalanceModalTimer = null;
 
 let tgUser = null;
 const tgApp = window.Telegram?.WebApp || null;
@@ -2988,7 +3106,24 @@ function getPlayerInitial(name) {
   return value.charAt(0).toUpperCase();
 }
 
+function parseBalanceNumber(value) {
+  if (value === null || value === undefined || value === "") return 0;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const parsed = parseFloat(String(value).replace(",", ".").replace(/[^\d.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeMoneyValue(value) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Number(number.toFixed(2)));
+}
+
 function getCurrentBalanceRaw() {
+  if (currentDemoTonBalanceLoaded) {
+    return normalizeMoneyValue(currentDemoTonBalance);
+  }
+
   const candidates = [
     window.appUserBalance,
     window.userBalance,
@@ -2997,14 +3132,8 @@ function getCurrentBalanceRaw() {
   ];
 
   for (const candidate of candidates) {
-    if (candidate === null || candidate === undefined || candidate === "") continue;
-
-    if (typeof candidate === "number" && Number.isFinite(candidate)) {
-      return candidate;
-    }
-
-    const parsed = parseFloat(String(candidate).replace(",", ".").replace(/[^\d.-]/g, ""));
-    if (Number.isFinite(parsed)) {
+    const parsed = parseBalanceNumber(candidate);
+    if (Number.isFinite(parsed) && parsed > 0) {
       return parsed;
     }
   }
@@ -3016,6 +3145,141 @@ function formatBalance(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "0.00 TON";
   return `${number.toFixed(2)} TON`;
+}
+
+
+function getUserRef(playerId = getCurrentPlayer().id) {
+  return db.collection("users").doc(String(playerId));
+}
+
+function getUserDemoBalanceFromData(data) {
+  const rawBalance = data?.demoTonBalance ?? data?.demoBalance ?? data?.balance ?? 0;
+  return normalizeMoneyValue(rawBalance);
+}
+
+function syncLocalDemoBalance(value) {
+  const normalized = normalizeMoneyValue(value);
+  currentDemoTonBalance = normalized;
+  currentDemoTonBalanceLoaded = true;
+  window.appUserBalance = normalized;
+  window.userBalance = normalized;
+  try {
+    localStorage.setItem("bobr_balance", String(normalized));
+  } catch (error) {
+    console.warn("Не удалось сохранить локальную копию demo-баланса:", error);
+  }
+  renderTopProfile();
+  renderScannerBetBar();
+}
+
+async function ensureDemoBalanceForCurrentUser() {
+  const player = getCurrentPlayer();
+  const userRef = getUserRef(player.id);
+  let ensuredBalance = 0;
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+    const data = snap.exists ? (snap.data() || {}) : {};
+
+    if (!snap.exists || data.demoBalanceGranted !== true) {
+      const currentBalance = getUserDemoBalanceFromData(data);
+      ensuredBalance = normalizeMoneyValue(currentBalance + DEMO_TON_START_BALANCE);
+      tx.set(userRef, {
+        playerId: player.id,
+        name: player.name,
+        avatar: player.avatar || null,
+        demoTonBalance: ensuredBalance,
+        demoBalanceGranted: true,
+        demoBalanceGrantedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      return;
+    }
+
+    ensuredBalance = getUserDemoBalanceFromData(data);
+    tx.set(userRef, {
+      playerId: player.id,
+      name: player.name,
+      avatar: player.avatar || null,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  });
+
+  syncLocalDemoBalance(ensuredBalance);
+}
+
+function subscribeCurrentUserBalance() {
+  if (currentUserBalanceUnsub) {
+    currentUserBalanceUnsub();
+    currentUserBalanceUnsub = null;
+  }
+
+  const player = getCurrentPlayer();
+  currentUserBalanceUnsub = getUserRef(player.id).onSnapshot((snapshot) => {
+    if (!snapshot.exists) return;
+    syncLocalDemoBalance(getUserDemoBalanceFromData(snapshot.data() || {}));
+  }, (error) => {
+    console.error("Ошибка подписки на demo TON-баланс:", error);
+  });
+}
+
+function createInsufficientBalanceError() {
+  const error = new Error(INSUFFICIENT_BALANCE_MESSAGE);
+  error.code = "insufficient-balance";
+  return error;
+}
+
+function isInsufficientBalanceError(error) {
+  return error?.code === "insufficient-balance" || String(error?.message || "").includes(INSUFFICIENT_BALANCE_MESSAGE);
+}
+
+function showInsufficientBalanceModal() {
+  const modal = document.getElementById("insufficientBalanceModal");
+  if (!modal) {
+    setScannerTransientMessage(INSUFFICIENT_BALANCE_MESSAGE, { type: "error", timeoutMs: 6000 });
+    return;
+  }
+
+  if (insufficientBalanceModalTimer) {
+    clearTimeout(insufficientBalanceModalTimer);
+    insufficientBalanceModalTimer = null;
+  }
+
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+  insufficientBalanceModalTimer = setTimeout(() => hideInsufficientBalanceModal(), 4200);
+}
+
+function hideInsufficientBalanceModal(event) {
+  if (event) event.stopPropagation();
+  const modal = document.getElementById("insufficientBalanceModal");
+  if (!modal) return;
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+  if (insufficientBalanceModalTimer) {
+    clearTimeout(insufficientBalanceModalTimer);
+    insufficientBalanceModalTimer = null;
+  }
+}
+
+function getScannerCommissionPercent(totalPot) {
+  const pot = Number(totalPot || 0);
+  if (pot < 0.2) return 15;
+  if (pot < 1) return 15;
+  if (pot < 5) return 12;
+  if (pot < 20) return 8;
+  if (pot < 50) return 6;
+  if (pot < 100) return 4;
+  if (pot < 200) return 3;
+  return 2;
+}
+
+function getScannerPayoutMeta(totalPot) {
+  const pot = normalizeMoneyValue(totalPot);
+  const commissionPercent = getScannerCommissionPercent(pot);
+  const commissionAmount = normalizeMoneyValue(pot * commissionPercent / 100);
+  const winnerPayout = normalizeMoneyValue(Math.max(0, pot - commissionAmount));
+  return { totalPot: pot, commissionPercent, commissionAmount, winnerPayout };
 }
 
 function escapeCssUrl(value) {
@@ -4678,6 +4942,12 @@ function syncScannerDerivedState() {
     stopScannerVisualAnimation();
   }
 
+  if (["finished", "preparing_next_round"].includes(scannerGridState.status) && round?.payoutProcessed !== true) {
+    processScannerRoundPayoutOnce(round.id).catch((error) => {
+      console.warn("Не удалось обработать выплату победителю:", error);
+    });
+  }
+
   ensureScannerRoundHistoryPersisted().catch((error) => {
     console.warn("Не удалось сохранить историю раунда пользователю:", error);
   });
@@ -4704,14 +4974,26 @@ function computeDeterministicRoundResult(round, participants) {
 
 async function joinOrCreateScannerRound() {
   if (scannerRealtime.isJoinBusy) return;
+  if (isScannerBettingLocked()) {
+    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", {
+      type: "info",
+      timeoutMs: 5000
+    });
+    return;
+  }
+
   scannerRealtime.isJoinBusy = true;
   renderScannerButtons();
+  renderScannerBetBar();
 
   try {
+    await ensureDemoBalanceForCurrentUser();
+
     const player = getCurrentPlayer();
     const stakeToAdd = normalizeStakeValue(scannerGridState.selectedStake);
     const desiredMaxPlayers = Number(scannerGridState.selectedPopulation || 2);
     const runtimeRef = scannerRuntimeRef();
+    const userRef = getUserRef(player.id);
     let joinedRoundId = null;
 
     if (!Number.isFinite(stakeToAdd) || stakeToAdd <= 0) {
@@ -4749,26 +5031,6 @@ async function joinOrCreateScannerRound() {
       );
 
       if (runtimeRoundKnownEmpty) {
-        tx.set(targetRoundRef, {
-          status: "idle",
-          totalPot: 0,
-          participantCount: 0,
-          countdownStartedAt: null,
-          countdownEndsAt: null,
-          activeStartedAt: null,
-          activeEndsAt: null,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          version: Number(targetRoundData?.version || 0) + 1,
-          cleanupReason: "empty_participants_snapshot"
-        }, { merge: true });
-
-        tx.set(runtimeRef, {
-          mode: "scanner-grid",
-          activeRoundId: null,
-          status: "idle",
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-
         targetRoundRef = null;
         targetRoundData = null;
       }
@@ -4795,6 +5057,11 @@ async function joinOrCreateScannerRound() {
           mode: "scanner-grid",
           status: "waiting",
           totalPot: 0,
+          commissionPercent: 0,
+          commissionAmount: 0,
+          winnerPayout: 0,
+          payoutProcessed: false,
+          payoutProcessedAt: null,
           participantCount: 0,
           maxPlayers: desiredMaxPlayers,
           entropySeed: `${nowMs}_${Math.random().toString(36).slice(2)}_${player.id}`,
@@ -4823,6 +5090,8 @@ async function joinOrCreateScannerRound() {
       const participantRef = scannerParticipantsCollection(targetRoundRef.id).doc(player.id);
       const participantSnap = await tx.get(participantRef);
       const participantData = participantSnap.exists ? (participantSnap.data() || {}) : null;
+      const userSnap = await tx.get(userRef);
+      const userData = userSnap.exists ? (userSnap.data() || {}) : {};
 
       const targetStatus = String(targetRoundData?.status || "waiting");
       if (["active", "finished", "preparing_next_round"].includes(targetStatus)) {
@@ -4838,20 +5107,54 @@ async function joinOrCreateScannerRound() {
         throw new Error("Текущая общая lobby уже заполнена. Дождись следующего раунда.");
       }
 
-      joinedRoundId = targetRoundRef.id;
-
       const previousStake = participantAlreadyInside
         ? normalizeStakeValue(participantData.stake)
         : 0;
       const nextStake = normalizeStakeValue(previousStake + stakeToAdd);
+      const stakeDelta = normalizeStakeValue(nextStake - previousStake);
+      const grantAmount = userData.demoBalanceGranted === true ? 0 : DEMO_TON_START_BALANCE;
+      const availableBalance = normalizeMoneyValue(getUserDemoBalanceFromData(userData) + grantAmount);
+
+      if (availableBalance < stakeDelta) {
+        throw createInsufficientBalanceError();
+      }
+
+      const nextBalance = normalizeMoneyValue(availableBalance - stakeDelta);
       const isRejoinFromLeft = participantData?.status === "left";
       const isNewParticipant = !participantSnap.exists || isRejoinFromLeft;
       const nextParticipantCount = Math.max(0, currentParticipantCount + (isNewParticipant ? 1 : 0));
-      const nextTotalPot = normalizeStakeValue(Number(targetRoundData?.totalPot || 0) + (nextStake - previousStake));
+      const nextTotalPot = normalizeStakeValue(Number(targetRoundData?.totalPot || 0) + stakeDelta);
+
+      if (runtimeRoundKnownEmpty && runtimeRoundId) {
+        const emptyRoundRef = scannerRoundRef(runtimeRoundId);
+        tx.set(emptyRoundRef, {
+          status: "idle",
+          totalPot: 0,
+          participantCount: 0,
+          countdownStartedAt: null,
+          countdownEndsAt: null,
+          activeStartedAt: null,
+          activeEndsAt: null,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          cleanupReason: "empty_participants_snapshot"
+        }, { merge: true });
+      }
 
       if (createNewRound) {
         tx.set(targetRoundRef, targetRoundData, { merge: true });
       }
+
+      tx.set(userRef, {
+        playerId: player.id,
+        name: player.name,
+        avatar: player.avatar || null,
+        demoTonBalance: nextBalance,
+        demoBalanceGranted: true,
+        demoBalanceGrantedAt: userData.demoBalanceGranted === true
+          ? (userData.demoBalanceGrantedAt || firebase.firestore.FieldValue.serverTimestamp())
+          : firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
 
       tx.set(participantRef, {
         playerId: player.id,
@@ -4880,6 +5183,7 @@ async function joinOrCreateScannerRound() {
         roundUpdate.activeEndsAt = null;
       }
 
+      joinedRoundId = targetRoundRef.id;
       tx.set(targetRoundRef, roundUpdate, { merge: true });
       tx.set(runtimeRef, {
         mode: "scanner-grid",
@@ -4896,13 +5200,18 @@ async function joinOrCreateScannerRound() {
     }
   } catch (error) {
     reportAppError("Не удалось войти в общий раунд:", error);
-    setScannerTransientMessage(error?.message || "Не удалось войти в общий раунд.", {
-      type: "error",
-      timeoutMs: 6000
-    });
+    if (isInsufficientBalanceError(error)) {
+      showInsufficientBalanceModal();
+    } else {
+      setScannerTransientMessage(error?.message || "Не удалось войти в общий раунд.", {
+        type: "error",
+        timeoutMs: 6000
+      });
+    }
   } finally {
     scannerRealtime.isJoinBusy = false;
     renderScannerButtons();
+    renderScannerBetBar();
   }
 }
 
@@ -4920,6 +5229,9 @@ async function removeParticipantFromRound(roundId, playerId, options = {}) {
     if (!participantSnap.exists) return;
     const participantData = participantSnap.data() || {};
     const participantStake = normalizeStakeValue(participantData.stake);
+    const userRef = getUserRef(playerId);
+    const userSnap = await tx.get(userRef);
+    const userData = userSnap.exists ? (userSnap.data() || {}) : {};
 
     if (roundData.status === "active" || roundData.status === "finished" || roundData.status === "preparing_next_round" || markLeftOnly) {
       tx.set(participantRef, {
@@ -4949,6 +5261,13 @@ async function removeParticipantFromRound(roundId, playerId, options = {}) {
 
     tx.delete(participantRef);
     tx.set(roundRef, update, { merge: true });
+
+    if (participantStake > 0) {
+      tx.set(userRef, {
+        demoTonBalance: normalizeMoneyValue(getUserDemoBalanceFromData(userData) + participantStake),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
 
     if (nextCount === 0) {
       tx.set(runtimeRef, {
@@ -5011,6 +5330,45 @@ async function pruneStaleLobbyParticipants() {
   } finally {
     scannerRealtime.pruneBusy = false;
   }
+}
+
+async function processScannerRoundPayoutOnce(roundId, resultOverride = null) {
+  if (!roundId) return;
+  const roundRef = scannerRoundRef(roundId);
+
+  await db.runTransaction(async (tx) => {
+    const roundSnap = await tx.get(roundRef);
+    if (!roundSnap.exists) return;
+    const roundData = roundSnap.data() || {};
+    const status = String(roundData.status || "");
+    if (!["finished", "preparing_next_round"].includes(status)) return;
+    if (roundData.payoutProcessed === true) return;
+
+    const winnerPlayerId = resultOverride?.winnerPlayerId || roundData.winnerPlayerId || null;
+    if (!winnerPlayerId) return;
+
+    const winnerRef = getUserRef(winnerPlayerId);
+    const winnerSnap = await tx.get(winnerRef);
+    const winnerData = winnerSnap.exists ? (winnerSnap.data() || {}) : {};
+    const payoutMeta = getScannerPayoutMeta(roundData.totalPot || resultOverride?.totalPot || 0);
+
+    tx.set(winnerRef, {
+      demoTonBalance: normalizeMoneyValue(getUserDemoBalanceFromData(winnerData) + payoutMeta.winnerPayout),
+      demoBalanceGranted: winnerData.demoBalanceGranted === true,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    tx.set(roundRef, {
+      totalPot: payoutMeta.totalPot,
+      commissionPercent: payoutMeta.commissionPercent,
+      commissionAmount: payoutMeta.commissionAmount,
+      winnerPayout: payoutMeta.winnerPayout,
+      payoutProcessed: true,
+      payoutProcessedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      version: Number(roundData.version || 0) + 1
+    }, { merge: true });
+  });
 }
 
 async function ensureScannerRoundLifecycle() {
@@ -5159,8 +5517,28 @@ async function ensureScannerRoundLifecycle() {
         const data = snap.data() || {};
         if ((data.status || "") !== "active") return;
 
+        const winnerRef = result.winnerPlayerId ? getUserRef(result.winnerPlayerId) : null;
+        const winnerSnap = winnerRef ? await tx.get(winnerRef) : null;
+        const winnerData = winnerSnap?.exists ? (winnerSnap.data() || {}) : {};
+        const payoutMeta = getScannerPayoutMeta(data.totalPot || actualTotalPot);
+        const shouldPayWinner = !!winnerRef && data.payoutProcessed !== true && payoutMeta.winnerPayout > 0;
+
+        if (shouldPayWinner) {
+          tx.set(winnerRef, {
+            demoTonBalance: normalizeMoneyValue(getUserDemoBalanceFromData(winnerData) + payoutMeta.winnerPayout),
+            demoBalanceGranted: winnerData.demoBalanceGranted === true,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        }
+
         tx.set(roundRef, {
           status: "finished",
+          totalPot: payoutMeta.totalPot,
+          commissionPercent: payoutMeta.commissionPercent,
+          commissionAmount: payoutMeta.commissionAmount,
+          winnerPayout: payoutMeta.winnerPayout,
+          payoutProcessed: shouldPayWinner,
+          payoutProcessedAt: shouldPayWinner ? firebase.firestore.FieldValue.serverTimestamp() : null,
           winnerPlayerId: result.winnerPlayerId,
           winnerName: result.winnerName,
           winnerStake: normalizeStakeValue(result.winnerStake),
@@ -5264,6 +5642,10 @@ async function ensureScannerRoundHistoryPersisted() {
       winnerPlayerId: scannerGridState.winningPlayer.id,
       winnerName: scannerGridState.winningPlayer.name,
       winnerStake: Number(scannerGridState.winningPlayer.stake || 0),
+      commissionPercent: Number(round.commissionPercent || 0),
+      commissionAmount: Number(round.commissionAmount || 0),
+      winnerPayout: Number(round.winnerPayout || 0),
+      payoutProcessed: round.payoutProcessed === true,
       winningCellIndex: Number(scannerGridState.winningCellIndex || 0),
       resultSource: round.resultSource || "firestore-deterministic"
     }, { merge: true })
@@ -5512,7 +5894,13 @@ async function setScannerQuickStake(value, event) {
   if (event) event.stopPropagation();
   const nextStake = normalizeStakeValue(value);
   if (!nextStake || nextStake <= 0) {
-    alert("Некорректная ставка.");
+    setScannerTransientMessage("Некорректная ставка.", { type: "error", timeoutMs: 5000 });
+    return;
+  }
+
+  if (isScannerBettingLocked()) {
+    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", { type: "info", timeoutMs: 5000 });
+    renderScannerBetBar();
     return;
   }
 
@@ -5525,7 +5913,13 @@ async function setScannerAllInStake(event) {
   if (event) event.stopPropagation();
   const balance = normalizeStakeValue(getCurrentBalanceRaw());
   if (!Number.isFinite(balance) || balance <= 0) {
-    alert("На балансе нет TON для ставки ва-банк.");
+    showInsufficientBalanceModal();
+    return;
+  }
+
+  if (isScannerBettingLocked()) {
+    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", { type: "info", timeoutMs: 5000 });
+    renderScannerBetBar();
     return;
   }
 
@@ -5550,11 +5944,12 @@ async function startOrJoinScannerRound(event) {
   const currentPlayer = getCurrentPlayer();
   const currentParticipant = getScannerParticipantById(currentPlayer.id);
 
-  if (status === "active") {
-    setScannerTransientMessage("Общий раунд уже идёт. Дождись следующей lobby.", {
+  if (isScannerBettingLocked()) {
+    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", {
       type: "info",
       timeoutMs: 5000
     });
+    renderScannerBetBar();
     return;
   }
 
@@ -5783,33 +6178,56 @@ function renderScannerRecentList() {
       <div class="scanner-player-swatch" style="background:${item.winnerPlayerId === getCurrentPlayer().id ? "hsl(145 74% 58%)" : "hsl(220 84% 66%)"};"></div>
       <div class="scanner-recent-copy">
         <div class="scanner-recent-title">${item.winnerName || "Победитель"}</div>
-        <div class="scanner-recent-meta">${formatHistoryDate(tsToMs(item.finishedAt) ? new Date(tsToMs(item.finishedAt)).toISOString() : item.finishedAt)} · ${formatCompactNumber(item.participantCount || 0)} игроков · банк ${formatTon(item.totalPot || 0)}</div>
+        <div class="scanner-recent-meta">${formatHistoryDate(tsToMs(item.finishedAt) ? new Date(tsToMs(item.finishedAt)).toISOString() : item.finishedAt)} · ${formatCompactNumber(item.participantCount || 0)} игроков · банк ${formatTon(item.totalPot || 0)} · комиссия ${Number(item.commissionPercent || 0)}%</div>
       </div>
-      <div class="scanner-recent-result">${formatTon(item.winnerStake || 0)}</div>
+      <div class="scanner-recent-result">${formatTon(item.winnerPayout || item.winnerStake || 0)}</div>
     </div>
   `).join("");
+}
+
+function isScannerBettingLocked() {
+  const status = String(
+    scannerGridState.status ||
+    scannerRealtime.roundData?.status ||
+    scannerRealtime.runtimeData?.status ||
+    "idle"
+  );
+  return ["active", "finished", "preparing_next_round"].includes(status);
 }
 
 function renderScannerBetBar() {
   const bar = document.getElementById("scannerBetBar");
   if (!bar) return;
 
+  const editButton = document.querySelector(".scanner-bet-edit");
   const allInButton = document.getElementById("scannerBetBarAllIn");
   const selectedStake = normalizeStakeValue(scannerGridState.selectedStake) || 0;
   const isBusy = !!scannerRealtime.isJoinBusy;
+  const bettingLocked = isScannerBettingLocked();
+  const shouldDisable = isBusy || bettingLocked;
+
+  bar.classList.toggle("is-betting-locked", bettingLocked);
+  bar.setAttribute("aria-disabled", String(shouldDisable));
+
+  if (editButton) {
+    editButton.disabled = shouldDisable;
+    editButton.classList.toggle("is-locked", bettingLocked);
+  }
 
   scannerQuickStakeValues.forEach((value, index) => {
     const button = document.getElementById(`scannerBetBarQuick${index}`);
     if (!button) return;
     const normalizedValue = normalizeStakeValue(value);
     button.textContent = formatScannerStakeButtonValue(normalizedValue);
-    button.classList.toggle("active", Number(selectedStake) === Number(normalizedValue));
-    button.disabled = isBusy;
-    button.setAttribute("aria-label", `Поставить ${formatTon(normalizedValue)}`);
+    button.classList.toggle("active", Number(selectedStake) === Number(normalizedValue) && !bettingLocked);
+    button.classList.toggle("is-locked", bettingLocked);
+    button.disabled = shouldDisable;
+    button.setAttribute("aria-label", bettingLocked ? "Ставки заблокированы до окончания раунда" : `Поставить ${formatTon(normalizedValue)}`);
   });
 
   if (allInButton) {
-    allInButton.disabled = isBusy;
+    allInButton.disabled = shouldDisable;
+    allInButton.classList.toggle("is-locked", bettingLocked);
   }
 
   requestScannerBetBarVisibilityUpdate();
@@ -6000,7 +6418,10 @@ function renderScannerRound() {
       const myWin = scannerGridState.winningPlayer.id === getCurrentPlayer().id;
       resultBanner.style.display = "block";
       resultTitle.textContent = myWin ? "Ты выиграл общий раунд" : `Победитель: ${scannerGridState.winningPlayer.name}`;
-      resultText.textContent = `${scannerGridState.winningPlayer.name} забрал ${formatTon(scannerGridState.totalPot)}. Его ставка: ${formatTon(scannerGridState.winningPlayer.stake)} · доля банка ${formatPercent(scannerGridState.winningPlayer.sharePercent)} · победная клетка #${scannerGridState.winningCellIndex}.`;
+      const payout = Number(scannerGridState.roundData?.winnerPayout || scannerGridState.totalPot || 0);
+      const commissionPercent = Number(scannerGridState.roundData?.commissionPercent || getScannerCommissionPercent(scannerGridState.totalPot));
+      const commissionAmount = Number(scannerGridState.roundData?.commissionAmount || 0);
+      resultText.textContent = `${scannerGridState.winningPlayer.name} получает ${formatTon(payout)}. Банк: ${formatTon(scannerGridState.totalPot)} · комиссия ${commissionPercent}% (${formatTon(commissionAmount)}) · ставка победителя: ${formatTon(scannerGridState.winningPlayer.stake)} · победная клетка #${scannerGridState.winningCellIndex}.`;
     } else {
       resultBanner.style.display = "none";
       resultTitle.textContent = "";
@@ -6774,6 +7195,11 @@ window.setScannerQuickStake = setScannerQuickStake;
 window.setScannerAllInStake = setScannerAllInStake;
 window.updateScannerBetBarVisibility = updateScannerBetBarVisibility;
 window.forceScannerBetBarVisibilityRefresh = forceScannerBetBarVisibilityRefresh;
+window.hideInsufficientBalanceModal = hideInsufficientBalanceModal;
+window.showInsufficientBalanceModal = showInsufficientBalanceModal;
+window.getScannerCommissionPercent = getScannerCommissionPercent;
+window.processScannerRoundPayoutOnce = processScannerRoundPayoutOnce;
+window.isScannerBettingLocked = isScannerBettingLocked;
 window.setScannerPopulation = setScannerPopulation;
 window.startOrJoinScannerRound = startOrJoinScannerRound;
 window.resetScannerRound = resetScannerRound;
@@ -6784,6 +7210,9 @@ scannerQuickStakeValues = loadScannerQuickStakeValues();
 scannerStakeSettingsState.draftValues = scannerQuickStakeValues.map((value) => String(value));
 
 renderTopProfile();
+ensureDemoBalanceForCurrentUser()
+  .then(() => subscribeCurrentUserBalance())
+  .catch((error) => console.error("Не удалось выдать demo TON-баланс:", error));
 homeScreenContext = "games";
 setMenuView("home");
 setActiveBottomNav("games");
