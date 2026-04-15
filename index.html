@@ -1370,16 +1370,18 @@ button {
   transform: rotate(180deg);
 }
 
-.scanner-player-list.is-collapsed {
-  display: none;
-}
-
+.scanner-player-list.is-collapsed,
 .scanner-player-list.is-expanded {
   display: flex;
 }
 
-.scanner-player-list.full-scroll {
-  max-height: 446px;
+.scanner-player-list.is-collapsed {
+  max-height: none;
+  overflow: visible;
+}
+
+.scanner-player-list.is-expanded.full-scroll {
+  max-height: 370px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-right: 2px;
@@ -1392,6 +1394,10 @@ button {
   overflow: visible;
 }
 
+.scanner-player-list.is-collapsed .scanner-pinned-player {
+  position: relative;
+}
+
 .scanner-player-scroll {
   max-height: 370px;
   overflow-y: auto;
@@ -1402,6 +1408,12 @@ button {
   gap: 10px;
   scrollbar-width: thin;
   scrollbar-color: rgba(109, 154, 255, 0.55) transparent;
+}
+
+.scanner-player-list.is-collapsed .scanner-player-scroll {
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
 }
 
 .scanner-player-list.full-scroll::-webkit-scrollbar,
@@ -5710,6 +5722,24 @@ function renderScannerParticipants() {
   meta.innerHTML = `Банк: <span class="scanner-inline-stat">${formatTon(scannerGridState.totalPot)}</span> · Лимит: <span class="scanner-inline-stat">${formatCompactNumber(scannerGridState.maxPlayers || 0)}</span> · Фаза: <span class="scanner-inline-stat">${getScannerStatusText(scannerGridState.roundData)}</span>`;
 
   const { hasMe, myPlayer, others, ordered } = getOrderedScannerPlayersForList();
+
+  if (!expanded) {
+    if (hasMe && myPlayer) {
+      const previewOthers = others.slice(0, 2);
+      const previewOthersHtml = previewOthers.map((player) => getScannerPlayerRowHtml(player)).join("");
+      const emptyOthersHtml = previewOthers.length
+        ? ""
+        : `<div class="scanner-empty">Другие игроки пока не вошли в раунд.</div>`;
+
+      list.classList.add("has-pinned");
+      list.innerHTML = `${getScannerPlayerRowHtml(myPlayer, { pinned: true })}${previewOthersHtml}${emptyOthersHtml}`;
+      return;
+    }
+
+    const previewPlayers = ordered.slice(0, 3);
+    list.innerHTML = previewPlayers.map((player) => getScannerPlayerRowHtml(player)).join("");
+    return;
+  }
 
   if (hasMe && myPlayer) {
     list.classList.add("has-pinned");
