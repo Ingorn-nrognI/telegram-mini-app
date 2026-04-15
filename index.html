@@ -1848,7 +1848,7 @@ button {
     0 0 28px rgba(45, 225, 255, 0.12),
     inset 0 1px 0 rgba(255,255,255,0.08);
   backdrop-filter: blur(18px);
-  z-index: 78;
+  z-index: 95;
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, 22px) scale(0.98);
@@ -2728,7 +2728,7 @@ function setActiveBottomNav(navName) {
   buttons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.nav === navName);
   });
-  requestScannerBetBarVisibilityUpdate();
+  forceScannerBetBarVisibilityRefresh();
 }
 
 function getPreferredHomeNav() {
@@ -2852,7 +2852,7 @@ function setMenuView(view, options = {}) {
   }
 
   syncAppBackButton();
-  requestScannerBetBarVisibilityUpdate();
+  forceScannerBetBarVisibilityRefresh();
 }
 
 function toggleModePopup(event) {
@@ -5065,6 +5065,8 @@ function renderScannerBetBar() {
 }
 
 function isScannerBetBarContextActive() {
+  const homeScreen = document.getElementById("homeScreen");
+  const bobrRunScreen = document.getElementById("bobrRunScreen");
   const historyPanel = document.getElementById("historyPanel");
   const modePopup = document.getElementById("modePopup");
   const leaderboardModal = document.getElementById("leaderboardModal");
@@ -5073,10 +5075,11 @@ function isScannerBetBarContextActive() {
   const modePopupOpen = !!modePopup?.classList.contains("open");
   const leaderboardOpen = leaderboardModal?.style.display === "flex";
   const roomsOpen = roomsModal?.style.display === "flex";
+  const homeActive = currentMenuView === "home" && !!homeScreen?.classList.contains("active");
+  const bobrRunActive = !!bobrRunScreen?.classList.contains("active");
 
-  return currentMenuView === "home" &&
-    homeScreenContext === "pvp" &&
-    currentBottomNav === "pvp" &&
+  return homeActive &&
+    !bobrRunActive &&
     !historyOpen &&
     !modePopupOpen &&
     !leaderboardOpen &&
@@ -5092,14 +5095,22 @@ function updateScannerBetBarVisibility() {
   if (isScannerBetBarContextActive()) {
     const rect = arena.getBoundingClientRect();
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
     const arenaCenter = rect.top + rect.height / 2;
+    const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+    const visiblePart = rect.height > 0 ? visibleHeight / rect.height : 0;
+    const navSafeTop = viewportHeight - 128;
+
     const isArenaInWorkingZone =
       rect.width > 0 &&
       rect.height > 0 &&
-      rect.top < viewportHeight * 0.52 &&
-      rect.bottom > viewportHeight * 0.28 &&
-      arenaCenter > viewportHeight * 0.22 &&
-      arenaCenter < viewportHeight * 0.72;
+      rect.right > 0 &&
+      rect.left < viewportWidth &&
+      visiblePart >= 0.18 &&
+      rect.bottom > viewportHeight * 0.10 &&
+      rect.top < navSafeTop &&
+      arenaCenter > viewportHeight * 0.10 &&
+      arenaCenter < viewportHeight * 0.82;
 
     shouldShow = !!isArenaInWorkingZone;
   }
@@ -5115,15 +5126,23 @@ function requestScannerBetBarVisibilityUpdate() {
   });
 }
 
+function forceScannerBetBarVisibilityRefresh() {
+  requestScannerBetBarVisibilityUpdate();
+  setTimeout(requestScannerBetBarVisibilityUpdate, 80);
+  setTimeout(requestScannerBetBarVisibilityUpdate, 220);
+  setTimeout(requestScannerBetBarVisibilityUpdate, 520);
+}
+
 function setupScannerBetBarVisibilityTracking() {
   if (scannerBetBarScrollAttached) return;
   const homeScreen = document.getElementById("homeScreen");
   if (homeScreen) {
     homeScreen.addEventListener("scroll", requestScannerBetBarVisibilityUpdate, { passive: true });
   }
-  window.addEventListener("resize", requestScannerBetBarVisibilityUpdate, { passive: true });
-  window.addEventListener("orientationchange", requestScannerBetBarVisibilityUpdate, { passive: true });
+  window.addEventListener("resize", forceScannerBetBarVisibilityRefresh, { passive: true });
+  window.addEventListener("orientationchange", forceScannerBetBarVisibilityRefresh, { passive: true });
   scannerBetBarScrollAttached = true;
+  forceScannerBetBarVisibilityRefresh();
 }
 
 function renderScannerButtons() {
@@ -5966,7 +5985,7 @@ function enterScannerGridMode(event) {
   requestAnimationFrame(() => {
     scrollHomeToSection("scannerHomeBlock");
     renderScannerRound();
-    requestScannerBetBarVisibilityUpdate();
+    forceScannerBetBarVisibilityRefresh();
   });
 }
 
@@ -5990,6 +6009,7 @@ window.setScannerCustomStake = setScannerCustomStake;
 window.setScannerQuickStake = setScannerQuickStake;
 window.setScannerAllInStake = setScannerAllInStake;
 window.updateScannerBetBarVisibility = updateScannerBetBarVisibility;
+window.forceScannerBetBarVisibilityRefresh = forceScannerBetBarVisibilityRefresh;
 window.setScannerPopulation = setScannerPopulation;
 window.startOrJoinScannerRound = startOrJoinScannerRound;
 window.resetScannerRound = resetScannerRound;
@@ -6001,11 +6021,16 @@ homeScreenContext = "games";
 setMenuView("home");
 setActiveBottomNav("games");
 scheduleInitialHomeGameScroll();
-window.addEventListener("load", scheduleInitialHomeGameScroll, { once: true });
+forceScannerBetBarVisibilityRefresh();
+window.addEventListener("load", () => {
+  scheduleInitialHomeGameScroll();
+  forceScannerBetBarVisibilityRefresh();
+}, { once: true });
 window.addEventListener("pageshow", () => {
   if (!homeInitialGameScrollApplied && currentMenuView === "home") {
     scheduleInitialHomeGameScroll();
   }
+  forceScannerBetBarVisibilityRefresh();
 });
 
 initializeScannerGridFeature();
