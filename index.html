@@ -2004,7 +2004,7 @@ button {
             </p>
             <div class="card-actions">
               <button type="button" class="card-action ghost" onclick="enterBobrRunMode(event)">Открыть экран</button>
-              <button type="button" class="card-action ghost" onclick="openRooms()">Комнаты</button>
+              <button type="button" class="card-action ghost" onclick="openBobrRunRooms()">Комнаты Bobr Run</button>
             </div>
           </div>
 
@@ -2035,8 +2035,8 @@ button {
             <button type="button" class="mode-popup-btn" onclick="enterBobrRunMode(event)">
               ⚔️ Bobr Run
             </button>
-            <button type="button" class="mode-popup-btn" onclick="event.stopPropagation(); openRooms()">
-              🎮 Комнаты
+            <button type="button" class="mode-popup-btn" onclick="event.stopPropagation(); openBobrRunRooms()">
+              🎮 Комнаты Bobr Run
             </button>
             <button type="button" class="mode-popup-btn" onclick="event.stopPropagation(); openLeaderboard()">
               🏆 Таблица лидеров
@@ -2108,7 +2108,7 @@ button {
         </p>
 
         <div class="mode-actions">
-          <button type="button" class="primary-action" onclick="openRooms()">Комнаты</button>
+          <button type="button" class="primary-action" onclick="openBobrRunRooms()">Комнаты Bobr Run</button>
           <button type="button" class="secondary-action" onclick="openLeaderboard()">Таблица</button>
         </div>
       </section>
@@ -2213,11 +2213,11 @@ button {
 <div id="roomsModal" class="app-modal" onclick="handleModalBackdropClick('roomsModal', event)">
   <div class="app-modal-card" onclick="event.stopPropagation()">
     <div class="roomsHeader">
-      <h2>🎮 Комнаты</h2>
-      <span class="closeBtn" onclick="closeRooms()">✕</span>
+      <h2>🎮 Комнаты Bobr Run</h2>
+      <span class="closeBtn" onclick="closeBobrRunRooms()">✕</span>
     </div>
     <div id="roomsList"></div>
-    <div id="createRoomBtn" class="createRoomBtn" onclick="showGameUnavailable()">Bobr Run временно недоступен</div>
+    <div id="createRoomBtn" class="createRoomBtn" onclick="createBobrRunRoom()">Создать комнату Bobr Run</div>
   </div>
 </div>
 
@@ -2779,7 +2779,7 @@ function enterBobrRunMode(event) {
   closeModePopup();
   closeHistoryPanel({ preserveNav: true });
   closeLeaderboard();
-  closeRooms();
+  closeBobrRunRooms();
   setMenuView("bobrRun");
 }
 
@@ -2787,13 +2787,13 @@ function exitGameMode() {
   closeModePopup();
   closeHistoryPanel();
   closeLeaderboard();
-  closeRooms();
+  closeBobrRunRooms();
   setMenuView("home");
 }
 
 function openGamesMenu() {
   closeLeaderboard();
-  closeRooms();
+  closeBobrRunRooms();
   setMenuView("home", { preserveNav: true });
   homeScreenContext = "games";
   setActiveBottomNav("games");
@@ -2808,7 +2808,7 @@ function openGamesMenu() {
 
 function openRecentHistory() {
   closeLeaderboard();
-  closeRooms();
+  closeBobrRunRooms();
   closeModePopup();
   setMenuView("home", { preserveNav: true, keepHistory: true });
 
@@ -3058,38 +3058,64 @@ function closeLeaderboard() {
   }
 }
 
-function openRooms() {
-  closeModePopup();
-  const roomsModal = document.getElementById("roomsModal");
+const BOBR_RUN_ROOMS_COLLECTION = "bobr_run_rooms";
+
+function getBobrRunRoomsCollectionRef() {
+  return db.collection(BOBR_RUN_ROOMS_COLLECTION);
+}
+
+function renderBobrRunRooms() {
   const roomsList = document.getElementById("roomsList");
   const createRoomBtn = document.getElementById("createRoomBtn");
-  const modeLabel = getActiveModeLabel();
 
   if (roomsList) {
-    roomsList.innerHTML = `<div class="rooms-note compact-note">Комнаты ${modeLabel} пока не подключены.</div>`;
+    roomsList.innerHTML = `
+      <div class="rooms-note compact-note">
+        <strong>Комнаты Bobr Run пока не подключены.</strong><br>
+        Этот раздел подготовлен только для будущего Bobr Run. Он не связан со Scanner Grid, не использует pvp_runtime и не влияет на общий PvP-раунд, банк, участников, статусы или историю Сканер-сетки.
+      </div>
+    `;
   }
 
   if (createRoomBtn) {
-    createRoomBtn.textContent = `Комнаты ${modeLabel} пока не подключены`;
+    createRoomBtn.textContent = "Создать комнату Bobr Run";
+    createRoomBtn.title = "Заглушка для будущего подключения комнат Bobr Run к Firebase";
   }
+}
+
+function openBobrRunRooms() {
+  closeModePopup();
+  closeHistoryPanel({ preserveNav: true });
+
+  const roomsModal = document.getElementById("roomsModal");
+  renderBobrRunRooms();
 
   if (roomsModal) {
     roomsModal.style.display = "flex";
   }
 }
 
-function closeRooms() {
+function closeBobrRunRooms() {
   const roomsModal = document.getElementById("roomsModal");
   if (roomsModal) roomsModal.style.display = "none";
 }
 
-function showGameUnavailable() {
-  alert(`${getActiveModeLabel()} пока недоступен.`);
+async function createBobrRunRoom() {
+  renderBobrRunRooms();
+  console.info("Bobr Run rooms are reserved for future Firebase integration.", {
+    collection: BOBR_RUN_ROOMS_COLLECTION
+  });
 }
 
-function createRoom() { showGameUnavailable(); }
-function joinRoom() { showGameUnavailable(); }
-function leaveRoom() { closeRooms(); }
+async function joinBobrRunRoom(roomId) {
+  renderBobrRunRooms();
+  console.info("joinBobrRunRoom is a future Bobr Run hook.", { roomId: roomId || null });
+}
+
+async function leaveBobrRunRoom(roomId) {
+  renderBobrRunRooms();
+  console.info("leaveBobrRunRoom is a future Bobr Run hook.", { roomId: roomId || null });
+}
 
 function openSkins() {
   setActiveBottomNav("skins");
@@ -3182,7 +3208,7 @@ function handleModalBackdropClick(modalId, event) {
   if (modalId === "leaderboardModal") {
     closeLeaderboard();
   } else if (modalId === "roomsModal") {
-    closeRooms();
+    closeBobrRunRooms();
   }
 }
 
@@ -5719,7 +5745,6 @@ function enterScannerGridMode(event) {
   closeModePopup();
   closeHistoryPanel({ preserveNav: true });
   closeLeaderboard();
-  closeRooms();
   ensureScannerVisualLoop();
   homeScreenContext = "pvp";
   setMenuView("home", { preserveNav: true });
@@ -5771,17 +5796,18 @@ window.enterBobrRunMode = enterBobrRunMode;
 window.exitGameMode = exitGameMode;
 window.openLeaderboard = openLeaderboard;
 window.closeLeaderboard = closeLeaderboard;
-window.openRooms = openRooms;
-window.closeRooms = closeRooms;
-window.createRoom = createRoom;
-window.joinRoom = joinRoom;
-window.leaveRoom = leaveRoom;
+window.openBobrRunRooms = openBobrRunRooms;
+window.closeBobrRunRooms = closeBobrRunRooms;
+window.createBobrRunRoom = createBobrRunRoom;
+window.joinBobrRunRoom = joinBobrRunRoom;
+window.leaveBobrRunRoom = leaveBobrRunRoom;
+window.renderBobrRunRooms = renderBobrRunRooms;
+window.getBobrRunRoomsCollectionRef = getBobrRunRoomsCollectionRef;
 window.openSkins = openSkins;
 window.openSettings = openSettings;
 window.openWallet = openWallet;
 window.toggleHistoryPanel = toggleHistoryPanel;
 window.toggleHistoryMatchDetails = toggleHistoryMatchDetails;
-window.showGameUnavailable = showGameUnavailable;
 window.handleBottomNav = handleBottomNav;
 window.handleMenuBackgroundClick = handleMenuBackgroundClick;
 window.handleModalBackdropClick = handleModalBackdropClick;
