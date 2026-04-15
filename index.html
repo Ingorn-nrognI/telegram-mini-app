@@ -2338,6 +2338,10 @@ const scannerRealtime = {
   runtimeData: null,
   roundData: null,
   participants: [],
+  runtimeReady: false,
+  roundReady: false,
+  participantsReady: true,
+  bootStartedAt: Date.now(),
   isJoinBusy: false,
   lifecycleBusy: false,
   pruneBusy: false,
@@ -3287,16 +3291,51 @@ function compareJoinedAtAsc(a, b) {
   return String(a.playerId || a.id || "").localeCompare(String(b.playerId || b.id || ""), "ru");
 }
 
+function isScannerLobbyParticipantStale(participant, roundStatus, now = Date.now()) {
+  const lobbyStatuses = new Set(["waiting", "countdown"]);
+  if (!participant || !lobbyStatuses.has(String(roundStatus || "idle"))) return false;
+  if (participant.status === "left") return true;
+
+  const updatedAt = tsToMs(participant.updatedAt || 0);
+  const joinedAt = tsToMs(participant.joinedAt || participant.createdAt || 0);
+  const lastSeenAt = Math.max(updatedAt, joinedAt);
+
+  if (!lastSeenAt) return false;
+  return now - lastSeenAt > SCANNER_STALE_LOBBY_MS;
+}
+
+function resetScannerRoundVisualState(options = {}) {
+  const {
+    status = null,
+    totalPot = 0,
+    countdownMs = 0
+  } = options;
+
+  scannerGridState.status = status || scannerGridState.status || "idle";
+  scannerGridState.players = [];
+  scannerGridState.participants = [];
+  scannerGridState.totalPlayers = 0;
+  scannerGridState.totalPot = Number.isFinite(Number(totalPot)) ? Number(totalPot) : 0;
+  scannerGridState.countdownMs = Math.max(0, Number(countdownMs) || 0);
+  scannerGridState.cellOwners = [];
+  scannerGridState.gridVersion = "idle";
+  scannerGridState.previewCellOwners = [];
+  scannerGridState.previewGridVersion = "idle";
+  scannerGridState.previewZones = [];
+  scannerGridState.winnerPlayerId = null;
+  scannerGridState.winningCellIndex = null;
+  scannerGridState.winningPlayer = null;
+  scannerGridPath = null;
+  stopScannerVisualAnimation();
+}
+
 function getRoundParticipantsForRender(round, participants) {
   const roundStatus = String(round?.status || "idle");
-  const lobbyStatuses = new Set(["waiting", "countdown"]);
+  const now = Date.now();
   return (participants || [])
     .filter((item) => {
       if (!item) return false;
-      if (lobbyStatuses.has(roundStatus)) {
-        return item.status !== "left";
-      }
-      return true;
+      return !isScannerLobbyParticipantStale(item, roundStatus, now);
     })
     .slice()
     .sort(compareJoinedAtAsc);
@@ -3917,6 +3956,9 @@ function getScannerNowMessage() {
 
   const round = scannerGridState.roundData;
   if (!round) return "Общий раунд пока не создан.";
+  if (round?.id && !scannerRealtime.participantsReady && ["waiting", "countdown", "active"].includes(scannerGridState.status)) {
+    return "Синхронизируем подтверждённых участников общего раунда. До прихода snapshot арена остаётся нейтральной.";
+  }
 
   if (scannerGridState.status === "waiting") {
     if (scannerGridState.totalPlayers === 1) {
@@ -3967,68 +4009,82 @@ function getScannerStatusText(round) {
 
 function syncScannerDerivedState() {
   const currentPlayer = getCurrentPlayer();
+  const now = Date.now();
   scannerGridState.myPlayerId = currentPlayer.id;
+
   const round = scannerRealtime.roundData || null;
-  const participants = Array.isArray(scannerRealtime.participants) ? scannerRealtime.participants.slice() : [];
+  const participantsSnapshot = Array.isArray(scannerRealtime.participants) ? scannerRealtime.participants.slice() : [];
+  const roundStatus = String(round?.status || "idle");
+  const participantsReady = !round?.id || !!scannerRealtime.participantsReady;
+  const shouldHoldNeutralArena = !!(
+    round &&
+    !participantsReady &&
+    ["waiting", "countdown", "active"].includes(roundStatus)
+  );
+  const renderParticipants = participantsReady ? getRoundParticipantsForRender(round, participantsSnapshot) : [];
+
   scannerGridState.roundData = round;
   scannerGridState.roundId = round?.id || null;
-  scannerGridState.roundStatus = round?.status || "idle";
-  scannerGridState.participants = getRoundParticipantsForRender(round, participants);
+  scannerGridState.roundStatus = roundStatus;
+  scannerGridState.participants = renderParticipants;
   scannerGridState.maxPlayers = Number(round?.maxPlayers || scannerGridState.selectedPopulation || 0);
   scannerGridState.lastResultSource = round?.resultSource || "firestore-shared";
 
-  const currentParticipant = scannerGridState.participants.find((item) => String(item.playerId) === currentPlayer.id) || null;
+  const currentParticipant = renderParticipants.find((item) => String(item.playerId) === currentPlayer.id) || null;
   scannerGridState.myParticipationStatus = currentParticipant ? (currentParticipant.status || "joined") : "none";
   scannerGridState.myJoinedRoundId = currentParticipant ? round?.id || null : null;
 
   if (!round) {
-    scannerGridState.status = "idle";
-    scannerGridState.players = [];
-    scannerGridState.totalPlayers = 0;
-    scannerGridState.totalPot = 0;
-    scannerGridState.countdownMs = 0;
-    scannerGridState.cellOwners = [];
-    scannerGridState.gridVersion = "idle";
-    scannerGridState.previewCellOwners = [];
-    scannerGridState.previewGridVersion = "idle";
-    scannerGridState.previewZones = [];
-    scannerGridState.winnerPlayerId = null;
-    scannerGridState.winningCellIndex = null;
-    scannerGridState.winningPlayer = null;
-    stopScannerVisualAnimation();
+    scannerGridState.roundStatus = "idle";
+    scannerGridState.roundData = null;
+    scannerGridState.roundId = null;
+    scannerGridState.maxPlayers = Number(scannerGridState.selectedPopulation || 0);
+    resetScannerRoundVisualState({
+      status: "idle",
+      totalPot: 0,
+      countdownMs: 0
+    });
     return;
   }
-
-  const finalized = buildScannerPlayersFromFirestore(round, participants);
-  const previewVersion = `${finalized.gridVersion}_preview_${round.status || "idle"}_${round.updatedAt ? tsToMs(round.updatedAt) : 0}`;
-  scannerGridState.players = finalized.players;
-  scannerGridState.totalPlayers = finalized.totalPlayers;
-  scannerGridState.totalPot = Number(round.totalPot || finalized.totalPot || 0);
-  scannerGridState.cellOwners = finalized.cellOwners;
-  scannerGridState.gridVersion = `${finalized.gridVersion}_${round.status || "idle"}_${round.updatedAt ? tsToMs(round.updatedAt) : 0}`;
-  scannerGridState.previewCellOwners = buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
-  scannerGridState.previewGridVersion = previewVersion;
-  scannerGridState.previewZones = buildScannerPreviewZones(scannerGridState.previewCellOwners, finalized.players);
-  scannerGridState.status = round.status || "waiting";
-  scannerGridState.renderSeed = round.entropySeed || round.id || "idle";
 
   const countdownEndsAt = tsToMs(round.countdownEndsAt);
   const activeEndsAt = tsToMs(round.activeEndsAt);
   const finishedEndsAt = tsToMs(round.finishedEndsAt);
   const preparingEndsAt = tsToMs(round.preparingEndsAt);
-  const now = Date.now();
 
-  if (round.status === "countdown") {
-    scannerGridState.countdownMs = Math.max(0, countdownEndsAt - now);
-  } else if (round.status === "active") {
-    scannerGridState.countdownMs = Math.max(0, activeEndsAt - now);
-  } else if (round.status === "finished") {
-    scannerGridState.countdownMs = Math.max(0, finishedEndsAt - now);
-  } else if (round.status === "preparing_next_round") {
-    scannerGridState.countdownMs = Math.max(0, preparingEndsAt - now);
-  } else {
-    scannerGridState.countdownMs = 0;
+  let countdownMs = 0;
+  if (roundStatus === "countdown") {
+    countdownMs = Math.max(0, countdownEndsAt - now);
+  } else if (roundStatus === "active") {
+    countdownMs = Math.max(0, activeEndsAt - now);
+  } else if (roundStatus === "finished") {
+    countdownMs = Math.max(0, finishedEndsAt - now);
+  } else if (roundStatus === "preparing_next_round") {
+    countdownMs = Math.max(0, preparingEndsAt - now);
   }
+
+  if (shouldHoldNeutralArena) {
+    resetScannerRoundVisualState({
+      status: roundStatus,
+      totalPot: Number(round.totalPot || 0),
+      countdownMs
+    });
+    return;
+  }
+
+  const finalized = buildScannerPlayersFromFirestore(round, renderParticipants);
+  const previewVersion = `${finalized.gridVersion}_preview_${round.status || "idle"}_${round.updatedAt ? tsToMs(round.updatedAt) : 0}`;
+  scannerGridState.players = finalized.players;
+  scannerGridState.totalPlayers = finalized.totalPlayers;
+  scannerGridState.totalPot = Number(round.totalPot || finalized.totalPot || 0);
+  scannerGridState.countdownMs = countdownMs;
+  scannerGridState.cellOwners = finalized.cellOwners;
+  scannerGridState.gridVersion = `${finalized.gridVersion}_${round.status || "idle"}_${round.updatedAt ? tsToMs(round.updatedAt) : 0}`;
+  scannerGridState.previewCellOwners = buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
+  scannerGridState.previewGridVersion = previewVersion;
+  scannerGridState.previewZones = buildScannerPreviewZones(scannerGridState.previewCellOwners, finalized.players);
+  scannerGridState.status = roundStatus || "waiting";
+  scannerGridState.renderSeed = round.entropySeed || round.id || "idle";
 
   scannerGridState.winnerPlayerId = round.winnerPlayerId || null;
   scannerGridState.winningCellIndex = Number.isInteger(round.winningCellIndex) ? round.winningCellIndex : null;
@@ -4057,7 +4113,6 @@ function syncScannerDerivedState() {
     console.warn("Не удалось сохранить историю раунда пользователю:", error);
   });
 }
-
 
 function computeDeterministicRoundResult(round, participants) {
   const renderParticipants = getRoundParticipantsForRender(round, participants);
@@ -4665,6 +4720,12 @@ function renderScannerParticipants() {
   if (!meta || !list) return;
 
   if (!scannerGridState.players.length) {
+    if (scannerGridState.roundId && !scannerRealtime.participantsReady) {
+      meta.textContent = "Синхронизируем список участников общего раунда…";
+      list.innerHTML = `<div class="scanner-empty">Загружаем подтверждённых участников из Firestore.</div>`;
+      return;
+    }
+
     meta.textContent = getActiveScannerTransientMessage() || "Подключись к раунду, чтобы увидеть общий список участников.";
     list.innerHTML = `<div class="scanner-empty">Пока в общем раунде нет игроков.</div>`;
     return;
@@ -5395,6 +5456,7 @@ function subscribeScannerParticipants(roundId) {
   }
 
   scannerRealtime.participants = [];
+  scannerRealtime.participantsReady = !roundId;
 
   if (!roundId) {
     syncScannerDerivedState();
@@ -5408,10 +5470,15 @@ function subscribeScannerParticipants(roundId) {
       const items = [];
       snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
       scannerRealtime.participants = items;
+      scannerRealtime.participantsReady = true;
       syncScannerDerivedState();
       renderScannerRound();
     }, (error) => {
       console.error("Ошибка подписки на участников раунда:", error);
+      scannerRealtime.participants = [];
+      scannerRealtime.participantsReady = true;
+      syncScannerDerivedState();
+      renderScannerRound();
     });
 }
 
@@ -5422,7 +5489,9 @@ function subscribeScannerRound(roundId) {
   }
 
   scannerRealtime.roundData = null;
+  scannerRealtime.roundReady = !roundId;
   scannerRealtime.participants = [];
+  scannerRealtime.participantsReady = !roundId;
   scannerRealtime.activeRoundId = roundId || null;
   subscribeScannerParticipants(null);
 
@@ -5434,6 +5503,7 @@ function subscribeScannerRound(roundId) {
 
   const roundRef = scannerRoundRef(roundId);
   scannerRealtime.unsubRound = roundRef.onSnapshot((snapshot) => {
+    scannerRealtime.roundReady = true;
     scannerRealtime.roundData = snapshot.exists ? { id: snapshot.id, ...(snapshot.data() || {}) } : null;
     subscribeScannerParticipants(snapshot.exists ? roundId : null);
     syncScannerDerivedState();
@@ -5441,6 +5511,11 @@ function subscribeScannerRound(roundId) {
     ensureScannerRoundLifecycle().catch((error) => console.warn("Не удалось синхронизировать фазу раунда:", error));
   }, (error) => {
     console.error("Ошибка подписки на общий раунд:", error);
+    scannerRealtime.roundReady = true;
+    scannerRealtime.roundData = null;
+    subscribeScannerParticipants(null);
+    syncScannerDerivedState();
+    renderScannerRound();
   });
 }
 
@@ -5450,7 +5525,10 @@ function subscribeScannerRuntime() {
     scannerRealtime.unsubRuntime = null;
   }
 
+  scannerRealtime.runtimeReady = false;
+
   scannerRealtime.unsubRuntime = scannerRuntimeRef().onSnapshot((snapshot) => {
+    scannerRealtime.runtimeReady = true;
     const data = snapshot.exists ? (snapshot.data() || {}) : {};
     scannerRealtime.runtimeData = data;
     const activeRoundId = data.activeRoundId || null;
@@ -5458,12 +5536,15 @@ function subscribeScannerRuntime() {
       subscribeScannerRound(activeRoundId);
     } else if (!activeRoundId) {
       scannerRealtime.roundData = null;
+      scannerRealtime.roundReady = true;
       scannerRealtime.participants = [];
+      scannerRealtime.participantsReady = true;
       syncScannerDerivedState();
       renderScannerRound();
     }
   }, (error) => {
     console.error("Ошибка подписки на runtime общего раунда:", error);
+    scannerRealtime.runtimeReady = true;
   });
 }
 
@@ -5488,6 +5569,16 @@ function subscribeScannerHistory() {
 
 function initializeScannerGridFeature() {
   scannerGridState.myPlayerId = getCurrentPlayer().id;
+  scannerGridState.roundData = null;
+  scannerGridState.roundId = null;
+  scannerGridState.roundStatus = "idle";
+  scannerGridState.maxPlayers = Number(scannerGridState.selectedPopulation || 0);
+  resetScannerRoundVisualState({
+    status: "idle",
+    totalPot: 0,
+    countdownMs: 0
+  });
+
   ensureScannerVisualLoop();
   startScannerHeartbeat();
   startScannerLifecycleTimer();
