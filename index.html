@@ -4201,13 +4201,13 @@ function syncScannerDerivedState() {
   }
 
   const finalized = buildScannerPlayersFromFirestore(round, renderParticipants);
-  const previewVersion = `${finalized.gridVersion}_preview_${round.status || "idle"}_${round.updatedAt ? tsToMs(round.updatedAt) : 0}`;
+  const previewVersion = `${finalized.gridVersion}_preview_${round.status || "idle"}`;
   scannerGridState.players = finalized.players;
   scannerGridState.totalPlayers = finalized.totalPlayers;
   scannerGridState.totalPot = normalizeStakeValue(finalized.totalPot);
   scannerGridState.countdownMs = countdownMs;
   scannerGridState.cellOwners = finalized.cellOwners;
-  scannerGridState.gridVersion = `${finalized.gridVersion}_${round.status || "idle"}_${round.updatedAt ? tsToMs(round.updatedAt) : 0}`;
+  scannerGridState.gridVersion = `${finalized.gridVersion}_${round.status || "idle"}`;
   scannerGridState.previewCellOwners = buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
   scannerGridState.previewGridVersion = previewVersion;
   scannerGridState.previewZones = buildScannerPreviewZones(scannerGridState.previewCellOwners, finalized.players);
