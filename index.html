@@ -1338,13 +1338,99 @@ button {
   gap: 10px;
 }
 
+.scanner-players-heading-row {
+  align-items: center;
+}
+
+.scanner-players-heading-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scanner-players-count {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 900;
+  color: #dff9ff;
+  background: rgba(45, 225, 255, 0.12);
+  border: 1px solid rgba(45, 225, 255, 0.22);
+}
+
+.scanner-participants-toggle.is-open .scanner-recent-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.scanner-player-list.is-collapsed {
+  display: none;
+}
+
+.scanner-player-list.is-expanded {
+  display: flex;
+}
+
+.scanner-player-list.full-scroll {
+  max-height: 446px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(109, 154, 255, 0.55) transparent;
+}
+
+.scanner-player-list.has-pinned {
+  max-height: none;
+  overflow: visible;
+}
+
+.scanner-player-scroll {
+  max-height: 370px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(109, 154, 255, 0.55) transparent;
+}
+
+.scanner-player-list.full-scroll::-webkit-scrollbar,
+.scanner-player-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scanner-player-list.full-scroll::-webkit-scrollbar-track,
+.scanner-player-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scanner-player-list.full-scroll::-webkit-scrollbar-thumb,
+.scanner-player-scroll::-webkit-scrollbar-thumb {
+  background: rgba(109, 154, 255, 0.55);
+  border-radius: 999px;
+}
+
+.scanner-pinned-player {
+  flex: 0 0 auto;
+}
+
 .scanner-player-row,
 .scanner-recent-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
-  padding: 12px 14px;
+  padding: 11px 12px;
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(19, 28, 62, 0.88), rgba(9, 13, 29, 0.94));
   border: 1px solid rgba(255,255,255,0.06);
@@ -1355,11 +1441,46 @@ button {
   box-shadow: inset 0 0 0 1px rgba(45, 225, 255, 0.08);
 }
 
+.scanner-player-row {
+  min-height: 66px;
+}
+
+.scanner-recent-card {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
 .scanner-player-swatch {
   width: 14px;
   height: 14px;
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
+}
+
+.scanner-player-avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.28), transparent 38%),
+    linear-gradient(135deg, rgba(77, 160, 255, 0.96), rgba(110, 101, 255, 0.9));
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.22);
+}
+
+.scanner-player-avatar.has-photo {
+  color: transparent;
 }
 
 .scanner-player-copy,
@@ -2015,12 +2136,24 @@ button {
 
         <div class="scanner-control-divider"></div>
 
-        <div class="scanner-home-heading-row scanner-home-heading-row-bottom">
-          <div class="scanner-inline-section-title">Участники раунда</div>
+        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-players-heading-row">
+          <div class="scanner-inline-section-title scanner-players-heading-title">
+            Игроки <span id="scannerPlayersCount" class="scanner-players-count">0</span>
+          </div>
+          <button
+            type="button"
+            id="scannerParticipantsToggle"
+            class="scanner-recent-toggle scanner-participants-toggle"
+            onclick="toggleScannerParticipants(event)"
+            aria-label="Показать игроков"
+            aria-expanded="false"
+          >
+            <span class="scanner-recent-toggle-icon">▾</span>
+          </button>
         </div>
 
         <div id="scannerParticipantsMeta" class="scanner-live-meta">Подключись к раунду, чтобы увидеть общий список игроков.</div>
-        <div id="scannerParticipantsList" class="scanner-player-list">
+        <div id="scannerParticipantsList" class="scanner-player-list is-collapsed">
           <div class="scanner-empty">Пока в общем раунде нет игроков.</div>
         </div>
 
@@ -2416,6 +2549,7 @@ const scannerGridState = {
   previewZones: [],
   recentRounds: [],
   recentRoundsExpanded: false,
+  playersExpanded: false,
   myPlayerId: null,
   myJoinedRoundId: null,
   myParticipationStatus: "none",
@@ -4961,40 +5095,124 @@ function renderScannerChips(containerId, values, currentValue, clickHandlerName,
   `).join("");
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function toggleScannerParticipants(event) {
+  if (event) event.stopPropagation();
+  scannerGridState.playersExpanded = !scannerGridState.playersExpanded;
+  renderScannerParticipants();
+}
+
+function getOrderedScannerPlayersForList() {
+  const sorted = scannerGridState.players
+    .slice()
+    .sort((a, b) => {
+      const stakeDiff = Number(b.stake || 0) - Number(a.stake || 0);
+      if (stakeDiff !== 0) return stakeDiff;
+      return Number(a.joinedAt || 0) - Number(b.joinedAt || 0);
+    });
+
+  const myPlayerId = getCurrentPlayer().id;
+  const myIndex = sorted.findIndex((player) => String(player.id) === String(myPlayerId));
+  if (myIndex === -1) return { hasMe: false, myPlayer: null, others: sorted, ordered: sorted };
+
+  const myPlayer = sorted[myIndex];
+  const others = sorted.filter((player) => String(player.id) !== String(myPlayerId));
+  return {
+    hasMe: true,
+    myPlayer,
+    others,
+    ordered: [myPlayer, ...others]
+  };
+}
+
+function getScannerPlayerAvatarHtml(player) {
+  const initial = escapeHtml(getPlayerInitial(player?.name));
+  const avatarUrl = String(player?.avatar || "").trim();
+  if (!avatarUrl) {
+    return `<div class="scanner-player-avatar">${initial}</div>`;
+  }
+
+  return `<div class="scanner-player-avatar has-photo" style="background-image:url(&quot;${escapeCssUrl(avatarUrl)}&quot;);">${initial}</div>`;
+}
+
+function getScannerPlayerRowHtml(player, options = {}) {
+  const participant = getScannerParticipantById(player.id);
+  const leftBadge = participant?.status === "left" ? " · вышел" : "";
+  const zonePercent = formatPercent((Number(player.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
+  const bankPercent = formatPercent(player.sharePercent);
+  const pinnedClass = options.pinned ? " scanner-pinned-player" : "";
+
+  return `
+    <div class="scanner-player-row${player.isMe ? " me" : ""}${pinnedClass}">
+      <div class="scanner-player-swatch" style="background:${player.color};"></div>
+      ${getScannerPlayerAvatarHtml(player)}
+      <div class="scanner-player-copy">
+        <div class="scanner-player-name">${escapeHtml(player.name)}${player.isMe ? " · ты" : ""}${leftBadge}</div>
+        <div class="scanner-player-meta">Зона ${zonePercent} · ${formatCompactNumber(player.cellCount)} клеток · ${bankPercent} банка</div>
+      </div>
+      <div class="scanner-player-stake">${formatTon(player.stake)}</div>
+    </div>
+  `;
+}
+
 function renderScannerParticipants() {
   const meta = document.getElementById("scannerParticipantsMeta");
   const list = document.getElementById("scannerParticipantsList");
+  const countEl = document.getElementById("scannerPlayersCount");
+  const toggleButton = document.getElementById("scannerParticipantsToggle");
   if (!meta || !list) return;
+
+  const playersCount = Number(scannerGridState.totalPlayers || scannerGridState.players.length || 0);
+  const expanded = !!scannerGridState.playersExpanded;
+
+  if (countEl) {
+    countEl.textContent = formatCompactNumber(playersCount);
+  }
+
+  if (toggleButton) {
+    toggleButton.classList.toggle("is-open", expanded);
+    toggleButton.setAttribute("aria-expanded", String(expanded));
+    toggleButton.setAttribute("aria-label", expanded ? "Скрыть игроков" : "Показать игроков");
+  }
+
+  list.className = `scanner-player-list ${expanded ? "is-expanded" : "is-collapsed"}`;
 
   if (!scannerGridState.players.length) {
     if (scannerGridState.roundId && !scannerRealtime.participantsReady) {
-      meta.textContent = "Синхронизируем список участников общего раунда…";
-      list.innerHTML = `<div class="scanner-empty">Загружаем подтверждённых участников из Firestore.</div>`;
+      meta.textContent = "Синхронизируем список игроков общего раунда…";
+      list.innerHTML = `<div class="scanner-empty">Загружаем подтверждённых игроков из Firestore.</div>`;
       return;
     }
 
-    meta.textContent = getActiveScannerTransientMessage() || "Подключись к раунду, чтобы увидеть общий список участников.";
+    meta.textContent = getActiveScannerTransientMessage() || "Подключись к раунду, чтобы увидеть общий список игроков.";
     list.innerHTML = `<div class="scanner-empty">Пока в общем раунде нет игроков.</div>`;
     return;
   }
 
-  const sorted = scannerGridState.players.slice().sort((a, b) => Number(b.stake || 0) - Number(a.stake || 0));
-  meta.innerHTML = `Игроков в текущем раунде: <span class="scanner-inline-stat">${formatCompactNumber(scannerGridState.totalPlayers)}</span> · Банк: <span class="scanner-inline-stat">${formatTon(scannerGridState.totalPot)}</span> · Лимит: <span class="scanner-inline-stat">${formatCompactNumber(scannerGridState.maxPlayers || 0)}</span> · Фаза: <span class="scanner-inline-stat">${getScannerStatusText(scannerGridState.roundData)}</span>`;
+  meta.innerHTML = `Банк: <span class="scanner-inline-stat">${formatTon(scannerGridState.totalPot)}</span> · Лимит: <span class="scanner-inline-stat">${formatCompactNumber(scannerGridState.maxPlayers || 0)}</span> · Фаза: <span class="scanner-inline-stat">${getScannerStatusText(scannerGridState.roundData)}</span>`;
 
-  list.innerHTML = sorted.map((player) => {
-    const participant = getScannerParticipantById(player.id);
-    const leftBadge = participant?.status === "left" ? " · вышел" : "";
-    return `
-      <div class="scanner-player-row ${player.isMe ? "me" : ""}">
-        <div class="scanner-player-swatch" style="background:${player.color};"></div>
-        <div class="scanner-player-copy">
-          <div class="scanner-player-name">${player.name}${player.isMe ? " · ты" : ""}${leftBadge}</div>
-          <div class="scanner-player-meta">Ставка ${formatTon(player.stake)} · ${formatPercent(player.sharePercent)} банка · ${formatCompactNumber(player.cellCount)} клеток</div>
-        </div>
-        <div class="scanner-player-stake">${formatPercent((player.cellCount / SCANNER_GRID_TOTAL_CELLS) * 100)}</div>
-      </div>
-    `;
-  }).join("");
+  const { hasMe, myPlayer, others, ordered } = getOrderedScannerPlayersForList();
+
+  if (hasMe && myPlayer) {
+    list.classList.add("has-pinned");
+    const othersHtml = others.length
+      ? `<div class="scanner-player-scroll">${others.map((player) => getScannerPlayerRowHtml(player)).join("")}</div>`
+      : `<div class="scanner-empty">Другие игроки пока не вошли в раунд.</div>`;
+
+    list.innerHTML = `${getScannerPlayerRowHtml(myPlayer, { pinned: true })}${othersHtml}`;
+    return;
+  }
+
+  list.classList.add("full-scroll");
+  list.innerHTML = ordered.map((player) => getScannerPlayerRowHtml(player)).join("");
 }
 
 function renderScannerRecentList() {
