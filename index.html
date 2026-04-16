@@ -7199,13 +7199,20 @@ function renderScannerRecentList() {
     const playersCountText = formatCompactNumber(item.participantCount || 0);
     const multiplierText = formatScannerMultiplier(winnerPayout, winnerStake);
     const winnerColor = item.winnerColor || getScannerColorById(item.winnerPlayerId || item.winnerName || "winner");
+    const winnerNickname = String(
+      item.winnerName ||
+      item.winner ||
+      (Array.isArray(item.results)
+        ? (item.results.find((row) => String(row.playerId || row.id || row.userId || "") === String(item.winnerPlayerId || ""))?.name || "")
+        : "")
+    ).trim() || "Победитель";
 
     return `
       <div class="scanner-recent-card">
         <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
         <div class="scanner-recent-copy">
           <div class="scanner-recent-title">${finishedAtText}</div>
-          <div class="scanner-recent-meta">Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText}</div>
+          <div class="scanner-recent-meta">Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText} · Победитель: ${escapeHtml(winnerNickname)}</div>
         </div>
         <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
       </div>
