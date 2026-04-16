@@ -2797,83 +2797,219 @@ button {
 
 
 
-/* Bobr World targeted fixes: centered balance, larger profile avatar */
-.top-bar {
-  grid-template-columns: minmax(52px, 1fr) auto minmax(84px, 1fr) !important;
-  position: absolute;
-}
-
-.top-bar-left {
-  justify-self: start;
-}
-
+/* Targeted wallet restore and Scanner history cards */
 .top-bar-right {
-  justify-self: end;
+  position: relative;
+  z-index: 5;
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  min-width: 92px;
+}
+
+.top-bar .wallet-btn {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  white-space: nowrap;
+  position: relative;
+  z-index: 6;
+}
+
+.top-bar .wallet-btn .wallet-icon,
+.top-bar .wallet-btn .wallet-text {
+  display: inline-flex !important;
+  align-items: center;
 }
 
 .top-bar .balance-card {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  justify-self: auto;
   z-index: 2;
-  pointer-events: none;
 }
 
-.profile-card {
-  width: 52px !important;
-  height: 52px !important;
-  min-width: 52px !important;
-  padding: 3px !important;
+.scanner-history-card {
+  padding: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(45, 225, 255, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(18, 26, 58, 0.9), rgba(9, 13, 29, 0.94));
 }
 
-.profile-card .profile-avatar {
-  width: 46px !important;
-  height: 46px !important;
-  min-width: 46px !important;
-  font-size: 18px !important;
+.scanner-history-card.is-expanded {
+  border-color: rgba(45, 225, 255, 0.22);
+  box-shadow:
+    0 14px 26px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(45, 225, 255, 0.07);
+}
+
+.scanner-history-topline {
+  font-size: 13px;
+  font-weight: 800;
+  color: #b6cbff;
+  margin-bottom: 9px;
+}
+
+.scanner-history-result-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+
+.scanner-history-result-word {
+  font-size: 19px;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.scanner-history-result-word.win {
+  color: var(--accent);
+}
+
+.scanner-history-result-word.lose {
+  color: var(--danger);
+}
+
+.scanner-history-amount {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 900;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #f3f8ff;
+  white-space: nowrap;
+}
+
+.scanner-history-amount.win {
+  color: #dfffe9;
+  background: rgba(117, 245, 156, 0.10);
+  border-color: rgba(117, 245, 156, 0.22);
+}
+
+.scanner-history-amount.lose {
+  color: #ffe4e7;
+  background: rgba(255, 107, 120, 0.10);
+  border-color: rgba(255, 107, 120, 0.22);
+}
+
+.scanner-history-date {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.scanner-history-details {
+  display: none;
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.scanner-history-details.open {
+  display: block;
+}
+
+.scanner-history-player-card,
+.scanner-history-winner-card {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 11px 12px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 10px;
+}
+
+.scanner-history-winner-card {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  background: rgba(117, 245, 156, 0.07);
+  border-color: rgba(117, 245, 156, 0.16);
+}
+
+.scanner-history-player-name {
+  font-size: 14px;
+  font-weight: 900;
+  color: #f6fbff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scanner-history-player-meta {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.scanner-history-winner-payout {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.scanner-history-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.scanner-history-detail-item {
+  padding: 10px 11px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.065);
+}
+
+.scanner-history-detail-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.scanner-history-detail-value {
+  font-size: 14px;
+  font-weight: 900;
+  color: #eaf5ff;
+  word-break: break-word;
 }
 
 @media (max-width: 420px) {
-  .top-bar {
-    grid-template-columns: minmax(48px, 1fr) auto minmax(84px, 1fr) !important;
+  .top-bar-right {
+    min-width: 86px;
   }
 
-  .profile-card {
-    width: 48px !important;
-    height: 48px !important;
-    min-width: 48px !important;
+  .top-bar .wallet-btn {
+    min-width: 86px;
+    height: 40px;
+    padding: 0 10px;
+    font-size: 12px;
   }
 
-  .profile-card .profile-avatar {
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    font-size: 17px !important;
-  }
-
-  .top-bar .balance-card {
-    min-width: 106px;
+  .scanner-history-detail-grid {
+    grid-template-columns: 1fr;
   }
 }
 
+@media (max-width: 340px) {
+  .top-bar-right {
+    min-width: 44px;
+  }
 
-.scanner-history-match-card {
-  padding: 0;
-  overflow: hidden;
-}
+  .top-bar .wallet-btn {
+    min-width: 42px;
+    width: 42px;
+    padding: 0;
+  }
 
-.scanner-history-match-card .scanner-recent-card {
-  border: none;
-  border-radius: 20px;
-  margin: 0;
-  background:
-    linear-gradient(180deg, rgba(18, 26, 58, 0.86), rgba(9, 13, 29, 0.92));
-}
-
-.scanner-history-match-card .history-match-details {
-  margin: 0 12px 12px;
+  .top-bar .wallet-btn .wallet-text {
+    display: none !important;
+  }
 }
 
 </style>
@@ -4354,21 +4490,41 @@ function toggleHistoryMatchDetails(matchId, event) {
   loadGameHistory();
 }
 
-function getScannerHistoryResultLabel(item) {
-  const youWon = item?.youWon === true;
-  const payout = normalizeMoneyValue(item?.winnerPayout || item?.payout || 0);
-  if (youWon) {
-    return {
-      label: `Победа · +${formatTon(payout)}`,
-      className: "win"
-    };
+function getHistoryDetailsDomId(matchId) {
+  return `history_details_${hashString(String(matchId || "match"))}`;
+}
+
+function toggleScannerHistoryDetails(matchId, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
   }
 
-  const myStake = normalizeMoneyValue(item?.myStake || item?.stake || item?.bet || 0);
-  return {
-    label: myStake > 0 ? `Поражение · ставка ${formatTon(myStake)}` : "Поражение",
-    className: "lose"
-  };
+  const safeMatchId = String(matchId || "");
+  const detailsId = getHistoryDetailsDomId(safeMatchId);
+  const detailsEl = document.getElementById(detailsId);
+  if (!detailsEl) return;
+
+  const willOpen = !detailsEl.classList.contains("open");
+
+  document.querySelectorAll("[data-scanner-history-details='true']").forEach((el) => {
+    el.classList.remove("open");
+    el.setAttribute("aria-hidden", "true");
+  });
+
+  document.querySelectorAll(".scanner-history-card.is-expanded").forEach((card) => {
+    card.classList.remove("is-expanded");
+  });
+
+  if (willOpen) {
+    detailsEl.classList.add("open");
+    detailsEl.setAttribute("aria-hidden", "false");
+    const card = detailsEl.closest(".scanner-history-card");
+    if (card) card.classList.add("is-expanded");
+    expandedHistoryMatchId = safeMatchId;
+  } else {
+    expandedHistoryMatchId = null;
+  }
 }
 
 function getHistoryEntryModeKey(item) {
@@ -4380,55 +4536,137 @@ function isScannerHistoryEntry(item) {
   return modeKey.includes("сканер") || modeKey.includes("scanner");
 }
 
-function getScannerHistoryEntryHtml(item, index, matchId, isExpanded) {
-  const resultMeta = getScannerHistoryResultLabel(item);
-  const playedAtText = formatHistoryDate(item.playedAt || item.finishedAt);
-  const totalPot = normalizeMoneyValue(item.totalPot || item.bank || 0);
-  const payout = normalizeMoneyValue(item.winnerPayout || item.payout || 0);
-  const participantCount = Number(item.participantCount || item.playersCount || (Array.isArray(item.results) ? item.results.length : 0));
-  const winnerName = item.winner || item.winnerName || "Победитель";
-  const safeMatchId = matchId.replace(/'/g, "&#39;");
+function getScannerHistoryResults(item) {
+  return Array.isArray(item?.results) ? item.results.slice() : [];
+}
 
-  const resultsRows = Array.isArray(item.results)
-    ? item.results
-        .slice()
-        .sort((a, b) => Number(a.place || 0) - Number(b.place || 0))
-        .map((row) => `
-          <tr>
-            <td>${Number(row.place || 0)}</td>
-            <td>${row.name || "Игрок"}</td>
-            <td>${formatTon(row.stake ?? row.score ?? 0)}</td>
-          </tr>
-        `)
-        .join("")
-    : "";
+function getScannerHistoryCurrentUserResult(item) {
+  const currentPlayer = getCurrentPlayer();
+  const results = getScannerHistoryResults(item);
+  return results.find((row) => {
+    const rowId = String(row.playerId || row.id || row.userId || "");
+    return rowId && rowId === String(currentPlayer.id);
+  }) || results.find((row) => row.isMe === true) || results.find((row) => {
+    const rowName = String(row.name || "").trim();
+    return rowName && rowName === String(currentPlayer.name || "").trim();
+  }) || null;
+}
 
-  const detailsHtml = isExpanded && resultsRows ? `
-    <div class="history-match-details">
-      <table class="history-match-table">
-        <thead>
-          <tr>
-            <th>Место</th>
-            <th>Игрок</th>
-            <th>Ставка</th>
-          </tr>
-        </thead>
-        <tbody>${resultsRows}</tbody>
-      </table>
+function getScannerHistoryWinnerResult(item) {
+  const winnerId = String(item?.winnerPlayerId || item?.winnerId || "");
+  const winnerName = String(item?.winnerName || item?.winner || "").trim();
+  const results = getScannerHistoryResults(item);
+  return results.find((row) => winnerId && String(row.playerId || row.id || row.userId || "") === winnerId)
+    || results.find((row) => winnerName && String(row.name || "").trim() === winnerName)
+    || null;
+}
+
+function getScannerHistoryMoneyValue(...values) {
+  for (const value of values) {
+    const parsed = normalizeMoneyValue(value);
+    if (parsed > 0) return parsed;
+  }
+  return 0;
+}
+
+function getScannerHistoryMyMeta(item) {
+  const currentPlayer = getCurrentPlayer();
+  const myResult = getScannerHistoryCurrentUserResult(item) || {};
+  return {
+    id: String(myResult.playerId || myResult.id || myResult.userId || item?.playerId || currentPlayer.id || ""),
+    name: String(item?.myName || myResult.name || currentPlayer.name || "Игрок"),
+    avatar: item?.myAvatar || myResult.avatar || currentPlayer.avatar || null,
+    color: item?.myColor || item?.roundColor || item?.playerColor || myResult.roundColor || myResult.playerColor || myResult.color || "hsl(182 88% 58%)",
+    stake: getScannerHistoryMoneyValue(item?.myStake, item?.stake, item?.bet, myResult.stake, myResult.bet, myResult.score)
+  };
+}
+
+function getScannerHistoryWinnerMeta(item) {
+  const winnerResult = getScannerHistoryWinnerResult(item) || {};
+  return {
+    id: String(item?.winnerPlayerId || item?.winnerId || winnerResult.playerId || winnerResult.id || ""),
+    name: String(item?.winnerName || item?.winner || winnerResult.name || "Победитель"),
+    avatar: item?.winnerAvatar || winnerResult.avatar || null,
+    color: item?.winnerColor || winnerResult.roundColor || winnerResult.playerColor || winnerResult.color || "hsl(145 74% 58%)",
+    stake: getScannerHistoryMoneyValue(item?.winnerStake, winnerResult.stake, winnerResult.bet, winnerResult.score),
+    payout: getScannerHistoryMoneyValue(item?.winnerPayout, item?.payout, item?.winPayout, item?.reward, item?.prize)
+  };
+}
+
+function getScannerHistoryAvatarHtml(name, avatar) {
+  return getScannerPlayerAvatarHtml({ name, avatar });
+}
+
+function getScannerHistoryEntryHtml(item, index, matchId) {
+  const currentPlayer = getCurrentPlayer();
+  const safeMatchId = String(matchId || `scanner_${index}`);
+  const detailsId = getHistoryDetailsDomId(safeMatchId);
+  const myMeta = getScannerHistoryMyMeta(item);
+  const winnerMeta = getScannerHistoryWinnerMeta(item);
+  const youWon = item?.youWon === true || (winnerMeta.id && winnerMeta.id === String(currentPlayer.id));
+  const resultClass = youWon ? "win" : "lose";
+  const resultWord = youWon ? "Выиграл" : "Проиграл";
+  const wonAmount = getScannerHistoryMoneyValue(item?.winnerPayout, item?.payout, item?.winPayout, item?.reward, item?.prize);
+  const amountText = youWon ? `+${formatTon(wonAmount)}` : `- ${formatTon(myMeta.stake)}`;
+  const playedAtText = formatHistoryDate(item?.playedAt || item?.finishedAt || item?.createdAt);
+  const totalPot = getScannerHistoryMoneyValue(item?.totalPot, item?.bank, item?.pot);
+  const participantCount = Number(item?.participantCount || item?.playersCount || getScannerHistoryResults(item).length || 0);
+  const safeClickId = safeMatchId.replace(/'/g, "&#39;");
+  const expandedClass = expandedHistoryMatchId === safeMatchId ? " is-expanded" : "";
+  const detailsOpenClass = expandedHistoryMatchId === safeMatchId ? " open" : "";
+  const detailsHidden = expandedHistoryMatchId === safeMatchId ? "false" : "true";
+  const winnerBlock = !youWon ? `
+    <div class="scanner-history-winner-card">
+      <div class="scanner-player-swatch" style="background:${escapeHtml(winnerMeta.color)};"></div>
+      ${getScannerHistoryAvatarHtml(winnerMeta.name, winnerMeta.avatar)}
+      <div class="scanner-player-copy">
+        <div class="scanner-history-player-name">${escapeHtml(winnerMeta.name)}</div>
+        <div class="scanner-history-player-meta">Победитель раунда</div>
+      </div>
+      <div class="scanner-history-winner-payout">+${formatTon(winnerMeta.payout)}</div>
     </div>
   ` : "";
 
   return `
-    <div class="history-match-card scanner-history-match-card" onclick="toggleHistoryMatchDetails('${safeMatchId}', event)">
-      <div class="scanner-recent-card">
-        <div class="scanner-player-swatch" style="background:${item.youWon ? "hsl(145 74% 58%)" : "hsl(220 84% 66%)"};"></div>
-        <div class="scanner-recent-copy">
-          <div class="scanner-recent-title">${resultMeta.label}</div>
-          <div class="scanner-recent-meta">${playedAtText} · победитель ${winnerName} · ${formatCompactNumber(participantCount)} игроков · банк ${formatTon(totalPot)}</div>
-        </div>
-        <div class="scanner-recent-result">${formatTon(payout)}</div>
+    <div class="history-match-card scanner-history-card${expandedClass}" onclick="toggleScannerHistoryDetails('${safeClickId}', event)">
+      <div class="scanner-history-topline">Режим: Сканер</div>
+      <div class="scanner-history-result-line">
+        <div class="scanner-history-result-word ${resultClass}">${resultWord}</div>
+        <div class="scanner-history-amount ${resultClass}">${amountText}</div>
       </div>
-      ${detailsHtml}
+      <div class="scanner-history-date">${playedAtText}</div>
+
+      <div id="${detailsId}" class="scanner-history-details${detailsOpenClass}" data-scanner-history-details="true" aria-hidden="${detailsHidden}">
+        <div class="scanner-history-player-card">
+          <div class="scanner-player-swatch" style="background:${escapeHtml(myMeta.color)};"></div>
+          ${getScannerHistoryAvatarHtml(myMeta.name, myMeta.avatar)}
+          <div class="scanner-player-copy">
+            <div class="scanner-history-player-name">${escapeHtml(myMeta.name)}</div>
+            <div class="scanner-history-player-meta">Твой цвет в арене этого раунда</div>
+          </div>
+        </div>
+
+        <div class="scanner-history-detail-grid">
+          <div class="scanner-history-detail-item">
+            <div class="scanner-history-detail-label">Игроки в раунде</div>
+            <div class="scanner-history-detail-value">${formatCompactNumber(participantCount)}</div>
+          </div>
+          <div class="scanner-history-detail-item">
+            <div class="scanner-history-detail-label">Моя ставка</div>
+            <div class="scanner-history-detail-value">${formatTon(myMeta.stake)}</div>
+          </div>
+          <div class="scanner-history-detail-item">
+            <div class="scanner-history-detail-label">Общий банк</div>
+            <div class="scanner-history-detail-value">${formatTon(totalPot)}</div>
+          </div>
+          <div class="scanner-history-detail-item">
+            <div class="scanner-history-detail-label">Мой результат</div>
+            <div class="scanner-history-detail-value ${resultClass}">${resultWord}</div>
+          </div>
+        </div>
+
+        ${winnerBlock}
+      </div>
     </div>
   `;
 }
@@ -4451,7 +4689,7 @@ function renderHistoryEntries(entries) {
       const isExpanded = expandedHistoryMatchId === matchId;
 
       if (isScannerHistoryEntry(item)) {
-        return getScannerHistoryEntryHtml(item, index, matchId, isExpanded);
+        return getScannerHistoryEntryHtml(item, index, matchId);
       }
 
       const resultMeta = getHistoryResultMeta(item);
@@ -4829,53 +5067,12 @@ function createTimestampFromNow(offsetMs = 0) {
 }
 
 function getScannerColorById(id, isCurrent = false) {
+  if (isCurrent) return "hsl(182 88% 58%)";
   const hash = hashString(id);
   const hue = hash % 360;
   const saturation = 68 + (hash % 16);
   const lightness = 56 + (hash % 8);
   return `hsl(${hue} ${saturation}% ${lightness}%)`;
-}
-
-const SCANNER_ROUND_COLOR_PALETTE = [
-  "hsl(182 88% 58%)",
-  "hsl(48 96% 62%)",
-  "hsl(145 74% 58%)",
-  "hsl(278 86% 68%)",
-  "hsl(16 92% 63%)",
-  "hsl(215 92% 66%)",
-  "hsl(328 84% 67%)",
-  "hsl(88 76% 58%)",
-  "hsl(196 92% 62%)",
-  "hsl(36 94% 61%)",
-  "hsl(258 88% 70%)",
-  "hsl(5 84% 65%)"
-];
-
-function getScannerRoundColorForJoin(roundData, playerId, slotIndex = 0) {
-  const seedText = `${roundData?.entropySeed || roundData?.id || "round"}_${playerId}_${slotIndex}`;
-  const seed = hashString(seedText);
-  const baseIndex = seed % SCANNER_ROUND_COLOR_PALETTE.length;
-  const baseColor = SCANNER_ROUND_COLOR_PALETTE[baseIndex];
-
-  if (slotIndex < SCANNER_ROUND_COLOR_PALETTE.length) {
-    return SCANNER_ROUND_COLOR_PALETTE[(baseIndex + slotIndex) % SCANNER_ROUND_COLOR_PALETTE.length];
-  }
-
-  const hue = (seed + slotIndex * 47) % 360;
-  const saturation = 72 + (seed % 18);
-  const lightness = 56 + (seed % 10);
-  return `hsl(${hue} ${saturation}% ${lightness}%)`;
-}
-
-function getScannerRoundPlayerColor(participant, round, index = 0) {
-  const savedColor = participant?.roundColor || participant?.playerColor || participant?.color;
-  if (savedColor) return savedColor;
-
-  const playerId = String(participant?.playerId || participant?.id || `player_${index}`);
-  return getScannerRoundColorForJoin({
-    id: round?.id || "round",
-    entropySeed: round?.entropySeed || round?.id || "round"
-  }, playerId, index);
 }
 
 function normalizeStakeValue(value) {
@@ -4939,10 +5136,6 @@ function getRoundParticipantsForRender(round, participants) {
   return (participants || [])
     .filter((item) => {
       if (!item) return false;
-      const participantStatus = String(item.status || "joined");
-      if (["left", "refunded", "canceled", "cancelled", "removed"].includes(participantStatus)) {
-        return false;
-      }
       return !isScannerLobbyParticipantStale(item, roundStatus, now);
     })
     .slice()
@@ -5240,7 +5433,7 @@ function buildScannerPlayersFromFirestore(round, participants) {
     joinedAt: tsToMs(participant.joinedAt || participant.createdAt || participant.updatedAt || Date.now()),
     isMe: String(participant.playerId || participant.id) === currentPlayer.id,
     left: participant.status === "left",
-    color: getScannerRoundPlayerColor(participant, round, index)
+    color: getScannerColorById(String(participant.playerId || participant.id || index), String(participant.playerId || participant.id) === currentPlayer.id)
   }));
 
   return finalizeScannerPlayers(normalized, `${round?.entropySeed || round?.id || "round"}_${round?.status || "idle"}_${round?.version || 0}`);
@@ -5575,8 +5768,6 @@ function getScannerStatusText(round) {
       return "finished";
     case "preparing_next_round":
       return "preparing next round";
-    case "canceled":
-      return "canceled / refund";
     default:
       return "idle";
   }
@@ -5646,23 +5837,6 @@ function syncScannerDerivedState() {
     scannerGridState.myParticipationStatus = "none";
     scannerGridState.myJoinedRoundId = null;
     scannerGridState.roundStatus = "idle";
-    scannerGridState.renderSeed = "idle";
-    resetScannerRoundVisualState({
-      status: "idle",
-      totalPot: 0,
-      countdownMs: 0
-    });
-    return;
-  }
-
-  if (roundStatus === "canceled") {
-    scannerGridState.roundData = null;
-    scannerGridState.roundId = null;
-    scannerGridState.roundStatus = "idle";
-    scannerGridState.participants = [];
-    scannerGridState.maxPlayers = Number(scannerGridState.selectedPopulation || 0);
-    scannerGridState.myParticipationStatus = "none";
-    scannerGridState.myJoinedRoundId = null;
     scannerGridState.renderSeed = "idle";
     resetScannerRoundVisualState({
       status: "idle",
@@ -5814,12 +5988,7 @@ async function joinOrCreateScannerRound() {
         getRoundParticipantsForRender({ id: runtimeRoundId, ...targetRoundData }, scannerRealtime.participants).length === 0
       );
 
-      if (
-        runtimeRoundKnownEmpty ||
-        targetRoundData?.refundDone === true ||
-        targetRoundData?.refundProcessed === true ||
-        String(targetRoundData?.status || "") === "canceled"
-      ) {
+      if (runtimeRoundKnownEmpty) {
         targetRoundRef = null;
         targetRoundData = null;
       }
@@ -5828,8 +5997,6 @@ async function joinOrCreateScannerRound() {
       const hasReusableLobby = !!(
         targetRoundRef &&
         targetRoundData &&
-        targetRoundData.refundDone !== true &&
-        targetRoundData.refundProcessed !== true &&
         ["waiting", "countdown"].includes(currentStatus)
       );
 
@@ -5853,12 +6020,6 @@ async function joinOrCreateScannerRound() {
           winnerPayout: 0,
           payoutProcessed: false,
           payoutProcessedAt: null,
-          refundDone: false,
-          refundProcessed: false,
-          refundAmount: 0,
-          refundPlayerId: null,
-          canceledAt: null,
-          cancellationReason: null,
           participantCount: 0,
           maxPlayers: desiredMaxPlayers,
           entropySeed: `${nowMs}_${Math.random().toString(36).slice(2)}_${player.id}`,
@@ -5921,9 +6082,6 @@ async function joinOrCreateScannerRound() {
       const isNewParticipant = !participantSnap.exists || isRejoinFromLeft;
       const nextParticipantCount = Math.max(0, currentParticipantCount + (isNewParticipant ? 1 : 0));
       const nextTotalPot = normalizeStakeValue(Number(targetRoundData?.totalPot || 0) + stakeDelta);
-      const roundColor = participantAlreadyInside
-        ? (participantData.roundColor || participantData.playerColor || getScannerRoundColorForJoin({ id: targetRoundRef.id, ...targetRoundData }, player.id, Math.max(0, currentParticipantCount - 1)))
-        : getScannerRoundColorForJoin({ id: targetRoundRef.id, ...targetRoundData }, player.id, Math.max(0, nextParticipantCount - 1));
 
       if (runtimeRoundKnownEmpty && runtimeRoundId) {
         const emptyRoundRef = scannerRoundRef(runtimeRoundId);
@@ -5962,8 +6120,6 @@ async function joinOrCreateScannerRound() {
         avatar: player.avatar || null,
         stake: nextStake,
         status: "joined",
-        roundColor,
-        playerColor: roundColor,
         joinedAt: participantData?.joinedAt || createTimestampFromNow(0),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         source: "telegram-mini-app"
@@ -5977,10 +6133,10 @@ async function joinOrCreateScannerRound() {
         version: Number(targetRoundData?.version || 0) + 1
       };
 
-      if (nextParticipantCount >= 1 && (targetStatus === "waiting" || !targetStatus)) {
+      if (nextParticipantCount >= 2 && (targetStatus === "waiting" || !targetStatus)) {
         roundUpdate.status = "countdown";
-        roundUpdate.countdownStartedAt = targetRoundData?.countdownStartedAt || createTimestampFromNow(0);
-        roundUpdate.countdownEndsAt = targetRoundData?.countdownEndsAt || createTimestampFromNow(SCANNER_COUNTDOWN_MS);
+        roundUpdate.countdownStartedAt = createTimestampFromNow(0);
+        roundUpdate.countdownEndsAt = createTimestampFromNow(SCANNER_COUNTDOWN_MS);
         roundUpdate.activeStartedAt = null;
         roundUpdate.activeEndsAt = null;
       }
@@ -6173,177 +6329,6 @@ async function processScannerRoundPayoutOnce(roundId, resultOverride = null) {
   });
 }
 
-
-async function cancelScannerRoundWithRefundOnce(roundId, options = {}) {
-  if (!roundId) return false;
-
-  const reason = options.reason || "not_enough_players";
-  const roundRef = scannerRoundRef(roundId);
-  const runtimeRef = scannerRuntimeRef();
-  const currentRound = scannerRealtime.roundData?.id === roundId ? scannerRealtime.roundData : null;
-  const knownParticipants = getRoundParticipantsForRender(currentRound || { id: roundId, status: "countdown" }, scannerRealtime.participants || []);
-  const candidateParticipant = knownParticipants[0] || null;
-  const refundPlayerId = candidateParticipant?.playerId || candidateParticipant?.id || null;
-
-  if (!refundPlayerId) return false;
-
-  let didCancel = false;
-  let refundAmount = 0;
-
-  await db.runTransaction(async (tx) => {
-    const runtimeSnap = await tx.get(runtimeRef);
-    const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
-    const roundSnap = await tx.get(roundRef);
-    if (!roundSnap.exists) return;
-
-    const roundData = roundSnap.data() || {};
-    const status = String(roundData.status || "waiting");
-    const participantCount = Number(roundData.participantCount || knownParticipants.length || 0);
-    const runtimePointsHere = !runtimeData.activeRoundId || runtimeData.activeRoundId === roundId;
-
-    if (!["waiting", "countdown"].includes(status)) return;
-    if (roundData.refundDone === true || roundData.refundProcessed === true || status === "canceled") return;
-    if (participantCount >= 2) return;
-
-    const participantRef = scannerParticipantsCollection(roundId).doc(String(refundPlayerId));
-    const participantSnap = await tx.get(participantRef);
-    const participantData = participantSnap.exists ? (participantSnap.data() || {}) : {};
-    const participantStatus = String(participantData.status || "joined");
-
-    if (!participantSnap.exists || ["left", "refunded", "canceled", "cancelled"].includes(participantStatus)) {
-      tx.set(roundRef, {
-        status: "canceled",
-        canceledAt: firebase.firestore.FieldValue.serverTimestamp(),
-        cancellationReason: reason,
-        refundDone: true,
-        refundProcessed: true,
-        refundAmount: 0,
-        participantCount: 0,
-        totalPot: 0,
-        countdownStartedAt: null,
-        countdownEndsAt: null,
-        activeStartedAt: null,
-        activeEndsAt: null,
-        winnerPlayerId: null,
-        winnerName: null,
-        winnerStake: 0,
-        winningCellIndex: null,
-        payoutProcessed: true,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        version: Number(roundData.version || 0) + 1
-      }, { merge: true });
-
-      if (runtimePointsHere) {
-        tx.set(runtimeRef, {
-          mode: "scanner-grid",
-          activeRoundId: null,
-          status: "idle",
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      }
-
-      didCancel = true;
-      return;
-    }
-
-    const stakeToRefund = normalizeStakeValue(participantData.stake);
-    const userRef = getUserRef(refundPlayerId);
-    const userSnap = await tx.get(userRef);
-    const userData = userSnap.exists ? (userSnap.data() || {}) : {};
-    const nextBalance = normalizeMoneyValue(getUserDemoBalanceFromData(userData) + stakeToRefund);
-
-    if (stakeToRefund > 0) {
-      tx.set(userRef, {
-        demoTonBalance: nextBalance,
-        demoBalanceGranted: userData.demoBalanceGranted === true,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-    }
-
-    tx.set(participantRef, {
-      status: "refunded",
-      refundDone: true,
-      refundAmount: stakeToRefund,
-      refundReason: reason,
-      refundedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    tx.set(roundRef, {
-      status: "canceled",
-      canceledAt: firebase.firestore.FieldValue.serverTimestamp(),
-      cancellationReason: reason,
-      refundDone: true,
-      refundProcessed: true,
-      refundPlayerId: String(refundPlayerId),
-      refundAmount: stakeToRefund,
-      participantCount: 0,
-      totalPot: 0,
-      countdownStartedAt: null,
-      countdownEndsAt: null,
-      activeStartedAt: null,
-      activeEndsAt: null,
-      finishedAt: null,
-      finishedEndsAt: null,
-      preparingStartedAt: null,
-      preparingEndsAt: null,
-      winnerPlayerId: null,
-      winnerName: null,
-      winnerStake: 0,
-      winningCellIndex: null,
-      commissionPercent: 0,
-      commissionAmount: 0,
-      winnerPayout: 0,
-      payoutProcessed: true,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      version: Number(roundData.version || 0) + 1
-    }, { merge: true });
-
-    if (runtimePointsHere) {
-      tx.set(runtimeRef, {
-        mode: "scanner-grid",
-        activeRoundId: null,
-        status: "idle",
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-    }
-
-    didCancel = true;
-    refundAmount = stakeToRefund;
-  });
-
-  if (didCancel) {
-    resetScannerRoundVisualState({ status: "idle", totalPot: 0, countdownMs: 0 });
-    scannerGridState.roundData = null;
-    scannerGridState.roundId = null;
-    scannerGridState.roundStatus = "idle";
-    scannerGridState.myParticipationStatus = "none";
-    scannerGridState.myJoinedRoundId = null;
-    setScannerTransientMessage(
-      refundAmount > 0
-        ? `Раунд отменён: не набралось 2 игрока. Ставка ${formatTon(refundAmount)} возвращена без комиссии.`
-        : "Раунд отменён: не набралось 2 игрока.",
-      { type: "info", timeoutMs: 6500, render: false }
-    );
-    renderTopProfile();
-    renderScannerRound();
-  }
-
-  return didCancel;
-}
-
-function shouldCancelSinglePlayerRound(round, participantCount, nowMs = Date.now()) {
-  const status = String(round?.status || "");
-  if (!["waiting", "countdown"].includes(status)) return false;
-  if (Number(participantCount || 0) !== 1) return false;
-  if (round?.refundDone === true || round?.refundProcessed === true) return false;
-  if (status === "countdown") {
-    const countdownEndsAt = tsToMs(round?.countdownEndsAt);
-    return countdownEndsAt > 0 && nowMs >= countdownEndsAt;
-  }
-  return false;
-}
-
 async function ensureScannerRoundLifecycle() {
   if (scannerRealtime.lifecycleBusy) return;
   const round = scannerRealtime.roundData;
@@ -6363,21 +6348,6 @@ async function ensureScannerRoundLifecycle() {
       renderParticipants.reduce((sum, participant) => sum + normalizeStakeValue(participant.stake), 0)
     );
 
-    if (roundStatus === "canceled") {
-      await db.runTransaction(async (tx) => {
-        const runtimeSnap = await tx.get(runtimeRef);
-        const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
-        if (runtimeData.activeRoundId && runtimeData.activeRoundId !== roundId) return;
-        tx.set(runtimeRef, {
-          mode: "scanner-grid",
-          activeRoundId: null,
-          status: "idle",
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      });
-      return;
-    }
-
     if (participantCount === 0) {
       await db.runTransaction(async (tx) => {
         const runtimeSnap = await tx.get(runtimeRef);
@@ -6386,8 +6356,6 @@ async function ensureScannerRoundLifecycle() {
         if (!snap.exists) return;
         const data = snap.data() || {};
         const runtimePointsHere = !runtimeData.activeRoundId || runtimeData.activeRoundId === roundId;
-
-        if (["active", "finished", "preparing_next_round", "canceled"].includes(String(data.status || ""))) return;
 
         tx.set(roundRef, {
           status: "idle",
@@ -6418,22 +6386,20 @@ async function ensureScannerRoundLifecycle() {
       await pruneStaleLobbyParticipants();
     }
 
-    if (roundStatus === "waiting" && participantCount >= 1) {
+    if (roundStatus === "waiting" && participantCount >= 2) {
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(roundRef);
         if (!snap.exists) return;
         const data = snap.data() || {};
         if ((data.status || "waiting") !== "waiting") return;
-        if (data.refundDone === true || data.refundProcessed === true) return;
+        if (participantCount < 2) return;
 
         tx.set(roundRef, {
           status: "countdown",
           totalPot: actualTotalPot,
           participantCount,
-          countdownStartedAt: data.countdownStartedAt || createTimestampFromNow(0),
-          countdownEndsAt: data.countdownEndsAt || createTimestampFromNow(SCANNER_COUNTDOWN_MS),
-          activeStartedAt: null,
-          activeEndsAt: null,
+          countdownStartedAt: createTimestampFromNow(0),
+          countdownEndsAt: createTimestampFromNow(SCANNER_COUNTDOWN_MS),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
           version: Number(data.version || 0) + 1
         }, { merge: true });
@@ -6449,9 +6415,29 @@ async function ensureScannerRoundLifecycle() {
 
     if (roundStatus === "countdown") {
       if (participantCount < 2) {
-        if (shouldCancelSinglePlayerRound(round, participantCount, nowMs)) {
-          await cancelScannerRoundWithRefundOnce(roundId, { reason: "not_enough_players" });
-        }
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(roundRef);
+          if (!snap.exists) return;
+          const data = snap.data() || {};
+          if ((data.status || "") !== "countdown") return;
+          if (participantCount >= 2) return;
+          tx.set(roundRef, {
+            status: "waiting",
+            totalPot: actualTotalPot,
+            participantCount,
+            countdownStartedAt: null,
+            countdownEndsAt: null,
+            activeStartedAt: null,
+            activeEndsAt: null,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            version: Number(data.version || 0) + 1
+          }, { merge: true });
+          tx.set(runtimeRef, {
+            activeRoundId: roundId,
+            status: "waiting",
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        });
         return;
       }
 
@@ -6461,9 +6447,7 @@ async function ensureScannerRoundLifecycle() {
           if (!snap.exists) return;
           const data = snap.data() || {};
           if ((data.status || "") !== "countdown") return;
-          if (data.refundDone === true || data.refundProcessed === true) return;
-          if (Number(data.participantCount || participantCount) < 2) return;
-
+          if (participantCount < 2) return;
           tx.set(roundRef, {
             status: "active",
             totalPot: actualTotalPot,
@@ -6484,15 +6468,12 @@ async function ensureScannerRoundLifecycle() {
     }
 
     if (roundStatus === "active" && tsToMs(round.activeEndsAt) > 0 && nowMs >= tsToMs(round.activeEndsAt)) {
-      if (participantCount < 2) return;
       const result = computeDeterministicRoundResult(round, scannerRealtime.participants);
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(roundRef);
         if (!snap.exists) return;
         const data = snap.data() || {};
         if ((data.status || "") !== "active") return;
-        if (data.refundDone === true || data.refundProcessed === true) return;
-        if (Number(data.participantCount || participantCount) < 2) return;
 
         const winnerRef = result.winnerPlayerId ? getUserRef(result.winnerPlayerId) : null;
         const winnerSnap = winnerRef ? await tx.get(winnerRef) : null;
@@ -6589,35 +6570,49 @@ async function ensureScannerRoundHistoryPersisted() {
   const myPlayer = scannerGridState.players.find((item) => item.id === currentPlayer.id);
   if (!myPlayer) return;
 
+  const summaryPlayers = scannerGridState.players
+    .slice()
+    .sort((a, b) => Number(b.stake || 0) - Number(a.stake || 0));
+  const winnerPlayer = scannerGridState.winningPlayer;
+  const winnerPayout = Number(round.winnerPayout || 0);
+
   const summary = {
     roomId: round.id,
+    roundId: round.id,
     playedAt: new Date(tsToMs(round.finishedAt) || Date.now()).toISOString(),
+    finishedAt: new Date(tsToMs(round.finishedAt) || Date.now()).toISOString(),
     savedAt: Date.now(),
     mode: "Сканер-сетка",
-    status: "finished",
-    game: "scanner-grid",
-    winner: scannerGridState.winningPlayer.name,
-    winnerName: scannerGridState.winningPlayer.name,
-    winnerPlayerId: scannerGridState.winningPlayer.id,
-    youWon: scannerGridState.winningPlayer.id === currentPlayer.id,
+    status: round.status,
+    winner: winnerPlayer.name,
+    winnerName: winnerPlayer.name,
+    winnerPlayerId: winnerPlayer.id,
+    winnerAvatar: winnerPlayer.avatar || null,
+    winnerColor: winnerPlayer.color || null,
+    winnerStake: Number(winnerPlayer.stake || 0),
+    youWon: winnerPlayer.id === currentPlayer.id,
+    myName: myPlayer.name,
+    myAvatar: myPlayer.avatar || currentPlayer.avatar || null,
+    myColor: myPlayer.color || null,
     myStake: Number(myPlayer.stake || 0),
-    participantCount: Number(scannerGridState.totalPlayers || 0),
     totalPot: Number(scannerGridState.totalPot || 0),
+    participantCount: Number(scannerGridState.totalPlayers || summaryPlayers.length || 0),
     commissionPercent: Number(round.commissionPercent || 0),
     commissionAmount: Number(round.commissionAmount || 0),
-    winnerPayout: Number(round.winnerPayout || 0),
-    results: scannerGridState.players
-      .slice()
-      .sort((a, b) => Number(b.stake || 0) - Number(a.stake || 0))
-      .map((player, index) => ({
-        place: index + 1,
-        name: player.name,
-        score: Number(player.stake || 0),
-        stake: Number(player.stake || 0),
-        playerId: player.id,
-        isMe: player.id === currentPlayer.id,
-        color: player.color || null
-      }))
+    winnerPayout,
+    payout: winnerPlayer.id === currentPlayer.id ? winnerPayout : 0,
+    results: summaryPlayers.map((player, index) => ({
+      place: index + 1,
+      playerId: player.id,
+      name: player.name,
+      avatar: player.avatar || null,
+      stake: Number(player.stake || 0),
+      score: Number(player.stake || 0),
+      roundColor: player.color || null,
+      playerColor: player.color || null,
+      color: player.color || null,
+      isMe: player.id === currentPlayer.id
+    }))
   };
 
   await Promise.all([
@@ -8248,6 +8243,7 @@ window.openSettings = openSettings;
 window.openWallet = openWallet;
 window.toggleHistoryPanel = toggleHistoryPanel;
 window.toggleHistoryMatchDetails = toggleHistoryMatchDetails;
+window.toggleScannerHistoryDetails = toggleScannerHistoryDetails;
 window.handleBottomNav = handleBottomNav;
 window.handleMenuBackgroundClick = handleMenuBackgroundClick;
 window.handleModalBackdropClick = handleModalBackdropClick;
