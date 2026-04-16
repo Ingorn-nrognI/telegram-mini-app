@@ -3104,10 +3104,8 @@ button {
           </button>
         </div>
 
-        <div id="scannerParticipantsMeta" class="scanner-live-meta">Подключись к раунду, чтобы увидеть общий список игроков.</div>
-        <div id="scannerParticipantsList" class="scanner-player-list is-collapsed">
-          <div class="scanner-empty">Пока в общем раунде нет игроков.</div>
-        </div>
+        <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
+        <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
 
         <div class="scanner-control-divider"></div>
 
@@ -3924,12 +3922,25 @@ function getScannerCommissionPercent(totalPot) {
   return 2;
 }
 
-function getScannerPayoutMeta(totalPot) {
+function getScannerPayoutMeta(totalPot, winnerStake = 0) {
   const pot = normalizeMoneyValue(totalPot);
-  const commissionPercent = getScannerCommissionPercent(pot);
-  const commissionAmount = normalizeMoneyValue(pot * commissionPercent / 100);
-  const winnerPayout = normalizeMoneyValue(Math.max(0, pot - commissionAmount));
-  return { totalPot: pot, commissionPercent, commissionAmount, winnerPayout };
+  const stake = normalizeMoneyValue(winnerStake);
+  const grossProfit = normalizeMoneyValue(Math.max(0, pot - stake));
+  const commissionPercent = grossProfit > 0 ? getScannerCommissionPercent(grossProfit) : 0;
+  const commissionAmount = grossProfit > 0
+    ? normalizeMoneyValue(grossProfit * commissionPercent / 100)
+    : 0;
+  const netProfit = normalizeMoneyValue(Math.max(0, grossProfit - commissionAmount));
+  const winnerPayout = normalizeMoneyValue(stake + netProfit);
+  return {
+    totalPot: pot,
+    winnerStake: stake,
+    grossProfit,
+    netProfit,
+    commissionPercent,
+    commissionAmount,
+    winnerPayout
+  };
 }
 
 function escapeCssUrl(value) {
@@ -5056,6 +5067,13 @@ function formatCompactNumber(value) {
   return new Intl.NumberFormat("ru-RU").format(number);
 }
 
+function formatScannerMultiplier(payout, stake) {
+  const safePayout = Number(payout || 0);
+  const safeStake = Number(stake || 0);
+  if (!Number.isFinite(safePayout) || !Number.isFinite(safeStake) || safeStake <= 0) return "x0.00";
+  return `x${(safePayout / safeStake).toFixed(2)}`;
+}
+
 function formatCountdownMs(ms) {
   const safe = Math.max(0, Math.ceil(ms / 1000));
   const minutes = String(Math.floor(safe / 60)).padStart(2, "0");
@@ -5080,8 +5098,8 @@ function createTimestampFromNow(offsetMs = 0) {
 }
 
 function getScannerColorById(id, isCurrent = false) {
-  if (isCurrent) return "hsl(182 88% 58%)";
-  const hash = hashString(id);
+  const stableId = String(id || "unknown_player");
+  const hash = hashString(stableId);
   const hue = hash % 360;
   const saturation = 68 + (hash % 16);
   const lightness = 56 + (hash % 8);
@@ -6321,7 +6339,8 @@ async function processScannerRoundPayoutOnce(roundId, resultOverride = null) {
     const winnerRef = getUserRef(winnerPlayerId);
     const winnerSnap = await tx.get(winnerRef);
     const winnerData = winnerSnap.exists ? (winnerSnap.data() || {}) : {};
-    const payoutMeta = getScannerPayoutMeta(roundData.totalPot || resultOverride?.totalPot || 0);
+    const winnerStake = normalizeStakeValue(resultOverride?.winnerStake ?? roundData.winnerStake ?? scannerGridState.winningPlayer?.stake ?? 0);
+    const payoutMeta = getScannerPayoutMeta(roundData.totalPot || resultOverride?.totalPot || 0, winnerStake);
 
     tx.set(winnerRef, {
       demoTonBalance: normalizeMoneyValue(getUserDemoBalanceFromData(winnerData) + payoutMeta.winnerPayout),
@@ -6333,6 +6352,9 @@ async function processScannerRoundPayoutOnce(roundId, resultOverride = null) {
       totalPot: payoutMeta.totalPot,
       commissionPercent: payoutMeta.commissionPercent,
       commissionAmount: payoutMeta.commissionAmount,
+      winnerStake: payoutMeta.winnerStake,
+      winnerGrossProfit: payoutMeta.grossProfit,
+      winnerNetProfit: payoutMeta.netProfit,
       winnerPayout: payoutMeta.winnerPayout,
       payoutProcessed: true,
       payoutProcessedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -6491,7 +6513,7 @@ async function ensureScannerRoundLifecycle() {
         const winnerRef = result.winnerPlayerId ? getUserRef(result.winnerPlayerId) : null;
         const winnerSnap = winnerRef ? await tx.get(winnerRef) : null;
         const winnerData = winnerSnap?.exists ? (winnerSnap.data() || {}) : {};
-        const payoutMeta = getScannerPayoutMeta(data.totalPot || actualTotalPot);
+        const payoutMeta = getScannerPayoutMeta(data.totalPot || actualTotalPot, result.winnerStake);
         const shouldPayWinner = !!winnerRef && data.payoutProcessed !== true && payoutMeta.winnerPayout > 0;
 
         if (shouldPayWinner) {
@@ -6507,6 +6529,8 @@ async function ensureScannerRoundLifecycle() {
           totalPot: payoutMeta.totalPot,
           commissionPercent: payoutMeta.commissionPercent,
           commissionAmount: payoutMeta.commissionAmount,
+          winnerGrossProfit: payoutMeta.grossProfit,
+          winnerNetProfit: payoutMeta.netProfit,
           winnerPayout: payoutMeta.winnerPayout,
           payoutProcessed: shouldPayWinner,
           payoutProcessedAt: shouldPayWinner ? firebase.firestore.FieldValue.serverTimestamp() : null,
@@ -6612,6 +6636,8 @@ async function ensureScannerRoundHistoryPersisted() {
     participantCount: Number(scannerGridState.totalPlayers || summaryPlayers.length || 0),
     commissionPercent: Number(round.commissionPercent || 0),
     commissionAmount: Number(round.commissionAmount || 0),
+    winnerGrossProfit: Number(round.winnerGrossProfit || Math.max(0, Number(scannerGridState.totalPot || 0) - Number(winnerPlayer.stake || 0))),
+    winnerNetProfit: Number(round.winnerNetProfit || Math.max(0, winnerPayout - Number(winnerPlayer.stake || 0))),
     winnerPayout,
     payout: winnerPlayer.id === currentPlayer.id ? winnerPayout : 0,
     results: summaryPlayers.map((player, index) => ({
@@ -6640,9 +6666,12 @@ async function ensureScannerRoundHistoryPersisted() {
       maxPlayers: Number(round.maxPlayers || 0),
       winnerPlayerId: scannerGridState.winningPlayer.id,
       winnerName: scannerGridState.winningPlayer.name,
+      winnerColor: scannerGridState.winningPlayer.color || getScannerColorById(scannerGridState.winningPlayer.id),
       winnerStake: Number(scannerGridState.winningPlayer.stake || 0),
       commissionPercent: Number(round.commissionPercent || 0),
       commissionAmount: Number(round.commissionAmount || 0),
+      winnerGrossProfit: Number(round.winnerGrossProfit || Math.max(0, Number(scannerGridState.totalPot || 0) - Number(scannerGridState.winningPlayer.stake || 0))),
+      winnerNetProfit: Number(round.winnerNetProfit || Math.max(0, Number(round.winnerPayout || 0) - Number(scannerGridState.winningPlayer.stake || 0))),
       winnerPayout: Number(round.winnerPayout || 0),
       payoutProcessed: round.payoutProcessed === true,
       winningCellIndex: Number(scannerGridState.winningCellIndex || 0),
@@ -7102,14 +7131,9 @@ function renderScannerParticipants() {
   list.className = `scanner-player-list ${expanded ? "is-expanded" : "is-collapsed"}`;
 
   if (!scannerGridState.players.length) {
-    if (scannerGridState.roundId && !scannerRealtime.participantsReady) {
-      meta.textContent = "Синхронизируем список игроков общего раунда…";
-      list.innerHTML = `<div class="scanner-empty">Загружаем подтверждённых игроков из Firestore.</div>`;
-      return;
-    }
-
-    meta.textContent = getActiveScannerTransientMessage() || "Подключись к раунду, чтобы увидеть общий список игроков.";
-    list.innerHTML = `<div class="scanner-empty">Пока в общем раунде нет игроков.</div>`;
+    meta.textContent = "";
+    meta.innerHTML = "";
+    list.innerHTML = "";
     return;
   }
 
@@ -7121,12 +7145,8 @@ function renderScannerParticipants() {
     if (hasMe && myPlayer) {
       const previewOthers = others.slice(0, 2);
       const previewOthersHtml = previewOthers.map((player) => getScannerPlayerRowHtml(player)).join("");
-      const emptyOthersHtml = previewOthers.length
-        ? ""
-        : `<div class="scanner-empty">Другие игроки пока не вошли в раунд.</div>`;
-
       list.classList.add("has-pinned");
-      list.innerHTML = `${getScannerPlayerRowHtml(myPlayer, { pinned: true })}${previewOthersHtml}${emptyOthersHtml}`;
+      list.innerHTML = `${getScannerPlayerRowHtml(myPlayer, { pinned: true })}${previewOthersHtml}`;
       return;
     }
 
@@ -7139,7 +7159,7 @@ function renderScannerParticipants() {
     list.classList.add("has-pinned");
     const othersHtml = others.length
       ? `<div class="scanner-player-scroll">${others.map((player) => getScannerPlayerRowHtml(player)).join("")}</div>`
-      : `<div class="scanner-empty">Другие игроки пока не вошли в раунд.</div>`;
+      : "";
 
     list.innerHTML = `${getScannerPlayerRowHtml(myPlayer, { pinned: true })}${othersHtml}`;
     return;
@@ -7172,16 +7192,25 @@ function renderScannerRecentList() {
     return;
   }
 
-  container.innerHTML = visibleItems.map((item) => `
-    <div class="scanner-recent-card">
-      <div class="scanner-player-swatch" style="background:${item.winnerPlayerId === getCurrentPlayer().id ? "hsl(145 74% 58%)" : "hsl(220 84% 66%)"};"></div>
-      <div class="scanner-recent-copy">
-        <div class="scanner-recent-title">${item.winnerName || "Победитель"}</div>
-        <div class="scanner-recent-meta">${formatHistoryDate(tsToMs(item.finishedAt) ? new Date(tsToMs(item.finishedAt)).toISOString() : item.finishedAt)} · ${formatCompactNumber(item.participantCount || 0)} игроков · банк ${formatTon(item.totalPot || 0)} · комиссия ${Number(item.commissionPercent || 0)}%</div>
+  container.innerHTML = visibleItems.map((item) => {
+    const winnerStake = normalizeMoneyValue(item.winnerStake || 0);
+    const winnerPayout = normalizeMoneyValue(item.winnerPayout || winnerStake || 0);
+    const finishedAtText = formatHistoryDate(tsToMs(item.finishedAt) ? new Date(tsToMs(item.finishedAt)).toISOString() : item.finishedAt);
+    const playersCountText = formatCompactNumber(item.participantCount || 0);
+    const multiplierText = formatScannerMultiplier(winnerPayout, winnerStake);
+    const winnerColor = item.winnerColor || getScannerColorById(item.winnerPlayerId || item.winnerName || "winner");
+
+    return `
+      <div class="scanner-recent-card">
+        <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
+        <div class="scanner-recent-copy">
+          <div class="scanner-recent-title">${finishedAtText}</div>
+          <div class="scanner-recent-meta">Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText}</div>
+        </div>
+        <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
       </div>
-      <div class="scanner-recent-result">${formatTon(item.winnerPayout || item.winnerStake || 0)}</div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 }
 
 function isScannerBettingLocked() {
@@ -7421,9 +7450,11 @@ function renderScannerRound() {
       resultBanner.style.display = "block";
       resultTitle.textContent = myWin ? "Ты выиграл общий раунд" : `Победитель: ${scannerGridState.winningPlayer.name}`;
       const payout = Number(scannerGridState.roundData?.winnerPayout || scannerGridState.totalPot || 0);
-      const commissionPercent = Number(scannerGridState.roundData?.commissionPercent || getScannerCommissionPercent(scannerGridState.totalPot));
+      const winnerStake = Number(scannerGridState.winningPlayer.stake || scannerGridState.roundData?.winnerStake || 0);
+      const grossProfit = Number(scannerGridState.roundData?.winnerGrossProfit ?? Math.max(0, Number(scannerGridState.totalPot || 0) - winnerStake));
+      const commissionPercent = Number(scannerGridState.roundData?.commissionPercent || getScannerCommissionPercent(grossProfit));
       const commissionAmount = Number(scannerGridState.roundData?.commissionAmount || 0);
-      resultText.textContent = `${scannerGridState.winningPlayer.name} получает ${formatTon(payout)}. Банк: ${formatTon(scannerGridState.totalPot)} · комиссия ${commissionPercent}% (${formatTon(commissionAmount)}) · ставка победителя: ${formatTon(scannerGridState.winningPlayer.stake)} · победная клетка #${scannerGridState.winningCellIndex}.`;
+      resultText.textContent = `${scannerGridState.winningPlayer.name} получает ${formatTon(payout)}. Банк: ${formatTon(scannerGridState.totalPot)} · ставка победителя: ${formatTon(winnerStake)} · чистая прибыль: ${formatTon(grossProfit)} · комиссия с прибыли: ${commissionPercent}% (${formatTon(commissionAmount)}) · победная клетка #${scannerGridState.winningCellIndex}.`;
     } else {
       resultBanner.style.display = "none";
       resultTitle.textContent = "";
