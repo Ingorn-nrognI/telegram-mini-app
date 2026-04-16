@@ -276,7 +276,7 @@ button {
   position: absolute;
   inset: 0;
   padding-top: calc(var(--safe-top) + 92px);
-  padding-bottom: calc(var(--safe-bottom) + 118px);
+  padding-bottom: calc(var(--safe-bottom) + 152px);
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -803,7 +803,7 @@ button {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(var(--safe-bottom) + 10px);
+  bottom: max(4px, calc(var(--safe-bottom) + 2px));
   width: min(calc(100vw - 24px), 480px);
   padding: 12px 8px 10px;
   display: grid;
@@ -1963,7 +1963,7 @@ button {
 .scanner-bet-bar {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--safe-bottom) + 96px);
+  bottom: calc(var(--safe-bottom) + 72px);
   width: min(calc(100vw - 24px), 480px);
   min-height: 64px;
   padding: 9px;
@@ -2369,7 +2369,7 @@ button {
     gap: 6px;
     padding: 8px;
     border-radius: 22px;
-    bottom: calc(var(--safe-bottom) + 94px);
+    bottom: calc(var(--safe-bottom) + 70px);
   }
 
   .scanner-bet-btn {
@@ -2643,7 +2643,7 @@ button {
 }
 
 .bottom-bar {
-  bottom: calc(var(--safe-bottom) + 8px);
+  bottom: max(4px, calc(var(--safe-bottom) + 2px));
   padding: 8px 7px;
   align-items: center;
   border-radius: 24px;
