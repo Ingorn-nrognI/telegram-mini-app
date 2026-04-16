@@ -2411,6 +2411,390 @@ button {
   }
 }
 
+
+
+/* Profile screen and compact navigation update */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.top-bar {
+  grid-template-columns: minmax(44px, 72px) minmax(108px, 1fr) auto;
+  gap: 8px;
+}
+
+.profile-card {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  padding: 2px;
+  border-radius: 50%;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.16), transparent 34%),
+    linear-gradient(180deg, rgba(18, 29, 64, 0.96), rgba(9, 14, 33, 0.94));
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(83, 159, 255, 0.12);
+}
+
+.profile-card .profile-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  font-size: 17px;
+}
+
+.profile-copy,
+.profile-label {
+  display: none !important;
+}
+
+.balance-card {
+  min-width: 108px;
+  padding: 7px 12px;
+  border-radius: 16px;
+}
+
+.balance-label {
+  font-size: 10px;
+  margin-bottom: 1px;
+}
+
+.balance-value {
+  font-size: 14px;
+}
+
+.wallet-btn {
+  height: 42px;
+  min-width: 94px;
+  padding: 0 12px;
+  border-radius: 16px;
+  gap: 6px;
+  font-size: 13px;
+  justify-content: center;
+}
+
+.menu-screen.profile-screen {
+  padding-top: calc(var(--safe-top) + 88px);
+}
+
+.profile-screen-inner {
+  gap: 12px;
+}
+
+.profile-hero-card,
+.profile-balance-card,
+.profile-stat-card,
+.profile-settings-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(45, 225, 255, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(13, 21, 48, 0.96), rgba(7, 10, 24, 0.96));
+  box-shadow: var(--shadow-main);
+}
+
+.profile-hero-card {
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-screen-avatar {
+  width: 78px;
+  height: 78px;
+  min-width: 78px;
+  font-size: 30px;
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.24),
+    0 16px 32px rgba(48, 112, 255, 0.30),
+    0 0 28px rgba(45, 225, 255, 0.12);
+}
+
+.profile-screen-copy {
+  min-width: 0;
+}
+
+.profile-screen-kicker,
+.profile-card-kicker,
+.profile-stat-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-screen-name {
+  margin: 6px 0 4px;
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-screen-id {
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-all;
+}
+
+.profile-balance-card,
+.profile-stat-card,
+.profile-settings-card {
+  padding: 16px;
+}
+
+.profile-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.profile-card-title {
+  margin: 4px 0 0;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.profile-balance-value {
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: rgba(45, 225, 255, 0.10);
+  border: 1px solid rgba(45, 225, 255, 0.18);
+  color: #dff9ff;
+  font-size: 16px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.profile-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-action-btn,
+.profile-settings-btn {
+  min-height: 46px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 12px;
+  font-weight: 900;
+  color: #eaf5ff;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.profile-action-btn.primary,
+.profile-settings-btn {
+  background: linear-gradient(135deg, rgba(104, 152, 255, 0.98), rgba(45, 225, 255, 0.9));
+  color: #06101f;
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: 0 12px 24px rgba(45, 225, 255, 0.16), inset 0 1px 0 rgba(255,255,255,0.22);
+}
+
+.profile-action-btn:active,
+.profile-settings-btn:active,
+.profile-hero-card:active {
+  transform: scale(0.98);
+}
+
+.profile-stat-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-stat-value {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #dff9ff;
+  white-space: nowrap;
+}
+
+.profile-settings-btn {
+  width: 100%;
+}
+
+.bottom-bar {
+  bottom: calc(var(--safe-bottom) + 8px);
+  padding: 8px 7px;
+  align-items: center;
+  border-radius: 24px;
+  overflow: visible;
+}
+
+.bottom-btn {
+  height: 50px;
+  border-radius: 16px;
+  gap: 4px;
+}
+
+.bottom-btn .nav-icon {
+  font-size: 17px;
+}
+
+.bottom-btn .nav-label {
+  font-size: 10px;
+}
+
+.center-fab {
+  width: 64px;
+  height: 64px;
+  margin-top: 0;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.22), transparent 32%),
+    linear-gradient(135deg, rgba(83, 152, 255, 1), rgba(45, 225, 255, 0.9));
+  box-shadow:
+    0 12px 26px rgba(49, 105, 255, 0.30),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+}
+
+.center-fab.is-active {
+  color: #ffffff;
+  box-shadow:
+    0 12px 28px rgba(45, 225, 255, 0.28),
+    inset 0 0 0 1px rgba(255,255,255,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+}
+
+@media (max-width: 420px) {
+  .top-bar {
+    grid-template-columns: 48px minmax(104px, 1fr) auto;
+    gap: 6px;
+  }
+
+  .profile-card {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+
+  .profile-card .profile-avatar {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+  }
+
+  .balance-card {
+    min-width: 104px;
+    padding: 6px 9px;
+  }
+
+  .balance-value {
+    font-size: 13px;
+  }
+
+  .wallet-btn {
+    width: auto;
+    min-width: 84px;
+    height: 40px;
+    padding: 0 10px;
+  }
+
+  .wallet-btn .wallet-icon,
+  .wallet-btn .wallet-text {
+    display: inline-flex;
+  }
+
+  .profile-hero-card {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .profile-screen-avatar {
+    width: 68px;
+    height: 68px;
+    min-width: 68px;
+    font-size: 26px;
+  }
+
+  .profile-screen-name {
+    font-size: 23px;
+  }
+
+  .profile-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-card-heading,
+  .profile-stat-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile-balance-value,
+  .profile-stat-value {
+    width: 100%;
+    text-align: center;
+  }
+
+  .bottom-bar {
+    width: calc(100vw - 16px);
+    padding: 7px 5px;
+    gap: 3px;
+    border-radius: 22px;
+  }
+
+  .bottom-btn {
+    height: 48px;
+    border-radius: 15px;
+  }
+
+  .center-fab {
+    width: 58px;
+    height: 58px;
+    border-radius: 20px;
+  }
+}
+
+@media (max-width: 340px) {
+  .wallet-btn .wallet-text {
+    display: none;
+  }
+
+  .wallet-btn {
+    min-width: 42px;
+    width: 42px;
+    padding: 0;
+  }
+
+  .balance-card {
+    min-width: 96px;
+  }
+
+  .bottom-btn .nav-label {
+    font-size: 9px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -2423,14 +2807,11 @@ button {
 
   <div class="top-bar">
     <div class="top-bar-left">
-      <div id="modeBackButton" class="mode-back-btn" onclick="event.stopPropagation(); exitGameMode()" aria-label="Назад">←</div>
+      <div id="modeBackButton" class="mode-back-btn" onclick="event.stopPropagation(); handleTelegramAppBack()" aria-label="Назад">←</div>
 
-      <button type="button" class="profile-card" onclick="openSettings()" aria-label="Профиль игрока">
+      <button type="button" class="profile-card" onclick="openProfileScreen(event)" aria-label="Открыть профиль">
         <div id="profileAvatar" class="profile-avatar">И</div>
-        <div class="profile-copy">
-          <div class="profile-label">Профиль</div>
-          <div id="nickname">Игрок</div>
-        </div>
+        <span id="nickname" class="visually-hidden">Игрок</span>
       </button>
     </div>
 
@@ -2441,10 +2822,9 @@ button {
 
     <div class="top-bar-right">
       <button type="button" class="wallet-btn" onclick="openWallet()" aria-label="Кошелёк">
-        <span>💼</span>
-        <span>Кошелёк</span>
+        <span class="wallet-icon">💼</span>
+        <span class="wallet-text">Кошелёк</span>
       </button>
-      <button type="button" class="icon-action-btn" onclick="openSettings()" aria-label="Настройки">⚙️</button>
     </div>
   </div>
 
@@ -2714,6 +3094,44 @@ button {
     </div>
   </div>
 
+  <div id="profileScreen" class="menu-screen profile-screen">
+    <div class="screen-inner profile-screen-inner">
+      <section class="profile-hero-card">
+        <div id="profileScreenAvatar" class="profile-avatar profile-screen-avatar">И</div>
+        <div class="profile-screen-copy">
+          <div class="profile-screen-kicker">Профиль игрока</div>
+          <h1 id="profileScreenName" class="profile-screen-name">Игрок</h1>
+          <div id="profileScreenId" class="profile-screen-id">ID: —</div>
+        </div>
+      </section>
+
+      <section class="profile-balance-card">
+        <div class="profile-card-heading">
+          <div>
+            <div class="profile-card-kicker">Demo TON</div>
+            <h2 class="profile-card-title">Баланс</h2>
+          </div>
+          <div id="profileScreenBalanceValue" class="profile-balance-value">0.00 TON</div>
+        </div>
+
+        <div class="profile-action-grid">
+          <button type="button" class="profile-action-btn primary" onclick="openWallet()">💼 Кошелёк</button>
+          <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('topup')">Пополнить</button>
+          <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('withdraw')">Вывести</button>
+        </div>
+      </section>
+
+      <section class="profile-stat-card">
+        <div class="profile-stat-label">Лучший выигрыш в раунде</div>
+        <div id="profileBestWinValue" class="profile-stat-value">0.00 TON</div>
+      </section>
+
+      <section class="profile-settings-card">
+        <button type="button" class="profile-settings-btn" onclick="openSettings()">⚙️ Настройки</button>
+      </section>
+    </div>
+  </div>
+
   <div id="scannerBetBar" class="scanner-bet-bar" onclick="event.stopPropagation()" aria-label="Бар ставок Сканера">
     <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="Настроить быстрые ставки">✏️</button>
     <button type="button" id="scannerBetBarQuick0" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(0, event)">1</button>
@@ -2903,6 +3321,8 @@ let currentBottomNav = "games";
 let homeScreenContext = "games";
 let homeInitialGameScrollApplied = false;
 let homeInitialGameScrollScheduled = false;
+let currentProfileBestRoundWin = 0;
+let profileBestWinRequestSeq = 0;
 
 const SCANNER_GRID_TOTAL_CELLS = 10000;
 const SCANNER_GRID_COLS = 100;
@@ -3385,9 +3805,139 @@ function renderTopProfile() {
   if (balanceEl) {
     balanceEl.innerText = formatBalance(getCurrentBalanceRaw());
   }
+
+  if (currentMenuView === "profile") {
+    renderProfileScreen({ reloadBestWin: false });
+  }
+}
+
+function renderProfileBestWinValue() {
+  const bestWinEl = document.getElementById("profileBestWinValue");
+  if (bestWinEl) {
+    bestWinEl.textContent = formatTon(currentProfileBestRoundWin || 0);
+  }
+}
+
+function getProfileBestWinCandidate(item, playerId) {
+  if (!item) return 0;
+
+  const playerWon = item.youWon === true ||
+    String(item.winnerPlayerId || item.winnerId || item.playerId || "") === String(playerId);
+
+  if (!playerWon) return 0;
+
+  const fields = [
+    item.winnerPayout,
+    item.payout,
+    item.winPayout,
+    item.reward,
+    item.prize,
+    item.amount,
+    item.bestWin
+  ];
+
+  return fields.reduce((max, value) => Math.max(max, normalizeMoneyValue(value)), 0);
+}
+
+async function loadProfileBestRoundWin() {
+  const requestSeq = profileBestWinRequestSeq + 1;
+  profileBestWinRequestSeq = requestSeq;
+  const player = getCurrentPlayer();
+  let bestWin = 0;
+
+  try {
+    const userHistorySnapshot = await getHistoryCollectionRef(player.id)
+      .limit(80)
+      .get();
+
+    userHistorySnapshot.forEach((doc) => {
+      bestWin = Math.max(bestWin, getProfileBestWinCandidate(doc.data() || {}, player.id));
+    });
+  } catch (error) {
+    console.warn("Не удалось загрузить пользовательскую историю для профиля:", error);
+  }
+
+  if (bestWin <= 0) {
+    try {
+      const scannerHistorySnapshot = await scannerHistoryCollection()
+        .where("winnerPlayerId", "==", player.id)
+        .limit(80)
+        .get();
+
+      scannerHistorySnapshot.forEach((doc) => {
+        bestWin = Math.max(bestWin, getProfileBestWinCandidate(doc.data() || {}, player.id));
+      });
+    } catch (error) {
+      console.warn("Не удалось загрузить историю выигрышей Сканера:", error);
+    }
+  }
+
+  if (requestSeq !== profileBestWinRequestSeq) return;
+  currentProfileBestRoundWin = normalizeMoneyValue(bestWin);
+  renderProfileBestWinValue();
+}
+
+function renderProfileScreen(options = {}) {
+  const { reloadBestWin = true } = options;
+  const currentPlayer = getCurrentPlayer();
+  const fallbackInitial = getPlayerInitial(currentPlayer.name);
+  const profileAvatarEl = document.getElementById("profileScreenAvatar");
+  const profileNameEl = document.getElementById("profileScreenName");
+  const profileIdEl = document.getElementById("profileScreenId");
+  const profileBalanceEl = document.getElementById("profileScreenBalanceValue");
+
+  if (profileAvatarEl) {
+    applyProfileAvatar(profileAvatarEl, currentPlayer.avatar, fallbackInitial);
+  }
+
+  if (profileNameEl) {
+    profileNameEl.textContent = currentPlayer.name || "Игрок";
+  }
+
+  if (profileIdEl) {
+    profileIdEl.textContent = `ID: ${currentPlayer.id || "—"}`;
+  }
+
+  if (profileBalanceEl) {
+    profileBalanceEl.textContent = formatBalance(getCurrentBalanceRaw());
+  }
+
+  renderProfileBestWinValue();
+
+  if (reloadBestWin) {
+    loadProfileBestRoundWin();
+  }
+}
+
+function openProfileScreen(event) {
+  if (event) event.stopPropagation();
+  closeModePopup();
+  closeHistoryPanel({ preserveNav: true });
+  closeLeaderboard();
+  closeBobrRunRooms();
+  currentProfileBestRoundWin = 0;
+  renderProfileScreen({ reloadBestWin: true });
+  setMenuView("profile", { preserveNav: true });
+}
+
+function closeProfileScreen() {
+  setMenuView("home", { preserveNav: true });
+  renderTopProfile();
+}
+
+function showProfilePlaceholderAction(action) {
+  const message = action === "withdraw"
+    ? "Вывод будет добавлен позже."
+    : "Пополнение будет добавлено позже.";
+  alert(message);
 }
 
 function handleTelegramAppBack() {
+  if (currentMenuView === "profile") {
+    closeProfileScreen();
+    return;
+  }
+
   if (currentMenuView !== "home") {
     exitGameMode();
   }
@@ -3437,6 +3987,7 @@ function getPreferredHomeNav() {
 }
 
 function getActiveModeLabel() {
+  if (currentMenuView === "profile") return "Профиль";
   if (currentMenuView === "bobrRun") return "Bobr Run";
   if (homeScreenContext === "pvp") return "Сканер-сетка";
   return "игровой режим";
@@ -3540,11 +4091,13 @@ function setMenuView(view, options = {}) {
 
   const homeScreen = document.getElementById("homeScreen");
   const bobrRunScreen = document.getElementById("bobrRunScreen");
+  const profileScreen = document.getElementById("profileScreen");
   const modePopup = document.getElementById("modePopup");
   const historyPanel = document.getElementById("historyPanel");
 
   if (homeScreen) homeScreen.classList.toggle("active", view === "home");
   if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "bobrRun");
+  if (profileScreen) profileScreen.classList.toggle("active", view === "profile");
   if (modePopup) modePopup.classList.remove("open");
   if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
 
@@ -5618,7 +6171,12 @@ async function ensureScannerRoundHistoryPersisted() {
     savedAt: Date.now(),
     mode: "Сканер-сетка",
     winner: scannerGridState.winningPlayer.name,
+    winnerPlayerId: scannerGridState.winningPlayer.id,
     youWon: scannerGridState.winningPlayer.id === currentPlayer.id,
+    totalPot: Number(scannerGridState.totalPot || 0),
+    commissionPercent: Number(round.commissionPercent || 0),
+    commissionAmount: Number(round.commissionAmount || 0),
+    winnerPayout: Number(round.winnerPayout || 0),
     results: scannerGridState.players
       .slice()
       .sort((a, b) => Number(b.stake || 0) - Number(a.stake || 0))
@@ -6236,6 +6794,7 @@ function renderScannerBetBar() {
 function isScannerBetBarContextActive() {
   const homeScreen = document.getElementById("homeScreen");
   const bobrRunScreen = document.getElementById("bobrRunScreen");
+  const profileScreen = document.getElementById("profileScreen");
   const historyPanel = document.getElementById("historyPanel");
   const modePopup = document.getElementById("modePopup");
   const leaderboardModal = document.getElementById("leaderboardModal");
@@ -6248,9 +6807,11 @@ function isScannerBetBarContextActive() {
   const stakeSettingsOpen = !!stakeSettingsOverlay?.classList.contains("open");
   const homeActive = currentMenuView === "home" && !!homeScreen?.classList.contains("active");
   const bobrRunActive = !!bobrRunScreen?.classList.contains("active");
+  const profileActive = !!profileScreen?.classList.contains("active");
 
   return homeActive &&
     !bobrRunActive &&
+    !profileActive &&
     !historyOpen &&
     !modePopupOpen &&
     !leaderboardOpen &&
@@ -7245,6 +7806,11 @@ window.leaveBobrRunRoom = leaveBobrRunRoom;
 window.renderBobrRunRooms = renderBobrRunRooms;
 window.getBobrRunRoomsCollectionRef = getBobrRunRoomsCollectionRef;
 window.openSkins = openSkins;
+window.openProfileScreen = openProfileScreen;
+window.closeProfileScreen = closeProfileScreen;
+window.renderProfileScreen = renderProfileScreen;
+window.showProfilePlaceholderAction = showProfilePlaceholderAction;
+window.handleTelegramAppBack = handleTelegramAppBack;
 window.openSettings = openSettings;
 window.openWallet = openWallet;
 window.toggleHistoryPanel = toggleHistoryPanel;
