@@ -25,6 +25,9 @@
   --shadow-glow: 0 0 32px rgba(83, 159, 255, 0.16);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --bottom-nav-height: 66px;
+  --bottom-nav-offset: 4px;
+  --bottom-stack-gap: 6px;
 }
 
 * {
@@ -276,7 +279,7 @@ button {
   position: absolute;
   inset: 0;
   padding-top: calc(var(--safe-top) + 92px);
-  padding-bottom: calc(var(--safe-bottom) + 152px);
+  padding-bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 108px);
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -621,7 +624,7 @@ button {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(var(--safe-bottom) + 100px);
+  bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 14px);
   width: min(calc(100vw - 24px), 480px);
   padding: 12px;
   border-radius: 24px;
@@ -661,7 +664,7 @@ button {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(var(--safe-bottom) + 98px);
+  bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 12px);
   width: min(calc(100vw - 24px), 480px);
   max-height: min(56vh, 520px);
   border-radius: 26px;
@@ -803,8 +806,9 @@ button {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: max(4px, calc(var(--safe-bottom) + 2px));
+  bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
   width: min(calc(100vw - 24px), 480px);
+  min-height: var(--bottom-nav-height);
   padding: 12px 8px 10px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -873,6 +877,39 @@ button {
 
 .center-fab .nav-label {
   font-size: 12px;
+}
+
+.app-notice {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 14px);
+  width: min(calc(100vw - 24px), 360px);
+  z-index: 165;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 16px) scale(0.98);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.app-notice.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.app-notice-card {
+  padding: 14px 16px;
+  border-radius: 20px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(45, 225, 255, 0.18), transparent 35%),
+    linear-gradient(180deg, rgba(12, 20, 47, 0.98), rgba(6, 10, 24, 0.98));
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 20px 38px rgba(0, 0, 0, 0.44), 0 0 24px rgba(45, 225, 255, 0.10);
+  color: #f3f8ff;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 700;
 }
 
 .app-modal {
@@ -1963,7 +2000,7 @@ button {
 .scanner-bet-bar {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--safe-bottom) + 72px);
+  bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + var(--bottom-nav-offset) + var(--bottom-stack-gap));
   width: min(calc(100vw - 24px), 480px);
   min-height: 64px;
   padding: 9px;
@@ -2369,7 +2406,7 @@ button {
     gap: 6px;
     padding: 8px;
     border-radius: 22px;
-    bottom: calc(var(--safe-bottom) + 70px);
+    bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + var(--bottom-nav-offset) + var(--bottom-stack-gap));
   }
 
   .scanner-bet-btn {
@@ -2643,7 +2680,8 @@ button {
 }
 
 .bottom-bar {
-  bottom: max(4px, calc(var(--safe-bottom) + 2px));
+  bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
+  min-height: var(--bottom-nav-height);
   padding: 8px 7px;
   align-items: center;
   border-radius: 24px;
@@ -2686,6 +2724,12 @@ button {
 }
 
 @media (max-width: 420px) {
+  :root {
+    --bottom-nav-height: 62px;
+    --bottom-nav-offset: 4px;
+    --bottom-stack-gap: 6px;
+  }
+
   .top-bar {
     grid-template-columns: 48px minmax(104px, 1fr) auto;
     gap: 6px;
@@ -3155,118 +3199,16 @@ button {
         </div>
       </section>
 
-      <section class="section-card">
-        <div class="section-heading">
-          <div>
-            <div class="section-kicker">Онлайн режимы</div>
-            <h2 class="section-title">Выбери, куда перейти</h2>
-          </div>
-
-          <button
-            type="button"
-            class="inline-action"
-            data-games-trigger="true"
-            onclick="toggleModePopup(event)"
-          >
-            Все игры
+      <div id="modePopup" class="mode-popup" onclick="event.stopPropagation()">
+        <div class="mode-popup-inner">
+          <button type="button" class="mode-popup-btn primary" onclick="enterScannerGridMode(event)">
+            🧬 Сканер
+          </button>
+          <button type="button" class="mode-popup-btn" onclick="showBobrRunComingSoon(event)">
+            ⚔️ Bobr Run
           </button>
         </div>
-
-        <p class="section-subtitle">
-          Стилизация сделана под мобильный Mini App: тёмный фон, мягкие сине-голубые свечения, скролл и фиксированная нижняя навигация.
-        </p>
-
-        <div id="gamesSection" class="cards-stack" style="margin-top:14px;">
-
-          <div class="game-card">
-            <div class="card-badge">⚔️ Архивный режим</div>
-            <h3 class="card-title">Bobr Run</h3>
-            <p class="card-text">
-              Рантайм всё ещё вынесен из файла, но экран режима, навигация, история, таблица и точки повторной интеграции сохранены.
-            </p>
-            <div class="card-actions">
-              <button type="button" class="card-action ghost" onclick="enterBobrRunMode(event)">Открыть экран</button>
-              <button type="button" class="card-action ghost" onclick="openBobrRunRooms()">Комнаты Bobr Run</button>
-            </div>
-          </div>
-
-          <div class="two-column-grid">
-            <div class="info-card">
-              <h3>🏆 Таблица</h3>
-              <p>Открой рейтинг игроков и лучшие результаты.</p>
-              <div class="card-actions">
-                <button type="button" class="card-action ghost" onclick="openLeaderboard()">Смотреть</button>
-              </div>
-            </div>
-
-            <div class="info-card">
-              <h3>🎨 Скины</h3>
-              <p>Точка входа для раздела косметики и визуальных предметов.</p>
-              <div class="card-actions">
-                <button type="button" class="card-action ghost" onclick="openSkins()">Открыть</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div id="modePopup" class="mode-popup" onclick="event.stopPropagation()">
-          <div class="mode-popup-inner">
-            <button type="button" class="mode-popup-btn primary" onclick="enterScannerGridMode(event)">
-              🧬 Сканер-сетка
-            </button>
-            <button type="button" class="mode-popup-btn" onclick="enterBobrRunMode(event)">
-              ⚔️ Bobr Run
-            </button>
-            <button type="button" class="mode-popup-btn" onclick="event.stopPropagation(); openBobrRunRooms()">
-              🎮 Комнаты Bobr Run
-            </button>
-            <button type="button" class="mode-popup-btn" onclick="event.stopPropagation(); openLeaderboard()">
-              🏆 Таблица лидеров
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section class="section-card">
-        <div class="section-heading">
-          <div>
-            <div class="section-kicker">Статус</div>
-            <h2 class="section-title">Быстрый обзор</h2>
-          </div>
-        </div>
-
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-value">PvP</div>
-            <div class="stat-label">Главный центр активности и быстрый переход в режим</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">24/7</div>
-            <div class="stat-label">Прокручиваемый домашний экран с постоянным нижним меню</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">UI</div>
-            <div class="stat-label">Новый тёмный мобильный стиль без ломания логики</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="banner-card">
-        <h3>🧾 История последних игр</h3>
-        <p>
-          Панель истории открывается поверх интерфейса и использует твою текущую Firestore-логику, поэтому сохранённые матчи продолжают подтягиваться.
-        </p>
-        <div class="card-actions" style="margin-top:14px;">
-          <button
-            type="button"
-            class="card-action ghost"
-            data-history-trigger="true"
-            onclick="toggleHistoryPanel(event)"
-          >
-            Открыть историю
-          </button>
-        </div>
-      </section>
+      </div>
     </div>
 
     <div id="historyPanel" class="history-panel" onclick="event.stopPropagation()">
@@ -3433,6 +3375,10 @@ button {
     </div>
   </div>
 
+  <div id="appNotice" class="app-notice" onclick="hideAppNotice(event)" aria-hidden="true">
+    <div id="appNoticeCard" class="app-notice-card" role="status" aria-live="polite"></div>
+  </div>
+
   <div class="bottom-bar">
     <button
       type="button"
@@ -3538,6 +3484,7 @@ let currentDemoTonBalance = 0;
 let currentDemoTonBalanceLoaded = false;
 let currentUserBalanceUnsub = null;
 let insufficientBalanceModalTimer = null;
+let appNoticeTimer = null;
 
 let tgUser = null;
 const tgApp = window.Telegram?.WebApp || null;
@@ -4369,7 +4316,6 @@ function toggleModePopup(event) {
     homeScreenContext = "games";
     setActiveBottomNav("games");
     requestAnimationFrame(() => {
-      scrollHomeToSection("gamesSection");
       modePopup.classList.add("open");
     });
   }
@@ -4406,7 +4352,6 @@ function openGamesMenu() {
   closeHistoryPanel({ preserveNav: true });
 
   requestAnimationFrame(() => {
-    scrollHomeToSection("gamesSection");
     const modePopup = document.getElementById("modePopup");
     if (modePopup) modePopup.classList.add("open");
   });
@@ -4911,9 +4856,61 @@ async function leaveBobrRunRoom(roomId) {
   console.info("leaveBobrRunRoom is a future Bobr Run hook.", { roomId: roomId || null });
 }
 
-function openSkins() {
-  setActiveBottomNav("skins");
-  alert("Скины");
+function updateAppNoticePosition() {
+  const notice = document.getElementById("appNotice");
+  if (!notice) return;
+  const betBar = document.getElementById("scannerBetBar");
+  const betBarVisible = !!betBar?.classList.contains("is-visible");
+  const extraOffset = betBarVisible ? 78 : 0;
+  notice.style.bottom = `calc(var(--safe-bottom) + var(--bottom-nav-height) + 14px + ${extraOffset}px)`;
+}
+
+function showAppNotice(message, options = {}) {
+  const { timeoutMs = 2600, closeModeMenu = false } = options;
+  const notice = document.getElementById("appNotice");
+  const card = document.getElementById("appNoticeCard");
+  if (!notice || !card) return;
+
+  if (closeModeMenu) {
+    closeModePopup();
+  }
+
+  if (appNoticeTimer) {
+    clearTimeout(appNoticeTimer);
+    appNoticeTimer = null;
+  }
+
+  card.textContent = String(message || "").trim();
+  updateAppNoticePosition();
+  notice.classList.add("open");
+  notice.setAttribute("aria-hidden", "false");
+
+  if (timeoutMs > 0) {
+    appNoticeTimer = setTimeout(() => hideAppNotice(), timeoutMs);
+  }
+}
+
+function hideAppNotice(event) {
+  if (event) event.stopPropagation();
+  const notice = document.getElementById("appNotice");
+  if (!notice) return;
+  notice.classList.remove("open");
+  notice.setAttribute("aria-hidden", "true");
+  if (appNoticeTimer) {
+    clearTimeout(appNoticeTimer);
+    appNoticeTimer = null;
+  }
+}
+
+function showBobrRunComingSoon(event) {
+  if (event) event.stopPropagation();
+  showAppNotice("Игра на стадии разработке", { timeoutMs: 2600, closeModeMenu: true });
+}
+
+function openSkins(event) {
+  if (event) event.stopPropagation();
+  closeModePopup();
+  showAppNotice("Скины на стадии разработке", { timeoutMs: 2600 });
 }
 
 function openWallet() {
@@ -7326,6 +7323,10 @@ function updateScannerBetBarVisibility() {
   }
 
   bar.classList.toggle("is-visible", shouldShow);
+  const notice = document.getElementById("appNotice");
+  if (notice?.classList.contains("open")) {
+    updateAppNoticePosition();
+  }
 }
 
 function requestScannerBetBarVisibilityUpdate() {
@@ -8284,6 +8285,9 @@ window.joinBobrRunRoom = joinBobrRunRoom;
 window.leaveBobrRunRoom = leaveBobrRunRoom;
 window.renderBobrRunRooms = renderBobrRunRooms;
 window.getBobrRunRoomsCollectionRef = getBobrRunRoomsCollectionRef;
+window.showAppNotice = showAppNotice;
+window.hideAppNotice = hideAppNotice;
+window.showBobrRunComingSoon = showBobrRunComingSoon;
 window.openSkins = openSkins;
 window.openProfileScreen = openProfileScreen;
 window.closeProfileScreen = closeProfileScreen;
