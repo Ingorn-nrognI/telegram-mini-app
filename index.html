@@ -3069,6 +3069,51 @@ button {
   }
 }
 
+
+
+/* Smooth Scanner updates, waiting text focus and top UI focus behavior */
+.top-bar,
+.profile-card,
+.top-bar .wallet-btn,
+.balance-value,
+.profile-balance-value {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease,
+    filter 0.22s ease,
+    text-shadow 0.22s ease;
+  will-change: opacity, transform;
+}
+
+.top-bar.scanner-focus-ui .profile-card {
+  opacity: 0 !important;
+  transform: translateY(-8px) scale(0.96) !important;
+  pointer-events: none !important;
+}
+
+.top-bar.scanner-focus-ui .wallet-btn {
+  opacity: 0 !important;
+  transform: translateY(-8px) scale(0.96) !important;
+  pointer-events: none !important;
+  visibility: visible !important;
+}
+
+.top-bar.scanner-focus-ui .top-bar-left,
+.top-bar.scanner-focus-ui .top-bar-right {
+  pointer-events: none;
+}
+
+.balance-value.balance-soft-update,
+.profile-balance-value.balance-soft-update {
+  text-shadow: 0 0 14px rgba(45, 225, 255, 0.26);
+}
+
+#scannerGridCanvas {
+  contain: paint;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 </style>
 </head>
 <body>
@@ -3588,6 +3633,7 @@ const scannerRealtime = {
   unsubRound: null,
   unsubParticipants: null,
   unsubHistory: null,
+  participantsRoundId: null,
   heartbeatTimer: null,
   lifecycleTimer: null,
   noticeTimer: null,
@@ -3616,6 +3662,7 @@ let scannerGridPath = null;
 let scannerGridResizeAttached = false;
 let scannerBetBarScrollAttached = false;
 let scannerBetBarVisibilityFrame = null;
+let scannerTopUiVisibilityFrame = null;
 const scannerAvatarCache = new Map();
 const scannerProfileAvatarCache = new Map();
 const scannerBeamMotionState = {
@@ -3683,10 +3730,23 @@ function hasTelegramSystemBackButton() {
   return !!(tgApp?.BackButton && typeof tgApp.BackButton.show === "function");
 }
 
+function getStableGuestPlayerId() {
+  const storageKey = "bobr_world_guest_player_id_v1";
+  try {
+    const existingId = localStorage.getItem(storageKey);
+    if (existingId) return existingId;
+    const nextId = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(storageKey, nextId);
+    return nextId;
+  } catch (error) {
+    return `guest_session_${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
 function getCurrentPlayer() {
   const nicknameEl = document.getElementById("nickname");
   const fallbackName = nicknameEl?.innerText?.trim() || "Игрок";
-  const id = tgUser?.id ? String(tgUser.id) : `guest_${fallbackName}`;
+  const id = tgUser?.id ? String(tgUser.id) : getStableGuestPlayerId();
   const name = tgUser?.username || tgUser?.first_name || fallbackName;
   return {
     id,
@@ -3975,6 +4035,34 @@ function applyProfileAvatar(element, avatarUrl, fallbackText) {
     });
 }
 
+
+function setTextContentIfChanged(element, value) {
+  if (!element) return false;
+  const nextText = String(value ?? "");
+  if (element.textContent === nextText) return false;
+  element.textContent = nextText;
+  return true;
+}
+
+function setBalanceTextIfChanged(element, value) {
+  if (!element) return;
+  const nextText = String(value ?? "");
+  const changed = setTextContentIfChanged(element, nextText);
+  if (!changed) return;
+
+  element.classList.add("balance-soft-update");
+  if (element.dataset.balanceUpdateTimer) {
+    clearTimeout(Number(element.dataset.balanceUpdateTimer));
+  }
+  const timerId = setTimeout(() => {
+    if (element.isConnected) {
+      element.classList.remove("balance-soft-update");
+      delete element.dataset.balanceUpdateTimer;
+    }
+  }, 260);
+  element.dataset.balanceUpdateTimer = String(timerId);
+}
+
 function renderTopProfile() {
   const currentPlayer = getCurrentPlayer();
   const nicknameEl = document.getElementById("nickname");
@@ -3983,26 +4071,29 @@ function renderTopProfile() {
   const fallbackInitial = getPlayerInitial(currentPlayer.name);
 
   if (nicknameEl) {
-    nicknameEl.innerText = currentPlayer.name;
+    setTextContentIfChanged(nicknameEl, currentPlayer.name);
   }
 
   if (avatarEl) {
-    applyProfileAvatar(avatarEl, currentPlayer.avatar, fallbackInitial);
+    const avatarKey = `${currentPlayer.avatar || ""}__${fallbackInitial}__${currentPlayer.name || ""}`;
+    if (avatarEl.dataset.profileAvatarKey !== avatarKey) {
+      avatarEl.dataset.profileAvatarKey = avatarKey;
+      applyProfileAvatar(avatarEl, currentPlayer.avatar, fallbackInitial);
+    }
   }
 
   if (balanceEl) {
-    balanceEl.innerText = formatBalance(getCurrentBalanceRaw());
+    setBalanceTextIfChanged(balanceEl, formatBalance(getCurrentBalanceRaw()));
   }
 
   if (currentMenuView === "profile") {
     renderProfileScreen({ reloadBestWin: false });
   }
 }
-
 function renderProfileBestWinValue() {
   const bestWinEl = document.getElementById("profileBestWinValue");
   if (bestWinEl) {
-    bestWinEl.textContent = formatTon(currentProfileBestRoundWin || 0);
+    setBalanceTextIfChanged(bestWinEl, formatTon(currentProfileBestRoundWin || 0));
   }
 }
 
@@ -4079,15 +4170,15 @@ function renderProfileScreen(options = {}) {
   }
 
   if (profileNameEl) {
-    profileNameEl.textContent = currentPlayer.name || "Игрок";
+    setTextContentIfChanged(profileNameEl, currentPlayer.name || "Игрок");
   }
 
   if (profileIdEl) {
-    profileIdEl.textContent = `ID: ${currentPlayer.id || "—"}`;
+    setTextContentIfChanged(profileIdEl, `ID: ${currentPlayer.id || "—"}`);
   }
 
   if (profileBalanceEl) {
-    profileBalanceEl.textContent = formatBalance(getCurrentBalanceRaw());
+    setBalanceTextIfChanged(profileBalanceEl, formatBalance(getCurrentBalanceRaw()));
   }
 
   renderProfileBestWinValue();
@@ -5811,12 +5902,19 @@ function syncScannerDerivedState() {
   const participantsSnapshot = Array.isArray(scannerRealtime.participants) ? scannerRealtime.participants.slice() : [];
   const roundStatus = String(round?.status || "idle");
   const participantsReady = !round?.id || (!!scannerRealtime.participantsReady && !scannerRealtime.participantsError);
+  const previousRenderParticipants = Array.isArray(scannerGridState.participants)
+    ? scannerGridState.participants.slice()
+    : [];
+  const renderParticipants = participantsReady
+    ? getRoundParticipantsForRender(round, participantsSnapshot)
+    : previousRenderParticipants;
   const shouldHoldNeutralArena = !!(
     round &&
     !participantsReady &&
-    ["waiting", "countdown", "active"].includes(roundStatus)
+    ["waiting", "countdown", "active"].includes(roundStatus) &&
+    renderParticipants.length === 0 &&
+    scannerGridState.players.length === 0
   );
-  const renderParticipants = participantsReady ? getRoundParticipantsForRender(round, participantsSnapshot) : [];
   const realParticipantCount = renderParticipants.length;
 
   scannerGridState.roundData = round;
@@ -7019,7 +7117,7 @@ function toggleScannerRecentRounds(event) {
 
 function setButtonState(button, { disabled = false, text = null } = {}) {
   if (!button) return;
-  if (text !== null) button.textContent = text;
+  if (text !== null) setTextContentIfChanged(button, text);
   button.disabled = !!disabled;
   button.style.opacity = disabled ? "0.55" : "1";
   button.style.cursor = disabled ? "default" : "pointer";
@@ -7116,7 +7214,7 @@ function renderScannerParticipants() {
   const expanded = !!scannerGridState.playersExpanded;
 
   if (countEl) {
-    countEl.textContent = formatCompactNumber(playersCount);
+    setTextContentIfChanged(countEl, formatCompactNumber(playersCount));
   }
 
   if (toggleButton) {
@@ -7128,7 +7226,7 @@ function renderScannerParticipants() {
   list.className = `scanner-player-list ${expanded ? "is-expanded" : "is-collapsed"}`;
 
   if (!scannerGridState.players.length) {
-    meta.textContent = "";
+    setTextContentIfChanged(meta, "");
     meta.innerHTML = "";
     list.innerHTML = "";
     return;
@@ -7293,42 +7391,52 @@ function isScannerBetBarContextActive() {
     !stakeSettingsOpen;
 }
 
+function getScannerArenaFocusState() {
+  const arena = document.getElementById("scannerGridCanvas");
+  if (!arena || !isScannerBetBarContextActive()) return false;
+
+  const rect = arena.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+  const arenaCenter = rect.top + rect.height / 2;
+  const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+  const visiblePart = rect.height > 0 ? visibleHeight / rect.height : 0;
+  const navSafeTop = viewportHeight - 128;
+
+  const isArenaInWorkingZone =
+    rect.width > 0 &&
+    rect.height > 0 &&
+    rect.right > 0 &&
+    rect.left < viewportWidth &&
+    visiblePart >= 0.18 &&
+    rect.bottom > viewportHeight * 0.10 &&
+    rect.top < navSafeTop &&
+    arenaCenter > viewportHeight * 0.10 &&
+    arenaCenter < viewportHeight * 0.82;
+
+  return !!isArenaInWorkingZone;
+}
+
+function updateScannerTopUiForArenaFocus(shouldHide = null) {
+  const topBar = document.querySelector(".top-bar");
+  if (!topBar) return;
+  const focused = shouldHide === null ? getScannerArenaFocusState() : !!shouldHide;
+  topBar.classList.toggle("scanner-focus-ui", focused);
+}
+
 function updateScannerBetBarVisibility() {
   const bar = document.getElementById("scannerBetBar");
-  const arena = document.getElementById("scannerGridCanvas");
-  if (!bar || !arena) return;
+  if (!bar) return;
 
-  let shouldShow = false;
-  if (isScannerBetBarContextActive()) {
-    const rect = arena.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-    const arenaCenter = rect.top + rect.height / 2;
-    const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
-    const visiblePart = rect.height > 0 ? visibleHeight / rect.height : 0;
-    const navSafeTop = viewportHeight - 128;
-
-    const isArenaInWorkingZone =
-      rect.width > 0 &&
-      rect.height > 0 &&
-      rect.right > 0 &&
-      rect.left < viewportWidth &&
-      visiblePart >= 0.18 &&
-      rect.bottom > viewportHeight * 0.10 &&
-      rect.top < navSafeTop &&
-      arenaCenter > viewportHeight * 0.10 &&
-      arenaCenter < viewportHeight * 0.82;
-
-    shouldShow = !!isArenaInWorkingZone;
-  }
-
+  const shouldShow = getScannerArenaFocusState();
   bar.classList.toggle("is-visible", shouldShow);
+  updateScannerTopUiForArenaFocus(shouldShow);
+
   const notice = document.getElementById("appNotice");
   if (notice?.classList.contains("open")) {
     updateAppNoticePosition();
   }
 }
-
 function requestScannerBetBarVisibilityUpdate() {
   if (scannerBetBarVisibilityFrame) return;
   scannerBetBarVisibilityFrame = requestAnimationFrame(() => {
@@ -7392,6 +7500,20 @@ function renderScannerButtons() {
   setButtonState(joinButton, { disabled, text });
 }
 
+
+function getScannerResultRevealProgress() {
+  if (!scannerGridState.animation || !scannerGridState.animation.active) return 1;
+  const duration = Math.max(1, Number(scannerGridState.animation.duration) || 1);
+  return Math.max(0, Math.min(1, (performance.now() - scannerGridState.animation.startedAt) / duration));
+}
+
+function isScannerResultRevealReady() {
+  const status = String(scannerGridState.status || "idle");
+  if (!["finished", "preparing_next_round"].includes(status)) return false;
+  if (!scannerGridState.winningPlayer || !Number.isInteger(scannerGridState.winningCellIndex)) return false;
+  return getScannerResultRevealProgress() >= 0.985;
+}
+
 function getScannerRoundOverlayLeft() {
   if (scannerGridState.status === "idle" || scannerGridState.totalPlayers <= 0) {
     return "Арена: ожидание игроков";
@@ -7412,9 +7534,13 @@ function getScannerRoundOverlayRight() {
     case "active":
       return "Зоны рассеяны по полю";
     case "finished":
-      return `Победитель: ${scannerGridState.winningPlayer?.name || "—"}`;
+      return isScannerResultRevealReady()
+        ? `Победитель: ${scannerGridState.winningPlayer?.name || "—"}`
+        : "Лазер сканирует";
     case "preparing_next_round":
-      return "Подготовка новой lobby";
+      return isScannerResultRevealReady()
+        ? "Результат показан"
+        : "Лазер сканирует";
     default:
       return "Лазер в ожидании";
   }
@@ -7439,34 +7565,39 @@ function renderScannerRound() {
   const resultText = document.getElementById("scannerResultText");
 
   const myChanceValue = formatPercent(((myPlayer?.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
-  if (countdown) countdown.textContent = formatCountdownMs(scannerGridState.countdownMs || 0);
-  if (poolChip) poolChip.textContent = `Банк: ${formatTon(scannerGridState.totalPot || 0)}`;
-  if (chanceChip) chanceChip.textContent = `Мои шансы: ${myChanceValue}`;
-  if (selectedStake) selectedStake.textContent = formatTon(scannerGridState.selectedStake);
-  if (selectedPopulation) selectedPopulation.textContent = scannerGridState.roundData ? formatCompactNumber(scannerGridState.maxPlayers || 0) : formatCompactNumber(scannerGridState.selectedPopulation);
-  if (cellsValue) cellsValue.textContent = formatCompactNumber(SCANNER_GRID_TOTAL_CELLS);
-  if (metaLeft) metaLeft.textContent = getScannerRoundOverlayLeft();
-  if (metaRight) metaRight.textContent = getScannerRoundOverlayRight();
+  if (countdown) setTextContentIfChanged(countdown, formatCountdownMs(scannerGridState.countdownMs || 0));
+  if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(scannerGridState.totalPot || 0)}`);
+  if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${myChanceValue}`);
+  if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
+  if (selectedPopulation) setTextContentIfChanged(selectedPopulation, scannerGridState.roundData ? formatCompactNumber(scannerGridState.maxPlayers || 0) : formatCompactNumber(scannerGridState.selectedPopulation));
+  if (cellsValue) setTextContentIfChanged(cellsValue, formatCompactNumber(SCANNER_GRID_TOTAL_CELLS));
+  if (metaLeft) setTextContentIfChanged(metaLeft, getScannerRoundOverlayLeft());
+  if (metaRight) setTextContentIfChanged(metaRight, getScannerRoundOverlayRight());
   if (footnote) {
     footnote.textContent = "";
     footnote.style.display = "none";
   }
 
   if (resultBanner && resultTitle && resultText) {
-    if ((scannerGridState.status === "finished" || scannerGridState.status === "preparing_next_round") && scannerGridState.winningPlayer) {
+    const isResultPhase = scannerGridState.status === "finished" || scannerGridState.status === "preparing_next_round";
+    if (isResultPhase && scannerGridState.winningPlayer && !isScannerResultRevealReady()) {
+      resultBanner.style.display = "block";
+      setTextContentIfChanged(resultTitle, "Лазер сканирует...");
+      setTextContentIfChanged(resultText, "Результат появится после завершения движения лазера.");
+    } else if (isResultPhase && scannerGridState.winningPlayer) {
       const myWin = scannerGridState.winningPlayer.id === getCurrentPlayer().id;
       resultBanner.style.display = "block";
-      resultTitle.textContent = myWin ? "Ты выиграл общий раунд" : `Победитель: ${scannerGridState.winningPlayer.name}`;
+      setTextContentIfChanged(resultTitle, myWin ? "Ты выиграл общий раунд" : `Победитель: ${scannerGridState.winningPlayer.name}`);
       const payout = Number(scannerGridState.roundData?.winnerPayout || scannerGridState.totalPot || 0);
       const winnerStake = Number(scannerGridState.winningPlayer.stake || scannerGridState.roundData?.winnerStake || 0);
       const grossProfit = Number(scannerGridState.roundData?.winnerGrossProfit ?? Math.max(0, Number(scannerGridState.totalPot || 0) - winnerStake));
       const commissionPercent = Number(scannerGridState.roundData?.commissionPercent || getScannerCommissionPercent(grossProfit));
       const commissionAmount = Number(scannerGridState.roundData?.commissionAmount || 0);
-      resultText.textContent = `${scannerGridState.winningPlayer.name} получает ${formatTon(payout)}. Банк: ${formatTon(scannerGridState.totalPot)} · ставка победителя: ${formatTon(winnerStake)} · чистая прибыль: ${formatTon(grossProfit)} · комиссия с прибыли: ${commissionPercent}% (${formatTon(commissionAmount)}) · победная клетка #${scannerGridState.winningCellIndex}.`;
+      setTextContentIfChanged(resultText, `${scannerGridState.winningPlayer.name} получает ${formatTon(payout)}. Банк: ${formatTon(scannerGridState.totalPot)} · ставка победителя: ${formatTon(winnerStake)} · чистая прибыль: ${formatTon(grossProfit)} · комиссия с прибыли: ${commissionPercent}% (${formatTon(commissionAmount)}).`);
     } else {
       resultBanner.style.display = "none";
-      resultTitle.textContent = "";
-      resultText.textContent = "";
+      setTextContentIfChanged(resultTitle, "");
+      setTextContentIfChanged(resultText, "");
     }
   }
 
@@ -7704,6 +7835,73 @@ function drawScannerLens(ctx, sourceCanvas, x, y, radius, surfaceSize, options =
   ctx.restore();
 }
 
+
+function getScannerBeamTextLightIntensity(beamSample, textBox, size) {
+  if (!beamSample || !textBox || !size) return 0;
+  const bx = beamSample.x * size;
+  const by = beamSample.y * size;
+  const angle = Number(beamSample.angle) || 0;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const tx = textBox.x + textBox.width / 2;
+  const ty = textBox.y + textBox.height / 2;
+  const dx = tx - bx;
+  const dy = ty - by;
+  const lineDistance = Math.abs(dx * sin - dy * cos);
+  const alongDistance = Math.abs(dx * cos + dy * sin);
+  const reticleDistance = Math.hypot(dx, dy);
+  const lineReach = size * 0.64;
+  const lineFalloff = size * 0.13;
+  const reticleFalloff = size * 0.24;
+  const lineIntensity = alongDistance <= lineReach
+    ? Math.max(0, 1 - lineDistance / lineFalloff)
+    : 0;
+  const reticleIntensity = Math.max(0, 1 - reticleDistance / reticleFalloff);
+  return Math.max(lineIntensity * 0.9, reticleIntensity);
+}
+
+function drawScannerWaitingText(ctx, size, beamSample) {
+  const text = "ожидание раунда";
+  const fontSize = Math.max(22, Math.min(38, size * 0.074));
+  const centerX = size / 2;
+  const centerY = size / 2;
+
+  ctx.save();
+  ctx.font = `900 ${fontSize}px Arial`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const measured = ctx.measureText(text);
+  const textBox = {
+    x: centerX - measured.width / 2,
+    y: centerY - fontSize * 0.58,
+    width: measured.width,
+    height: fontSize * 1.18
+  };
+  const light = getScannerBeamTextLightIntensity(beamSample, textBox, size);
+  const baseAlpha = 0.72 + light * 0.28;
+
+  ctx.shadowBlur = 18 + light * 34;
+  ctx.shadowColor = `rgba(45, 225, 255, ${0.30 + light * 0.44})`;
+  ctx.fillStyle = `rgba(235, 249, 255, ${baseAlpha})`;
+  ctx.fillText(text, centerX, centerY);
+
+  if (light > 0.04) {
+    ctx.globalAlpha = light * 0.78;
+    ctx.shadowBlur = 28;
+    ctx.shadowColor = "rgba(255,255,255,0.78)";
+    ctx.fillStyle = "rgba(255,255,255,0.82)";
+    ctx.fillText(text, centerX, centerY);
+  }
+
+  ctx.globalAlpha = 0.42 + light * 0.24;
+  ctx.font = `700 ${Math.max(11, fontSize * 0.38)}px Arial`;
+  ctx.shadowBlur = 12 + light * 16;
+  ctx.shadowColor = `rgba(45, 225, 255, ${0.22 + light * 0.28})`;
+  ctx.fillStyle = `rgba(193, 220, 255, ${0.62 + light * 0.28})`;
+  ctx.fillText("лазер готовит общий вход", centerX, centerY + fontSize * 0.84);
+  ctx.restore();
+}
+
 function drawScannerIdleArena(ctx, size, now) {
   const gradient = ctx.createLinearGradient(0, 0, 0, size);
   gradient.addColorStop(0, "#02050c");
@@ -7738,12 +7936,7 @@ function drawScannerIdleArena(ctx, size, now) {
   });
   ctx.restore();
 
-  ctx.save();
-  ctx.fillStyle = "rgba(255,255,255,0.04)";
-  ctx.font = `${Math.max(12, size * 0.038)}px Arial`;
-  ctx.textAlign = "center";
-  ctx.fillText("Ожидание общего раунда", size / 2, size - 24);
-  ctx.restore();
+  drawScannerWaitingText(ctx, size, idleSample);
 }
 
 function drawScannerPlayerBadge(ctx, zone, size, alpha = 1) {
@@ -8032,26 +8225,35 @@ function renderScannerCanvas() {
     ctx.restore();
   }
 
-  drawScannerWinnerHighlight(ctx, cellSize);
+  if (isScannerResultRevealReady()) {
+    drawScannerWinnerHighlight(ctx, cellSize);
+  }
 }
 
 function subscribeScannerParticipants(roundId) {
+  const nextRoundId = roundId ? String(roundId) : null;
+
+  if (scannerRealtime.participantsRoundId === nextRoundId && scannerRealtime.unsubParticipants) {
+    return;
+  }
+
   if (scannerRealtime.unsubParticipants) {
     scannerRealtime.unsubParticipants();
     scannerRealtime.unsubParticipants = null;
   }
 
-  scannerRealtime.participants = [];
-  scannerRealtime.participantsReady = !roundId;
+  scannerRealtime.participantsRoundId = nextRoundId;
+  scannerRealtime.participants = nextRoundId ? scannerRealtime.participants : [];
+  scannerRealtime.participantsReady = !nextRoundId;
   scannerRealtime.participantsError = false;
 
-  if (!roundId) {
+  if (!nextRoundId) {
     syncScannerDerivedState();
     renderScannerRound();
     return;
   }
 
-  scannerRealtime.unsubParticipants = scannerParticipantsCollection(roundId)
+  scannerRealtime.unsubParticipants = scannerParticipantsCollection(nextRoundId)
     .orderBy("joinedAt", "asc")
     .onSnapshot((snapshot) => {
       const items = [];
@@ -8063,14 +8265,12 @@ function subscribeScannerParticipants(roundId) {
       renderScannerRound();
     }, (error) => {
       console.error("Ошибка подписки на участников раунда:", error);
-      scannerRealtime.participants = [];
       scannerRealtime.participantsReady = false;
       scannerRealtime.participantsError = true;
       syncScannerDerivedState();
       renderScannerRound();
     });
 }
-
 function subscribeScannerRound(roundId) {
   if (scannerRealtime.unsubRound) {
     scannerRealtime.unsubRound();
@@ -8079,23 +8279,28 @@ function subscribeScannerRound(roundId) {
 
   scannerRealtime.roundData = null;
   scannerRealtime.roundReady = !roundId;
-  scannerRealtime.participants = [];
-  scannerRealtime.participantsReady = !roundId;
-  scannerRealtime.participantsError = false;
   scannerRealtime.activeRoundId = roundId || null;
-  subscribeScannerParticipants(null);
 
   if (!roundId) {
+    subscribeScannerParticipants(null);
     syncScannerDerivedState();
     renderScannerRound();
     return;
   }
 
+  subscribeScannerParticipants(roundId);
+
   const roundRef = scannerRoundRef(roundId);
   scannerRealtime.unsubRound = roundRef.onSnapshot((snapshot) => {
     scannerRealtime.roundReady = true;
     scannerRealtime.roundData = snapshot.exists ? { id: snapshot.id, ...(snapshot.data() || {}) } : null;
-    subscribeScannerParticipants(snapshot.exists ? roundId : null);
+
+    if (!snapshot.exists) {
+      subscribeScannerParticipants(null);
+    } else if (scannerRealtime.participantsRoundId !== String(roundId)) {
+      subscribeScannerParticipants(roundId);
+    }
+
     syncScannerDerivedState();
     renderScannerRound();
     ensureScannerRoundLifecycle().catch((error) => console.warn("Не удалось синхронизировать фазу раунда:", error));
@@ -8108,7 +8313,6 @@ function subscribeScannerRound(roundId) {
     renderScannerRound();
   });
 }
-
 function subscribeScannerRuntime() {
   if (scannerRealtime.unsubRuntime) {
     scannerRealtime.unsubRuntime();
