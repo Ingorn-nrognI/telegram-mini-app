@@ -7412,8 +7412,8 @@ function renderScannerRecentList() {
       <div class="scanner-recent-card">
         <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
         <div class="scanner-recent-copy">
-          <div class="scanner-recent-title">${finishedAtText}</div>
-          <div class="scanner-recent-meta">Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText} · Победитель: ${escapeHtml(winnerNickname)}</div>
+          <div class="scanner-recent-title">Победитель: ${escapeHtml(winnerNickname)}</div>
+          <div class="scanner-recent-meta">Дата и время: ${finishedAtText} · Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText}</div>
         </div>
         <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
       </div>
