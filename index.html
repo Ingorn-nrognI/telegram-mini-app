@@ -3708,9 +3708,14 @@ const scannerBeamMotionState = {
 
 const scannerWaitingTextGlowState = {
   text: "",
-  values: [],
   lastUpdateAt: 0,
-  lastContactX: null
+  cacheKey: "",
+  maskCanvas: null,
+  maskCtx: null,
+  glowCanvas: null,
+  glowCtx: null,
+  paintCanvas: null,
+  paintCtx: null
 };
 
 function shouldIgnoreExternalConsoleError(message) {
@@ -7875,213 +7880,183 @@ function drawScannerLens(ctx, sourceCanvas, x, y, radius, surfaceSize, options =
 }
 
 
-function getScannerWaitingTextLetters(ctx, text, startX, centerY) {
-  const letters = [];
-  let cursorX = startX;
-
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    const width = ctx.measureText(char).width;
-    letters.push({
-      char,
-      index,
-      x: cursorX,
-      centerX: cursorX + width / 2,
-      centerY,
-      width
-    });
-    cursorX += width;
-  }
-
-  return letters;
+function createScannerWaitingTextLayer(size) {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  return { canvas, ctx };
 }
 
-function getScannerWaitingTextContact(beamSample, textBox, size, fontSize) {
-  if (!beamSample || !textBox || !size || !fontSize) return null;
-
-  const bx = beamSample.x * size;
-  const by = beamSample.y * size;
-  const angle = Number(beamSample.angle) || 0;
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  const paddingX = Math.max(fontSize * 0.62, 16);
-  const paddingY = Math.max(fontSize * 0.72, 18);
-  const rect = {
-    left: textBox.x - paddingX,
-    right: textBox.x + textBox.width + paddingX,
-    top: textBox.y - paddingY,
-    bottom: textBox.y + textBox.height + paddingY
-  };
-
-  let tMin = -Infinity;
-  let tMax = Infinity;
-
-  const clipAxis = (origin, direction, min, max) => {
-    if (Math.abs(direction) < 0.0001) {
-      return origin >= min && origin <= max;
-    }
-
-    let t1 = (min - origin) / direction;
-    let t2 = (max - origin) / direction;
-
-    if (t1 > t2) {
-      const temp = t1;
-      t1 = t2;
-      t2 = temp;
-    }
-
-    tMin = Math.max(tMin, t1);
-    tMax = Math.min(tMax, t2);
-    return tMin <= tMax;
-  };
-
-  if (!clipAxis(bx, cos, rect.left, rect.right)) return null;
-  if (!clipAxis(by, sin, rect.top, rect.bottom)) return null;
-
-  const tContact = tMin <= 0 && tMax >= 0
-    ? 0
-    : (Math.abs(tMin) < Math.abs(tMax) ? tMin : tMax);
-
-  const contactX = bx + cos * tContact;
-  const contactY = by + sin * tContact;
-  const nearestTextX = Math.max(textBox.x, Math.min(textBox.x + textBox.width, contactX));
-  const nearestTextY = Math.max(textBox.y, Math.min(textBox.y + textBox.height, contactY));
-  const distanceToText = Math.hypot(contactX - nearestTextX, contactY - nearestTextY);
-  const contactPower = Math.max(0, 1 - distanceToText / Math.max(1, fontSize * 0.95));
-
-  if (contactPower <= 0.03) return null;
-
-  return {
-    x: contactX,
-    y: contactY,
-    power: Math.max(0, Math.min(1, 0.72 + contactPower * 0.28)),
-    angle,
-    beamX: bx,
-    beamY: by,
-    cos,
-    sin
-  };
-}
-
-function updateScannerWaitingTextGlowValues(text, letters, contact, fontSize) {
-  const now = performance.now();
+function getScannerWaitingTextCache(text, font, size, startX, centerY, fontSize, measuredWidth) {
   const state = scannerWaitingTextGlowState;
+  const roundedSize = Math.max(1, Math.round(size));
+  const cacheKey = [
+    text,
+    font,
+    roundedSize,
+    Math.round(startX * 10),
+    Math.round(centerY * 10),
+    Math.round(measuredWidth * 10),
+    Math.round(fontSize * 10)
+  ].join("|");
 
-  if (state.text !== text || state.values.length !== letters.length) {
+  if (
+    state.cacheKey !== cacheKey ||
+    !state.maskCanvas ||
+    !state.glowCanvas ||
+    !state.paintCanvas ||
+    state.maskCanvas.width !== roundedSize ||
+    state.maskCanvas.height !== roundedSize
+  ) {
+    const maskLayer = createScannerWaitingTextLayer(roundedSize);
+    const glowLayer = createScannerWaitingTextLayer(roundedSize);
+    const paintLayer = createScannerWaitingTextLayer(roundedSize);
+
+    maskLayer.ctx.clearRect(0, 0, roundedSize, roundedSize);
+    maskLayer.ctx.font = font;
+    maskLayer.ctx.textAlign = "left";
+    maskLayer.ctx.textBaseline = "middle";
+    maskLayer.ctx.fillStyle = "rgba(255,255,255,1)";
+    maskLayer.ctx.fillText(text, startX, centerY);
+
     state.text = text;
-    state.values = new Array(letters.length).fill(0);
-    state.lastContactX = null;
-    state.lastUpdateAt = now;
-    state.missedContactMs = 0;
+    state.lastUpdateAt = performance.now();
+    state.cacheKey = cacheKey;
+    state.maskCanvas = maskLayer.canvas;
+    state.maskCtx = maskLayer.ctx;
+    state.glowCanvas = glowLayer.canvas;
+    state.glowCtx = glowLayer.ctx;
+    state.paintCanvas = paintLayer.canvas;
+    state.paintCtx = paintLayer.ctx;
   }
 
-  const elapsed = state.lastUpdateAt ? Math.min(120, Math.max(0, now - state.lastUpdateAt)) : 16;
-  state.lastUpdateAt = now;
-
-  const fade = Math.pow(0.08, elapsed / 620);
-  for (let index = 0; index < state.values.length; index += 1) {
-    state.values[index] *= fade;
-    if (state.values[index] < 0.004) state.values[index] = 0;
-  }
-
-  if (!contact) {
-    state.missedContactMs = (state.missedContactMs || 0) + elapsed;
-    if (state.missedContactMs > 180) {
-      state.lastContactX = null;
-    }
-    return state.values;
-  }
-
-  state.missedContactMs = 0;
-
-  const visibleLetters = letters.filter((letter) => letter.char.trim());
-  const averageLetterWidth = visibleLetters.length
-    ? visibleLetters.reduce((sum, letter) => sum + letter.width, 0) / visibleLetters.length
-    : fontSize * 0.54;
-  const hotRadius = Math.max(fontSize * 0.54, averageLetterWidth * 1.2);
-  const trailRadius = Math.max(fontSize * 1.05, averageLetterWidth * 2.7);
-  const beamReach = Math.max(fontSize * 0.78, averageLetterWidth * 1.65);
-  const directionDelta = state.lastContactX === null ? 0 : contact.x - state.lastContactX;
-  const direction = Math.abs(directionDelta) > averageLetterWidth * 0.06 ? Math.sign(directionDelta) : 0;
-
-  letters.forEach((letter, index) => {
-    if (!letter.char.trim()) return;
-
-    const horizontalDistance = Math.abs(letter.centerX - contact.x);
-    const lineDistance = Math.abs(
-      ((letter.centerX - contact.beamX) * contact.sin) -
-      ((letter.centerY - contact.beamY) * contact.cos)
-    );
-    const beamLetterContact = Math.max(0, 1 - lineDistance / beamReach);
-    const currentLight = Math.max(0, 1 - horizontalDistance / hotRadius) * beamLetterContact;
-    let trailLight = 0;
-
-    if (direction !== 0) {
-      const behindDistance = direction > 0
-        ? contact.x - letter.centerX
-        : letter.centerX - contact.x;
-      if (behindDistance > 0 && behindDistance <= trailRadius) {
-        trailLight = Math.max(0, 1 - behindDistance / trailRadius) * 0.64 * Math.max(0.42, beamLetterContact);
-      }
-    } else if (horizontalDistance <= trailRadius) {
-      trailLight = Math.max(0, 1 - horizontalDistance / trailRadius) * 0.34 * Math.max(0.42, beamLetterContact);
-    }
-
-    const activation = Math.max(currentLight, trailLight) * contact.power;
-    state.values[index] = Math.max(state.values[index], Math.min(1, activation));
-  });
-
-  state.lastContactX = contact.x;
-  return state.values;
+  return state;
 }
 
-function drawScannerWaitingText(ctx, size, beamSample) {
+function fadeScannerWaitingTextGlowLayer(cache) {
+  if (!cache?.glowCtx || !cache.glowCanvas) return;
+
+  const now = performance.now();
+  const elapsed = cache.lastUpdateAt ? Math.min(90, Math.max(0, now - cache.lastUpdateAt)) : 16;
+  cache.lastUpdateAt = now;
+
+  const retainedAlpha = Math.pow(0.035, elapsed / 620);
+  const fadeAlpha = Math.max(0.035, Math.min(0.18, 1 - retainedAlpha));
+  const ctx = cache.glowCtx;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fillStyle = `rgba(0,0,0,${fadeAlpha})`;
+  ctx.fillRect(0, 0, cache.glowCanvas.width, cache.glowCanvas.height);
+  ctx.restore();
+}
+
+function drawScannerWaitingTextBeamStrip(layerCtx, from, to, softWidth, coreWidth) {
+  if (!Number.isFinite(from) || !Number.isFinite(to) || Math.abs(to - from) < 0.5) return;
+
+  const width = to - from;
+  const softGradient = layerCtx.createLinearGradient(0, -softWidth, 0, softWidth);
+  softGradient.addColorStop(0, "rgba(45,225,255,0)");
+  softGradient.addColorStop(0.18, "rgba(45,225,255,0.10)");
+  softGradient.addColorStop(0.42, "rgba(45,225,255,0.44)");
+  softGradient.addColorStop(0.5, "rgba(255,255,255,0.82)");
+  softGradient.addColorStop(0.58, "rgba(45,225,255,0.44)");
+  softGradient.addColorStop(0.82, "rgba(45,225,255,0.10)");
+  softGradient.addColorStop(1, "rgba(45,225,255,0)");
+
+  layerCtx.fillStyle = softGradient;
+  layerCtx.fillRect(from, -softWidth, width, softWidth * 2);
+
+  const coreGradient = layerCtx.createLinearGradient(0, -coreWidth, 0, coreWidth);
+  coreGradient.addColorStop(0, "rgba(255,255,255,0)");
+  coreGradient.addColorStop(0.36, "rgba(224,252,255,0.62)");
+  coreGradient.addColorStop(0.5, "rgba(255,255,255,0.96)");
+  coreGradient.addColorStop(0.64, "rgba(224,252,255,0.62)");
+  coreGradient.addColorStop(1, "rgba(255,255,255,0)");
+
+  layerCtx.fillStyle = coreGradient;
+  layerCtx.fillRect(from, -coreWidth, width, coreWidth * 2);
+}
+
+function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, centerGap = 0) {
+  if (!cache?.paintCtx || !cache.paintCanvas || !cache.maskCanvas || !cache.glowCtx || !beamSample) return;
+
+  const bx = Math.max(-0.24, Math.min(1.24, Number(beamSample.x) || 0.5)) * size;
+  const by = Math.max(-0.24, Math.min(1.24, Number(beamSample.y) || 0.5)) * size;
+  const angle = Number.isFinite(Number(beamSample.angle)) ? Number(beamSample.angle) : 0;
+  const beamLength = size * 4.7;
+  const halfLength = beamLength / 2;
+  const gapHalf = Math.max(0, Math.min(halfLength - 2, Number(centerGap || 0) / 2));
+  const softWidth = Math.max(7, Math.min(18, fontSize * 0.34));
+  const coreWidth = Math.max(1.6, Math.min(4.2, fontSize * 0.095));
+  const paintCtx = cache.paintCtx;
+
+  paintCtx.clearRect(0, 0, cache.paintCanvas.width, cache.paintCanvas.height);
+  paintCtx.save();
+  paintCtx.translate(bx, by);
+  paintCtx.rotate(angle);
+  paintCtx.globalCompositeOperation = "source-over";
+  paintCtx.globalAlpha = 0.9;
+
+  if (gapHalf > 0) {
+    drawScannerWaitingTextBeamStrip(paintCtx, -halfLength, -gapHalf, softWidth, coreWidth);
+    drawScannerWaitingTextBeamStrip(paintCtx, gapHalf, halfLength, softWidth, coreWidth);
+  } else {
+    drawScannerWaitingTextBeamStrip(paintCtx, -halfLength, halfLength, softWidth, coreWidth);
+  }
+
+  paintCtx.restore();
+
+  paintCtx.save();
+  paintCtx.globalCompositeOperation = "destination-in";
+  paintCtx.drawImage(cache.maskCanvas, 0, 0);
+  paintCtx.restore();
+
+  cache.glowCtx.save();
+  cache.glowCtx.globalCompositeOperation = "lighter";
+  cache.glowCtx.globalAlpha = 0.72;
+  cache.glowCtx.drawImage(cache.paintCanvas, 0, 0);
+  cache.glowCtx.restore();
+}
+
+function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   const text = "Ожидание раунда...";
   const fontSize = Math.max(22, Math.min(38, size * 0.074));
   const centerX = size / 2;
   const centerY = size / 2;
+  const font = `900 ${fontSize}px Arial`;
 
   ctx.save();
-  ctx.font = `900 ${fontSize}px Arial`;
+  ctx.font = font;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
 
   const measured = ctx.measureText(text);
   const startX = centerX - measured.width / 2;
-  const textBox = {
-    x: startX,
-    y: centerY - fontSize * 0.58,
-    width: measured.width,
-    height: fontSize * 1.18
-  };
-  const letters = getScannerWaitingTextLetters(ctx, text, startX, centerY);
-  const contact = getScannerWaitingTextContact(beamSample, textBox, size, fontSize);
-  const glowValues = updateScannerWaitingTextGlowValues(text, letters, contact, fontSize);
+  const cache = getScannerWaitingTextCache(text, font, size, startX, centerY, fontSize, measured.width);
 
-  letters.forEach((letter, index) => {
-    if (!letter.char.trim()) return;
-    const glow = Math.max(0, Math.min(1, glowValues[index] || 0));
+  fadeScannerWaitingTextGlowLayer(cache);
+  addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, options.centerGap || 0);
 
-    ctx.globalAlpha = 0.58;
+  ctx.globalAlpha = 0.62;
+  ctx.shadowBlur = Math.max(5, fontSize * 0.28);
+  ctx.shadowColor = "rgba(15, 35, 64, 0.64)";
+  ctx.fillStyle = "rgba(221, 238, 255, 0.68)";
+  ctx.fillText(text, startX, centerY);
+
+  if (cache.glowCanvas) {
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 0.74;
+    ctx.shadowBlur = Math.max(10, fontSize * 0.62);
+    ctx.shadowColor = "rgba(45,225,255,0.38)";
+    ctx.drawImage(cache.glowCanvas, 0, 0, size, size);
+
+    ctx.globalAlpha = 0.92;
     ctx.shadowBlur = 0;
-    ctx.shadowColor = "transparent";
-    ctx.fillStyle = "rgba(221, 238, 255, 0.66)";
-    ctx.fillText(letter.char, letter.x, letter.centerY);
-
-    if (glow > 0.015) {
-      ctx.globalAlpha = Math.min(1, glow * 0.88);
-      ctx.shadowBlur = 16 + glow * 30;
-      ctx.shadowColor = `rgba(45, 225, 255, ${0.28 + glow * 0.48})`;
-      ctx.fillStyle = `rgba(226, 252, 255, ${0.58 + glow * 0.36})`;
-      ctx.fillText(letter.char, letter.x, letter.centerY);
-
-      ctx.globalAlpha = Math.min(1, glow * 0.54);
-      ctx.shadowBlur = 6 + glow * 16;
-      ctx.shadowColor = `rgba(255,255,255,${0.36 + glow * 0.28})`;
-      ctx.fillStyle = "rgba(255,255,255,0.94)";
-      ctx.fillText(letter.char, letter.x, letter.centerY);
-    }
-  });
+    ctx.drawImage(cache.glowCanvas, 0, 0, size, size);
+    ctx.globalCompositeOperation = "source-over";
+  }
 
   ctx.restore();
 }
@@ -8120,7 +8095,9 @@ function drawScannerIdleArena(ctx, size, now) {
   });
   ctx.restore();
 
-  drawScannerWaitingText(ctx, size, idleSample);
+  drawScannerWaitingText(ctx, size, idleSample, {
+    centerGap: idleReticleRadius * 2.7
+  });
 }
 
 function drawScannerPlayerBadge(ctx, zone, size, alpha = 1) {
