@@ -3556,6 +3556,10 @@ if (!firebase.apps.length) {
 }
 const db = firebase.firestore();
 const DEMO_TON_START_BALANCE = 1000;
+const DEMO_TON_RESET_MIGRATION_COLLECTION = "system";
+const DEMO_TON_RESET_MIGRATION_DOC = "demo_ton_balance_reset_to_1000_v1";
+const DEMO_TON_RESET_MIGRATION_TARGET = 1000;
+const DEMO_TON_RESET_MIGRATION_BATCH_SIZE = 450;
 const INSUFFICIENT_BALANCE_MESSAGE = "Для ставки не хватает баланса. Пополните свой баланс и повторите попытку.";
 let currentDemoTonBalance = 0;
 let currentDemoTonBalanceLoaded = false;
@@ -3718,6 +3722,17 @@ const scannerWaitingTextGlowState = {
   paintCtx: null
 };
 
+const SCANNER_WAITING_TEXT_VISUALS = {
+  baseAlpha: 0.42,
+  fillStyle: "rgba(210, 226, 246, 0.48)",
+  baseShadowBlurFactor: 0.16,
+  baseShadowColor: "rgba(15, 35, 64, 0.38)",
+  glowAlpha: 0.44,
+  glowFinalAlpha: 0.58,
+  glowShadowBlurFactor: 0.38,
+  glowShadowColor: "rgba(45,225,255,0.22)"
+};
+
 function shouldIgnoreExternalConsoleError(message) {
   const text = String(message || "").toLowerCase();
   return (
@@ -3871,18 +3886,65 @@ function syncLocalDemoBalance(value) {
   renderScannerBetBar();
 }
 
+function getDemoTonResetMigrationRef() {
+  return db
+    .collection(DEMO_TON_RESET_MIGRATION_COLLECTION)
+    .doc(DEMO_TON_RESET_MIGRATION_DOC);
+}
+
+function hasDemoTonBalanceField(data) {
+  return Object.prototype.hasOwnProperty.call(data || {}, "demoTonBalance");
+}
+
+async function resetAllDemoTonBalancesTo1000Once() {
+  const migrationRef = getDemoTonResetMigrationRef();
+  const migrationSnapshot = await migrationRef.get();
+  const migrationData = migrationSnapshot.exists ? (migrationSnapshot.data() || {}) : {};
+
+  if (migrationData.completed === true) {
+    return false;
+  }
+
+  const usersSnapshot = await db.collection("users").get();
+  const userRefs = [];
+  usersSnapshot.forEach((doc) => {
+    userRefs.push(doc.ref);
+  });
+
+  for (let index = 0; index < userRefs.length; index += DEMO_TON_RESET_MIGRATION_BATCH_SIZE) {
+    const batch = db.batch();
+    userRefs
+      .slice(index, index + DEMO_TON_RESET_MIGRATION_BATCH_SIZE)
+      .forEach((userRef) => {
+        batch.set(userRef, {
+          demoTonBalance: DEMO_TON_RESET_MIGRATION_TARGET
+        }, { merge: true });
+      });
+    await batch.commit();
+  }
+
+  await migrationRef.set({
+    completed: true,
+    migrationId: DEMO_TON_RESET_MIGRATION_DOC,
+    targetBalance: DEMO_TON_RESET_MIGRATION_TARGET,
+    usersUpdated: userRefs.length,
+    completedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  return true;
+}
+
 async function ensureDemoBalanceForCurrentUser() {
   const player = getCurrentPlayer();
   const userRef = getUserRef(player.id);
-  let ensuredBalance = 0;
+  let ensuredBalance = DEMO_TON_START_BALANCE;
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(userRef);
     const data = snap.exists ? (snap.data() || {}) : {};
 
-    if (!snap.exists || data.demoBalanceGranted !== true) {
-      const currentBalance = getUserDemoBalanceFromData(data);
-      ensuredBalance = normalizeMoneyValue(currentBalance + DEMO_TON_START_BALANCE);
+    if (!snap.exists || !hasDemoTonBalanceField(data)) {
+      ensuredBalance = DEMO_TON_START_BALANCE;
       tx.set(userRef, {
         playerId: player.id,
         name: player.name,
@@ -8070,20 +8132,20 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   fadeScannerWaitingTextGlowLayer(cache);
   addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, options.centerGap || 0);
 
-  ctx.globalAlpha = 0.62;
-  ctx.shadowBlur = Math.max(5, fontSize * 0.28);
-  ctx.shadowColor = "rgba(15, 35, 64, 0.64)";
-  ctx.fillStyle = "rgba(221, 238, 255, 0.68)";
+  ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.baseAlpha;
+  ctx.shadowBlur = Math.max(3, fontSize * SCANNER_WAITING_TEXT_VISUALS.baseShadowBlurFactor);
+  ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.baseShadowColor;
+  ctx.fillStyle = SCANNER_WAITING_TEXT_VISUALS.fillStyle;
   ctx.fillText(text, startX, centerY);
 
   if (cache.glowCanvas) {
     ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = 0.74;
-    ctx.shadowBlur = Math.max(10, fontSize * 0.62);
-    ctx.shadowColor = "rgba(45,225,255,0.38)";
+    ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.glowAlpha;
+    ctx.shadowBlur = Math.max(6, fontSize * SCANNER_WAITING_TEXT_VISUALS.glowShadowBlurFactor);
+    ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.glowShadowColor;
     ctx.drawImage(cache.glowCanvas, 0, 0, size, size);
 
-    ctx.globalAlpha = 0.92;
+    ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.glowFinalAlpha;
     ctx.shadowBlur = 0;
     ctx.drawImage(cache.glowCanvas, 0, 0, size, size);
     ctx.globalCompositeOperation = "source-over";
@@ -8647,9 +8709,13 @@ scannerQuickStakeValues = loadScannerQuickStakeValues();
 scannerStakeSettingsState.draftValues = scannerQuickStakeValues.map((value) => String(value));
 
 renderTopProfile();
-ensureDemoBalanceForCurrentUser()
+resetAllDemoTonBalancesTo1000Once()
+  .catch((error) => {
+    console.error("Не удалось выполнить миграцию demo TON-балансов до 1000:", error);
+  })
+  .then(() => ensureDemoBalanceForCurrentUser())
   .then(() => subscribeCurrentUserBalance())
-  .catch((error) => console.error("Не удалось выдать demo TON-баланс:", error));
+  .catch((error) => console.error("Не удалось подготовить demo TON-баланс:", error));
 homeScreenContext = "games";
 setMenuView("home");
 setActiveBottomNav("games");
