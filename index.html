@@ -7979,6 +7979,31 @@ function drawScannerWaitingTextBeamStrip(layerCtx, from, to, softWidth, coreWidt
   layerCtx.fillRect(from, -coreWidth, width, coreWidth * 2);
 }
 
+function drawScannerWaitingTextPointGlow(layerCtx, x, y, radius) {
+  const safeRadius = Math.max(4, Number(radius) || 0);
+  const haloRadius = safeRadius * 1.62;
+  const gradient = layerCtx.createRadialGradient(x, y, 0, x, y, haloRadius);
+  gradient.addColorStop(0, "rgba(255,255,255,0.98)");
+  gradient.addColorStop(0.22, "rgba(224,252,255,0.76)");
+  gradient.addColorStop(0.48, "rgba(45,225,255,0.46)");
+  gradient.addColorStop(0.78, "rgba(45,225,255,0.16)");
+  gradient.addColorStop(1, "rgba(45,225,255,0)");
+
+  layerCtx.save();
+  layerCtx.globalCompositeOperation = "lighter";
+  layerCtx.fillStyle = gradient;
+  layerCtx.beginPath();
+  layerCtx.arc(x, y, haloRadius, 0, Math.PI * 2);
+  layerCtx.fill();
+
+  layerCtx.globalAlpha = 0.92;
+  layerCtx.fillStyle = "rgba(255,255,255,0.9)";
+  layerCtx.beginPath();
+  layerCtx.arc(x, y, Math.max(2, safeRadius * 0.34), 0, Math.PI * 2);
+  layerCtx.fill();
+  layerCtx.restore();
+}
+
 function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, centerGap = 0) {
   if (!cache?.paintCtx || !cache.paintCanvas || !cache.maskCanvas || !cache.glowCtx || !beamSample) return;
 
@@ -7990,6 +8015,10 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   const gapHalf = Math.max(0, Math.min(halfLength - 2, Number(centerGap || 0) / 2));
   const softWidth = Math.max(7, Math.min(18, fontSize * 0.34));
   const coreWidth = Math.max(1.6, Math.min(4.2, fontSize * 0.095));
+  const visualPointRadius = centerGap > 0
+    ? Math.max(softWidth, Number(centerGap || 0) / 2.7)
+    : Math.max(softWidth, fontSize * 0.42);
+  const textPointInfluenceRadius = Math.max(visualPointRadius, fontSize * 0.48);
   const paintCtx = cache.paintCtx;
 
   paintCtx.clearRect(0, 0, cache.paintCanvas.width, cache.paintCanvas.height);
@@ -8007,6 +8036,8 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   }
 
   paintCtx.restore();
+
+  drawScannerWaitingTextPointGlow(paintCtx, bx, by, textPointInfluenceRadius);
 
   paintCtx.save();
   paintCtx.globalCompositeOperation = "destination-in";
