@@ -1593,26 +1593,105 @@ button {
 }
 
 .scanner-result-banner {
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 18px;
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 16px);
+  width: min(calc(100vw - 24px), 480px);
+  padding: 15px 16px;
+  border-radius: 22px;
   background:
-    linear-gradient(135deg, rgba(18, 35, 84, 0.96), rgba(7, 12, 28, 0.94)),
-    radial-gradient(circle at 100% 0%, rgba(45, 225, 255, 0.12), transparent 35%);
-  border: 1px solid rgba(255,255,255,0.08);
+    linear-gradient(135deg, rgba(18, 35, 84, 0.98), rgba(7, 12, 28, 0.96)),
+    radial-gradient(circle at 100% 0%, rgba(45, 225, 255, 0.18), transparent 36%);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow:
+    0 22px 42px rgba(0, 0, 0, 0.42),
+    0 0 28px rgba(45, 225, 255, 0.12);
+  backdrop-filter: blur(16px);
+  z-index: 110;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 18px) scale(0.98);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.scanner-result-banner.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
 }
 
 .scanner-result-title {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin-bottom: 6px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #dff9ff;
+  margin-bottom: 10px;
 }
 
 .scanner-result-text {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.scanner-result-item {
+  min-width: 0;
+  padding: 10px 11px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.scanner-result-label {
+  display: block;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.scanner-result-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font-size: 14px;
-  color: var(--text-soft);
-  line-height: 1.55;
+  line-height: 1.35;
+  font-weight: 800;
+  color: #f6fbff;
+}
+
+.scanner-result-color-swatch {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
+}
+
+.scanner-result-value span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .scanner-result-banner {
+    width: calc(100vw - 16px);
+    bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 14px);
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .scanner-result-text {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 }
 
 .scanner-home-hub {
@@ -1849,9 +1928,6 @@ button {
   bottom: 12px;
 }
 
-.scanner-result-banner {
-  margin-top: 10px;
-}
 
 @media (max-width: 420px) {
   #scannerGridCanvas {
@@ -3595,9 +3671,10 @@ const SCANNER_STAKE_PRESETS = [2, 5, 10, 25, 50, 100, 250];
 const SCANNER_POPULATION_PRESETS = [2, 12, 48, 150, 400, 1000];
 const SCANNER_COUNTDOWN_MS = 30000;
 const SCANNER_ACTIVE_MS = 20000;
-const SCANNER_FINISHED_MS = 1200;
-const SCANNER_PREPARING_MS = 4000;
-const SCANNER_PREVIEW_TRANSITION_MS = 2600;
+const SCANNER_FINISHED_MS = 4200;
+const SCANNER_PREPARING_MS = 2200;
+const SCANNER_PREVIEW_TRANSITION_MS = 1100;
+const SCANNER_SHUFFLING_MS = SCANNER_PREVIEW_TRANSITION_MS + SCANNER_PREPARING_MS;
 const SCANNER_EDGE_LATCH_MS = 3400;
 const SCANNER_ACTIVE_BEAM_STEPS = 360;
 const SCANNER_ACTIVE_BEAM_BASE_SPEED = 1.68;
@@ -4164,6 +4241,14 @@ function setTextContentIfChanged(element, value) {
   const nextText = String(value ?? "");
   if (element.textContent === nextText) return false;
   element.textContent = nextText;
+  return true;
+}
+
+function setInnerHtmlIfChanged(element, value) {
+  if (!element) return false;
+  const nextHtml = String(value ?? "");
+  if (element.innerHTML === nextHtml) return false;
+  element.innerHTML = nextHtml;
   return true;
 }
 
@@ -6177,6 +6262,45 @@ function getScannerCountdownBeamSample(round, fallbackSample, players) {
   return interpolateScannerBeamState(fallbackSample, edgeSample, latchProgress);
 }
 
+function getScannerShuffleProgress(round) {
+  if (String(round?.status || "") !== "shuffling") return 0;
+  const startedAt = tsToMs(round?.shuffleStartedAt);
+  const endsAt = tsToMs(round?.shuffleEndsAt);
+  if (startedAt > 0 && endsAt > startedAt) {
+    return clampScannerNumber((Date.now() - startedAt) / Math.max(1, endsAt - startedAt), 0, 1);
+  }
+  if (startedAt > 0) {
+    return clampScannerNumber((Date.now() - startedAt) / SCANNER_SHUFFLING_MS, 0, 1);
+  }
+  return 0;
+}
+
+function getScannerShuffleTransitionProgress(round) {
+  const totalProgress = getScannerShuffleProgress(round);
+  const transitionShare = clampScannerNumber(SCANNER_PREVIEW_TRANSITION_MS / Math.max(1, SCANNER_SHUFFLING_MS), 0.05, 1);
+  return smoothstep(0, transitionShare, totalProgress);
+}
+
+function getScannerPreparingProgress(round) {
+  if (String(round?.status || "") !== "preparing_next_round") return 0;
+  const startedAt = tsToMs(round?.preparingStartedAt);
+  const endsAt = tsToMs(round?.preparingEndsAt);
+  if (startedAt > 0 && endsAt > startedAt) {
+    return clampScannerNumber((Date.now() - startedAt) / Math.max(1, endsAt - startedAt), 0, 1);
+  }
+  if (startedAt > 0) {
+    return clampScannerNumber((Date.now() - startedAt) / Math.max(1, SCANNER_PREPARING_MS), 0, 1);
+  }
+  return 0;
+}
+
+function getScannerPreparingBeamSample(round, players) {
+  const activeCache = getScannerActiveBeamCache(round, players || []);
+  const finalSample = activeCache?.finalSample || getScannerSharedLobbyBeamSample();
+  const roamingSample = getScannerSharedLobbyBeamSample();
+  return interpolateScannerBeamState(finalSample, roamingSample, getScannerPreparingProgress(round));
+}
+
 function stopScannerVisualAnimation() {
   scannerGridState.animation.active = false;
   scannerGridState.animation.roundId = null;
@@ -6288,6 +6412,8 @@ function getScannerStatusText(round) {
       return "waiting / lobby";
     case "countdown":
       return "countdown";
+    case "shuffling":
+      return "shuffling / settling";
     case "active":
       return "active / running";
     case "finished":
@@ -6316,7 +6442,7 @@ function hasScannerRoundVisibleState(round) {
   return participantCount > 0 ||
     totalPot > 0 ||
     hasWinner ||
-    ["countdown", "active", "finished", "preparing_next_round"].includes(status);
+    ["countdown", "shuffling", "active", "finished", "preparing_next_round"].includes(status);
 }
 
 
@@ -6377,6 +6503,8 @@ function syncScannerDerivedState() {
   let countdownMs = 0;
   if (roundStatus === "countdown") {
     countdownMs = Math.max(0, countdownEndsAt - now);
+  } else if (roundStatus === "shuffling") {
+    countdownMs = Math.max(0, tsToMs(round.shuffleEndsAt) - now);
   } else if (roundStatus === "active") {
     countdownMs = Math.max(0, activeEndsAt - now);
   } else if (roundStatus === "finished") {
@@ -6568,7 +6696,7 @@ async function joinOrCreateScannerRound() {
 
       let createNewRound = false;
       if (!hasReusableLobby) {
-        if (targetRoundRef && targetRoundData && ["active", "finished", "preparing_next_round"].includes(currentStatus)) {
+        if (targetRoundRef && targetRoundData && ["shuffling", "active", "finished", "preparing_next_round"].includes(currentStatus)) {
           if (currentStatus === "active") {
             throw new Error("Общий раунд уже идёт. Дождись следующего общего входа.");
           }
@@ -6595,6 +6723,8 @@ async function joinOrCreateScannerRound() {
           waitingOpenedAt: createTimestampFromNow(0),
           countdownStartedAt: null,
           countdownEndsAt: null,
+          shuffleStartedAt: null,
+          shuffleEndsAt: null,
           activeStartedAt: null,
           activeEndsAt: null,
           finishedAt: null,
@@ -6618,7 +6748,7 @@ async function joinOrCreateScannerRound() {
       const userData = userSnap.exists ? (userSnap.data() || {}) : {};
 
       const targetStatus = String(targetRoundData?.status || "waiting");
-      if (["active", "finished", "preparing_next_round"].includes(targetStatus)) {
+      if (["shuffling", "active", "finished", "preparing_next_round"].includes(targetStatus)) {
         throw new Error("Текущий общий раунд уже закрыт для входа.");
       }
 
@@ -6703,6 +6833,8 @@ async function joinOrCreateScannerRound() {
         roundUpdate.status = "countdown";
         roundUpdate.countdownStartedAt = createTimestampFromNow(0);
         roundUpdate.countdownEndsAt = createTimestampFromNow(SCANNER_COUNTDOWN_MS);
+        roundUpdate.shuffleStartedAt = null;
+        roundUpdate.shuffleEndsAt = null;
         roundUpdate.activeStartedAt = null;
         roundUpdate.activeEndsAt = null;
       }
@@ -6757,7 +6889,7 @@ async function removeParticipantFromRound(roundId, playerId, options = {}) {
     const userSnap = await tx.get(userRef);
     const userData = userSnap.exists ? (userSnap.data() || {}) : {};
 
-    if (roundData.status === "active" || roundData.status === "finished" || roundData.status === "preparing_next_round" || markLeftOnly) {
+    if (roundData.status === "shuffling" || roundData.status === "active" || roundData.status === "finished" || roundData.status === "preparing_next_round" || markLeftOnly) {
       tx.set(participantRef, {
         status: "left",
         leaveReason: reason,
@@ -6779,12 +6911,16 @@ async function removeParticipantFromRound(roundId, playerId, options = {}) {
       update.status = "countdown";
       update.countdownStartedAt = createTimestampFromNow(0);
       update.countdownEndsAt = createTimestampFromNow(SCANNER_COUNTDOWN_MS);
+      update.shuffleStartedAt = null;
+      update.shuffleEndsAt = null;
       update.activeStartedAt = null;
       update.activeEndsAt = null;
     } else if (nextCount === 0) {
       update.status = "waiting";
       update.countdownStartedAt = null;
       update.countdownEndsAt = null;
+      update.shuffleStartedAt = null;
+      update.shuffleEndsAt = null;
       update.activeStartedAt = null;
       update.activeEndsAt = null;
     }
@@ -6822,7 +6958,7 @@ async function leaveScannerRound(options = {}) {
   const participant = getScannerParticipantById(currentPlayer.id);
   if (!participant) return;
   const roundStatus = scannerGridState.status;
-  const shouldMarkLeft = roundStatus === "active" || roundStatus === "finished";
+  const shouldMarkLeft = roundStatus === "shuffling" || roundStatus === "active" || roundStatus === "finished";
   await removeParticipantFromRound(roundId, currentPlayer.id, {
     markLeftOnly: shouldMarkLeft,
     reason: options.reason || "manual"
@@ -7020,18 +7156,20 @@ async function ensureScannerRoundLifecycle() {
             if ((data.status || "") !== "countdown") return;
 
             tx.set(roundRef, {
-              status: "active",
+              status: "shuffling",
               totalPot: actualTotalPot,
               participantCount,
-              activeStartedAt: createTimestampFromNow(0),
-              activeEndsAt: createTimestampFromNow(SCANNER_ACTIVE_MS),
+              shuffleStartedAt: createTimestampFromNow(0),
+              shuffleEndsAt: createTimestampFromNow(SCANNER_SHUFFLING_MS),
+              activeStartedAt: null,
+              activeEndsAt: null,
               updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
               version: Number(data.version || 0) + 1
             }, { merge: true });
 
             tx.set(runtimeRef, {
               activeRoundId: roundId,
-              status: "active",
+              status: "shuffling",
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
           });
@@ -7051,6 +7189,53 @@ async function ensureScannerRoundLifecycle() {
           }
           return;
         }
+      }
+    }
+
+    if (roundStatus === "shuffling") {
+      if (tsToMs(round.shuffleEndsAt) <= 0) {
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(roundRef);
+          if (!snap.exists) return;
+          const data = snap.data() || {};
+          if ((data.status || "") !== "shuffling") return;
+
+          tx.set(roundRef, {
+            totalPot: actualTotalPot,
+            participantCount,
+            shuffleStartedAt: createTimestampFromNow(0),
+            shuffleEndsAt: createTimestampFromNow(SCANNER_SHUFFLING_MS),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            version: Number(data.version || 0) + 1
+          }, { merge: true });
+        });
+        return;
+      }
+
+      if (nowMs >= tsToMs(round.shuffleEndsAt)) {
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(roundRef);
+          if (!snap.exists) return;
+          const data = snap.data() || {};
+          if ((data.status || "") !== "shuffling") return;
+
+          tx.set(roundRef, {
+            status: "active",
+            totalPot: actualTotalPot,
+            participantCount,
+            activeStartedAt: createTimestampFromNow(0),
+            activeEndsAt: createTimestampFromNow(SCANNER_ACTIVE_MS),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            version: Number(data.version || 0) + 1
+          }, { merge: true });
+
+          tx.set(runtimeRef, {
+            activeRoundId: roundId,
+            status: "active",
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        });
+        return;
       }
     }
 
@@ -7116,6 +7301,34 @@ async function ensureScannerRoundLifecycle() {
         if (!snap.exists) return;
         const data = snap.data() || {};
         if ((data.status || "") !== "finished") return;
+
+        tx.set(roundRef, {
+          status: "preparing_next_round",
+          preparingStartedAt: createTimestampFromNow(0),
+          preparingEndsAt: createTimestampFromNow(SCANNER_PREPARING_MS),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          version: Number(data.version || 0) + 1
+        }, { merge: true });
+
+        tx.set(runtimeRef, {
+          activeRoundId: roundId,
+          status: "preparing_next_round",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      });
+      return;
+    }
+
+    if (roundStatus === "preparing_next_round" && tsToMs(round.preparingEndsAt) > 0 && nowMs >= tsToMs(round.preparingEndsAt)) {
+      await db.runTransaction(async (tx) => {
+        const runtimeSnap = await tx.get(runtimeRef);
+        const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
+        if (runtimeData.activeRoundId && runtimeData.activeRoundId !== roundId) return;
+
+        const snap = await tx.get(roundRef);
+        if (!snap.exists) return;
+        const data = snap.data() || {};
+        if ((data.status || "") !== "preparing_next_round") return;
 
         tx.set(roundRef, {
           status: "completed",
@@ -7522,8 +7735,8 @@ async function startOrJoinScannerRound(event) {
     return;
   }
 
-  if (status === "finished" || status === "preparing_next_round") {
-    setScannerTransientMessage("Сейчас показывается результат текущего общего раунда. Следующая lobby откроется автоматически.", {
+  if (status === "shuffling" || status === "finished" || status === "preparing_next_round") {
+    setScannerTransientMessage("Сейчас идёт завершение текущего общего раунда. Следующая lobby откроется автоматически.", {
       type: "info",
       timeoutMs: 5000
     });
@@ -7671,6 +7884,14 @@ function renderScannerParticipants() {
   meta.innerHTML = "";
   meta.style.display = "none";
 
+  if (scannerGridState.status === "preparing_next_round") {
+    if (countEl) {
+      setTextContentIfChanged(countEl, "0");
+    }
+    list.innerHTML = "";
+    return;
+  }
+
   if (!scannerGridState.players.length) {
     if (scannerGridState.roundData && hasScannerRoundVisibleState(scannerGridState.roundData)) {
       list.innerHTML = `<div class="scanner-empty">Подгружаем текущее состояние игроков этого раунда...</div>`;
@@ -7771,7 +7992,7 @@ function isScannerBettingLocked() {
     scannerRealtime.runtimeData?.status ||
     "idle"
   );
-  return ["active", "finished", "preparing_next_round"].includes(status);
+  return ["shuffling", "active", "finished", "preparing_next_round"].includes(status);
 }
 
 function renderScannerBetBar() {
@@ -7930,6 +8151,9 @@ function renderScannerButtons() {
       text = "Раунд заполнен";
       disabled = true;
     }
+  } else if (scannerGridState.status === "shuffling") {
+    text = "Перемешивание";
+    disabled = true;
   } else if (scannerGridState.status === "active") {
     text = "Раунд идёт";
     disabled = true;
@@ -7977,7 +8201,9 @@ function getScannerRoundOverlayRight() {
     case "waiting":
       return "Арена готова";
     case "countdown":
-      return scannerGridState.totalPlayers === 1 ? "Ожидание 2-го игрока" : "Ожидание старта";
+      return scannerGridState.totalPlayers === 1 ? "Ожидание 2-го игрока" : "Лазер идёт к границе";
+    case "shuffling":
+      return "Игроки перемешиваются";
     case "active":
       return "Раунд идёт";
     case "finished":
@@ -7993,10 +8219,7 @@ function getScannerRoundOverlayRight() {
 
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
-  if (status === "active") {
-    return "Раунд";
-  }
-  if (["countdown", "finished", "preparing_next_round"].includes(status)) {
+  if (["countdown", "shuffling", "active", "finished", "preparing_next_round"].includes(status)) {
     return formatCountdownMs(scannerGridState.countdownMs || 0);
   }
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
@@ -8006,7 +8229,8 @@ function renderScannerRound() {
   renderScannerChips("scannerStakeChips", SCANNER_STAKE_PRESETS, scannerGridState.selectedStake, "setScannerStakeAndJoin", " TON");
   renderScannerChips("scannerPopulationChips", SCANNER_POPULATION_PRESETS, scannerGridState.selectedPopulation, "setScannerPopulation", "");
 
-  const myPlayer = getScannerMyPlayer();
+  const isArenaResetPhase = scannerGridState.status === "preparing_next_round";
+  const myPlayer = isArenaResetPhase ? null : getScannerMyPlayer();
   const countdown = document.getElementById("scannerCountdownChip");
   const poolChip = document.getElementById("scannerPoolChip");
   const chanceChip = document.getElementById("scannerChanceChip");
@@ -8025,8 +8249,8 @@ function renderScannerRound() {
     setTextContentIfChanged(countdown, getScannerCountdownChipText());
     countdown.classList.toggle("is-round-active", scannerGridState.status === "active");
   }
-  if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(scannerGridState.totalPot || 0)}`);
-  if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${myChanceValue}`);
+  if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(isArenaResetPhase ? 0 : (scannerGridState.totalPot || 0))}`);
+  if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${isArenaResetPhase ? "0%" : myChanceValue}`);
   if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
   if (selectedPopulation) setTextContentIfChanged(selectedPopulation, scannerGridState.roundData ? formatCompactNumber(scannerGridState.maxPlayers || 0) : formatCompactNumber(scannerGridState.selectedPopulation));
   if (cellsValue) setTextContentIfChanged(cellsValue, formatCompactNumber(SCANNER_GRID_TOTAL_CELLS));
@@ -8040,19 +8264,37 @@ function renderScannerRound() {
   if (resultBanner && resultTitle && resultText) {
     const isResultPhase = scannerGridState.status === "finished";
     if (isResultPhase && scannerGridState.winningPlayer) {
-      const myWin = scannerGridState.winningPlayer.id === getCurrentPlayer().id;
-      resultBanner.style.display = "block";
-      setTextContentIfChanged(resultTitle, myWin ? "Ты выиграл общий раунд" : `Победитель: ${scannerGridState.winningPlayer.name}`);
+      const winnerPlayer = scannerGridState.winningPlayer;
       const payout = Number(scannerGridState.roundData?.winnerPayout || scannerGridState.totalPot || 0);
-      const winnerStake = Number(scannerGridState.winningPlayer.stake || scannerGridState.roundData?.winnerStake || 0);
-      const grossProfit = Number(scannerGridState.roundData?.winnerGrossProfit ?? Math.max(0, Number(scannerGridState.totalPot || 0) - winnerStake));
-      const commissionPercent = Number(scannerGridState.roundData?.commissionPercent || getScannerCommissionPercent(grossProfit));
-      const commissionAmount = Number(scannerGridState.roundData?.commissionAmount || 0);
-      setTextContentIfChanged(resultText, `${scannerGridState.winningPlayer.name} получает ${formatTon(payout)}. Банк: ${formatTon(scannerGridState.totalPot)} · ставка победителя: ${formatTon(winnerStake)} · чистая прибыль: ${formatTon(grossProfit)} · комиссия с прибыли: ${commissionPercent}% (${formatTon(commissionAmount)}).`);
+      const winnerStake = Number(winnerPlayer.stake || scannerGridState.roundData?.winnerStake || 0);
+      const multiplier = formatScannerMultiplier(payout, winnerStake);
+      const winnerColor = escapeHtml(winnerPlayer.color || getScannerColorById(winnerPlayer.id, scannerGridState.roundId || scannerGridState.renderSeed || "winner"));
+      resultBanner.style.display = "block";
+      resultBanner.classList.add("open");
+      setTextContentIfChanged(resultTitle, "Победитель");
+      setInnerHtmlIfChanged(resultText, `
+        <div class="scanner-result-item">
+          <span class="scanner-result-label">Цвет</span>
+          <div class="scanner-result-value"><span class="scanner-result-color-swatch" style="background:${winnerColor};"></span><span>Цвет арены</span></div>
+        </div>
+        <div class="scanner-result-item">
+          <span class="scanner-result-label">Ник</span>
+          <div class="scanner-result-value"><span>${escapeHtml(winnerPlayer.name)}</span></div>
+        </div>
+        <div class="scanner-result-item">
+          <span class="scanner-result-label">Выигрыш</span>
+          <div class="scanner-result-value"><span>${formatTon(payout)}</span></div>
+        </div>
+        <div class="scanner-result-item">
+          <span class="scanner-result-label">Множитель</span>
+          <div class="scanner-result-value"><span>${multiplier}</span></div>
+        </div>
+      `);
     } else {
+      resultBanner.classList.remove("open");
       resultBanner.style.display = "none";
       setTextContentIfChanged(resultTitle, "");
-      setTextContentIfChanged(resultText, "");
+      setInnerHtmlIfChanged(resultText, "");
     }
   }
 
@@ -8503,19 +8745,24 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   ctx.restore();
 }
 
-function drawScannerIdleArena(ctx, size, now) {
+function drawScannerArenaBase(ctx, size) {
   const gradient = ctx.createLinearGradient(0, 0, 0, size);
   gradient.addColorStop(0, "#02050c");
   gradient.addColorStop(1, "#050913");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
+}
 
-  const idleSample = getScannerSharedLobbyBeamSample();
-  const cx = size * idleSample.x;
-  const cy = size * idleSample.y;
-  const angle = idleSample.angle;
+function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
+  const safeSample = beamSample || getScannerSharedLobbyBeamSample();
+  const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
+  const cx = size * safeSample.x;
+  const cy = size * safeSample.y;
+  const angle = safeSample.angle;
+
+  drawScannerArenaBase(ctx, size);
 
   ctx.save();
   ctx.translate(cx, cy);
@@ -8537,8 +8784,19 @@ function drawScannerIdleArena(ctx, size, now) {
   });
   ctx.restore();
 
-  drawScannerWaitingText(ctx, size, idleSample, {
-    centerGap: idleReticleRadius * 2.7
+  if (waitingTextAlpha > 0.01) {
+    ctx.save();
+    ctx.globalAlpha = waitingTextAlpha;
+    drawScannerWaitingText(ctx, size, safeSample, {
+      centerGap: idleReticleRadius * 2.7
+    });
+    ctx.restore();
+  }
+}
+
+function drawScannerIdleArena(ctx, size, now) {
+  drawScannerEmptyArenaState(ctx, size, getScannerSharedLobbyBeamSample(), {
+    waitingTextAlpha: 1
   });
 }
 
@@ -8706,8 +8964,15 @@ function renderScannerCanvas() {
 
   ctx.clearRect(0, 0, size, size);
 
+  const roundData = scannerGridState.roundData || null;
   if (!hasGrid) {
-    drawScannerIdleArena(ctx, size, now);
+    if (roundStatus === "preparing_next_round" && roundData) {
+      drawScannerEmptyArenaState(ctx, size, getScannerPreparingBeamSample(roundData, scannerGridState.players || []), {
+        waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData))
+      });
+    } else {
+      drawScannerIdleArena(ctx, size, now);
+    }
     return;
   }
 
@@ -8715,13 +8980,30 @@ function renderScannerCanvas() {
 
   let beamSample = null;
   let previewBadgeAlpha = 0;
-  const roundData = scannerGridState.roundData || null;
 
   if (roundStatus === "waiting" || roundStatus === "countdown") {
     if (scannerGridPreviewCanvasCache?.canvas) {
       ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
     }
     previewBadgeAlpha = 1;
+  } else if (roundStatus === "shuffling") {
+    const shuffleProgress = getScannerShuffleTransitionProgress(roundData);
+    if (scannerGridPreviewCanvasCache?.canvas) {
+      ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
+    }
+    if (shuffleProgress >= 0.999) {
+      if (scannerGridCache?.canvas) {
+        ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
+      }
+    } else {
+      renderScannerActiveTransition(ctx, size, cellSize, shuffleProgress);
+    }
+    previewBadgeAlpha = 1 - shuffleProgress;
+  } else if (roundStatus === "preparing_next_round") {
+    drawScannerEmptyArenaState(ctx, size, getScannerPreparingBeamSample(roundData, scannerGridState.players || []), {
+      waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData))
+    });
+    return;
   } else if (scannerGridCache?.canvas) {
     ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
   }
@@ -8736,6 +9018,9 @@ function renderScannerCanvas() {
     beamSample = getScannerActiveBeamSample(roundData, scannerGridState.players || [], 1);
   } else if (roundStatus === "active") {
     beamSample = getScannerActiveBeamSample(roundData, scannerGridState.players || []);
+  } else if (roundStatus === "shuffling") {
+    const activeCache = getScannerActiveBeamCache(roundData, scannerGridState.players || []);
+    beamSample = activeCache?.startSample || getScannerSharedLobbyBeamSample();
   } else {
     const roamingSample = getScannerSharedLobbyBeamSample();
     beamSample = roundStatus === "countdown"
@@ -8902,7 +9187,7 @@ function subscribeScannerRuntime() {
 function isScannerBootstrapCandidate(round) {
   if (!round) return false;
   const status = String(round.status || "idle");
-  if (!["waiting", "countdown", "active", "finished", "preparing_next_round"].includes(status)) {
+  if (!["waiting", "countdown", "shuffling", "active", "finished", "preparing_next_round"].includes(status)) {
     return false;
   }
 
@@ -8910,8 +9195,9 @@ function isScannerBootstrapCandidate(round) {
     return false;
   }
 
-  if (status === "finished" || status === "preparing_next_round") {
+  if (status === "shuffling" || status === "finished" || status === "preparing_next_round") {
     const recentEdge = Math.max(
+      tsToMs(round.shuffleEndsAt || 0),
       tsToMs(round.finishedAt || 0),
       tsToMs(round.preparingEndsAt || 0),
       tsToMs(round.updatedAt || 0)
