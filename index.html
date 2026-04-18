@@ -5833,6 +5833,17 @@ function getScannerRoamingDuration(seedValue, minDuration = 5600, maxDuration = 
   return safeMin + (hashString(`duration_${seedValue}`) % spread);
 }
 
+function getScannerSharedLobbyBeamSample() {
+  return getScannerRoamingBeamSample(
+    "lobby_shared",
+    "scanner_shared_lobby_motion",
+    {
+      minDuration: 6200,
+      maxDuration: 9800
+    }
+  );
+}
+
 function getScannerRoamingBeamSample(modeKey, seedValue, options = {}) {
   const now = performance.now();
   const fullKey = `${modeKey}::${seedValue}`;
@@ -5974,10 +5985,8 @@ function getScannerCellIndexFromPoint(x, y) {
 
 function getScannerActiveBeamCacheKey(round, players) {
   const roundPart = `${round?.id || "round"}::${round?.entropySeed || "seed"}`;
-  const playersPart = (players || [])
-    .map((player) => `${player.id}:${normalizeStakeValue(player.stake)}:${Math.round(tsToMs(player.joinedAt || 0) / 1000)}`)
-    .join("|");
-  return `${roundPart}::${playersPart}`;
+  const activeWindowPart = `${Math.round(tsToMs(round?.activeStartedAt || 0) / 1000)}::${Math.round(tsToMs(round?.activeEndsAt || 0) / 1000)}`;
+  return `${roundPart}::${activeWindowPart}`;
 }
 
 function getScannerActiveBeamStartState(seedValue) {
@@ -8501,7 +8510,7 @@ function drawScannerIdleArena(ctx, size, now) {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
 
-  const idleSample = getScannerAmbientBeamSample(now, "idle");
+  const idleSample = getScannerSharedLobbyBeamSample();
   const cx = size * idleSample.x;
   const cy = size * idleSample.y;
   const angle = idleSample.angle;
@@ -8728,24 +8737,10 @@ function renderScannerCanvas() {
   } else if (roundStatus === "active") {
     beamSample = getScannerActiveBeamSample(roundData, scannerGridState.players || []);
   } else {
-    const roundSeed = scannerGridState.renderSeed || scannerGridState.roundId || "idle";
-    const isSinglePlayerLobby = roundStatus === "waiting" && scannerGridState.totalPlayers <= 1;
-
-    if (isSinglePlayerLobby) {
-      beamSample = getScannerAmbientBeamSample(now, `${roundSeed}_single_waiting`);
-    } else {
-      const roamingSample = getScannerRoamingBeamSample(
-        roundStatus,
-        `${roundSeed}_${scannerGridState.roundId || "idle"}_${scannerGridState.totalPlayers}_${scannerGridState.previewGridVersion}`,
-        {
-          minDuration: 6200,
-          maxDuration: 9800
-        }
-      );
-      beamSample = roundStatus === "countdown"
-        ? getScannerCountdownBeamSample(roundData, roamingSample, scannerGridState.players || [])
-        : roamingSample;
-    }
+    const roamingSample = getScannerSharedLobbyBeamSample();
+    beamSample = roundStatus === "countdown"
+      ? getScannerCountdownBeamSample(roundData, roamingSample, scannerGridState.players || [])
+      : roamingSample;
   }
 
   if (beamSample) {
