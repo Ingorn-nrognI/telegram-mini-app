@@ -3686,7 +3686,9 @@ const scannerRealtime = {
   lifecycleBusy: false,
   pruneBusy: false,
   lastPersistedRoundId: null,
-  lastAnimatedRoundId: null
+  lastAnimatedRoundId: null,
+  bootstrappingRound: false,
+  fallbackRoundId: null
 };
 
 let scannerGridVisualFrame = null;
@@ -6028,6 +6030,26 @@ function getScannerStatusText(round) {
   }
 }
 
+function getScannerDeclaredParticipantCount(round) {
+  const count = Number(round?.participantCount || 0);
+  if (!Number.isFinite(count)) return 0;
+  return Math.max(0, Math.floor(count));
+}
+
+function hasScannerRoundVisibleState(round) {
+  if (!round) return false;
+
+  const status = String(round.status || "idle");
+  const participantCount = getScannerDeclaredParticipantCount(round);
+  const totalPot = normalizeStakeValue(round.totalPot || 0);
+  const hasWinner = !!round.winnerPlayerId || !!round.winnerName || Number.isInteger(round.winningCellIndex);
+
+  return participantCount > 0 ||
+    totalPot > 0 ||
+    hasWinner ||
+    ["countdown", "active", "finished", "preparing_next_round"].includes(status);
+}
+
 
 function syncScannerDerivedState() {
   const currentPlayer = getCurrentPlayer();
@@ -6094,7 +6116,10 @@ function syncScannerDerivedState() {
     countdownMs = Math.max(0, preparingEndsAt - now);
   }
 
-  if (shouldHoldNeutralArena) {
+  const declaredParticipantCount = getScannerDeclaredParticipantCount(round);
+  const roundHasVisibleState = hasScannerRoundVisibleState(round);
+
+  if (shouldHoldNeutralArena && !roundHasVisibleState) {
     scannerGridState.participants = [];
     scannerGridState.myParticipationStatus = "none";
     scannerGridState.myJoinedRoundId = null;
@@ -6109,19 +6134,41 @@ function syncScannerDerivedState() {
   }
 
   if (participantsReady && realParticipantCount === 0) {
-    scannerGridState.roundData = null;
-    scannerGridState.roundId = null;
-    scannerGridState.roundStatus = "idle";
-    scannerGridState.participants = [];
-    scannerGridState.maxPlayers = Number(scannerGridState.selectedPopulation || 0);
-    scannerGridState.myParticipationStatus = "none";
-    scannerGridState.myJoinedRoundId = null;
-    scannerGridState.renderSeed = "idle";
-    resetScannerRoundVisualState({
-      status: "idle",
-      totalPot: 0,
-      countdownMs: 0
-    });
+    if (!roundHasVisibleState) {
+      scannerGridState.roundData = null;
+      scannerGridState.roundId = null;
+      scannerGridState.roundStatus = "idle";
+      scannerGridState.participants = [];
+      scannerGridState.maxPlayers = Number(scannerGridState.selectedPopulation || 0);
+      scannerGridState.myParticipationStatus = "none";
+      scannerGridState.myJoinedRoundId = null;
+      scannerGridState.renderSeed = "idle";
+      resetScannerRoundVisualState({
+        status: "idle",
+        totalPot: 0,
+        countdownMs: 0
+      });
+      return;
+    }
+
+    scannerGridState.players = [];
+    scannerGridState.totalPlayers = declaredParticipantCount;
+    scannerGridState.totalPot = normalizeStakeValue(round?.totalPot || 0);
+    scannerGridState.countdownMs = countdownMs;
+    scannerGridState.cellOwners = [];
+    scannerGridState.gridVersion = `pending_${round.id || "round"}_${round.status || "idle"}_${round.version || 0}`;
+    scannerGridState.previewCellOwners = [];
+    scannerGridState.previewGridVersion = scannerGridState.gridVersion;
+    scannerGridState.previewZones = [];
+    scannerGridState.status = roundStatus || "waiting";
+    scannerGridState.renderSeed = round.entropySeed || round.id || "idle";
+    scannerGridState.winnerPlayerId = round.winnerPlayerId || null;
+    scannerGridState.winningCellIndex = Number.isInteger(round.winningCellIndex) ? round.winningCellIndex : null;
+    scannerGridState.winningPlayer = null;
+
+    if (scannerGridState.animation.roundId && scannerGridState.animation.roundId !== round.id) {
+      stopScannerVisualAnimation();
+    }
     return;
   }
 
@@ -7368,7 +7415,11 @@ function renderScannerParticipants() {
   meta.style.display = "none";
 
   if (!scannerGridState.players.length) {
-    list.innerHTML = "";
+    if (scannerGridState.roundData && hasScannerRoundVisibleState(scannerGridState.roundData)) {
+      list.innerHTML = `<div class="scanner-empty">Подгружаем текущее состояние игроков этого раунда...</div>`;
+    } else {
+      list.innerHTML = "";
+    }
     return;
   }
 
@@ -7687,10 +7738,7 @@ function getScannerRoundOverlayRight() {
 
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
-  if (status === "active") {
-    return "Раунд";
-  }
-  if (status === "countdown") {
+  if (["countdown", "active", "finished", "preparing_next_round"].includes(status)) {
     return formatCountdownMs(scannerGridState.countdownMs || 0);
   }
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
@@ -8578,8 +8626,14 @@ function subscribeScannerRound(roundId) {
   scannerRealtime.roundData = null;
   scannerRealtime.roundReady = !roundId;
   scannerRealtime.activeRoundId = roundId || null;
+  if (roundId) {
+    scannerRealtime.fallbackRoundId = String(roundId) === String(scannerRealtime.runtimeData?.activeRoundId || "")
+      ? null
+      : scannerRealtime.fallbackRoundId;
+  }
 
   if (!roundId) {
+    scannerRealtime.fallbackRoundId = null;
     subscribeScannerParticipants(null);
     syncScannerDerivedState();
     renderScannerRound();
@@ -8627,18 +8681,96 @@ function subscribeScannerRuntime() {
     if (scannerRealtime.activeRoundId !== activeRoundId) {
       subscribeScannerRound(activeRoundId);
     } else if (!activeRoundId) {
-      scannerRealtime.roundData = null;
-      scannerRealtime.roundReady = true;
-      scannerRealtime.participants = [];
-      scannerRealtime.participantsReady = true;
-      scannerRealtime.participantsError = false;
-      syncScannerDerivedState();
-      renderScannerRound();
+      bootstrapScannerRoundFromRecentState().catch((error) => {
+        console.warn("Не удалось восстановить текущее состояние общего раунда:", error);
+        scannerRealtime.roundData = null;
+        scannerRealtime.roundReady = true;
+        scannerRealtime.participants = [];
+        scannerRealtime.participantsReady = true;
+        scannerRealtime.participantsError = false;
+        syncScannerDerivedState();
+        renderScannerRound();
+      });
     }
   }, (error) => {
     console.error("Ошибка подписки на runtime общего раунда:", error);
     scannerRealtime.runtimeReady = true;
   });
+}
+
+function isScannerBootstrapCandidate(round) {
+  if (!round) return false;
+  const status = String(round.status || "idle");
+  if (!["waiting", "countdown", "active", "finished", "preparing_next_round"].includes(status)) {
+    return false;
+  }
+
+  if (!hasScannerRoundVisibleState(round)) {
+    return false;
+  }
+
+  if (status === "finished" || status === "preparing_next_round") {
+    const recentEdge = Math.max(
+      tsToMs(round.finishedAt || 0),
+      tsToMs(round.preparingEndsAt || 0),
+      tsToMs(round.updatedAt || 0)
+    );
+    return recentEdge >= Date.now() - 60000;
+  }
+
+  return true;
+}
+
+async function bootstrapScannerRoundFromRecentState(options = {}) {
+  const { force = false } = options;
+  if (scannerRealtime.bootstrappingRound) return;
+  if (!force && scannerRealtime.runtimeData?.activeRoundId) return;
+
+  scannerRealtime.bootstrappingRound = true;
+
+  try {
+    const snapshot = await scannerRoundsCollection()
+      .orderBy("updatedAt", "desc")
+      .limit(8)
+      .get();
+
+    let fallbackRound = null;
+    snapshot.forEach((doc) => {
+      if (fallbackRound) return;
+      const candidate = { id: doc.id, ...(doc.data() || {}) };
+      if (isScannerBootstrapCandidate(candidate)) {
+        fallbackRound = candidate;
+      }
+    });
+
+    if (scannerRealtime.runtimeData?.activeRoundId) {
+      return;
+    }
+
+    if (fallbackRound) {
+      scannerRealtime.fallbackRoundId = fallbackRound.id;
+      if (scannerRealtime.activeRoundId !== fallbackRound.id) {
+        subscribeScannerRound(fallbackRound.id);
+      } else {
+        scannerRealtime.roundData = scannerRealtime.roundData || fallbackRound;
+        syncScannerDerivedState();
+        renderScannerRound();
+      }
+      return;
+    }
+
+    if (!scannerRealtime.activeRoundId || scannerRealtime.fallbackRoundId === scannerRealtime.activeRoundId) {
+      scannerRealtime.fallbackRoundId = null;
+      scannerRealtime.roundData = null;
+      scannerRealtime.roundReady = true;
+      scannerRealtime.participants = [];
+      scannerRealtime.participantsReady = true;
+      scannerRealtime.participantsError = false;
+      subscribeScannerRound(null);
+    }
+  } finally {
+    scannerRealtime.bootstrappingRound = false;
+  }
 }
 
 function subscribeScannerHistory() {
@@ -8677,6 +8809,9 @@ function initializeScannerGridFeature() {
   startScannerHeartbeat();
   startScannerLifecycleTimer();
   subscribeScannerRuntime();
+  bootstrapScannerRoundFromRecentState({ force: true }).catch((error) => {
+    console.warn("Не удалось выполнить стартовое восстановление общего раунда:", error);
+  });
   subscribeScannerHistory();
   syncScannerDerivedState();
   renderScannerRound();
@@ -8709,6 +8844,9 @@ function enterScannerGridMode(event) {
 
 function handleVisibilityChange() {
   updateScannerHeartbeat().catch(() => {});
+  if (document.visibilityState === "visible") {
+    bootstrapScannerRoundFromRecentState({ force: true }).catch(() => {});
+  }
 }
 
 function handleBeforeUnload() {
