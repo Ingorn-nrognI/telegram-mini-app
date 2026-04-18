@@ -1201,6 +1201,14 @@ button {
   letter-spacing: 0.08em;
 }
 
+.scanner-countdown-chip.is-round-active {
+  color: var(--accent);
+  border-color: rgba(117, 245, 156, 0.24);
+  box-shadow:
+    inset 0 0 0 1px rgba(117, 245, 156, 0.08),
+    0 0 18px rgba(117, 245, 156, 0.14);
+}
+
 .scanner-chance-chip {
   justify-content: flex-end;
   min-width: 0;
@@ -3590,6 +3598,12 @@ const SCANNER_ACTIVE_MS = 20000;
 const SCANNER_FINISHED_MS = 1200;
 const SCANNER_PREPARING_MS = 4000;
 const SCANNER_PREVIEW_TRANSITION_MS = 2600;
+const SCANNER_EDGE_LATCH_MS = 3400;
+const SCANNER_ACTIVE_BEAM_STEPS = 360;
+const SCANNER_ACTIVE_BEAM_BASE_SPEED = 1.68;
+const SCANNER_ACTIVE_BEAM_MIN_SPEED_FACTOR = 0.18;
+const SCANNER_ACTIVE_BEAM_SLOWDOWN_START = 0.72;
+const SCANNER_ACTIVE_BEAM_EDGE_PADDING = 0.012;
 const SCANNER_HEARTBEAT_MS = 20000;
 const SCANNER_STALE_LOBBY_MS = 90000;
 const SCANNER_RUNTIME_COLLECTION = "pvp_runtime";
@@ -3703,6 +3717,7 @@ let scannerBetBarVisibilityFrame = null;
 let scannerTopUiVisibilityFrame = null;
 const scannerAvatarCache = new Map();
 const scannerProfileAvatarCache = new Map();
+let scannerActiveBeamCache = null;
 const scannerBeamMotionState = {
   modeKey: "",
   segmentIndex: 0,
@@ -5908,6 +5923,251 @@ function interpolateScannerPath(points, progress) {
   };
 }
 
+function clampScannerNumber(value, min = 0, max = 1) {
+  const number = Number(value);
+  const safeMin = Number.isFinite(min) ? Number(min) : 0;
+  const safeMax = Number.isFinite(max) ? Number(max) : 1;
+  if (!Number.isFinite(number)) return safeMin;
+  return Math.max(safeMin, Math.min(safeMax, number));
+}
+
+function normalizeScannerVector(x, y, fallback = { x: 1, y: 0 }) {
+  const length = Math.hypot(Number(x) || 0, Number(y) || 0);
+  if (!Number.isFinite(length) || length <= 0.00001) {
+    const fallbackLength = Math.hypot(Number(fallback?.x) || 0, Number(fallback?.y) || 0) || 1;
+    return {
+      x: (Number(fallback?.x) || 1) / fallbackLength,
+      y: (Number(fallback?.y) || 0) / fallbackLength
+    };
+  }
+  return {
+    x: (Number(x) || 0) / length,
+    y: (Number(y) || 0) / length
+  };
+}
+
+function smoothstep(min, max, value) {
+  const safeMin = Number(min) || 0;
+  const safeMax = Number(max) || 1;
+  if (safeMax <= safeMin) return value >= safeMax ? 1 : 0;
+  const t = clampScannerNumber((Number(value) - safeMin) / (safeMax - safeMin), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function lerpScannerAngle(from, to, progress) {
+  const start = Number(from) || 0;
+  const end = Number(to) || 0;
+  const t = clampScannerNumber(progress, 0, 1);
+  let delta = end - start;
+  while (delta > Math.PI) delta -= Math.PI * 2;
+  while (delta < -Math.PI) delta += Math.PI * 2;
+  return start + delta * t;
+}
+
+function getScannerCellIndexFromPoint(x, y) {
+  const clampedX = clampScannerNumber(x, 0, 0.999999);
+  const clampedY = clampScannerNumber(y, 0, 0.999999);
+  const col = Math.max(0, Math.min(SCANNER_GRID_COLS - 1, Math.floor(clampedX * SCANNER_GRID_COLS)));
+  const row = Math.max(0, Math.min(SCANNER_GRID_ROWS - 1, Math.floor(clampedY * SCANNER_GRID_ROWS)));
+  return row * SCANNER_GRID_COLS + col;
+}
+
+function getScannerActiveBeamCacheKey(round, players) {
+  const roundPart = `${round?.id || "round"}::${round?.entropySeed || "seed"}`;
+  const playersPart = (players || [])
+    .map((player) => `${player.id}:${normalizeStakeValue(player.stake)}:${Math.round(tsToMs(player.joinedAt || 0) / 1000)}`)
+    .join("|");
+  return `${roundPart}::${playersPart}`;
+}
+
+function getScannerActiveBeamStartState(seedValue) {
+  const rnd = mulberry32(hashString(`active_start_${seedValue}`));
+  const pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
+  const side = Math.floor(rnd() * 4);
+  const offset = 0.12 + rnd() * 0.76;
+
+  if (side === 0) {
+    return {
+      x: offset,
+      y: pad,
+      velocity: normalizeScannerVector((rnd() - 0.5) * 1.1, 0.78 + rnd() * 0.52, { x: 0, y: 1 })
+    };
+  }
+
+  if (side === 1) {
+    return {
+      x: 1 - pad,
+      y: offset,
+      velocity: normalizeScannerVector(-(0.78 + rnd() * 0.52), (rnd() - 0.5) * 1.1, { x: -1, y: 0 })
+    };
+  }
+
+  if (side === 2) {
+    return {
+      x: offset,
+      y: 1 - pad,
+      velocity: normalizeScannerVector((rnd() - 0.5) * 1.1, -(0.78 + rnd() * 0.52), { x: 0, y: -1 })
+    };
+  }
+
+  return {
+    x: pad,
+    y: offset,
+    velocity: normalizeScannerVector(0.78 + rnd() * 0.52, (rnd() - 0.5) * 1.1, { x: 1, y: 0 })
+  };
+}
+
+function getScannerActiveSpeedFactor(progress) {
+  const slowdown = smoothstep(SCANNER_ACTIVE_BEAM_SLOWDOWN_START, 1, progress);
+  const factor = 1 - 0.82 * slowdown * slowdown;
+  return Math.max(SCANNER_ACTIVE_BEAM_MIN_SPEED_FACTOR, factor);
+}
+
+function getScannerActiveBeamCache(round, players) {
+  if (!round || !Array.isArray(players) || !players.length) return null;
+
+  const key = getScannerActiveBeamCacheKey(round, players);
+  if (scannerActiveBeamCache?.key === key && Array.isArray(scannerActiveBeamCache?.samples) && scannerActiveBeamCache.samples.length > 1) {
+    return scannerActiveBeamCache;
+  }
+
+  const seedValue = `${key}::active_beam`;
+  const startState = getScannerActiveBeamStartState(seedValue);
+  const rnd = mulberry32(hashString(`active_motion_${seedValue}`));
+  const steps = Math.max(120, Number(SCANNER_ACTIVE_BEAM_STEPS) || 360);
+  const dtSeconds = (SCANNER_ACTIVE_MS / 1000) / Math.max(1, steps - 1);
+  const pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
+  const phaseA = rnd() * Math.PI * 2;
+  const phaseB = rnd() * Math.PI * 2;
+  const freqA = 1.08 + rnd() * 0.72;
+  const freqB = 1.84 + rnd() * 1.12;
+
+  let position = { x: startState.x, y: startState.y };
+  let velocity = normalizeScannerVector(startState.velocity.x, startState.velocity.y, { x: 1, y: 0 });
+  const samples = [];
+
+  for (let step = 0; step < steps; step += 1) {
+    const progress = step / Math.max(1, steps - 1);
+    samples.push({
+      x: clampScannerNumber(position.x, pad, 1 - pad),
+      y: clampScannerNumber(position.y, pad, 1 - pad),
+      angle: Math.atan2(velocity.y || 0.0001, velocity.x || 0.0001),
+      progress
+    });
+
+    if (step >= steps - 1) continue;
+
+    const driftAngle =
+      Math.sin(progress * Math.PI * 2 * freqA + phaseA) * 0.022 +
+      Math.cos(progress * Math.PI * 2 * freqB + phaseB) * 0.012;
+
+    const cos = Math.cos(driftAngle);
+    const sin = Math.sin(driftAngle);
+    velocity = normalizeScannerVector(
+      velocity.x * cos - velocity.y * sin,
+      velocity.x * sin + velocity.y * cos,
+      velocity
+    );
+
+    const distance = SCANNER_ACTIVE_BEAM_BASE_SPEED * getScannerActiveSpeedFactor(progress) * dtSeconds;
+    let nextX = position.x + velocity.x * distance;
+    let nextY = position.y + velocity.y * distance;
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      let bounced = false;
+
+      if (nextX < pad) {
+        nextX = pad + (pad - nextX);
+        velocity = normalizeScannerVector(Math.abs(velocity.x), velocity.y, { x: 1, y: 0 });
+        bounced = true;
+      } else if (nextX > 1 - pad) {
+        nextX = (1 - pad) - (nextX - (1 - pad));
+        velocity = normalizeScannerVector(-Math.abs(velocity.x), velocity.y, { x: -1, y: 0 });
+        bounced = true;
+      }
+
+      if (nextY < pad) {
+        nextY = pad + (pad - nextY);
+        velocity = normalizeScannerVector(velocity.x, Math.abs(velocity.y), { x: 0, y: 1 });
+        bounced = true;
+      } else if (nextY > 1 - pad) {
+        nextY = (1 - pad) - (nextY - (1 - pad));
+        velocity = normalizeScannerVector(velocity.x, -Math.abs(velocity.y), { x: 0, y: -1 });
+        bounced = true;
+      }
+
+      if (!bounced) break;
+    }
+
+    position = {
+      x: clampScannerNumber(nextX, pad, 1 - pad),
+      y: clampScannerNumber(nextY, pad, 1 - pad)
+    };
+  }
+
+  const finalSample = samples[samples.length - 1] || { x: 0.5, y: 0.5, angle: 0 };
+  scannerActiveBeamCache = {
+    key,
+    samples,
+    startSample: samples[0] || finalSample,
+    finalSample,
+    winningCellIndex: getScannerCellIndexFromPoint(finalSample.x, finalSample.y)
+  };
+  return scannerActiveBeamCache;
+}
+
+function getScannerBeamMotionProgress(round, progressOverride = null) {
+  if (Number.isFinite(Number(progressOverride))) {
+    return clampScannerNumber(progressOverride, 0, 1);
+  }
+
+  const startedAt = tsToMs(round?.activeStartedAt);
+  const activeEndsAt = tsToMs(round?.activeEndsAt);
+  if (startedAt > 0 && activeEndsAt > startedAt) {
+    return clampScannerNumber((Date.now() - startedAt) / Math.max(1, activeEndsAt - startedAt), 0, 1);
+  }
+
+  if (startedAt > 0) {
+    return clampScannerNumber((Date.now() - startedAt) / SCANNER_ACTIVE_MS, 0, 1);
+  }
+
+  return 0;
+}
+
+function getScannerActiveBeamSample(round, players, progressOverride = null) {
+  const cache = getScannerActiveBeamCache(round, players);
+  if (!cache) return { x: 0.5, y: 0.5, angle: 0 };
+  return interpolateScannerPath(cache.samples, getScannerBeamMotionProgress(round, progressOverride));
+}
+
+function getScannerCountdownLatchProgress(round) {
+  if (String(round?.status || "") !== "countdown") return 0;
+  const countdownEndsAt = tsToMs(round?.countdownEndsAt);
+  if (countdownEndsAt <= 0) return 0;
+  const timeLeft = countdownEndsAt - Date.now();
+  if (timeLeft <= 0) return 1;
+  return clampScannerNumber((SCANNER_EDGE_LATCH_MS - timeLeft) / SCANNER_EDGE_LATCH_MS, 0, 1);
+}
+
+function interpolateScannerBeamState(fromSample, toSample, progress) {
+  const t = smoothstep(0, 1, progress);
+  const from = fromSample || { x: 0.5, y: 0.5, angle: 0 };
+  const to = toSample || from;
+  return {
+    x: from.x + (to.x - from.x) * t,
+    y: from.y + (to.y - from.y) * t,
+    angle: lerpScannerAngle(from.angle || 0, to.angle || 0, t)
+  };
+}
+
+function getScannerCountdownBeamSample(round, fallbackSample, players) {
+  const latchProgress = getScannerCountdownLatchProgress(round);
+  if (latchProgress <= 0) return fallbackSample;
+  const activeCache = getScannerActiveBeamCache(round, players);
+  const edgeSample = activeCache?.startSample || fallbackSample;
+  return interpolateScannerBeamState(fallbackSample, edgeSample, latchProgress);
+}
+
 function stopScannerVisualAnimation() {
   scannerGridState.animation.active = false;
   scannerGridState.animation.roundId = null;
@@ -6190,23 +6450,12 @@ function syncScannerDerivedState() {
   scannerGridState.winningCellIndex = Number.isInteger(round.winningCellIndex) ? round.winningCellIndex : null;
   scannerGridState.winningPlayer = scannerGridState.players.find((player) => player.id === scannerGridState.winnerPlayerId) || null;
 
-  if (scannerGridState.status === "finished") {
-    if (
-      scannerGridState.winningCellIndex !== null &&
-      scannerRealtime.lastAnimatedRoundId !== round.id
-    ) {
-      scannerRealtime.lastAnimatedRoundId = round.id;
-      scannerGridPath = buildScannerPathForCell(scannerGridState.winningCellIndex, `${round.id}_${round.entropySeed || "seed"}`);
-      scannerGridState.animation = {
-        active: true,
-        roundId: round.id,
-        startedAt: performance.now(),
-        duration: 2600,
-        points: scannerGridPath
-      };
-    }
-  } else if (scannerGridState.animation.roundId && scannerGridState.animation.roundId !== round.id) {
+  if (scannerGridState.animation.roundId && scannerGridState.animation.roundId !== round.id) {
     stopScannerVisualAnimation();
+  }
+
+  if (scannerGridState.status !== "finished") {
+    scannerRealtime.lastAnimatedRoundId = null;
   }
 
   if (scannerGridState.status === "finished" && round?.payoutProcessed !== true) {
@@ -6223,11 +6472,10 @@ function syncScannerDerivedState() {
 function computeDeterministicRoundResult(round, participants) {
   const renderParticipants = getRoundParticipantsForRender(round, participants);
   const finalized = buildScannerPlayersFromFirestore(round, renderParticipants);
-  const seedSource = `${round.entropySeed || round.id || "round"}|${renderParticipants
-    .map((item) => `${item.playerId}:${normalizeStakeValue(item.stake)}:${tsToMs(item.joinedAt || item.createdAt || item.updatedAt)}`)
-    .join("|")}`;
-  const rnd = mulberry32(hashString(seedSource));
-  const winningCellIndex = Math.max(0, Math.min(SCANNER_GRID_TOTAL_CELLS - 1, Math.floor(rnd() * SCANNER_GRID_TOTAL_CELLS)));
+  const activeCache = getScannerActiveBeamCache(round, finalized.players);
+  const winningCellIndex = Number.isInteger(activeCache?.winningCellIndex)
+    ? activeCache.winningCellIndex
+    : 0;
   const ownerIndex = finalized.cellOwners[winningCellIndex] ?? 0;
   const winnerPlayer = finalized.players[ownerIndex] || finalized.players[0] || null;
   return {
@@ -7694,16 +7942,14 @@ function renderScannerButtons() {
 
 
 function getScannerResultRevealProgress() {
-  if (!scannerGridState.animation || !scannerGridState.animation.active) return 1;
-  const duration = Math.max(1, Number(scannerGridState.animation.duration) || 1);
-  return Math.max(0, Math.min(1, (performance.now() - scannerGridState.animation.startedAt) / duration));
+  const status = String(scannerGridState.status || "idle");
+  return status === "finished" ? 1 : 0;
 }
 
 function isScannerResultRevealReady() {
   const status = String(scannerGridState.status || "idle");
   if (status !== "finished") return false;
-  if (!scannerGridState.winningPlayer || !Number.isInteger(scannerGridState.winningCellIndex)) return false;
-  return getScannerResultRevealProgress() >= 0.985;
+  return !!scannerGridState.winningPlayer && Number.isInteger(scannerGridState.winningCellIndex);
 }
 
 function getScannerRoundOverlayLeft() {
@@ -7738,7 +7984,10 @@ function getScannerRoundOverlayRight() {
 
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
-  if (["countdown", "active", "finished", "preparing_next_round"].includes(status)) {
+  if (status === "active") {
+    return "Раунд";
+  }
+  if (["countdown", "finished", "preparing_next_round"].includes(status)) {
     return formatCountdownMs(scannerGridState.countdownMs || 0);
   }
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
@@ -7763,7 +8012,10 @@ function renderScannerRound() {
   const resultText = document.getElementById("scannerResultText");
 
   const myChanceValue = formatPercent(((myPlayer?.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
-  if (countdown) setTextContentIfChanged(countdown, getScannerCountdownChipText());
+  if (countdown) {
+    setTextContentIfChanged(countdown, getScannerCountdownChipText());
+    countdown.classList.toggle("is-round-active", scannerGridState.status === "active");
+  }
   if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(scannerGridState.totalPot || 0)}`);
   if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${myChanceValue}`);
   if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
@@ -7778,11 +8030,7 @@ function renderScannerRound() {
 
   if (resultBanner && resultTitle && resultText) {
     const isResultPhase = scannerGridState.status === "finished";
-    if (isResultPhase && scannerGridState.winningPlayer && !isScannerResultRevealReady()) {
-      resultBanner.style.display = "block";
-      setTextContentIfChanged(resultTitle, "Лазер сканирует...");
-      setTextContentIfChanged(resultText, "Результат появится после завершения движения лазера.");
-    } else if (isResultPhase && scannerGridState.winningPlayer) {
+    if (isResultPhase && scannerGridState.winningPlayer) {
       const myWin = scannerGridState.winningPlayer.id === getCurrentPlayer().id;
       resultBanner.style.display = "block";
       setTextContentIfChanged(resultTitle, myWin ? "Ты выиграл общий раунд" : `Победитель: ${scannerGridState.winningPlayer.name}`);
@@ -8458,24 +8706,13 @@ function renderScannerCanvas() {
 
   let beamSample = null;
   let previewBadgeAlpha = 0;
+  const roundData = scannerGridState.roundData || null;
 
   if (roundStatus === "waiting" || roundStatus === "countdown") {
     if (scannerGridPreviewCanvasCache?.canvas) {
       ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
     }
     previewBadgeAlpha = 1;
-  } else if (roundStatus === "active") {
-    const activeStartedAt = tsToMs(scannerGridState.roundData?.activeStartedAt);
-    const transitionProgress = activeStartedAt > 0
-      ? Math.max(0, Math.min(1, (Date.now() - activeStartedAt) / SCANNER_PREVIEW_TRANSITION_MS))
-      : 1;
-
-    if (transitionProgress < 1) {
-      renderScannerActiveTransition(ctx, size, cellSize, transitionProgress);
-      previewBadgeAlpha = Math.max(0, 1 - transitionProgress * 1.18);
-    } else if (scannerGridCache?.canvas) {
-      ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
-    }
   } else if (scannerGridCache?.canvas) {
     ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
   }
@@ -8487,47 +8724,9 @@ function renderScannerCanvas() {
   }
 
   if (roundStatus === "finished") {
-    const points = scannerGridState.animation.points || scannerGridPath || [];
-    const progress = scannerGridState.animation.active
-      ? Math.min(1, (performance.now() - scannerGridState.animation.startedAt) / scannerGridState.animation.duration)
-      : 1;
-
-    if (progress >= 1) {
-      scannerGridState.animation.active = false;
-    }
-
-    beamSample = interpolateScannerPath(points, progress);
-    const px = beamSample.x * size;
-    const py = beamSample.y * size;
-    const beamLength = size * 4.8;
-    const wobbleStrength = 0.02;
-    const wobble = Math.sin(progress * Math.PI * 10) * wobbleStrength;
-    const baseDotRadius = Math.max(10.5, size * 0.031);
-    const finalLensPhase = Math.max(0, Math.min(1, progress));
-    const lensRadius = baseDotRadius + finalLensPhase * Math.max(26, size * 0.11);
-    const beamGapRadius = finalLensPhase > 0.001 ? lensRadius : baseDotRadius;
-
-    ctx.save();
-    ctx.translate(px, py);
-    ctx.rotate(beamSample.angle + wobble);
-    drawScannerBeam(ctx, beamLength, {
-      glowWidth: 12.2,
-      coreWidth: 3.15,
-      innerWidth: 0.96,
-      glowBlur: 29,
-      coreBlur: 15,
-      beamColor: "rgba(45, 225, 255, 0.82)",
-      innerColor: "rgba(255,255,255,0.96)",
-      centerGap: beamGapRadius * 2.75
-    });
-    ctx.restore();
-
-    if (scannerGridCache?.canvas) {
-      drawScannerLens(ctx, scannerGridCache.canvas, px, py, lensRadius, size, {
-        zoom: 1.7 + finalLensPhase * 0.65,
-        alpha: 0.3 + finalLensPhase * 0.7
-      });
-    }
+    beamSample = getScannerActiveBeamSample(roundData, scannerGridState.players || [], 1);
+  } else if (roundStatus === "active") {
+    beamSample = getScannerActiveBeamSample(roundData, scannerGridState.players || []);
   } else {
     const roundSeed = scannerGridState.renderSeed || scannerGridState.roundId || "idle";
     const isSinglePlayerLobby = roundStatus === "waiting" && scannerGridState.totalPlayers <= 1;
@@ -8535,36 +8734,43 @@ function renderScannerCanvas() {
     if (isSinglePlayerLobby) {
       beamSample = getScannerAmbientBeamSample(now, `${roundSeed}_single_waiting`);
     } else {
-      beamSample = getScannerRoamingBeamSample(
+      const roamingSample = getScannerRoamingBeamSample(
         roundStatus,
-        `${roundSeed}_${scannerGridState.roundId || "idle"}_${scannerGridState.totalPlayers}_${scannerGridState.gridVersion}`,
+        `${roundSeed}_${scannerGridState.roundId || "idle"}_${scannerGridState.totalPlayers}_${scannerGridState.previewGridVersion}`,
         {
-          minDuration: roundStatus === "active" ? 5200 : 6200,
-          maxDuration: roundStatus === "active" ? 9200 : 9800
+          minDuration: 6200,
+          maxDuration: 9800
         }
       );
+      beamSample = roundStatus === "countdown"
+        ? getScannerCountdownBeamSample(roundData, roamingSample, scannerGridState.players || [])
+        : roamingSample;
     }
+  }
 
+  if (beamSample) {
     const px = beamSample.x * size;
     const py = beamSample.y * size;
-    const beamLength = size * (isSinglePlayerLobby ? 4.6 : 4.4);
+    const beamLength = size * (roundStatus === "active" || roundStatus === "finished" ? 4.85 : 4.5);
     const reticleRadius = Math.max(10.2, size * 0.031);
 
     ctx.save();
     ctx.translate(px, py);
-    ctx.rotate(beamSample.angle);
+    ctx.rotate(beamSample.angle || 0);
     drawScannerBeam(ctx, beamLength, {
-      glowWidth: roundStatus === "active" ? 12 : 11,
-      coreWidth: roundStatus === "active" ? 3.2 : 2.9,
-      innerWidth: 0.92,
-      glowBlur: 28,
-      coreBlur: 14,
-      beamColor: roundStatus === "active" ? "rgba(45, 225, 255, 0.84)" : "rgba(45, 225, 255, 0.72)",
-      innerColor: "rgba(255,255,255,0.94)",
-      centerGap: reticleRadius * 2.7
+      glowWidth: roundStatus === "active" || roundStatus === "finished" ? 12.2 : 11,
+      coreWidth: roundStatus === "active" || roundStatus === "finished" ? 3.25 : 2.9,
+      innerWidth: 0.94,
+      glowBlur: 29,
+      coreBlur: 15,
+      beamColor: roundStatus === "active" || roundStatus === "finished"
+        ? "rgba(45, 225, 255, 0.86)"
+        : "rgba(45, 225, 255, 0.72)",
+      innerColor: "rgba(255,255,255,0.95)",
+      centerGap: reticleRadius * 2.72
     });
     drawScannerReticle(ctx, 0, 0, reticleRadius, {
-      alpha: roundStatus === "active" ? 0.98 : 0.86,
+      alpha: roundStatus === "active" || roundStatus === "finished" ? 0.98 : 0.86,
       plusScale: 0.74,
       plusColor: "rgba(7, 11, 18, 0.96)"
     });
