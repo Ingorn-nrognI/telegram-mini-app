@@ -7296,10 +7296,7 @@ function getScannerPlayerAvatarHtml(player) {
 }
 
 function getScannerPlayerRowHtml(player, options = {}) {
-  const participant = getScannerParticipantById(player.id);
-  const leftBadge = participant?.status === "left" ? " · вышел" : "";
-  const zonePercent = formatPercent((Number(player.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
-  const bankPercent = formatPercent(player.sharePercent);
+  const arenaPercent = formatPercent((Number(player.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
   const pinnedClass = options.pinned ? " scanner-pinned-player" : "";
 
   return `
@@ -7307,8 +7304,8 @@ function getScannerPlayerRowHtml(player, options = {}) {
       <div class="scanner-player-swatch" style="background:${player.color};"></div>
       ${getScannerPlayerAvatarHtml(player)}
       <div class="scanner-player-copy">
-        <div class="scanner-player-name">${escapeHtml(player.name)}${player.isMe ? " · ты" : ""}${leftBadge}</div>
-        <div class="scanner-player-meta">Зона ${zonePercent} · ${formatCompactNumber(player.cellCount)} клеток · ${bankPercent} банка</div>
+        <div class="scanner-player-name">${escapeHtml(player.name)}</div>
+        <div class="scanner-player-meta">${arenaPercent}</div>
       </div>
       <div class="scanner-player-stake">${formatTon(player.stake)}</div>
     </div>
@@ -7337,14 +7334,13 @@ function renderScannerParticipants() {
 
   list.className = `scanner-player-list ${expanded ? "is-expanded" : "is-collapsed"}`;
 
+  meta.innerHTML = "";
+  meta.style.display = "none";
+
   if (!scannerGridState.players.length) {
-    setTextContentIfChanged(meta, "");
-    meta.innerHTML = "";
     list.innerHTML = "";
     return;
   }
-
-  meta.innerHTML = `Банк: <span class="scanner-inline-stat">${formatTon(scannerGridState.totalPot)}</span> · Лимит: <span class="scanner-inline-stat">${formatCompactNumber(scannerGridState.maxPlayers || 0)}</span> · Фаза: <span class="scanner-inline-stat">${getScannerStatusText(scannerGridState.roundData)}</span>`;
 
   const { hasMe, myPlayer, others, ordered } = getOrderedScannerPlayersForList();
 
