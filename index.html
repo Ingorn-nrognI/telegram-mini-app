@@ -3194,7 +3194,7 @@ button {
 
         <div class="scanner-panel-top">
           <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
-          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:00</div>
+          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
           <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
         </div>
 
@@ -3585,9 +3585,9 @@ const SCANNER_GRID_COLS = 100;
 const SCANNER_GRID_ROWS = 100;
 const SCANNER_STAKE_PRESETS = [2, 5, 10, 25, 50, 100, 250];
 const SCANNER_POPULATION_PRESETS = [2, 12, 48, 150, 400, 1000];
-const SCANNER_COUNTDOWN_MS = 15000;
+const SCANNER_COUNTDOWN_MS = 30000;
 const SCANNER_ACTIVE_MS = 20000;
-const SCANNER_FINISHED_MS = 6000;
+const SCANNER_FINISHED_MS = 1200;
 const SCANNER_PREPARING_MS = 4000;
 const SCANNER_PREVIEW_TRANSITION_MS = 2600;
 const SCANNER_HEARTBEAT_MS = 20000;
@@ -6113,7 +6113,7 @@ function syncScannerDerivedState() {
   scannerGridState.winningCellIndex = Number.isInteger(round.winningCellIndex) ? round.winningCellIndex : null;
   scannerGridState.winningPlayer = scannerGridState.players.find((player) => player.id === scannerGridState.winnerPlayerId) || null;
 
-  if (scannerGridState.status === "finished" || scannerGridState.status === "preparing_next_round") {
+  if (scannerGridState.status === "finished") {
     if (
       scannerGridState.winningCellIndex !== null &&
       scannerRealtime.lastAnimatedRoundId !== round.id
@@ -6132,7 +6132,7 @@ function syncScannerDerivedState() {
     stopScannerVisualAnimation();
   }
 
-  if (["finished", "preparing_next_round"].includes(scannerGridState.status) && round?.payoutProcessed !== true) {
+  if (scannerGridState.status === "finished" && round?.payoutProcessed !== true) {
     processScannerRoundPayoutOnce(round.id).catch((error) => {
       console.warn("Не удалось обработать выплату победителю:", error);
     });
@@ -6365,7 +6365,7 @@ async function joinOrCreateScannerRound() {
         version: Number(targetRoundData?.version || 0) + 1
       };
 
-      if (nextParticipantCount >= 2 && (targetStatus === "waiting" || !targetStatus)) {
+      if (nextParticipantCount >= 1 && (createNewRound || targetStatus === "waiting" || !targetStatus)) {
         roundUpdate.status = "countdown";
         roundUpdate.countdownStartedAt = createTimestampFromNow(0);
         roundUpdate.countdownEndsAt = createTimestampFromNow(SCANNER_COUNTDOWN_MS);
@@ -6441,7 +6441,13 @@ async function removeParticipantFromRound(roundId, playerId, options = {}) {
       version: Number(roundData.version || 0) + 1
     };
 
-    if (nextCount < 2) {
+    if (nextCount === 1) {
+      update.status = "countdown";
+      update.countdownStartedAt = createTimestampFromNow(0);
+      update.countdownEndsAt = createTimestampFromNow(SCANNER_COUNTDOWN_MS);
+      update.activeStartedAt = null;
+      update.activeEndsAt = null;
+    } else if (nextCount === 0) {
       update.status = "waiting";
       update.countdownStartedAt = null;
       update.countdownEndsAt = null;
@@ -6482,7 +6488,7 @@ async function leaveScannerRound(options = {}) {
   const participant = getScannerParticipantById(currentPlayer.id);
   if (!participant) return;
   const roundStatus = scannerGridState.status;
-  const shouldMarkLeft = roundStatus === "active" || roundStatus === "finished" || roundStatus === "preparing_next_round";
+  const shouldMarkLeft = roundStatus === "active" || roundStatus === "finished";
   await removeParticipantFromRound(roundId, currentPlayer.id, {
     markLeftOnly: shouldMarkLeft,
     reason: options.reason || "manual"
@@ -6531,7 +6537,7 @@ async function processScannerRoundPayoutOnce(roundId, resultOverride = null) {
     if (!roundSnap.exists) return;
     const roundData = roundSnap.data() || {};
     const status = String(roundData.status || "");
-    if (!["finished", "preparing_next_round"].includes(status)) return;
+    if (status !== "finished") return;
     if (roundData.payoutProcessed === true) return;
 
     const winnerPlayerId = resultOverride?.winnerPlayerId || roundData.winnerPlayerId || null;
@@ -6594,7 +6600,7 @@ async function ensureScannerRoundLifecycle() {
         const runtimePointsHere = !runtimeData.activeRoundId || runtimeData.activeRoundId === roundId;
 
         tx.set(roundRef, {
-          status: "idle",
+          status: "waiting",
           totalPot: 0,
           participantCount: 0,
           countdownStartedAt: null,
@@ -6622,13 +6628,13 @@ async function ensureScannerRoundLifecycle() {
       await pruneStaleLobbyParticipants();
     }
 
-    if (roundStatus === "waiting" && participantCount >= 2) {
+    if (roundStatus === "waiting" && participantCount >= 1) {
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(roundRef);
         if (!snap.exists) return;
         const data = snap.data() || {};
         if ((data.status || "waiting") !== "waiting") return;
-        if (participantCount < 2) return;
+        if (participantCount < 1) return;
 
         tx.set(roundRef, {
           status: "countdown",
@@ -6636,6 +6642,8 @@ async function ensureScannerRoundLifecycle() {
           participantCount,
           countdownStartedAt: createTimestampFromNow(0),
           countdownEndsAt: createTimestampFromNow(SCANNER_COUNTDOWN_MS),
+          activeStartedAt: null,
+          activeEndsAt: null,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
           version: Number(data.version || 0) + 1
         }, { merge: true });
@@ -6650,56 +6658,65 @@ async function ensureScannerRoundLifecycle() {
     }
 
     if (roundStatus === "countdown") {
-      if (participantCount < 2) {
+      if (tsToMs(round.countdownEndsAt) <= 0) {
         await db.runTransaction(async (tx) => {
           const snap = await tx.get(roundRef);
           if (!snap.exists) return;
           const data = snap.data() || {};
           if ((data.status || "") !== "countdown") return;
-          if (participantCount >= 2) return;
+
           tx.set(roundRef, {
-            status: "waiting",
             totalPot: actualTotalPot,
             participantCount,
-            countdownStartedAt: null,
-            countdownEndsAt: null,
-            activeStartedAt: null,
-            activeEndsAt: null,
+            countdownStartedAt: createTimestampFromNow(0),
+            countdownEndsAt: createTimestampFromNow(SCANNER_COUNTDOWN_MS),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             version: Number(data.version || 0) + 1
-          }, { merge: true });
-          tx.set(runtimeRef, {
-            activeRoundId: roundId,
-            status: "waiting",
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
         });
         return;
       }
 
-      if (tsToMs(round.countdownEndsAt) > 0 && nowMs >= tsToMs(round.countdownEndsAt)) {
-        await db.runTransaction(async (tx) => {
-          const snap = await tx.get(roundRef);
-          if (!snap.exists) return;
-          const data = snap.data() || {};
-          if ((data.status || "") !== "countdown") return;
-          if (participantCount < 2) return;
-          tx.set(roundRef, {
-            status: "active",
-            totalPot: actualTotalPot,
-            participantCount,
-            activeStartedAt: createTimestampFromNow(0),
-            activeEndsAt: createTimestampFromNow(SCANNER_ACTIVE_MS),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            version: Number(data.version || 0) + 1
-          }, { merge: true });
-          tx.set(runtimeRef, {
-            activeRoundId: roundId,
-            status: "active",
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
-        });
-        return;
+      if (nowMs >= tsToMs(round.countdownEndsAt)) {
+        if (participantCount >= 2) {
+          await db.runTransaction(async (tx) => {
+            const snap = await tx.get(roundRef);
+            if (!snap.exists) return;
+            const data = snap.data() || {};
+            if ((data.status || "") !== "countdown") return;
+
+            tx.set(roundRef, {
+              status: "active",
+              totalPot: actualTotalPot,
+              participantCount,
+              activeStartedAt: createTimestampFromNow(0),
+              activeEndsAt: createTimestampFromNow(SCANNER_ACTIVE_MS),
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              version: Number(data.version || 0) + 1
+            }, { merge: true });
+
+            tx.set(runtimeRef, {
+              activeRoundId: roundId,
+              status: "active",
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          });
+          return;
+        }
+
+        if (participantCount === 1) {
+          await removeParticipantFromRound(roundId, renderParticipants[0].playerId, {
+            reason: "single_player_timeout"
+          });
+
+          if (String(renderParticipants[0].playerId || "") === String(getCurrentPlayer().id)) {
+            setScannerTransientMessage("Второй игрок не зашёл. Ставка возвращена, арена сброшена.", {
+              type: "info",
+              timeoutMs: 5000
+            });
+          }
+          return;
+        }
       }
     }
 
@@ -6745,6 +6762,7 @@ async function ensureScannerRoundLifecycle() {
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
           version: Number(data.version || 0) + 1
         }, { merge: true });
+
         tx.set(runtimeRef, {
           activeRoundId: roundId,
           status: "finished",
@@ -6756,41 +6774,29 @@ async function ensureScannerRoundLifecycle() {
 
     if (roundStatus === "finished" && tsToMs(round.finishedEndsAt) > 0 && nowMs >= tsToMs(round.finishedEndsAt)) {
       await db.runTransaction(async (tx) => {
+        const runtimeSnap = await tx.get(runtimeRef);
+        const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
+        if (runtimeData.activeRoundId && runtimeData.activeRoundId !== roundId) return;
+
         const snap = await tx.get(roundRef);
         if (!snap.exists) return;
         const data = snap.data() || {};
         if ((data.status || "") !== "finished") return;
+
         tx.set(roundRef, {
-          status: "preparing_next_round",
-          preparingStartedAt: createTimestampFromNow(0),
-          preparingEndsAt: createTimestampFromNow(SCANNER_PREPARING_MS),
+          status: "completed",
+          completedAt: firebase.firestore.FieldValue.serverTimestamp(),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
           version: Number(data.version || 0) + 1
         }, { merge: true });
-        tx.set(runtimeRef, {
-          activeRoundId: roundId,
-          status: "preparing_next_round",
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      });
-      return;
-    }
 
-    if (roundStatus === "preparing_next_round" && tsToMs(round.preparingEndsAt) > 0 && nowMs >= tsToMs(round.preparingEndsAt)) {
-      await db.runTransaction(async (tx) => {
-        const runtimeSnap = await tx.get(runtimeRef);
-        const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
-        if (runtimeData.activeRoundId && runtimeData.activeRoundId !== roundId) return;
-        const snap = await tx.get(roundRef);
-        if (!snap.exists) return;
-        const data = snap.data() || {};
-        if ((data.status || "") !== "preparing_next_round") return;
         tx.set(runtimeRef, {
           activeRoundId: null,
           status: "idle",
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
       });
+      return;
     }
   } finally {
     scannerRealtime.lifecycleBusy = false;
@@ -6800,7 +6806,7 @@ async function ensureScannerRoundLifecycle() {
 async function ensureScannerRoundHistoryPersisted() {
   const round = scannerGridState.roundData;
   if (!round || !round.id) return;
-  if (!["finished", "preparing_next_round"].includes(scannerGridState.status)) return;
+  if (scannerGridState.status !== "finished") return;
   if (!scannerGridState.winningPlayer) return;
   if (scannerRealtime.lastPersistedRoundId === round.id) return;
 
@@ -7615,7 +7621,7 @@ function getScannerResultRevealProgress() {
 
 function isScannerResultRevealReady() {
   const status = String(scannerGridState.status || "idle");
-  if (!["finished", "preparing_next_round"].includes(status)) return false;
+  if (status !== "finished") return false;
   if (!scannerGridState.winningPlayer || !Number.isInteger(scannerGridState.winningCellIndex)) return false;
   return getScannerResultRevealProgress() >= 0.985;
 }
@@ -7634,22 +7640,31 @@ function getScannerRoundOverlayRight() {
 
   switch (scannerGridState.status) {
     case "waiting":
-      return scannerGridState.totalPlayers === 1 ? "Ожидание 2-го игрока" : "Ожидание старта";
+      return "Арена готова";
     case "countdown":
-      return "Крупные долевые зоны";
+      return scannerGridState.totalPlayers === 1 ? "Ожидание 2-го игрока" : "Ожидание старта";
     case "active":
-      return "Зоны рассеяны по полю";
+      return "Раунд идёт";
     case "finished":
       return isScannerResultRevealReady()
         ? `Победитель: ${scannerGridState.winningPlayer?.name || "—"}`
-        : "Лазер сканирует";
+        : "Раунд завершён";
     case "preparing_next_round":
-      return isScannerResultRevealReady()
-        ? "Результат показан"
-        : "Лазер сканирует";
+      return "Арена готова";
     default:
       return "Лазер в ожидании";
   }
+}
+
+function getScannerCountdownChipText() {
+  const status = String(scannerGridState.status || "idle");
+  if (status === "active") {
+    return "Раунд";
+  }
+  if (status === "countdown") {
+    return formatCountdownMs(scannerGridState.countdownMs || 0);
+  }
+  return formatCountdownMs(SCANNER_COUNTDOWN_MS);
 }
 
 function renderScannerRound() {
@@ -7671,7 +7686,7 @@ function renderScannerRound() {
   const resultText = document.getElementById("scannerResultText");
 
   const myChanceValue = formatPercent(((myPlayer?.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
-  if (countdown) setTextContentIfChanged(countdown, formatCountdownMs(scannerGridState.countdownMs || 0));
+  if (countdown) setTextContentIfChanged(countdown, getScannerCountdownChipText());
   if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(scannerGridState.totalPot || 0)}`);
   if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${myChanceValue}`);
   if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
@@ -7685,7 +7700,7 @@ function renderScannerRound() {
   }
 
   if (resultBanner && resultTitle && resultText) {
-    const isResultPhase = scannerGridState.status === "finished" || scannerGridState.status === "preparing_next_round";
+    const isResultPhase = scannerGridState.status === "finished";
     if (isResultPhase && scannerGridState.winningPlayer && !isScannerResultRevealReady()) {
       resultBanner.style.display = "block";
       setTextContentIfChanged(resultTitle, "Лазер сканирует...");
@@ -8394,7 +8409,7 @@ function renderScannerCanvas() {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
   }
 
-  if (roundStatus === "finished" || roundStatus === "preparing_next_round") {
+  if (roundStatus === "finished") {
     const points = scannerGridState.animation.points || scannerGridPath || [];
     const progress = scannerGridState.animation.active
       ? Math.min(1, (performance.now() - scannerGridState.animation.startedAt) / scannerGridState.animation.duration)
@@ -8408,7 +8423,7 @@ function renderScannerCanvas() {
     const px = beamSample.x * size;
     const py = beamSample.y * size;
     const beamLength = size * 4.8;
-    const wobbleStrength = roundStatus === "preparing_next_round" ? 0.008 : 0.02;
+    const wobbleStrength = 0.02;
     const wobble = Math.sin(progress * Math.PI * 10) * wobbleStrength;
     const baseDotRadius = Math.max(10.5, size * 0.031);
     const finalLensPhase = Math.max(0, Math.min(1, progress));
