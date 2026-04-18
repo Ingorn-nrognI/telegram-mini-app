@@ -5291,13 +5291,41 @@ function createTimestampFromNow(offsetMs = 0) {
   return firebase.firestore.Timestamp.fromMillis(Date.now() + offsetMs);
 }
 
-function getScannerColorById(id, isCurrent = false) {
-  const stableId = String(id || "unknown_player");
+function getScannerColorById(id, scopeKey = "") {
+  const stableId = `${String(scopeKey || "global_scope")}::${String(id || "unknown_player")}`;
   const hash = hashString(stableId);
   const hue = hash % 360;
   const saturation = 68 + (hash % 16);
   const lightness = 56 + (hash % 8);
   return `hsl(${hue} ${saturation}% ${lightness}%)`;
+}
+
+function getScannerRoundColorSeed(round) {
+  return `${round?.entropySeed || round?.id || "round"}::${tsToMs(round?.createdAt || 0)}::${String(round?.createdBy || "")}`;
+}
+
+function getScannerUniqueRoundColor(roundSeed, playerIndex) {
+  const safeIndex = Math.max(0, Number(playerIndex) || 0);
+  const roundHash = hashString(`${roundSeed || "round_seed"}`);
+  const hueBase = roundHash % 360;
+  const hueStep = 137;
+  const hueBand = Math.floor(safeIndex / 360);
+  const hueIndex = safeIndex % 360;
+  const hue = (hueBase + (hueIndex * hueStep)) % 360;
+  const preciseHue = Math.min(359.999, hue + (hueBand * 0.013));
+  const saturationCycle = [72, 76, 80, 84, 88, 70, 74, 78, 82, 86];
+  const lightnessCycle = [58, 62, 54, 66, 50, 60, 56, 64, 52, 68];
+  const saturation = saturationCycle[hueBand % saturationCycle.length] + (Math.floor(hueBand / saturationCycle.length) % 3);
+  const lightness = lightnessCycle[Math.floor(hueBand / saturationCycle.length) % lightnessCycle.length];
+  return `hsl(${preciseHue.toFixed(3)} ${saturation}% ${lightness}%)`;
+}
+
+function assignScannerRoundColors(round, participants) {
+  const roundSeed = getScannerRoundColorSeed(round);
+  return (participants || []).map((participant, index) => ({
+    participant,
+    color: getScannerUniqueRoundColor(roundSeed, index)
+  }));
 }
 
 function normalizeStakeValue(value) {
@@ -5650,7 +5678,9 @@ function buildScannerScatterRevealThresholds(versionSeed) {
 
 function buildScannerPlayersFromFirestore(round, participants) {
   const currentPlayer = getCurrentPlayer();
-  const normalized = getRoundParticipantsForRender(round, participants).map((participant, index) => ({
+  const renderParticipants = getRoundParticipantsForRender(round, participants);
+  const participantsWithColors = assignScannerRoundColors(round, renderParticipants);
+  const normalized = participantsWithColors.map(({ participant, color }, index) => ({
     id: String(participant.playerId || participant.id || `player_${index}`),
     name: participant.name || "Игрок",
     avatar: participant.avatar || null,
@@ -5658,7 +5688,7 @@ function buildScannerPlayersFromFirestore(round, participants) {
     joinedAt: tsToMs(participant.joinedAt || participant.createdAt || participant.updatedAt || Date.now()),
     isMe: String(participant.playerId || participant.id) === currentPlayer.id,
     left: participant.status === "left",
-    color: getScannerColorById(String(participant.playerId || participant.id || index), String(participant.playerId || participant.id) === currentPlayer.id)
+    color
   }));
 
   return finalizeScannerPlayers(normalized, `${round?.entropySeed || round?.id || "round"}_${round?.status || "idle"}_${round?.version || 0}`);
@@ -6873,7 +6903,7 @@ async function ensureScannerRoundHistoryPersisted() {
       maxPlayers: Number(round.maxPlayers || 0),
       winnerPlayerId: scannerGridState.winningPlayer.id,
       winnerName: scannerGridState.winningPlayer.name,
-      winnerColor: scannerGridState.winningPlayer.color || getScannerColorById(scannerGridState.winningPlayer.id),
+      winnerColor: scannerGridState.winningPlayer.color || getScannerColorById(scannerGridState.winningPlayer.id, round.id || round.entropySeed || "history_round"),
       winnerStake: Number(scannerGridState.winningPlayer.stake || 0),
       commissionPercent: Number(round.commissionPercent || 0),
       commissionAmount: Number(round.commissionAmount || 0),
@@ -7401,7 +7431,10 @@ function renderScannerRecentList() {
     const finishedAtText = formatHistoryDate(tsToMs(item.finishedAt) ? new Date(tsToMs(item.finishedAt)).toISOString() : item.finishedAt);
     const playersCountText = formatCompactNumber(item.participantCount || 0);
     const multiplierText = formatScannerMultiplier(winnerPayout, winnerStake);
-    const winnerColor = item.winnerColor || getScannerColorById(item.winnerPlayerId || item.winnerName || "winner");
+    const winnerColor = item.winnerColor || getScannerColorById(
+      item.winnerPlayerId || item.winnerName || "winner",
+      item.roundId || item.finishedAt || item.playedAt || item.mode || "recent_round"
+    );
     const winnerNickname = String(
       item.winnerName ||
       item.winner ||
