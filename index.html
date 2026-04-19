@@ -3802,6 +3802,15 @@ let scannerTopUiVisibilityFrame = null;
 const scannerAvatarCache = new Map();
 const scannerProfileAvatarCache = new Map();
 let scannerActiveBeamCache = null;
+const scannerDerivedVisualCache = {
+  key: "",
+  value: null
+};
+const scannerOrderedPlayersCache = {
+  playersRef: null,
+  myPlayerId: "",
+  value: null
+};
 const scannerBeamMotionState = {
   modeKey: "",
   segmentIndex: 0,
@@ -5496,6 +5505,7 @@ function resetScannerRoundVisualState(options = {}) {
   scannerGridState.winningCellIndex = null;
   scannerGridState.winningPlayer = null;
   scannerGridPath = null;
+  resetScannerDerivedVisualCache();
   stopScannerVisualAnimation();
 }
 
@@ -5808,6 +5818,57 @@ function buildScannerPlayersFromFirestore(round, participants) {
   }));
 
   return finalizeScannerPlayers(normalized, `${round?.entropySeed || round?.id || "round"}_${round?.status || "idle"}_${round?.version || 0}`);
+}
+
+function resetScannerDerivedVisualCache() {
+  scannerDerivedVisualCache.key = "";
+  scannerDerivedVisualCache.value = null;
+  scannerOrderedPlayersCache.playersRef = null;
+  scannerOrderedPlayersCache.myPlayerId = "";
+  scannerOrderedPlayersCache.value = null;
+}
+
+function getScannerDerivedVisualCacheKey(round, participants) {
+  const roundPart = [
+    String(round?.id || "round"),
+    String(round?.status || "idle"),
+    String(round?.version || 0),
+    String(round?.entropySeed || "seed")
+  ].join("::");
+
+  const participantsPart = (participants || []).map((participant, index) => [
+    String(participant?.playerId || participant?.id || `participant_${index}`),
+    normalizeStakeValue(participant?.stake).toFixed(2),
+    String(tsToMs(participant?.joinedAt || participant?.createdAt || participant?.updatedAt || 0)),
+    String(participant?.status || "joined"),
+    String(participant?.name || ""),
+    String(participant?.avatar || "")
+  ].join("~")).join("||");
+
+  return `${roundPart}::${participantsPart}`;
+}
+
+function getScannerDerivedVisualState(round, participants) {
+  const cacheKey = getScannerDerivedVisualCacheKey(round, participants);
+  if (scannerDerivedVisualCache.key === cacheKey && scannerDerivedVisualCache.value) {
+    return scannerDerivedVisualCache.value;
+  }
+
+  const finalized = buildScannerPlayersFromFirestore(round, participants);
+  const previewVersion = `${finalized.gridVersion}_preview_${round?.status || "idle"}`;
+  const previewCellOwners = buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
+  const previewZones = buildScannerPreviewZones(previewCellOwners, finalized.players);
+  const nextValue = {
+    key: cacheKey,
+    finalized,
+    previewVersion,
+    previewCellOwners,
+    previewZones
+  };
+
+  scannerDerivedVisualCache.key = cacheKey;
+  scannerDerivedVisualCache.value = nextValue;
+  return nextValue;
 }
 
 function getScannerMyPlayer() {
@@ -6742,17 +6803,17 @@ function syncScannerDerivedState() {
     return;
   }
 
-  const finalized = buildScannerPlayersFromFirestore(round, renderParticipants);
-  const previewVersion = `${finalized.gridVersion}_preview_${round.status || "idle"}`;
+  const derivedVisual = getScannerDerivedVisualState(round, renderParticipants);
+  const finalized = derivedVisual.finalized;
   scannerGridState.players = finalized.players;
   scannerGridState.totalPlayers = finalized.totalPlayers;
   scannerGridState.totalPot = normalizeStakeValue(finalized.totalPot);
   scannerGridState.countdownMs = countdownMs;
   scannerGridState.cellOwners = finalized.cellOwners;
   scannerGridState.gridVersion = `${finalized.gridVersion}_${round.status || "idle"}`;
-  scannerGridState.previewCellOwners = buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
-  scannerGridState.previewGridVersion = previewVersion;
-  scannerGridState.previewZones = buildScannerPreviewZones(scannerGridState.previewCellOwners, finalized.players);
+  scannerGridState.previewCellOwners = derivedVisual.previewCellOwners;
+  scannerGridState.previewGridVersion = derivedVisual.previewVersion;
+  scannerGridState.previewZones = derivedVisual.previewZones;
   scannerGridState.status = roundStatus || "waiting";
   scannerGridState.renderSeed = round.entropySeed || round.id || "idle";
 
@@ -7983,6 +8044,15 @@ function toggleScannerParticipants(event) {
 }
 
 function getOrderedScannerPlayersForList() {
+  const myPlayerId = getCurrentPlayer().id;
+  if (
+    scannerOrderedPlayersCache.playersRef === scannerGridState.players &&
+    scannerOrderedPlayersCache.myPlayerId === myPlayerId &&
+    scannerOrderedPlayersCache.value
+  ) {
+    return scannerOrderedPlayersCache.value;
+  }
+
   const sorted = scannerGridState.players
     .slice()
     .sort((a, b) => {
@@ -7991,18 +8061,24 @@ function getOrderedScannerPlayersForList() {
       return Number(a.joinedAt || 0) - Number(b.joinedAt || 0);
     });
 
-  const myPlayerId = getCurrentPlayer().id;
   const myIndex = sorted.findIndex((player) => String(player.id) === String(myPlayerId));
-  if (myIndex === -1) return { hasMe: false, myPlayer: null, others: sorted, ordered: sorted };
+  const nextValue = myIndex === -1
+    ? { hasMe: false, myPlayer: null, others: sorted, ordered: sorted }
+    : (() => {
+        const myPlayer = sorted[myIndex];
+        const others = sorted.filter((player) => String(player.id) !== String(myPlayerId));
+        return {
+          hasMe: true,
+          myPlayer,
+          others,
+          ordered: [myPlayer, ...others]
+        };
+      })();
 
-  const myPlayer = sorted[myIndex];
-  const others = sorted.filter((player) => String(player.id) !== String(myPlayerId));
-  return {
-    hasMe: true,
-    myPlayer,
-    others,
-    ordered: [myPlayer, ...others]
-  };
+  scannerOrderedPlayersCache.playersRef = scannerGridState.players;
+  scannerOrderedPlayersCache.myPlayerId = myPlayerId;
+  scannerOrderedPlayersCache.value = nextValue;
+  return nextValue;
 }
 
 function getScannerPlayerAvatarHtml(player) {
@@ -8054,22 +8130,22 @@ function renderScannerParticipants() {
 
   list.className = `scanner-player-list ${expanded ? "is-expanded" : "is-collapsed"}`;
 
-  meta.innerHTML = "";
+  setInnerHtmlIfChanged(meta, "");
   meta.style.display = "none";
 
   if (scannerGridState.status === "preparing_next_round") {
     if (countEl) {
       setTextContentIfChanged(countEl, "0");
     }
-    list.innerHTML = "";
+    setInnerHtmlIfChanged(list, "");
     return;
   }
 
   if (!scannerGridState.players.length) {
     if (scannerGridState.roundData && hasScannerRoundVisibleState(scannerGridState.roundData)) {
-      list.innerHTML = `<div class="scanner-empty">Подгружаем текущее состояние игроков этого раунда...</div>`;
+      setInnerHtmlIfChanged(list, `<div class="scanner-empty">Подгружаем текущее состояние игроков этого раунда...</div>`);
     } else {
-      list.innerHTML = "";
+      setInnerHtmlIfChanged(list, "");
     }
     return;
   }
@@ -8081,12 +8157,12 @@ function renderScannerParticipants() {
       const previewOthers = others.slice(0, 2);
       const previewOthersHtml = previewOthers.map((player) => getScannerPlayerRowHtml(player)).join("");
       list.classList.add("has-pinned");
-      list.innerHTML = `${getScannerPlayerRowHtml(myPlayer, { pinned: true })}${previewOthersHtml}`;
+      setInnerHtmlIfChanged(list, `${getScannerPlayerRowHtml(myPlayer, { pinned: true })}${previewOthersHtml}`);
       return;
     }
 
     const previewPlayers = ordered.slice(0, 3);
-    list.innerHTML = previewPlayers.map((player) => getScannerPlayerRowHtml(player)).join("");
+    setInnerHtmlIfChanged(list, previewPlayers.map((player) => getScannerPlayerRowHtml(player)).join(""));
     return;
   }
 
@@ -8096,12 +8172,12 @@ function renderScannerParticipants() {
       ? `<div class="scanner-player-scroll">${others.map((player) => getScannerPlayerRowHtml(player)).join("")}</div>`
       : "";
 
-    list.innerHTML = `${getScannerPlayerRowHtml(myPlayer, { pinned: true })}${othersHtml}`;
+    setInnerHtmlIfChanged(list, `${getScannerPlayerRowHtml(myPlayer, { pinned: true })}${othersHtml}`);
     return;
   }
 
   list.classList.add("full-scroll");
-  list.innerHTML = ordered.map((player) => getScannerPlayerRowHtml(player)).join("");
+  setInnerHtmlIfChanged(list, ordered.map((player) => getScannerPlayerRowHtml(player)).join(""));
 }
 
 function renderScannerRecentList() {
@@ -8123,11 +8199,11 @@ function renderScannerRecentList() {
   }
 
   if (!items.length) {
-    container.innerHTML = `<div class="scanner-empty">Глобальная история раундов пока пуста.</div>`;
+    setInnerHtmlIfChanged(container, `<div class="scanner-empty">Глобальная история раундов пока пуста.</div>`);
     return;
   }
 
-  container.innerHTML = visibleItems.map((item) => {
+  setInnerHtmlIfChanged(container, visibleItems.map((item) => {
     const winnerStake = normalizeMoneyValue(item.winnerStake || 0);
     const winnerPayout = normalizeMoneyValue(item.winnerPayout || winnerStake || 0);
     const finishedAtText = formatHistoryDate(tsToMs(item.finishedAt) ? new Date(tsToMs(item.finishedAt)).toISOString() : item.finishedAt);
@@ -8155,7 +8231,7 @@ function renderScannerRecentList() {
         <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
       </div>
     `;
-  }).join("");
+  }).join(""));
 }
 
 function isScannerBettingLocked() {
@@ -8398,7 +8474,8 @@ function getScannerCountdownChipText() {
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
 }
 
-function renderScannerRound() {
+function renderScannerRound(options = {}) {
+  const { forceCanvas = false } = options;
   renderScannerChips("scannerStakeChips", SCANNER_STAKE_PRESETS, scannerGridState.selectedStake, "setScannerStakeAndJoin", " TON");
   renderScannerChips("scannerPopulationChips", SCANNER_POPULATION_PRESETS, scannerGridState.selectedPopulation, "setScannerPopulation", "");
 
@@ -8475,7 +8552,9 @@ function renderScannerRound() {
   renderScannerBetBar();
   renderScannerParticipants();
   renderScannerRecentList();
-  renderScannerCanvas();
+  if (forceCanvas || !scannerGridVisualFrame) {
+    renderScannerCanvas();
+  }
 }
 
 
@@ -9527,10 +9606,16 @@ function initializeScannerGridFeature() {
   renderScannerRound();
 
   if (!scannerGridResizeAttached) {
+    let scannerResizeRaf = null;
     window.addEventListener("resize", () => {
-      if (shouldRenderScannerCanvasLive()) {
-        renderScannerCanvas();
+      if (!shouldRenderScannerCanvasLive()) return;
+      if (scannerResizeRaf) {
+        cancelAnimationFrame(scannerResizeRaf);
       }
+      scannerResizeRaf = requestAnimationFrame(() => {
+        scannerResizeRaf = null;
+        renderScannerCanvas();
+      });
     });
     scannerGridResizeAttached = true;
   }
