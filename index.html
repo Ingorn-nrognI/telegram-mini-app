@@ -3681,6 +3681,12 @@ const SCANNER_ACTIVE_BEAM_BASE_SPEED = 1.68;
 const SCANNER_ACTIVE_BEAM_MIN_SPEED_FACTOR = 0.18;
 const SCANNER_ACTIVE_BEAM_SLOWDOWN_START = 0.72;
 const SCANNER_ACTIVE_BEAM_EDGE_PADDING = 0.012;
+const SCANNER_BEAM_SMOOTH_TAU_MS = 62;
+const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 54;
+const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 34;
+const SCANNER_BEAM_SNAP_DELTA_MS = 220;
+const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.42;
+const SCANNER_BEAM_HARD_RESET_ANGLE = Math.PI * 0.92;
 const SCANNER_HEARTBEAT_MS = 20000;
 const SCANNER_STALE_LOBBY_MS = 90000;
 const SCANNER_RUNTIME_COLLECTION = "pvp_runtime";
@@ -3786,6 +3792,7 @@ let scannerGridVisualFrame = null;
 let scannerGridCanvasCache = null;
 let scannerGridPreviewCanvasCache = null;
 let scannerGridCache = null;
+let scannerGridLinesCache = null;
 let scannerGridTransitionCache = null;
 let scannerGridPath = null;
 let scannerGridResizeAttached = false;
@@ -3802,6 +3809,13 @@ const scannerBeamMotionState = {
   startedAt: 0,
   duration: 0,
   lastPoint: { x: 0.5, y: 0.5, angle: 0 }
+};
+
+const scannerBeamRenderState = {
+  initialized: false,
+  key: "",
+  sample: { x: 0.5, y: 0.5, angle: 0 },
+  lastFrameAt: 0
 };
 
 const scannerWaitingTextGlowState = {
@@ -6060,6 +6074,87 @@ function lerpScannerAngle(from, to, progress) {
   return start + delta * t;
 }
 
+function getScannerAngleDelta(from, to) {
+  let delta = (Number(to) || 0) - (Number(from) || 0);
+  while (delta > Math.PI) delta -= Math.PI * 2;
+  while (delta < -Math.PI) delta += Math.PI * 2;
+  return delta;
+}
+
+function getScannerBeamSampleDistance(fromSample, toSample) {
+  const from = fromSample || { x: 0.5, y: 0.5 };
+  const to = toSample || from;
+  return Math.hypot((Number(to.x) || 0) - (Number(from.x) || 0), (Number(to.y) || 0) - (Number(from.y) || 0));
+}
+
+function resetScannerBeamRenderState(sample = null, key = "") {
+  const nextSample = sample || { x: 0.5, y: 0.5, angle: 0 };
+  scannerBeamRenderState.initialized = true;
+  scannerBeamRenderState.key = String(key || "");
+  scannerBeamRenderState.sample = {
+    x: clampScannerNumber(nextSample.x, -0.18, 1.18),
+    y: clampScannerNumber(nextSample.y, -0.18, 1.18),
+    angle: Number(nextSample.angle) || 0
+  };
+  scannerBeamRenderState.lastFrameAt = performance.now();
+  return scannerBeamRenderState.sample;
+}
+
+function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = performance.now(), options = {}) {
+  const target = targetSample || { x: 0.5, y: 0.5, angle: 0 };
+  const state = scannerBeamRenderState;
+  const safeFrameTime = Number.isFinite(Number(frameTime)) ? Number(frameTime) : performance.now();
+  const nextKey = String(renderKey || "beam");
+  const previousSample = state.sample || { x: 0.5, y: 0.5, angle: 0 };
+  const keyChanged = state.key !== nextKey;
+
+  if (!state.initialized || !Number.isFinite(state.lastFrameAt)) {
+    state.lastFrameAt = safeFrameTime;
+    return resetScannerBeamRenderState(target, nextKey);
+  }
+
+  let deltaMs = safeFrameTime - state.lastFrameAt;
+  if (!Number.isFinite(deltaMs) || deltaMs < 0) {
+    deltaMs = 16.6667;
+  }
+  state.lastFrameAt = safeFrameTime;
+
+  const distance = getScannerBeamSampleDistance(previousSample, target);
+  const angleDistance = Math.abs(getScannerAngleDelta(previousSample.angle || 0, target.angle || 0));
+  const shouldSnap =
+    options.snap === true ||
+    deltaMs >= SCANNER_BEAM_SNAP_DELTA_MS ||
+    (keyChanged && distance >= SCANNER_BEAM_HARD_RESET_DISTANCE && angleDistance >= SCANNER_BEAM_HARD_RESET_ANGLE);
+
+  if (shouldSnap) {
+    state.key = nextKey;
+    state.sample = {
+      x: clampScannerNumber(target.x, -0.18, 1.18),
+      y: clampScannerNumber(target.y, -0.18, 1.18),
+      angle: Number(target.angle) || 0
+    };
+    return state.sample;
+  }
+
+  const effectiveDelta = Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, Math.max(1, deltaMs));
+  let positionAlpha = 1 - Math.exp(-effectiveDelta / SCANNER_BEAM_SMOOTH_TAU_MS);
+  let angleAlpha = 1 - Math.exp(-effectiveDelta / SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS);
+
+  if (options.preferImmediate === true) {
+    positionAlpha = Math.max(positionAlpha, 0.72);
+    angleAlpha = Math.max(angleAlpha, 0.76);
+  }
+
+  state.key = nextKey;
+  state.sample = {
+    x: previousSample.x + ((Number(target.x) || 0) - previousSample.x) * positionAlpha,
+    y: previousSample.y + ((Number(target.y) || 0) - previousSample.y) * positionAlpha,
+    angle: lerpScannerAngle(previousSample.angle || 0, Number(target.angle) || 0, angleAlpha)
+  };
+
+  return state.sample;
+}
+
 function getScannerCellIndexFromPoint(x, y) {
   const clampedX = clampScannerNumber(x, 0, 0.999999);
   const clampedY = clampScannerNumber(y, 0, 0.999999);
@@ -6307,6 +6402,7 @@ function stopScannerVisualAnimation() {
   scannerGridState.animation.startedAt = 0;
   scannerGridState.animation.points = [];
   scannerGridPath = null;
+  resetScannerBeamRenderState();
 }
 
 function ensureScannerVisualLoop() {
@@ -8365,6 +8461,15 @@ function drawScannerGridLines(ctx, size, cellSize) {
   ctx.restore();
 }
 
+function buildScannerGridLinesCache(size, cellSize) {
+  const cacheCanvas = document.createElement("canvas");
+  cacheCanvas.width = size;
+  cacheCanvas.height = size;
+  const cacheCtx = cacheCanvas.getContext("2d");
+  drawScannerGridLines(cacheCtx, size, cellSize);
+  return cacheCanvas;
+}
+
 function drawScannerBeam(ctx, length, options = {}) {
   const safeLength = Math.max(0, Number(length) || 0);
   if (!safeLength) return;
@@ -8882,6 +8987,17 @@ function ensureScannerSurfaceCaches(size) {
     scannerGridPreviewCanvasCache = { version: scannerGridState.previewGridVersion, size, canvas: previewCanvas };
   }
 
+  if (
+    !scannerGridLinesCache ||
+    !scannerGridLinesCache.canvas ||
+    scannerGridLinesCache.size !== size
+  ) {
+    scannerGridLinesCache = {
+      size,
+      canvas: buildScannerGridLinesCache(size, size / SCANNER_GRID_COLS)
+    };
+  }
+
   const transitionVersion = `${scannerGridState.previewGridVersion}_${scannerGridState.gridVersion}`;
   if (
     !scannerGridTransitionCache ||
@@ -8967,11 +9083,23 @@ function renderScannerCanvas() {
   const roundData = scannerGridState.roundData || null;
   if (!hasGrid) {
     if (roundStatus === "preparing_next_round" && roundData) {
-      drawScannerEmptyArenaState(ctx, size, getScannerPreparingBeamSample(roundData, scannerGridState.players || []), {
+      const preparingBeamSample = getSmoothedScannerBeamSample(
+        getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+        `${roundStatus}::${roundData?.id || "none"}::empty`,
+        now
+      );
+      drawScannerEmptyArenaState(ctx, size, preparingBeamSample, {
         waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData))
       });
     } else {
-      drawScannerIdleArena(ctx, size, now);
+      const idleBeamSample = getSmoothedScannerBeamSample(
+        getScannerSharedLobbyBeamSample(),
+        `${roundStatus || "idle"}::empty`,
+        now
+      );
+      drawScannerEmptyArenaState(ctx, size, idleBeamSample, {
+        waitingTextAlpha: 1
+      });
     }
     return;
   }
@@ -9000,7 +9128,12 @@ function renderScannerCanvas() {
     }
     previewBadgeAlpha = 1 - shuffleProgress;
   } else if (roundStatus === "preparing_next_round") {
-    drawScannerEmptyArenaState(ctx, size, getScannerPreparingBeamSample(roundData, scannerGridState.players || []), {
+    const preparingBeamSample = getSmoothedScannerBeamSample(
+      getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+      `${roundStatus}::${roundData?.id || "none"}::grid`,
+      now
+    );
+    drawScannerEmptyArenaState(ctx, size, preparingBeamSample, {
       waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData))
     });
     return;
@@ -9008,7 +9141,11 @@ function renderScannerCanvas() {
     ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
   }
 
-  drawScannerGridLines(ctx, size, cellSize);
+  if (scannerGridLinesCache?.canvas) {
+    ctx.drawImage(scannerGridLinesCache.canvas, 0, 0, size, size);
+  } else {
+    drawScannerGridLines(ctx, size, cellSize);
+  }
 
   if (previewBadgeAlpha > 0.02) {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
@@ -9029,6 +9166,15 @@ function renderScannerCanvas() {
   }
 
   if (beamSample) {
+    beamSample = getSmoothedScannerBeamSample(
+      beamSample,
+      `${roundStatus}::${roundData?.id || "none"}::${scannerGridState.gridVersion || "idle"}::${scannerGridState.previewGridVersion || "idle"}`,
+      now,
+      {
+        preferImmediate: roundStatus === "finished"
+      }
+    );
+
     const px = beamSample.x * size;
     const py = beamSample.y * size;
     const beamLength = size * (roundStatus === "active" || roundStatus === "finished" ? 4.85 : 4.5);
