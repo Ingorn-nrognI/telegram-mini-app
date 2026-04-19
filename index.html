@@ -3677,17 +3677,28 @@ const SCANNER_PREVIEW_TRANSITION_MS = 1100;
 const SCANNER_SHUFFLING_MS = SCANNER_PREVIEW_TRANSITION_MS + SCANNER_PREPARING_MS;
 const SCANNER_EDGE_LATCH_MS = 3400;
 const SCANNER_ACTIVE_BEAM_STEPS = 1800;
-const SCANNER_ACTIVE_BEAM_BASE_SPEED = 1.18;
-const SCANNER_ACTIVE_BEAM_MIN_SPEED_FACTOR = 0;
-const SCANNER_ACTIVE_BEAM_SLOWDOWN_START = 0;
+const SCANNER_ACTIVE_BEAM_BASE_SPEED = 1.34;
+const SCANNER_ACTIVE_BEAM_MIN_SPEED_FACTOR = 0.16;
+const SCANNER_ACTIVE_BEAM_SLOWDOWN_START = 0.22;
 const SCANNER_ACTIVE_BEAM_EDGE_PADDING = 0.012;
 const SCANNER_LOBBY_BEAM_EDGE_PADDING = 0.012;
-const SCANNER_LOBBY_BEAM_BASE_SPEED = 0.235;
-const SCANNER_LOBBY_BEAM_COUNTDOWN_MIN_SPEED_FACTOR = 0.26;
+const SCANNER_LOBBY_BEAM_BASE_SPEED = 0.285;
+const SCANNER_LOBBY_BEAM_COUNTDOWN_MIN_SPEED_FACTOR = 0.34;
 const SCANNER_LOBBY_BEAM_EPOCH_MS = Date.UTC(2026, 0, 1, 0, 0, 0);
 const SCANNER_COUNTDOWN_BEAM_STEPS = 960;
-const SCANNER_BEAM_SMOOTH_TAU_MS = 96;
-const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 88;
+const SCANNER_LOBBY_BEAM_SWAY_AMPLITUDE = 0.026;
+const SCANNER_LOBBY_BEAM_SWAY_SECONDARY_AMPLITUDE = 0.012;
+const SCANNER_LOBBY_BEAM_SWAY_LOOKAHEAD_MS = 26;
+const SCANNER_BEAM_CURVE_STRENGTH = 0.055;
+const SCANNER_BEAM_CURVE_SECONDARY_STRENGTH = 0.024;
+const SCANNER_BEAM_BOUNCE_BEND_STRENGTH = 0.18;
+const SCANNER_BEAM_BOUNCE_NORMAL_BIAS = 0.14;
+const SCANNER_RETICLE_IDLE_SPIN_SPEED = 0.0017;
+const SCANNER_RETICLE_ACTIVE_SPIN_SPEED = 0.0034;
+const SCANNER_RETICLE_IDLE_WOBBLE = 0.08;
+const SCANNER_RETICLE_ACTIVE_WOBBLE = 0.16;
+const SCANNER_BEAM_SMOOTH_TAU_MS = 74;
+const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 66;
 const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
@@ -6085,7 +6096,41 @@ function resetScannerBeamRenderState(sample = null, key = "") {
 
 function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = performance.now(), options = {}) {
   const target = targetSample || { x: 0.5, y: 0.5, angle: 0 };
-  return resetScannerBeamRenderState(target, renderKey);
+  const safeFrameTime = Number.isFinite(Number(frameTime)) ? Number(frameTime) : performance.now();
+  const safeKey = String(renderKey || "");
+
+  if (!scannerBeamRenderState.initialized || scannerBeamRenderState.key !== safeKey) {
+    return resetScannerBeamRenderState(target, safeKey);
+  }
+
+  const previous = scannerBeamRenderState.sample || { x: 0.5, y: 0.5, angle: 0 };
+  const deltaMs = Math.max(0, Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, safeFrameTime - (scannerBeamRenderState.lastFrameAt || safeFrameTime)));
+  const hardDistance = getScannerBeamSampleDistance(previous, target);
+  const hardAngle = Math.abs(getScannerAngleDelta(previous.angle || 0, target.angle || 0));
+
+  if (
+    deltaMs >= SCANNER_BEAM_SNAP_DELTA_MS ||
+    hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE ||
+    hardAngle >= SCANNER_BEAM_HARD_RESET_ANGLE
+  ) {
+    return resetScannerBeamRenderState(target, safeKey);
+  }
+
+  const positionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
+  const angleTauMs = Math.max(1, Number(options.angleTauMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS);
+  const positionBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / positionTauMs);
+  const angleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / angleTauMs);
+
+  const nextSample = {
+    x: previous.x + (target.x - previous.x) * positionBlend,
+    y: previous.y + (target.y - previous.y) * positionBlend,
+    angle: lerpScannerAngle(previous.angle || 0, target.angle || 0, angleBlend)
+  };
+
+  scannerBeamRenderState.sample = nextSample;
+  scannerBeamRenderState.lastFrameAt = safeFrameTime;
+  scannerBeamRenderState.key = safeKey;
+  return nextSample;
 }
 
 function interpolateScannerSampleSequence(samples, progress) {
@@ -6121,6 +6166,80 @@ function getScannerCellIndexFromPoint(x, y) {
   const col = Math.max(0, Math.min(SCANNER_GRID_COLS - 1, Math.floor(clampedX * SCANNER_GRID_COLS)));
   const row = Math.max(0, Math.min(SCANNER_GRID_ROWS - 1, Math.floor(clampedY * SCANNER_GRID_ROWS)));
   return row * SCANNER_GRID_COLS + col;
+}
+
+function rotateScannerVector(vector, angle) {
+  const safeAngle = Number(angle) || 0;
+  const source = normalizeScannerVector(vector?.x, vector?.y, { x: 1, y: 0 });
+  const cos = Math.cos(safeAngle);
+  const sin = Math.sin(safeAngle);
+  return normalizeScannerVector(
+    source.x * cos - source.y * sin,
+    source.x * sin + source.y * cos,
+    source
+  );
+}
+
+function reflectScannerValueWithinRange(value, min, max) {
+  const safeMin = Number(min) || 0;
+  const safeMax = Number(max) || 1;
+  const range = Math.max(0.000001, safeMax - safeMin);
+  const period = range * 2;
+  const wrapped = ((((Number(value) || 0) - safeMin) % period) + period) % period;
+  return wrapped <= range
+    ? safeMin + wrapped
+    : safeMax - (wrapped - range);
+}
+
+function getScannerLobbyFlowOffsets(timestampMs, motionState, seedValue = "scanner_shared_lobby_motion_v2") {
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+  const timeSeconds = safeTimestamp / 1000;
+  const seed = hashString(`lobby_flow_${seedValue}_${Math.round(tsToMs(motionState?.anchorAt || 0) / 1000)}`);
+  const phaseA = ((seed >>> 1) % 360) * (Math.PI / 180);
+  const phaseB = ((seed >>> 5) % 360) * (Math.PI / 180);
+  const phaseC = ((seed >>> 9) % 360) * (Math.PI / 180);
+  const phaseD = ((seed >>> 13) % 360) * (Math.PI / 180);
+  const rateA = 0.48 + ((seed >>> 3) % 23) / 50;
+  const rateB = 0.94 + ((seed >>> 7) % 31) / 34;
+  const rateC = 0.56 + ((seed >>> 11) % 19) / 42;
+  const rateD = 1.18 + ((seed >>> 15) % 27) / 28;
+
+  const ax = Math.sin(timeSeconds * rateA + phaseA) * SCANNER_LOBBY_BEAM_SWAY_AMPLITUDE;
+  const bx = Math.sin(timeSeconds * rateB + phaseB) * SCANNER_LOBBY_BEAM_SWAY_SECONDARY_AMPLITUDE;
+  const ay = Math.cos(timeSeconds * rateC + phaseC) * SCANNER_LOBBY_BEAM_SWAY_AMPLITUDE;
+  const by = Math.sin(timeSeconds * rateD + phaseD) * SCANNER_LOBBY_BEAM_SWAY_SECONDARY_AMPLITUDE;
+
+  return {
+    x: ax + bx,
+    y: ay + by,
+    dx: (Math.cos(timeSeconds * rateA + phaseA) * rateA * SCANNER_LOBBY_BEAM_SWAY_AMPLITUDE)
+      + (Math.cos(timeSeconds * rateB + phaseB) * rateB * SCANNER_LOBBY_BEAM_SWAY_SECONDARY_AMPLITUDE),
+    dy: (-Math.sin(timeSeconds * rateC + phaseC) * rateC * SCANNER_LOBBY_BEAM_SWAY_AMPLITUDE)
+      + (Math.cos(timeSeconds * rateD + phaseD) * rateD * SCANNER_LOBBY_BEAM_SWAY_SECONDARY_AMPLITUDE)
+  };
+}
+
+function getScannerLobbyBeamSampleCore(state, timestampMs, options = {}) {
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+  const safePad = clampScannerNumber(options.pad ?? SCANNER_LOBBY_BEAM_EDGE_PADDING, 0, 0.24);
+  const min = safePad;
+  const max = 1 - safePad;
+  const elapsedSeconds = Math.max(0, (safeTimestamp - state.anchorAt) / 1000);
+  const seedValue = String(options.seedValue || "scanner_shared_lobby_motion_v2");
+
+  const xState = getScannerReflectedAxisState(state.x, state.vx, elapsedSeconds, min, max);
+  const yState = getScannerReflectedAxisState(state.y, state.vy, elapsedSeconds, min, max);
+  const flow = getScannerLobbyFlowOffsets(safeTimestamp, state, seedValue);
+
+  const x = reflectScannerValueWithinRange(xState.position + flow.x, min, max);
+  const y = reflectScannerValueWithinRange(yState.position + flow.y, min, max);
+
+  return {
+    x,
+    y,
+    vx: xState.velocity + flow.dx,
+    vy: yState.velocity + flow.dy
+  };
 }
 
 
@@ -6279,22 +6398,21 @@ function getScannerReflectedAxisState(start, velocityPerSecond, elapsedSeconds, 
 }
 
 function getScannerBeamSampleFromMotionState(motionState, timestampMs = Date.now(), options = {}) {
-  const state = normalizeScannerBeamMotionState(motionState, options.seedValue || "scanner_shared_lobby_motion_v2");
+  const seedValue = String(options.seedValue || "scanner_shared_lobby_motion_v2");
+  const state = normalizeScannerBeamMotionState(motionState, seedValue);
   const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
-  const safePad = clampScannerNumber(options.pad ?? SCANNER_LOBBY_BEAM_EDGE_PADDING, 0, 0.24);
-  const min = safePad;
-  const max = 1 - safePad;
-  const elapsedSeconds = Math.max(0, (safeTimestamp - state.anchorAt) / 1000);
-
-  const xState = getScannerReflectedAxisState(state.x, state.vx, elapsedSeconds, min, max);
-  const yState = getScannerReflectedAxisState(state.y, state.vy, elapsedSeconds, min, max);
+  const current = getScannerLobbyBeamSampleCore(state, safeTimestamp, options);
+  const lookaheadMs = Math.max(8, Number(options.lookaheadMs) || SCANNER_LOBBY_BEAM_SWAY_LOOKAHEAD_MS);
+  const future = getScannerLobbyBeamSampleCore(state, safeTimestamp + lookaheadMs, options);
+  const deltaX = future.x - current.x;
+  const deltaY = future.y - current.y;
 
   return {
-    x: xState.position,
-    y: yState.position,
-    angle: Math.atan2(yState.velocity || 0.0001, xState.velocity || 0.0001),
-    vx: xState.velocity,
-    vy: yState.velocity
+    x: current.x,
+    y: current.y,
+    angle: Math.atan2(deltaY || current.vy || 0.0001, deltaX || current.vx || 0.0001),
+    vx: current.vx,
+    vy: current.vy
   };
 }
 
@@ -6322,6 +6440,26 @@ function simulateScannerBeamBounceSamples(options = {}) {
   const speedFactorAt = typeof options.speedFactorAt === "function"
     ? options.speedFactorAt
     : (() => 1);
+  const seedValue = String(options.seedValue || "scanner_beam_bounce");
+  const curveStrength = Math.max(0, Number(options.curveStrength) || SCANNER_BEAM_CURVE_STRENGTH);
+  const curveSecondaryStrength = Math.max(0, Number(options.curveSecondaryStrength) || SCANNER_BEAM_CURVE_SECONDARY_STRENGTH);
+  const bounceBendStrength = Math.max(0, Number(options.bounceBendStrength) || SCANNER_BEAM_BOUNCE_BEND_STRENGTH);
+  const bounceNormalBias = Math.max(0, Number(options.bounceNormalBias) || SCANNER_BEAM_BOUNCE_NORMAL_BIAS);
+  const seed = hashString(`beam_curve_${seedValue}`);
+  const phaseA = ((seed >>> 1) % 360) * (Math.PI / 180);
+  const phaseB = ((seed >>> 5) % 360) * (Math.PI / 180);
+  const phaseC = ((seed >>> 9) % 360) * (Math.PI / 180);
+  const rateA = 0.78 + ((seed >>> 3) % 19) / 14;
+  const rateB = 1.24 + ((seed >>> 7) % 27) / 11;
+  const rateC = 1.62 + ((seed >>> 11) % 23) / 10;
+  let bounceCount = 0;
+
+  function getCurveOffset(progress) {
+    const safeProgress = clampScannerNumber(progress, 0, 1);
+    return Math.sin(safeProgress * Math.PI * 2 * rateA + phaseA) * curveStrength
+      + Math.sin(safeProgress * Math.PI * 2 * rateB + phaseB) * curveSecondaryStrength
+      + Math.cos(safeProgress * Math.PI * 2 * rateC + phaseC) * (curveSecondaryStrength * 0.45);
+  }
 
   let position = {
     x: clampScannerNumber(options.startPosition?.x, safePad, 1 - safePad),
@@ -6357,30 +6495,57 @@ function simulateScannerBeamBounceSamples(options = {}) {
     const distance = safeBaseSpeed * ((speedFactor + nextFactor) * 0.5) * dtSeconds;
     if (distance <= 0.0000001) continue;
 
+    const curveDelta = getCurveOffset(nextProgress) - getCurveOffset(progress);
+    if (Math.abs(curveDelta) > 0.0000001) {
+      direction = rotateScannerVector(direction, curveDelta);
+    }
+
     let nextX = position.x + direction.x * distance;
     let nextY = position.y + direction.y * distance;
 
     for (let attempt = 0; attempt < 4; attempt += 1) {
       let bounced = false;
+      const impactPhase = nextProgress * Math.PI * 2 * (1.08 + bounceCount * 0.037) + phaseC;
+      const tangentKick = Math.sin(impactPhase) * bounceBendStrength;
 
       if (nextX < safePad) {
         nextX = safePad + (safePad - nextX);
-        direction = normalizeScannerVector(Math.abs(direction.x), direction.y, { x: 1, y: 0 });
+        direction = normalizeScannerVector(
+          Math.abs(direction.x) * (1 + bounceNormalBias),
+          direction.y + tangentKick,
+          { x: 1, y: direction.y }
+        );
         bounced = true;
+        bounceCount += 1;
       } else if (nextX > 1 - safePad) {
         nextX = (1 - safePad) - (nextX - (1 - safePad));
-        direction = normalizeScannerVector(-Math.abs(direction.x), direction.y, { x: -1, y: 0 });
+        direction = normalizeScannerVector(
+          -Math.abs(direction.x) * (1 + bounceNormalBias),
+          direction.y + tangentKick,
+          { x: -1, y: direction.y }
+        );
         bounced = true;
+        bounceCount += 1;
       }
 
       if (nextY < safePad) {
         nextY = safePad + (safePad - nextY);
-        direction = normalizeScannerVector(direction.x, Math.abs(direction.y), { x: 0, y: 1 });
+        direction = normalizeScannerVector(
+          direction.x + tangentKick,
+          Math.abs(direction.y) * (1 + bounceNormalBias),
+          { x: direction.x, y: 1 }
+        );
         bounced = true;
+        bounceCount += 1;
       } else if (nextY > 1 - safePad) {
         nextY = (1 - safePad) - (nextY - (1 - safePad));
-        direction = normalizeScannerVector(direction.x, -Math.abs(direction.y), { x: 0, y: -1 });
+        direction = normalizeScannerVector(
+          direction.x + tangentKick,
+          -Math.abs(direction.y) * (1 + bounceNormalBias),
+          { x: direction.x, y: -1 }
+        );
         bounced = true;
+        bounceCount += 1;
       }
 
       if (!bounced) break;
@@ -6579,6 +6744,10 @@ function getScannerCountdownBeamCache(round) {
     steps: cruiseSteps,
     baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
     pad: SCANNER_ACTIVE_BEAM_EDGE_PADDING,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::countdown_cruise`,
+    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
+    curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
+    bounceBendStrength: SCANNER_BEAM_BOUNCE_BEND_STRENGTH * 0.7,
     speedFactorAt: (progress) => {
       const eased = smoothstep(0, 1, progress);
       return 1 - (1 - SCANNER_LOBBY_BEAM_COUNTDOWN_MIN_SPEED_FACTOR) * eased;
@@ -6684,6 +6853,11 @@ function getScannerActiveBeamCache(round, players) {
     steps: Math.max(180, Number(SCANNER_ACTIVE_BEAM_STEPS) || 1800),
     baseSpeed: SCANNER_ACTIVE_BEAM_BASE_SPEED,
     pad: SCANNER_ACTIVE_BEAM_EDGE_PADDING,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::active`,
+    curveStrength: SCANNER_BEAM_CURVE_STRENGTH,
+    curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH,
+    bounceBendStrength: SCANNER_BEAM_BOUNCE_BEND_STRENGTH,
+    bounceNormalBias: SCANNER_BEAM_BOUNCE_NORMAL_BIAS,
     speedFactorAt: (progress) => getScannerActiveSpeedFactor(progress)
   });
 
@@ -9181,6 +9355,8 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   const alpha = Math.max(0, Math.min(1, Number(options.alpha) || 1));
   const plusScale = Math.max(0.2, Number(options.plusScale) || 0.72);
   const plusColor = options.plusColor || "rgba(7, 11, 18, 0.96)";
+  const rotation = Number.isFinite(Number(options.rotation)) ? Number(options.rotation) : 0;
+  const wobble = Math.max(0, Number(options.wobble) || 0);
 
   ctx.save();
   ctx.translate(x, y);
@@ -9211,6 +9387,13 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
   ctx.stroke();
 
+  const orbitRadius = safeRadius * (0.54 + wobble * 0.12);
+  const orbitX = Math.cos(rotation) * orbitRadius;
+  const orbitY = Math.sin(rotation) * orbitRadius;
+  const orbitDotRadius = Math.max(1.2, safeRadius * (0.08 + wobble * 0.03));
+
+  ctx.save();
+  ctx.rotate(rotation * 1.14);
   const plusLength = safeRadius * plusScale;
   ctx.lineCap = "round";
   ctx.lineWidth = Math.max(1.2, safeRadius * 0.16);
@@ -9221,6 +9404,16 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.moveTo(0, -plusLength);
   ctx.lineTo(0, plusLength);
   ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.shadowBlur = safeRadius * 0.9;
+  ctx.shadowColor = "rgba(45,225,255,0.44)";
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.beginPath();
+  ctx.arc(orbitX, orbitY, orbitDotRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 
   ctx.restore();
 }
@@ -9509,6 +9702,10 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const cx = size * safeSample.x;
   const cy = size * safeSample.y;
   const angle = safeSample.angle;
+  const reticleRotation = Number.isFinite(Number(options.reticleRotation))
+    ? Number(options.reticleRotation)
+    : performance.now() * SCANNER_RETICLE_IDLE_SPIN_SPEED;
+  const reticleWobble = Math.max(0, Number(options.reticleWobble) || SCANNER_RETICLE_IDLE_WOBBLE);
 
   drawScannerArenaBase(ctx, size);
 
@@ -9528,7 +9725,9 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   drawScannerReticle(ctx, 0, 0, idleReticleRadius, {
     alpha: 0.96,
     plusScale: 0.72,
-    plusColor: "rgba(6, 10, 16, 0.96)"
+    plusColor: "rgba(6, 10, 16, 0.96)",
+    rotation: reticleRotation,
+    wobble: reticleWobble
   });
   ctx.restore();
 
@@ -9720,20 +9919,35 @@ function renderScannerCanvas() {
   const roundStatus = scannerGridState.status;
   const hasGrid = scannerGridState.players.length > 0;
   const now = performance.now();
+  const nowMs = Date.now();
 
   ctx.clearRect(0, 0, size, size);
 
   const roundData = scannerGridState.roundData || null;
+  const beamRenderKey = getScannerBeamRenderKey(roundStatus, roundData, hasGrid ? "grid" : "empty");
+
   if (!hasGrid) {
     if (roundStatus === "preparing_next_round" && roundData) {
-      const preparingBeamSample = getScannerPreparingBeamSample(roundData, scannerGridState.players || []);
+      const preparingBeamSample = getSmoothedScannerBeamSample(
+        getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+        beamRenderKey,
+        now
+      );
       drawScannerEmptyArenaState(ctx, size, preparingBeamSample, {
-        waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData))
+        waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
+        reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
+        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
       });
     } else {
-      const idleBeamSample = getScannerSharedLobbyBeamSample();
+      const idleBeamSample = getSmoothedScannerBeamSample(
+        getScannerSharedLobbyBeamSample(nowMs),
+        beamRenderKey,
+        now
+      );
       drawScannerEmptyArenaState(ctx, size, idleBeamSample, {
-        waitingTextAlpha: 1
+        waitingTextAlpha: 1,
+        reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
+        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
       });
     }
     return;
@@ -9763,9 +9977,15 @@ function renderScannerCanvas() {
     }
     previewBadgeAlpha = 1 - shuffleProgress;
   } else if (roundStatus === "preparing_next_round") {
-    const preparingBeamSample = getScannerPreparingBeamSample(roundData, scannerGridState.players || []);
+    const preparingBeamSample = getSmoothedScannerBeamSample(
+      getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+      beamRenderKey,
+      now
+    );
     drawScannerEmptyArenaState(ctx, size, preparingBeamSample, {
-      waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData))
+      waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
+      reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
+      reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
     });
     return;
   } else if (scannerGridCache?.canvas) {
@@ -9782,38 +10002,46 @@ function renderScannerCanvas() {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
   }
 
-  beamSample = getScannerUnifiedBeamSample(
-    roundStatus,
-    roundData,
-    scannerGridState.players || [],
-    Date.now()
+  beamSample = getSmoothedScannerBeamSample(
+    getScannerUnifiedBeamSample(
+      roundStatus,
+      roundData,
+      scannerGridState.players || [],
+      nowMs
+    ),
+    beamRenderKey,
+    now
   );
 
   if (beamSample) {
+    const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const px = beamSample.x * size;
     const py = beamSample.y * size;
-    const beamLength = size * (roundStatus === "active" || roundStatus === "finished" ? 4.85 : 4.5);
+    const beamLength = size * (isHotBeam ? 4.85 : 4.5);
     const reticleRadius = Math.max(10.2, size * 0.031);
+    const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
 
     ctx.save();
     ctx.translate(px, py);
     ctx.rotate(beamSample.angle || 0);
     drawScannerBeam(ctx, beamLength, {
-      glowWidth: roundStatus === "active" || roundStatus === "finished" ? 12.2 : 11,
-      coreWidth: roundStatus === "active" || roundStatus === "finished" ? 3.25 : 2.9,
+      glowWidth: isHotBeam ? 12.2 : 11,
+      coreWidth: isHotBeam ? 3.25 : 2.9,
       innerWidth: 0.94,
       glowBlur: 29,
       coreBlur: 15,
-      beamColor: roundStatus === "active" || roundStatus === "finished"
+      beamColor: isHotBeam
         ? "rgba(45, 225, 255, 0.86)"
         : "rgba(45, 225, 255, 0.72)",
       innerColor: "rgba(255,255,255,0.95)",
       centerGap: reticleRadius * 2.72
     });
     drawScannerReticle(ctx, 0, 0, reticleRadius, {
-      alpha: roundStatus === "active" || roundStatus === "finished" ? 0.98 : 0.86,
+      alpha: isHotBeam ? 0.98 : 0.86,
       plusScale: 0.74,
-      plusColor: "rgba(7, 11, 18, 0.96)"
+      plusColor: "rgba(7, 11, 18, 0.96)",
+      rotation: reticleRotation,
+      wobble: isHotBeam ? SCANNER_RETICLE_ACTIVE_WOBBLE : SCANNER_RETICLE_IDLE_WOBBLE
     });
     ctx.restore();
   }
