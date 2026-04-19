@@ -3703,12 +3703,12 @@ const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
 const SCANNER_BEAM_HARD_RESET_ANGLE = Math.PI * 0.985;
-const SCANNER_BEAM_SCAN_IDLE_SPEED = 1.28;
-const SCANNER_BEAM_SCAN_ACTIVE_SPEED = 1.86;
-const SCANNER_BEAM_SCAN_IDLE_SWEEP = 0.92;
-const SCANNER_BEAM_SCAN_ACTIVE_SWEEP = 0.54;
-const SCANNER_BEAM_SCAN_DIRECTION_INFLUENCE = 0.14;
-const SCANNER_BEAM_SCAN_SMOOTH_TAU_MS = 138;
+const SCANNER_BEAM_SCAN_IDLE_SPEED = 1.18;
+const SCANNER_BEAM_SCAN_ACTIVE_SPEED = 1.74;
+const SCANNER_BEAM_SCAN_IDLE_SWEEP = 0.96;
+const SCANNER_BEAM_SCAN_ACTIVE_SWEEP = 0.58;
+const SCANNER_BEAM_SCAN_PREPARING_SWEEP = 0.42;
+const SCANNER_BEAM_SCAN_SMOOTH_TAU_MS = 142;
 const SCANNER_HEARTBEAT_MS = 20000;
 const SCANNER_STALE_LOBBY_MS = 90000;
 const SCANNER_RUNTIME_COLLECTION = "pvp_runtime";
@@ -6173,73 +6173,6 @@ function interpolateScannerSampleSequence(samples, progress) {
   };
 }
 
-function resetScannerBeamVisualState(angle = 0, key = "") {
-  scannerBeamVisualState.initialized = true;
-  scannerBeamVisualState.key = String(key || "");
-  scannerBeamVisualState.angle = Number(angle) || 0;
-  scannerBeamVisualState.lastFrameAt = performance.now();
-  return scannerBeamVisualState.angle;
-}
-
-function getScannerAutonomousBeamAngle(sample, roundStatus, roundData, timestampMs = Date.now()) {
-  const motionAngle = Number(sample?.angle) || 0;
-  const safeStatus = String(roundStatus || "idle");
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
-  const seedKey = `${safeStatus}::${roundData?.id || "idle"}::${roundData?.entropySeed || "seed"}`;
-  const seed = hashString(`beam_scan_${seedKey}`);
-  const t = safeTimestamp / 1000;
-  const isHotScan = safeStatus === "active" || safeStatus === "finished";
-  const scanSpeed = isHotScan ? SCANNER_BEAM_SCAN_ACTIVE_SPEED : SCANNER_BEAM_SCAN_IDLE_SPEED;
-  const scanSweep = isHotScan ? SCANNER_BEAM_SCAN_ACTIVE_SWEEP : SCANNER_BEAM_SCAN_IDLE_SWEEP;
-  const phaseA = (seed % 360) * (Math.PI / 180);
-  const phaseB = ((seed >>> 4) % 360) * (Math.PI / 180);
-  const phaseC = ((seed >>> 8) % 360) * (Math.PI / 180);
-  const waveRateA = 0.72 + ((seed >>> 12) % 24) / 30;
-  const waveRateB = 1.14 + ((seed >>> 16) % 18) / 18;
-
-  const scanAngle = (t * scanSpeed)
-    + phaseA
-    + Math.sin(t * waveRateA + phaseB) * scanSweep
-    + Math.cos(t * waveRateB + phaseC) * (scanSweep * 0.35);
-
-  return lerpScannerAngle(scanAngle, motionAngle, SCANNER_BEAM_SCAN_DIRECTION_INFLUENCE);
-}
-
-function getSmoothedScannerBeamVisualAngle(targetAngle, renderKey, frameTime = performance.now(), options = {}) {
-  const safeFrameTime = Number.isFinite(Number(frameTime)) ? Number(frameTime) : performance.now();
-  const safeKey = String(renderKey || "");
-
-  if (!scannerBeamVisualState.initialized || scannerBeamVisualState.key !== safeKey) {
-    return resetScannerBeamVisualState(targetAngle, safeKey);
-  }
-
-  const previousAngle = Number(scannerBeamVisualState.angle) || 0;
-  const deltaMs = Math.max(0, Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, safeFrameTime - (scannerBeamVisualState.lastFrameAt || safeFrameTime)));
-  const smoothingTauMs = Math.max(1, Number(options.angleTauMs) || SCANNER_BEAM_SCAN_SMOOTH_TAU_MS);
-  const blend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / smoothingTauMs);
-  const nextAngle = lerpScannerAngle(previousAngle, targetAngle, blend);
-
-  scannerBeamVisualState.angle = nextAngle;
-  scannerBeamVisualState.lastFrameAt = safeFrameTime;
-  scannerBeamVisualState.key = safeKey;
-  return nextAngle;
-}
-
-function getScannerVisualBeamSample(beamSample, roundStatus, roundData, renderKey, timestampMs = Date.now(), frameTime = performance.now(), variant = "grid") {
-  if (!beamSample) return beamSample;
-
-  const visualAngle = getSmoothedScannerBeamVisualAngle(
-    getScannerAutonomousBeamAngle(beamSample, roundStatus, roundData, timestampMs),
-    `${String(renderKey || "beam")}::visual_scan::${String(variant || "grid")}`,
-    frameTime
-  );
-
-  return {
-    ...beamSample,
-    angle: visualAngle
-  };
-}
-
 function getScannerCellIndexFromPoint(x, y) {
   const clampedX = clampScannerNumber(x, 0, 0.999999);
   const clampedY = clampScannerNumber(y, 0, 0.999999);
@@ -7162,12 +7095,93 @@ function getScannerBeamRenderKey(roundStatus, roundData, variant = "grid") {
   return `${safeStatus}::${roundId}::${safeVariant}`;
 }
 
+function getScannerBeamScanConfig(roundStatus) {
+  const safeStatus = String(roundStatus || "idle");
+  if (safeStatus === "active" || safeStatus === "finished") {
+    return {
+      speed: SCANNER_BEAM_SCAN_ACTIVE_SPEED,
+      sweep: SCANNER_BEAM_SCAN_ACTIVE_SWEEP
+    };
+  }
+
+  if (safeStatus === "preparing_next_round") {
+    return {
+      speed: SCANNER_BEAM_SCAN_IDLE_SPEED * 0.86,
+      sweep: SCANNER_BEAM_SCAN_PREPARING_SWEEP
+    };
+  }
+
+  return {
+    speed: SCANNER_BEAM_SCAN_IDLE_SPEED,
+    sweep: SCANNER_BEAM_SCAN_IDLE_SWEEP
+  };
+}
+
+function resetScannerBeamVisualState(baseAngle = 0, key = "", frameTime = performance.now()) {
+  scannerBeamVisualState.initialized = true;
+  scannerBeamVisualState.key = String(key || "");
+  scannerBeamVisualState.angle = Number(baseAngle) || 0;
+  scannerBeamVisualState.lastFrameAt = Number.isFinite(Number(frameTime)) ? Number(frameTime) : performance.now();
+  return scannerBeamVisualState.angle;
+}
+
+function getScannerVisualBeamAngle(baseAngle, roundStatus, renderKey, timestampMs = Date.now(), frameTime = performance.now()) {
+  const safeBaseAngle = Number(baseAngle) || 0;
+  const safeFrameTime = Number.isFinite(Number(frameTime)) ? Number(frameTime) : performance.now();
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+  const safeKey = String(renderKey || "idle");
+
+  const config = getScannerBeamScanConfig(roundStatus);
+  const seed = hashString(`scanner_beam_scan_${safeKey}`);
+  const primaryPhase = ((seed >>> 1) % 360) * (Math.PI / 180);
+  const secondaryPhase = ((seed >>> 6) % 360) * (Math.PI / 180);
+  const tertiaryPhase = ((seed >>> 11) % 360) * (Math.PI / 180);
+  const time = safeTimestamp / 1000;
+  const offset =
+    Math.sin(time * config.speed + primaryPhase) * config.sweep +
+    Math.sin(time * (config.speed * 1.67) + secondaryPhase) * (config.sweep * 0.22) +
+    Math.cos(time * (config.speed * 0.61) + tertiaryPhase) * (config.sweep * 0.08);
+  const targetAngle = safeBaseAngle + offset;
+
+  if (!scannerBeamVisualState.initialized || scannerBeamVisualState.key !== safeKey) {
+    return resetScannerBeamVisualState(targetAngle, safeKey, safeFrameTime);
+  }
+
+  const deltaMs = Math.max(0, Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, safeFrameTime - (scannerBeamVisualState.lastFrameAt || safeFrameTime)));
+  if (deltaMs >= SCANNER_BEAM_SNAP_DELTA_MS) {
+    return resetScannerBeamVisualState(targetAngle, safeKey, safeFrameTime);
+  }
+
+  const blend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / SCANNER_BEAM_SCAN_SMOOTH_TAU_MS);
+  const nextAngle = lerpScannerAngle(scannerBeamVisualState.angle || 0, targetAngle, blend);
+  scannerBeamVisualState.angle = nextAngle;
+  scannerBeamVisualState.lastFrameAt = safeFrameTime;
+  scannerBeamVisualState.key = safeKey;
+  return nextAngle;
+}
+
+function getScannerVisualBeamSample(beamSample, roundStatus, renderKey, timestampMs = Date.now(), frameTime = performance.now()) {
+  const safeSample = beamSample || { x: 0.5, y: 0.5, angle: 0 };
+  return {
+    ...safeSample,
+    angle: getScannerVisualBeamAngle(
+      safeSample.angle,
+      roundStatus,
+      renderKey,
+      timestampMs,
+      frameTime
+    )
+  };
+}
+
 function stopScannerVisualAnimation() {
   scannerGridState.animation.active = false;
   scannerGridState.animation.roundId = null;
   scannerGridState.animation.startedAt = 0;
   scannerGridState.animation.points = [];
   scannerGridPath = null;
+  scannerBeamVisualState.initialized = false;
+  scannerBeamVisualState.key = "";
 }
 
 function ensureScannerVisualLoop() {
@@ -10016,11 +10030,9 @@ function renderScannerCanvas() {
       const preparingVisualBeamSample = getScannerVisualBeamSample(
         preparingBeamSample,
         roundStatus,
-        roundData,
         beamRenderKey,
         nowMs,
-        now,
-        "empty"
+        now
       );
       drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
         waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
@@ -10036,11 +10048,9 @@ function renderScannerCanvas() {
       const idleVisualBeamSample = getScannerVisualBeamSample(
         idleBeamSample,
         roundStatus,
-        roundData,
         beamRenderKey,
         nowMs,
-        now,
-        "empty"
+        now
       );
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
@@ -10083,11 +10093,9 @@ function renderScannerCanvas() {
     const preparingVisualBeamSample = getScannerVisualBeamSample(
       preparingBeamSample,
       roundStatus,
-      roundData,
       beamRenderKey,
       nowMs,
-      now,
-      "empty"
+      now
     );
     drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
       waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
@@ -10120,15 +10128,9 @@ function renderScannerCanvas() {
     now
   );
 
-  const visualBeamSample = getScannerVisualBeamSample(
-    beamSample,
-    roundStatus,
-    roundData,
-    beamRenderKey,
-    nowMs,
-    now,
-    "grid"
-  );
+  const visualBeamSample = beamSample
+    ? getScannerVisualBeamSample(beamSample, roundStatus, beamRenderKey, nowMs, now)
+    : null;
 
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
