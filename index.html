@@ -1030,8 +1030,6 @@ button {
   box-shadow: 0 12px 24px rgba(49, 105, 255, 0.28);
 }
 
-
-
 #homeScreen .screen-inner {
   position: relative;
 }
@@ -1104,7 +1102,6 @@ button {
     inset 0 1px 0 rgba(255,255,255,0.04),
     0 14px 28px rgba(0, 0, 0, 0.14);
 }
-
 
 .scanner-feature-card {
   background:
@@ -1928,7 +1925,6 @@ button {
   bottom: 12px;
 }
 
-
 @media (max-width: 420px) {
   #scannerGridCanvas {
     aspect-ratio: 1 / 1;
@@ -1947,7 +1943,6 @@ button {
     bottom: 10px;
   }
 }
-
 
 @media (max-width: 420px) {
   .scanner-control-grid {
@@ -2045,8 +2040,6 @@ button {
   }
 }
 
-
-
 .scanner-live-note {
   margin-top: 12px;
   color: var(--text-soft);
@@ -2060,7 +2053,6 @@ button {
   font-size: 13px;
   line-height: 1.5;
 }
-
 
 .scanner-game-title {
   position: relative;
@@ -2386,8 +2378,6 @@ button {
   box-shadow: 0 12px 24px rgba(45, 225, 255, 0.18), inset 0 1px 0 rgba(255,255,255,0.22);
 }
 
-
-
 .scanner-bet-bar.is-betting-locked {
   background:
     linear-gradient(180deg, rgba(35, 42, 56, 0.92), rgba(13, 17, 27, 0.96));
@@ -2531,8 +2521,6 @@ button {
     font-size: 16px;
   }
 }
-
-
 
 /* Profile screen and compact navigation update */
 .visually-hidden {
@@ -2923,8 +2911,6 @@ button {
   }
 }
 
-
-
 /* Targeted wallet restore and Scanner history cards */
 .top-bar-right {
   position: relative;
@@ -3153,8 +3139,6 @@ button {
   }
 }
 
-
-
 /* Smooth Scanner updates, waiting text focus and top UI focus behavior */
 .top-bar,
 .profile-card,
@@ -3197,7 +3181,6 @@ button {
   transform: translateZ(0);
   backface-visibility: hidden;
 }
-
 
 /* Targeted balance centering: keeps only the balance block exactly in the middle of the top UI */
 .top-bar {
@@ -3521,8 +3504,6 @@ button {
     </div>
   </div>
 
-
-
   <div
     id="insufficientBalanceModal"
     class="insufficient-balance-modal"
@@ -3708,7 +3689,6 @@ const SCANNER_BEAM_SCAN_ACTIVE_SPEED = 1.74;
 const SCANNER_BEAM_SCAN_IDLE_SWEEP = 0.96;
 const SCANNER_BEAM_SCAN_ACTIVE_SWEEP = 0.58;
 const SCANNER_BEAM_SCAN_PREPARING_SWEEP = 0.42;
-const SCANNER_BEAM_SCAN_SMOOTH_TAU_MS = 142;
 const SCANNER_HEARTBEAT_MS = 20000;
 const SCANNER_STALE_LOBBY_MS = 90000;
 const SCANNER_RUNTIME_COLLECTION = "pvp_runtime";
@@ -3774,13 +3754,6 @@ const scannerGridState = {
   transientMessage: "",
   transientMessageType: "info",
   transientMessageExpiresAt: 0,
-  animation: {
-    active: false,
-    roundId: null,
-    startedAt: 0,
-    duration: 2600,
-    points: []
-  }
 };
 
 const scannerRealtime = {
@@ -3816,7 +3789,6 @@ let scannerGridPreviewCanvasCache = null;
 let scannerGridCache = null;
 let scannerGridLinesCache = null;
 let scannerGridTransitionCache = null;
-let scannerGridPath = null;
 let scannerGridResizeAttached = false;
 let scannerBetBarScrollAttached = false;
 let scannerBetBarVisibilityFrame = null;
@@ -3834,26 +3806,10 @@ const scannerOrderedPlayersCache = {
   myPlayerId: "",
   value: null
 };
-const scannerBeamMotionState = {
-  modeKey: "",
-  segmentIndex: 0,
-  path: [],
-  startedAt: 0,
-  duration: 0,
-  lastPoint: { x: 0.5, y: 0.5, angle: 0 }
-};
-
 const scannerBeamRenderState = {
   initialized: false,
   key: "",
   sample: { x: 0.5, y: 0.5, angle: 0 },
-  lastFrameAt: 0
-};
-
-const scannerBeamVisualState = {
-  initialized: false,
-  key: "",
-  angle: 0,
   lastFrameAt: 0
 };
 
@@ -4021,7 +3977,6 @@ function formatBalance(value) {
   if (!Number.isFinite(number)) return "0.00 TON";
   return `${number.toFixed(2)} TON`;
 }
-
 
 function getUserRef(playerId = getCurrentPlayer().id) {
   return db.collection("users").doc(String(playerId));
@@ -4301,7 +4256,6 @@ function applyProfileAvatar(element, avatarUrl, fallbackText) {
       setAvatarFallback(element, fallbackText);
     });
 }
-
 
 function setTextContentIfChanged(element, value) {
   if (!element) return false;
@@ -5551,7 +5505,6 @@ function resetScannerRoundVisualState(options = {}) {
   scannerGridState.winnerPlayerId = null;
   scannerGridState.winningCellIndex = null;
   scannerGridState.winningPlayer = null;
-  scannerGridPath = null;
   resetScannerDerivedVisualCache();
   stopScannerVisualAnimation();
 }
@@ -5682,7 +5635,6 @@ function finalizeScannerPlayers(players, versionSeed) {
     gridVersion: `${versionSeed}_${allocated.length}_${totalPot.toFixed(2)}`
   };
 }
-
 
 function buildScannerPreviewCellOwners(players, totalCells, versionSeed) {
   const owners = new Array(totalCells).fill(-1);
@@ -5935,111 +5887,6 @@ function getScannerCellCenter(cellIndex) {
   };
 }
 
-function buildScannerPathForCell(cellIndex, seedValue) {
-  const target = getScannerCellCenter(cellIndex);
-  const seed = hashString(`${seedValue}_${cellIndex}`);
-  const rnd = mulberry32(seed);
-  const points = [];
-  const entrances = [
-    { x: -0.14, y: 0.08 + rnd() * 0.84 },
-    { x: 1.14, y: 0.08 + rnd() * 0.84 },
-    { x: 0.08 + rnd() * 0.84, y: -0.14 },
-    { x: 0.08 + rnd() * 0.84, y: 1.14 }
-  ];
-
-  points.push(entrances[Math.floor(rnd() * entrances.length)]);
-
-  const sweepCount = 12;
-  for (let i = 0; i < sweepCount; i += 1) {
-    const t = (i + 1) / (sweepCount + 1);
-    const approach = Math.max(0, (t - 0.58) / 0.42);
-    const wanderRadius = 0.22 * (1 - approach);
-    const baseX = 0.08 + rnd() * 0.84;
-    const baseY = 0.08 + rnd() * 0.84;
-    const blendX = baseX * (1 - approach) + target.x * approach;
-    const blendY = baseY * (1 - approach) + target.y * approach;
-
-    points.push({
-      x: Math.max(-0.08, Math.min(1.08, blendX + (rnd() - 0.5) * wanderRadius)),
-      y: Math.max(-0.08, Math.min(1.08, blendY + (rnd() - 0.5) * wanderRadius))
-    });
-  }
-
-  points.push({
-    x: target.x + (rnd() - 0.5) * 0.07,
-    y: target.y + (rnd() - 0.5) * 0.07
-  });
-  points.push({
-    x: target.x + (rnd() - 0.5) * 0.025,
-    y: target.y + (rnd() - 0.5) * 0.025
-  });
-  points.push(target);
-  return points;
-}
-
-function buildScannerRoamingPath(seedValue, startPoint = null) {
-  const rnd = mulberry32(hashString(`roam_${seedValue}`));
-  const points = [];
-  const safeStart = startPoint && Number.isFinite(startPoint.x) && Number.isFinite(startPoint.y)
-    ? {
-        x: Math.max(0.06, Math.min(0.94, startPoint.x)),
-        y: Math.max(0.06, Math.min(0.94, startPoint.y))
-      }
-    : {
-        x: 0.08 + rnd() * 0.84,
-        y: 0.08 + rnd() * 0.84
-      };
-
-  points.push(safeStart);
-
-  const count = 12 + Math.floor(rnd() * 6);
-  for (let i = 0; i < count; i += 1) {
-    const edgeBias = i % 4 === 0 ? 0.06 : 0.1;
-    points.push({
-      x: edgeBias + rnd() * (1 - edgeBias * 2),
-      y: edgeBias + rnd() * (1 - edgeBias * 2)
-    });
-  }
-
-  if (points.length < 2) {
-    points.push({
-      x: Math.max(0.06, Math.min(0.94, safeStart.x + 0.08)),
-      y: safeStart.y
-    });
-  }
-
-  return points;
-}
-
-function getScannerAmbientBeamSample(now, seedValue = "idle") {
-  const seed = hashString(`ambient_${seedValue}`);
-  const t = now / 1000;
-  const phaseA = (seed % 360) * (Math.PI / 180);
-  const phaseB = ((seed >> 3) % 360) * (Math.PI / 180);
-  const phaseC = ((seed >> 6) % 360) * (Math.PI / 180);
-
-  const x = 0.5
-    + Math.sin(t * 0.55 + phaseA) * 0.24
-    + Math.sin(t * 0.18 + phaseB) * 0.035;
-  const y = 0.5
-    + Math.cos(t * 0.82 + phaseB) * 0.22
-    + Math.sin(t * 0.26 + phaseC) * 0.028;
-  const angle = Math.sin(t * 0.47 + phaseC) * Math.PI + Math.cos(t * 0.19 + phaseA) * 0.18;
-
-  return {
-    x: Math.max(-0.16, Math.min(1.16, x)),
-    y: Math.max(-0.16, Math.min(1.16, y)),
-    angle
-  };
-}
-
-function getScannerRoamingDuration(seedValue, minDuration = 5600, maxDuration = 8600) {
-  const safeMin = Math.max(1200, Number(minDuration) || 5600);
-  const safeMax = Math.max(safeMin + 1, Number(maxDuration) || 8600);
-  const spread = safeMax - safeMin;
-  return safeMin + (hashString(`duration_${seedValue}`) % spread);
-}
-
 function clampScannerNumber(value, min = 0, max = 1) {
   const number = Number(value);
   const safeMin = Number.isFinite(min) ? Number(min) : 0;
@@ -6117,12 +5964,13 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   }
 
   const previous = scannerBeamRenderState.sample || { x: 0.5, y: 0.5, angle: 0 };
-  const deltaMs = Math.max(0, Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, safeFrameTime - (scannerBeamRenderState.lastFrameAt || safeFrameTime)));
+  const rawDeltaMs = Math.max(0, safeFrameTime - (scannerBeamRenderState.lastFrameAt || safeFrameTime));
+  const deltaMs = Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, rawDeltaMs);
   const hardDistance = getScannerBeamSampleDistance(previous, target);
   const hardAngle = Math.abs(getScannerAngleDelta(previous.angle || 0, target.angle || 0));
 
   if (
-    deltaMs >= SCANNER_BEAM_SNAP_DELTA_MS ||
+    rawDeltaMs >= SCANNER_BEAM_SNAP_DELTA_MS ||
     hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE ||
     hardAngle >= SCANNER_BEAM_HARD_RESET_ANGLE
   ) {
@@ -6254,7 +6102,6 @@ function getScannerLobbyBeamSampleCore(state, timestampMs, options = {}) {
     vy: yState.velocity + flow.dy
   };
 }
-
 
 function getScannerLobbySeedConfig(seedValue = "scanner_shared_lobby_motion_v2") {
   const rnd = mulberry32(hashString(`lobby_seed_${seedValue}`));
@@ -6703,7 +6550,6 @@ function mergeScannerSampleSequences(primary, secondary) {
   return first.concat(second.slice(1));
 }
 
-
 function getScannerCountdownTiming(round) {
   const countdownEndsAt = tsToMs(round?.countdownEndsAt);
   const derivedStart = countdownEndsAt > 0 ? Math.max(0, countdownEndsAt - SCANNER_COUNTDOWN_MS) : 0;
@@ -7061,7 +6907,6 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 
-
 function getScannerBeamRenderKey(roundStatus, roundData, variant = "grid") {
   const safeStatus = String(roundStatus || "idle");
   const safeVariant = String(variant || "grid");
@@ -7117,71 +6962,39 @@ function getScannerBeamScanConfig(roundStatus) {
   };
 }
 
-function resetScannerBeamVisualState(baseAngle = 0, key = "", frameTime = performance.now()) {
-  scannerBeamVisualState.initialized = true;
-  scannerBeamVisualState.key = String(key || "");
-  scannerBeamVisualState.angle = Number(baseAngle) || 0;
-  scannerBeamVisualState.lastFrameAt = Number.isFinite(Number(frameTime)) ? Number(frameTime) : performance.now();
-  return scannerBeamVisualState.angle;
-}
-
-function getScannerVisualBeamAngle(baseAngle, roundStatus, renderKey, timestampMs = Date.now(), frameTime = performance.now()) {
-  const safeBaseAngle = Number(baseAngle) || 0;
-  const safeFrameTime = Number.isFinite(Number(frameTime)) ? Number(frameTime) : performance.now();
+function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = Date.now()) {
+  const safeStatus = String(roundStatus || "idle");
   const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
   const safeKey = String(renderKey || "idle");
-
-  const config = getScannerBeamScanConfig(roundStatus);
+  const config = getScannerBeamScanConfig(safeStatus);
   const seed = hashString(`scanner_beam_scan_${safeKey}`);
   const primaryPhase = ((seed >>> 1) % 360) * (Math.PI / 180);
   const secondaryPhase = ((seed >>> 6) % 360) * (Math.PI / 180);
   const tertiaryPhase = ((seed >>> 11) % 360) * (Math.PI / 180);
   const time = safeTimestamp / 1000;
-  const offset =
+
+  return (
     Math.sin(time * config.speed + primaryPhase) * config.sweep +
     Math.sin(time * (config.speed * 1.67) + secondaryPhase) * (config.sweep * 0.22) +
-    Math.cos(time * (config.speed * 0.61) + tertiaryPhase) * (config.sweep * 0.08);
-  const targetAngle = safeBaseAngle + offset;
-
-  if (!scannerBeamVisualState.initialized || scannerBeamVisualState.key !== safeKey) {
-    return resetScannerBeamVisualState(targetAngle, safeKey, safeFrameTime);
-  }
-
-  const deltaMs = Math.max(0, Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, safeFrameTime - (scannerBeamVisualState.lastFrameAt || safeFrameTime)));
-  if (deltaMs >= SCANNER_BEAM_SNAP_DELTA_MS) {
-    return resetScannerBeamVisualState(targetAngle, safeKey, safeFrameTime);
-  }
-
-  const blend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / SCANNER_BEAM_SCAN_SMOOTH_TAU_MS);
-  const nextAngle = lerpScannerAngle(scannerBeamVisualState.angle || 0, targetAngle, blend);
-  scannerBeamVisualState.angle = nextAngle;
-  scannerBeamVisualState.lastFrameAt = safeFrameTime;
-  scannerBeamVisualState.key = safeKey;
-  return nextAngle;
+    Math.cos(time * (config.speed * 0.61) + tertiaryPhase) * (config.sweep * 0.08)
+  );
 }
 
 function getScannerVisualBeamSample(beamSample, roundStatus, renderKey, timestampMs = Date.now(), frameTime = performance.now()) {
   const safeSample = beamSample || { x: 0.5, y: 0.5, angle: 0 };
   return {
     ...safeSample,
-    angle: getScannerVisualBeamAngle(
-      safeSample.angle,
+    angle: (Number(safeSample.angle) || 0) + getScannerBeamScanOffset(
       roundStatus,
       renderKey,
-      timestampMs,
-      frameTime
+      timestampMs
     )
   };
 }
 
 function stopScannerVisualAnimation() {
-  scannerGridState.animation.active = false;
-  scannerGridState.animation.roundId = null;
-  scannerGridState.animation.startedAt = 0;
-  scannerGridState.animation.points = [];
-  scannerGridPath = null;
-  scannerBeamVisualState.initialized = false;
-  scannerBeamVisualState.key = "";
+  scannerBeamRenderState.initialized = false;
+  scannerBeamRenderState.key = "";
 }
 
 function ensureScannerVisualLoop() {
@@ -7320,7 +7133,6 @@ function hasScannerRoundVisibleState(round) {
     ["countdown", "shuffling", "active", "finished", "preparing_next_round"].includes(status);
 }
 
-
 function syncScannerDerivedState() {
   const currentPlayer = getCurrentPlayer();
   const now = Date.now();
@@ -7437,10 +7249,6 @@ function syncScannerDerivedState() {
     scannerGridState.winnerPlayerId = round.winnerPlayerId || null;
     scannerGridState.winningCellIndex = Number.isInteger(round.winningCellIndex) ? round.winningCellIndex : null;
     scannerGridState.winningPlayer = null;
-
-    if (scannerGridState.animation.roundId && scannerGridState.animation.roundId !== round.id) {
-      stopScannerVisualAnimation();
-    }
     return;
   }
 
@@ -7461,10 +7269,6 @@ function syncScannerDerivedState() {
   scannerGridState.winnerPlayerId = round.winnerPlayerId || null;
   scannerGridState.winningCellIndex = Number.isInteger(round.winningCellIndex) ? round.winningCellIndex : null;
   scannerGridState.winningPlayer = scannerGridState.players.find((player) => player.id === scannerGridState.winnerPlayerId) || null;
-
-  if (scannerGridState.animation.roundId && scannerGridState.animation.roundId !== round.id) {
-    stopScannerVisualAnimation();
-  }
 
   if (scannerGridState.status !== "finished") {
     scannerRealtime.lastAnimatedRoundId = null;
@@ -9128,7 +8932,6 @@ function renderScannerButtons() {
   setButtonState(joinButton, { disabled, text });
 }
 
-
 function getScannerResultRevealProgress() {
   const status = String(scannerGridState.status || "idle");
   return status === "finished" ? 1 : 0;
@@ -9262,7 +9065,6 @@ function renderScannerRound(options = {}) {
     renderScannerCanvas();
   }
 }
-
 
 function invalidateScannerCanvasMetrics() {
   scannerCanvasMetricsState.dirty = true;
@@ -9566,7 +9368,6 @@ function drawScannerLens(ctx, sourceCanvas, x, y, radius, surfaceSize, options =
   ctx.stroke();
   ctx.restore();
 }
-
 
 function createScannerWaitingTextLayer(size) {
   const canvas = document.createElement("canvas");
