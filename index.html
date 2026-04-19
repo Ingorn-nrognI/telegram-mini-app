@@ -3699,6 +3699,8 @@ const SCANNER_RETICLE_IDLE_WOBBLE = 0.08;
 const SCANNER_RETICLE_ACTIVE_WOBBLE = 0.16;
 const SCANNER_BEAM_SMOOTH_TAU_MS = 74;
 const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 66;
+const SCANNER_BEAM_BOUNCE_ANGLE_SMOOTH_TAU_MS = 196;
+const SCANNER_BEAM_BOUNCE_ANGLE_THRESHOLD = Math.PI * 0.36;
 const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
@@ -6110,20 +6112,26 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
 
   if (
     deltaMs >= SCANNER_BEAM_SNAP_DELTA_MS ||
-    hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE ||
-    hardAngle >= SCANNER_BEAM_HARD_RESET_ANGLE
+    hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE
   ) {
     return resetScannerBeamRenderState(target, safeKey);
   }
 
   const positionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
   const angleTauMs = Math.max(1, Number(options.angleTauMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS);
+  const followTargetPosition = options.followTargetPosition !== false;
+  const bounceTurnBlend = smoothstep(SCANNER_BEAM_BOUNCE_ANGLE_THRESHOLD, Math.PI, hardAngle);
+  const adaptiveAngleTauMs = angleTauMs + (Math.max(angleTauMs, SCANNER_BEAM_BOUNCE_ANGLE_SMOOTH_TAU_MS) - angleTauMs) * bounceTurnBlend;
   const positionBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / positionTauMs);
-  const angleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / angleTauMs);
+  const angleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / adaptiveAngleTauMs);
 
   const nextSample = {
-    x: previous.x + (target.x - previous.x) * positionBlend,
-    y: previous.y + (target.y - previous.y) * positionBlend,
+    x: followTargetPosition
+      ? clampScannerNumber(target.x, -0.18, 1.18)
+      : previous.x + (target.x - previous.x) * positionBlend,
+    y: followTargetPosition
+      ? clampScannerNumber(target.y, -0.18, 1.18)
+      : previous.y + (target.y - previous.y) * positionBlend,
     angle: lerpScannerAngle(previous.angle || 0, target.angle || 0, angleBlend)
   };
 
