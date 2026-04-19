@@ -6212,6 +6212,7 @@ function getScannerCellIndexFromPoint(x, y) {
   return row * SCANNER_GRID_COLS + col;
 }
 
+
 function getScannerLobbySeedConfig(seedValue = "scanner_shared_lobby_motion_v2") {
   const rnd = mulberry32(hashString(`lobby_seed_${seedValue}`));
   const pad = SCANNER_LOBBY_BEAM_EDGE_PADDING;
@@ -6234,6 +6235,106 @@ function getScannerLobbySeedConfig(seedValue = "scanner_shared_lobby_motion_v2")
       { x: 0.82, y: 0.56 }
     )
   };
+}
+
+function getScannerBeamVelocityFromAngle(angle, speed = SCANNER_LOBBY_BEAM_BASE_SPEED) {
+  const direction = normalizeScannerVector(
+    Math.cos(Number(angle) || 0),
+    Math.sin(Number(angle) || 0),
+    { x: 1, y: 0 }
+  );
+  const safeSpeed = Math.max(0, Number(speed) || 0);
+  return {
+    x: direction.x * safeSpeed,
+    y: direction.y * safeSpeed
+  };
+}
+
+function getScannerDefaultIdleBeamMotion(seedValue = "scanner_shared_lobby_motion_v2") {
+  const config = getScannerLobbySeedConfig(seedValue);
+  return {
+    anchorAt: SCANNER_LOBBY_BEAM_EPOCH_MS,
+    x: clampScannerNumber(config.startX, SCANNER_LOBBY_BEAM_EDGE_PADDING, 1 - SCANNER_LOBBY_BEAM_EDGE_PADDING),
+    y: clampScannerNumber(config.startY, SCANNER_LOBBY_BEAM_EDGE_PADDING, 1 - SCANNER_LOBBY_BEAM_EDGE_PADDING),
+    vx: Number(config.velocity.x || 0) * SCANNER_LOBBY_BEAM_BASE_SPEED,
+    vy: Number(config.velocity.y || 0) * SCANNER_LOBBY_BEAM_BASE_SPEED
+  };
+}
+
+function normalizeScannerBeamMotionState(rawState, fallbackSeed = "scanner_shared_lobby_motion_v2") {
+  if (!rawState || typeof rawState !== "object") {
+    return getScannerDefaultIdleBeamMotion(fallbackSeed);
+  }
+
+  const fallback = getScannerDefaultIdleBeamMotion(fallbackSeed);
+  const anchorAt = tsToMs(rawState.anchorAt || rawState.startedAt || rawState.startAt || rawState.timestamp || 0) || fallback.anchorAt;
+  const x = clampScannerNumber(rawState.x, SCANNER_LOBBY_BEAM_EDGE_PADDING, 1 - SCANNER_LOBBY_BEAM_EDGE_PADDING);
+  const y = clampScannerNumber(rawState.y, SCANNER_LOBBY_BEAM_EDGE_PADDING, 1 - SCANNER_LOBBY_BEAM_EDGE_PADDING);
+
+  let vx = Number(rawState.vx);
+  let vy = Number(rawState.vy);
+
+  if (!Number.isFinite(vx) || !Number.isFinite(vy)) {
+    const angleVelocity = getScannerBeamVelocityFromAngle(rawState.angle, SCANNER_LOBBY_BEAM_BASE_SPEED);
+    const normalized = normalizeScannerVector(
+      Number.isFinite(vx) ? vx : angleVelocity.x,
+      Number.isFinite(vy) ? vy : angleVelocity.y,
+      angleVelocity
+    );
+    vx = normalized.x * SCANNER_LOBBY_BEAM_BASE_SPEED;
+    vy = normalized.y * SCANNER_LOBBY_BEAM_BASE_SPEED;
+  } else {
+    const normalized = normalizeScannerVector(vx, vy, fallback);
+    vx = normalized.x * SCANNER_LOBBY_BEAM_BASE_SPEED;
+    vy = normalized.y * SCANNER_LOBBY_BEAM_BASE_SPEED;
+  }
+
+  return {
+    anchorAt,
+    x,
+    y,
+    vx,
+    vy
+  };
+}
+
+function getScannerRuntimeIdleBeamState(runtimeData = scannerRealtime.runtimeData) {
+  const rawMotion = runtimeData?.idleBeamMotion || runtimeData?.idleBeamState || null;
+  return normalizeScannerBeamMotionState(rawMotion, "scanner_shared_lobby_motion_v2");
+}
+
+function getScannerRoundCountdownBeamState(round) {
+  const rawMotion = round?.countdownBeamMotion || round?.beamMotion || round?.beamStart || null;
+  if (!rawMotion) return null;
+  return normalizeScannerBeamMotionState(rawMotion, `${round?.id || "round"}::${round?.entropySeed || "seed"}::countdown`);
+}
+
+function createScannerIdleBeamMotionFromSample(sample, timestampMs = Date.now()) {
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+  const normalizedVelocity = normalizeScannerVector(
+    sample?.vx,
+    sample?.vy,
+    getScannerBeamVelocityFromAngle(sample?.angle, SCANNER_LOBBY_BEAM_BASE_SPEED)
+  );
+
+  return {
+    anchorAt: safeTimestamp,
+    x: clampScannerNumber(sample?.x, SCANNER_LOBBY_BEAM_EDGE_PADDING, 1 - SCANNER_LOBBY_BEAM_EDGE_PADDING),
+    y: clampScannerNumber(sample?.y, SCANNER_LOBBY_BEAM_EDGE_PADDING, 1 - SCANNER_LOBBY_BEAM_EDGE_PADDING),
+    vx: normalizedVelocity.x * SCANNER_LOBBY_BEAM_BASE_SPEED,
+    vy: normalizedVelocity.y * SCANNER_LOBBY_BEAM_BASE_SPEED
+  };
+}
+
+function getScannerBeamMotionSignature(motionState) {
+  const state = normalizeScannerBeamMotionState(motionState);
+  return [
+    Math.round(state.anchorAt / 10),
+    state.x.toFixed(5),
+    state.y.toFixed(5),
+    state.vx.toFixed(5),
+    state.vy.toFixed(5)
+  ].join("::");
 }
 
 function getScannerReflectedAxisState(start, velocityPerSecond, elapsedSeconds, min, max) {
@@ -6266,17 +6367,16 @@ function getScannerReflectedAxisState(start, velocityPerSecond, elapsedSeconds, 
   };
 }
 
-function getScannerSharedLobbyBeamSampleAt(timestampMs = Date.now(), seedValue = "scanner_shared_lobby_motion_v2") {
-  const config = getScannerLobbySeedConfig(seedValue);
+function getScannerBeamSampleFromMotionState(motionState, timestampMs = Date.now(), options = {}) {
+  const state = normalizeScannerBeamMotionState(motionState, options.seedValue || "scanner_shared_lobby_motion_v2");
   const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
-  const elapsedSeconds = Math.max(0, (safeTimestamp - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000);
-  const pad = SCANNER_LOBBY_BEAM_EDGE_PADDING;
-  const min = pad;
-  const max = 1 - pad;
-  const speed = SCANNER_LOBBY_BEAM_BASE_SPEED;
+  const safePad = clampScannerNumber(options.pad ?? SCANNER_LOBBY_BEAM_EDGE_PADDING, 0, 0.24);
+  const min = safePad;
+  const max = 1 - safePad;
+  const elapsedSeconds = Math.max(0, (safeTimestamp - state.anchorAt) / 1000);
 
-  const xState = getScannerReflectedAxisState(config.startX, config.velocity.x * speed, elapsedSeconds, min, max);
-  const yState = getScannerReflectedAxisState(config.startY, config.velocity.y * speed, elapsedSeconds, min, max);
+  const xState = getScannerReflectedAxisState(state.x, state.vx, elapsedSeconds, min, max);
+  const yState = getScannerReflectedAxisState(state.y, state.vy, elapsedSeconds, min, max);
 
   return {
     x: xState.position,
@@ -6287,10 +6387,20 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = Date.now(), seedValue =
   };
 }
 
-function getScannerSharedLobbyBeamSample(timestampMs = Date.now()) {
-  return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2");
+function getScannerSharedLobbyBeamSampleAt(timestampMs = Date.now(), seedValue = "scanner_shared_lobby_motion_v2", runtimeData = scannerRealtime.runtimeData) {
+  const motionState = runtimeData?.idleBeamMotion || runtimeData?.idleBeamState
+    ? getScannerRuntimeIdleBeamState(runtimeData)
+    : getScannerDefaultIdleBeamMotion(seedValue);
+
+  return getScannerBeamSampleFromMotionState(motionState, timestampMs, {
+    pad: SCANNER_LOBBY_BEAM_EDGE_PADDING,
+    seedValue
+  });
 }
 
+function getScannerSharedLobbyBeamSample(timestampMs = Date.now()) {
+  return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
+}
 function simulateScannerBeamBounceSamples(options = {}) {
   const durationMs = Math.max(0, Number(options.durationMs) || 0);
   const safePad = clampScannerNumber(options.pad ?? SCANNER_ACTIVE_BEAM_EDGE_PADDING, 0, 0.24);
@@ -6504,6 +6614,7 @@ function mergeScannerSampleSequences(primary, secondary) {
   return first.concat(second.slice(1));
 }
 
+
 function getScannerCountdownTiming(round) {
   const countdownEndsAt = tsToMs(round?.countdownEndsAt);
   const derivedStart = countdownEndsAt > 0 ? Math.max(0, countdownEndsAt - SCANNER_COUNTDOWN_MS) : 0;
@@ -6523,12 +6634,26 @@ function getScannerCountdownBeamCache(round) {
   if (!round) return null;
 
   const timing = getScannerCountdownTiming(round);
-  const key = `${round?.id || "round"}::${round?.entropySeed || "seed"}::${Math.round(timing.startedAt / 100)}::${Math.round(timing.endsAt / 100)}`;
+  const motionState = getScannerRoundCountdownBeamState(round);
+  const key = [
+    round?.id || "round",
+    round?.entropySeed || "seed",
+    Math.round(timing.startedAt / 100),
+    Math.round(timing.endsAt / 100),
+    getScannerBeamMotionSignature(motionState || getScannerDefaultIdleBeamMotion(`${round?.id || "round"}::fallback`))
+  ].join("::");
+
   if (scannerCountdownBeamCache?.key === key && Array.isArray(scannerCountdownBeamCache?.samples) && scannerCountdownBeamCache.samples.length > 1) {
     return scannerCountdownBeamCache;
   }
 
-  const lobbyStartSample = getScannerSharedLobbyBeamSampleAt(timing.startedAt);
+  const lobbyStartSample = motionState
+    ? getScannerBeamSampleFromMotionState(motionState, timing.startedAt, {
+        pad: SCANNER_ACTIVE_BEAM_EDGE_PADDING,
+        seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::countdown`
+      })
+    : getScannerSharedLobbyBeamSampleAt(timing.startedAt);
+
   const latchDurationMs = Math.min(SCANNER_EDGE_LATCH_MS, timing.durationMs);
   const cruiseDurationMs = Math.max(0, timing.durationMs - latchDurationMs);
   const cruiseRatio = timing.durationMs > 0 ? cruiseDurationMs / timing.durationMs : 0;
@@ -6557,6 +6682,7 @@ function getScannerCountdownBeamCache(round) {
   scannerCountdownBeamCache = {
     key,
     timing,
+    motionState,
     samples,
     startSample: lobbyStartSample,
     latchStartSample,
@@ -6567,6 +6693,24 @@ function getScannerCountdownBeamCache(round) {
   return scannerCountdownBeamCache;
 }
 
+function getScannerCountdownBeamSampleAtTime(round, timestampMs = Date.now(), fallbackSample = null) {
+  const cache = getScannerCountdownBeamCache(round);
+  if (!cache) return fallbackSample || getScannerSharedLobbyBeamSampleAt(timestampMs);
+  const progress = clampScannerNumber((timestampMs - cache.timing.startedAt) / Math.max(1, cache.timing.durationMs), 0, 1);
+  return interpolateScannerSampleSequence(cache.samples, progress);
+}
+
+function getScannerCurrentLobbyOrCountdownSample(round, runtimeData = scannerRealtime.runtimeData, timestampMs = Date.now()) {
+  const status = String(round?.status || "waiting");
+  if (status === "countdown") {
+    return getScannerCountdownBeamSampleAtTime(
+      round,
+      timestampMs,
+      getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", runtimeData)
+    );
+  }
+  return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", runtimeData);
+}
 function getScannerActiveLaunchState(round, latchSample) {
   const seedValue = `${round?.id || "round"}::${round?.entropySeed || "seed"}::active_launch`;
   const rnd = mulberry32(hashString(seedValue));
@@ -6606,7 +6750,8 @@ function getScannerActiveBeamCacheKey(round, players) {
   const roundPart = `${round?.id || "round"}::${round?.entropySeed || "seed"}`;
   const activeWindowPart = `${Math.round(tsToMs(round?.activeStartedAt || 0) / 1000)}::${Math.round(tsToMs(round?.activeEndsAt || 0) / 1000)}`;
   const latchWindowPart = `${Math.round(tsToMs(round?.countdownStartedAt || 0) / 1000)}::${Math.round(tsToMs(round?.countdownEndsAt || 0) / 1000)}`;
-  return `${roundPart}::${activeWindowPart}::${latchWindowPart}`;
+  const beamPart = getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(round));
+  return `${roundPart}::${activeWindowPart}::${latchWindowPart}::${beamPart}`;
 }
 
 function getScannerActiveBeamCache(round, players) {
@@ -6689,10 +6834,7 @@ function interpolateScannerBeamState(fromSample, toSample, progress) {
 }
 
 function getScannerCountdownBeamSample(round, fallbackSample, players) {
-  const cache = getScannerCountdownBeamCache(round);
-  if (!cache) return fallbackSample || getScannerSharedLobbyBeamSample();
-  const progress = clampScannerNumber((Date.now() - cache.timing.startedAt) / Math.max(1, cache.timing.durationMs), 0, 1);
-  return interpolateScannerSampleSequence(cache.samples, progress);
+  return getScannerCountdownBeamSampleAtTime(round, Date.now(), fallbackSample || getScannerSharedLobbyBeamSample());
 }
 
 function getScannerShuffleProgress(round) {
@@ -6754,27 +6896,28 @@ function getScannerBeamRenderKey(roundStatus, roundData, variant = "grid") {
   const roundId = roundData?.id || "none";
 
   if (!roundData) {
-    return `${safeStatus}::${safeVariant}::shared`;
+    const idleMotion = getScannerRuntimeIdleBeamState(scannerRealtime.runtimeData);
+    return `${safeStatus}::${safeVariant}::idle::${getScannerBeamMotionSignature(idleMotion)}`;
   }
 
   if (safeStatus === "countdown") {
-    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.countdownEndsAt || 0) / 100)}::${safeVariant}`;
+    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.countdownEndsAt || 0) / 100)}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}::${safeVariant}`;
   }
 
   if (safeStatus === "shuffling") {
-    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.shuffleStartedAt || 0) / 100)}::${safeVariant}`;
+    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.shuffleStartedAt || 0) / 100)}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}::${safeVariant}`;
   }
 
   if (safeStatus === "active") {
-    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.activeStartedAt || 0) / 100)}::${safeVariant}`;
+    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.activeStartedAt || 0) / 100)}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}::${safeVariant}`;
   }
 
   if (safeStatus === "finished") {
-    return `${safeStatus}::${roundId}::${Number.isInteger(roundData.winningCellIndex) ? roundData.winningCellIndex : "none"}::${safeVariant}`;
+    return `${safeStatus}::${roundId}::${Number.isInteger(roundData.winningCellIndex) ? roundData.winningCellIndex : "none"}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}::${safeVariant}`;
   }
 
   if (safeStatus === "preparing_next_round") {
-    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.preparingStartedAt || 0) / 100)}::${safeVariant}`;
+    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.preparingStartedAt || 0) / 100)}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}::${safeVariant}`;
   }
 
   return `${safeStatus}::${roundId}::${safeVariant}`;
@@ -7201,6 +7344,7 @@ async function joinOrCreateScannerRound() {
           createdByName: player.name,
           createdAt: createTimestampFromNow(0),
           waitingOpenedAt: createTimestampFromNow(0),
+          countdownBeamMotion: null,
           countdownStartedAt: null,
           countdownEndsAt: null,
           shuffleStartedAt: null,
@@ -7310,7 +7454,13 @@ async function joinOrCreateScannerRound() {
       };
 
       if (nextParticipantCount >= 1 && (createNewRound || targetStatus === "waiting" || !targetStatus)) {
+        const countdownAnchorSample = getScannerCurrentLobbyOrCountdownSample(
+          { id: targetRoundRef.id, ...targetRoundData },
+          runtimeData,
+          Date.now()
+        );
         roundUpdate.status = "countdown";
+        roundUpdate.countdownBeamMotion = createScannerIdleBeamMotionFromSample(countdownAnchorSample, Date.now());
         roundUpdate.countdownStartedAt = createTimestampFromNow(0);
         roundUpdate.countdownEndsAt = createTimestampFromNow(SCANNER_COUNTDOWN_MS);
         roundUpdate.shuffleStartedAt = null;
@@ -7368,6 +7518,10 @@ async function removeParticipantFromRound(roundId, playerId, options = {}) {
     const userRef = getUserRef(playerId);
     const userSnap = await tx.get(userRef);
     const userData = userSnap.exists ? (userSnap.data() || {}) : {};
+    const runtimeSnap = await tx.get(runtimeRef);
+    const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
+    const nowMs = Date.now();
+    const currentRoundForMotion = { id: roundId, ...roundData };
 
     if (roundData.status === "shuffling" || roundData.status === "active" || roundData.status === "finished" || roundData.status === "preparing_next_round" || markLeftOnly) {
       tx.set(participantRef, {
@@ -7388,7 +7542,9 @@ async function removeParticipantFromRound(roundId, playerId, options = {}) {
     };
 
     if (nextCount === 1) {
+      const countdownAnchorSample = getScannerCurrentLobbyOrCountdownSample(currentRoundForMotion, runtimeData, nowMs);
       update.status = "countdown";
+      update.countdownBeamMotion = createScannerIdleBeamMotionFromSample(countdownAnchorSample, nowMs);
       update.countdownStartedAt = createTimestampFromNow(0);
       update.countdownEndsAt = createTimestampFromNow(SCANNER_COUNTDOWN_MS);
       update.shuffleStartedAt = null;
@@ -7397,6 +7553,7 @@ async function removeParticipantFromRound(roundId, playerId, options = {}) {
       update.activeEndsAt = null;
     } else if (nextCount === 0) {
       update.status = "waiting";
+      update.countdownBeamMotion = null;
       update.countdownStartedAt = null;
       update.countdownEndsAt = null;
       update.shuffleStartedAt = null;
@@ -7416,9 +7573,11 @@ async function removeParticipantFromRound(roundId, playerId, options = {}) {
     }
 
     if (nextCount === 0) {
+      const idleResumeSample = getScannerCurrentLobbyOrCountdownSample(currentRoundForMotion, runtimeData, nowMs);
       tx.set(runtimeRef, {
         activeRoundId: null,
         status: "idle",
+        idleBeamMotion: createScannerIdleBeamMotionFromSample(idleResumeSample, nowMs),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
     } else {
@@ -7541,6 +7700,7 @@ async function ensureScannerRoundLifecycle() {
     );
 
     if (participantCount === 0) {
+      const idleResumeSample = getScannerCurrentLobbyOrCountdownSample(round, scannerRealtime.runtimeData, nowMs);
       await db.runTransaction(async (tx) => {
         const runtimeSnap = await tx.get(runtimeRef);
         const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
@@ -7553,6 +7713,7 @@ async function ensureScannerRoundLifecycle() {
           status: "waiting",
           totalPot: 0,
           participantCount: 0,
+          countdownBeamMotion: null,
           countdownStartedAt: null,
           countdownEndsAt: null,
           activeStartedAt: null,
@@ -7567,6 +7728,7 @@ async function ensureScannerRoundLifecycle() {
             mode: "scanner-grid",
             activeRoundId: null,
             status: "idle",
+            idleBeamMotion: createScannerIdleBeamMotionFromSample(idleResumeSample, nowMs),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
         }
@@ -7579,6 +7741,7 @@ async function ensureScannerRoundLifecycle() {
     }
 
     if (roundStatus === "waiting" && participantCount >= 1) {
+      const countdownAnchorSample = getScannerSharedLobbyBeamSampleAt(nowMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(roundRef);
         if (!snap.exists) return;
@@ -7590,6 +7753,7 @@ async function ensureScannerRoundLifecycle() {
           status: "countdown",
           totalPot: actualTotalPot,
           participantCount,
+          countdownBeamMotion: createScannerIdleBeamMotionFromSample(countdownAnchorSample, nowMs),
           countdownStartedAt: createTimestampFromNow(0),
           countdownEndsAt: createTimestampFromNow(SCANNER_COUNTDOWN_MS),
           activeStartedAt: null,
@@ -7609,6 +7773,11 @@ async function ensureScannerRoundLifecycle() {
 
     if (roundStatus === "countdown") {
       if (tsToMs(round.countdownEndsAt) <= 0) {
+        const countdownAnchorSample = getScannerCountdownBeamSampleAtTime(
+          round,
+          nowMs,
+          getScannerSharedLobbyBeamSampleAt(nowMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
+        );
         await db.runTransaction(async (tx) => {
           const snap = await tx.get(roundRef);
           if (!snap.exists) return;
@@ -7618,6 +7787,7 @@ async function ensureScannerRoundLifecycle() {
           tx.set(roundRef, {
             totalPot: actualTotalPot,
             participantCount,
+            countdownBeamMotion: createScannerIdleBeamMotionFromSample(countdownAnchorSample, nowMs),
             countdownStartedAt: createTimestampFromNow(0),
             countdownEndsAt: createTimestampFromNow(SCANNER_COUNTDOWN_MS),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -7800,6 +7970,7 @@ async function ensureScannerRoundLifecycle() {
     }
 
     if (roundStatus === "preparing_next_round" && tsToMs(round.preparingEndsAt) > 0 && nowMs >= tsToMs(round.preparingEndsAt)) {
+      const idleResumeSample = getScannerPreparingBeamSample(round, buildScannerPlayersFromFirestore(round, renderParticipants).players);
       await db.runTransaction(async (tx) => {
         const runtimeSnap = await tx.get(runtimeRef);
         const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
@@ -7820,6 +7991,7 @@ async function ensureScannerRoundLifecycle() {
         tx.set(runtimeRef, {
           activeRoundId: null,
           status: "idle",
+          idleBeamMotion: createScannerIdleBeamMotionFromSample(idleResumeSample, nowMs),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
       });
