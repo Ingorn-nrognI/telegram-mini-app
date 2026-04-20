@@ -3685,7 +3685,7 @@ const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
 const SCANNER_BEAM_HARD_RESET_ANGLE = Math.PI * 0.985;
 const SCANNER_BEAM_DIRECTION_EPSILON = 0.00001;
-const SCANNER_BEAM_RENDER_ANGLE_OFFSET = 0;
+const SCANNER_BEAM_RENDER_ANGLE_OFFSET = Math.PI / 2;
 const SCANNER_BEAM_TURN_RESPONSE_MS = 108;
 const SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS = 196;
 const SCANNER_BEAM_SCAN_IDLE_SPEED = 0.96;
@@ -6061,8 +6061,7 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
 
   if (
     rawDeltaMs >= SCANNER_BEAM_SNAP_DELTA_MS ||
-    hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE ||
-    hardAngle >= SCANNER_BEAM_HARD_RESET_ANGLE
+    hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE
   ) {
     return resetScannerBeamRenderState(target, safeKey);
   }
@@ -6079,10 +6078,12 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     nextY - previous.y,
     targetAngles.travelAngle
   );
-  const smoothedTravelAngle = lerpScannerAngle(previousTravelAngle, targetAngles.travelAngle, angleBlend);
-  const desiredRenderAngle = hardDistance > SCANNER_BEAM_DIRECTION_EPSILON
+  const desiredTravelAngle = hardDistance > SCANNER_BEAM_DIRECTION_EPSILON
     ? motionAngleFromStep
-    : targetAngles.renderAngle;
+    : targetAngles.travelAngle;
+  const renderAngleOffset = getScannerAngleDelta(targetAngles.travelAngle, targetAngles.renderAngle);
+  const desiredRenderAngle = desiredTravelAngle + renderAngleOffset;
+  const smoothedTravelAngle = lerpScannerAngle(previousTravelAngle, desiredTravelAngle, angleBlend);
   const smoothedRenderAngle = lerpScannerAngle(previousRenderAngle, desiredRenderAngle, angleBlend);
 
   const nextSample = {
@@ -6104,11 +6105,13 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
 function interpolateScannerSampleSequence(samples, progress) {
   if (!Array.isArray(samples) || samples.length < 2) {
     const single = samples?.[0] || { x: 0.5, y: 0.5, angle: 0 };
-    const baseAngle = getScannerBeamMotionAngle(single);
+    const baseTravelAngle = getScannerBeamMotionAngle(single);
+    const baseRenderAngle = getScannerBeamRenderAngle(single, baseTravelAngle);
     return {
       ...single,
-      angle: baseAngle,
-      travelAngle: baseAngle,
+      angle: baseRenderAngle,
+      renderAngle: baseRenderAngle,
+      travelAngle: baseTravelAngle,
       vx: Number(single?.vx) || 0,
       vy: Number(single?.vy) || 0
     };
@@ -6131,17 +6134,20 @@ function interpolateScannerSampleSequence(samples, progress) {
 
   const fromMotionAngle = getScannerBeamMotionAngle(from);
   const toMotionAngle = getScannerBeamMotionAngle(to);
+  const fromRenderAngle = getScannerBeamRenderAngle(from, fromMotionAngle);
+  const toRenderAngle = getScannerBeamRenderAngle(to, toMotionAngle);
   const travelAngle = hasDirection
     ? Math.atan2(dy, dx)
     : (Math.hypot(vx, vy) > 0.00001
       ? Math.atan2(vy, vx)
       : lerpScannerAngle(fromMotionAngle, toMotionAngle, t));
+  const renderAngle = lerpScannerAngle(fromRenderAngle, toRenderAngle, t);
 
   return {
     x: Math.max(-0.18, Math.min(1.18, x)),
     y: Math.max(-0.18, Math.min(1.18, y)),
-    angle: travelAngle,
-    renderAngle: travelAngle,
+    angle: renderAngle,
+    renderAngle,
     travelAngle,
     vx,
     vy
