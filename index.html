@@ -3678,12 +3678,14 @@ const SCANNER_RETICLE_IDLE_SPIN_SPEED = 0.0017;
 const SCANNER_RETICLE_ACTIVE_SPIN_SPEED = 0.0034;
 const SCANNER_RETICLE_IDLE_WOBBLE = 0.08;
 const SCANNER_RETICLE_ACTIVE_WOBBLE = 0.16;
-const SCANNER_BEAM_SMOOTH_TAU_MS = 74;
-const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 66;
+const SCANNER_BEAM_SMOOTH_TAU_MS = 62;
+const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 118;
 const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
 const SCANNER_BEAM_HARD_RESET_ANGLE = Math.PI * 0.985;
+const SCANNER_BEAM_TURN_RESPONSE_MS = 108;
+const SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS = 196;
 const SCANNER_BEAM_SCAN_IDLE_SPEED = 0.96;
 const SCANNER_BEAM_SCAN_ACTIVE_SPEED = 1.22;
 const SCANNER_BEAM_SCAN_IDLE_SWEEP = 0.42;
@@ -6012,12 +6014,29 @@ function interpolateScannerSampleSequence(samples, progress) {
   const dy = (Number(to?.y) || 0) - (Number(from?.y) || 0);
   const hasDirection = Math.hypot(dx, dy) > 0.00001;
 
+  const fromAngle = Number(from?.angle);
+  const toAngle = Number(to?.angle);
+  const hasExplicitAngle = Number.isFinite(fromAngle) || Number.isFinite(toAngle);
+  const resolvedFromAngle = Number.isFinite(fromAngle)
+    ? fromAngle
+    : Number.isFinite(toAngle)
+      ? toAngle
+      : 0;
+  const resolvedToAngle = Number.isFinite(toAngle)
+    ? toAngle
+    : Number.isFinite(fromAngle)
+      ? fromAngle
+      : resolvedFromAngle;
+  const travelAngle = hasDirection ? Math.atan2(dy, dx) : lerpScannerAngle(resolvedFromAngle, resolvedToAngle, t);
+  const angle = hasExplicitAngle
+    ? lerpScannerAngle(resolvedFromAngle, resolvedToAngle, t)
+    : travelAngle;
+
   return {
     x: Math.max(-0.18, Math.min(1.18, x)),
     y: Math.max(-0.18, Math.min(1.18, y)),
-    angle: hasDirection
-      ? Math.atan2(dy, dx)
-      : lerpScannerAngle(Number(from?.angle) || 0, Number(to?.angle) || 0, t)
+    angle,
+    travelAngle
   };
 }
 
@@ -6305,6 +6324,11 @@ function simulateScannerBeamBounceSamples(options = {}) {
   const curveSecondaryStrength = Math.max(0, Number(options.curveSecondaryStrength) || SCANNER_BEAM_CURVE_SECONDARY_STRENGTH);
   const bounceBendStrength = Math.max(0, Number(options.bounceBendStrength) || SCANNER_BEAM_BOUNCE_BEND_STRENGTH);
   const bounceNormalBias = Math.max(0, Number(options.bounceNormalBias) || SCANNER_BEAM_BOUNCE_NORMAL_BIAS);
+  const turnResponseMs = Math.max(1, Number(options.turnResponseMs) || SCANNER_BEAM_TURN_RESPONSE_MS);
+  const bounceTurnResponseMs = Math.max(
+    turnResponseMs,
+    Number(options.bounceTurnResponseMs) || SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS
+  );
   const seed = hashString(`beam_curve_${seedValue}`);
   const phaseA = ((seed >>> 1) % 360) * (Math.PI / 180);
   const phaseB = ((seed >>> 5) % 360) * (Math.PI / 180);
@@ -6330,18 +6354,22 @@ function simulateScannerBeamBounceSamples(options = {}) {
     options.startVelocity?.y,
     { x: 1, y: 0 }
   );
+  let beamAngle = Number.isFinite(Number(options.startAngle))
+    ? Number(options.startAngle)
+    : Math.atan2(direction.y || 0.0001, direction.x || 0.0001);
 
   const samples = [];
 
   for (let step = 0; step < steps; step += 1) {
     const progress = step / Math.max(1, steps - 1);
     const speedFactor = Math.max(0, Number(speedFactorAt(progress)) || 0);
-    const currentAngle = Math.atan2(direction.y || 0.0001, direction.x || 0.0001);
+    const currentTravelAngle = Math.atan2(direction.y || 0.0001, direction.x || 0.0001);
 
     samples.push({
       x: clampScannerNumber(position.x, safePad, 1 - safePad),
       y: clampScannerNumber(position.y, safePad, 1 - safePad),
-      angle: currentAngle,
+      angle: beamAngle,
+      travelAngle: currentTravelAngle,
       progress,
       vx: direction.x * safeBaseSpeed * speedFactor,
       vy: direction.y * safeBaseSpeed * speedFactor,
@@ -6362,6 +6390,7 @@ function simulateScannerBeamBounceSamples(options = {}) {
 
     let nextX = position.x + direction.x * distance;
     let nextY = position.y + direction.y * distance;
+    let bouncedDuringStep = false;
 
     for (let attempt = 0; attempt < 4; attempt += 1) {
       let bounced = false;
@@ -6376,6 +6405,7 @@ function simulateScannerBeamBounceSamples(options = {}) {
           { x: 1, y: direction.y }
         );
         bounced = true;
+        bouncedDuringStep = true;
         bounceCount += 1;
       } else if (nextX > 1 - safePad) {
         nextX = (1 - safePad) - (nextX - (1 - safePad));
@@ -6385,6 +6415,7 @@ function simulateScannerBeamBounceSamples(options = {}) {
           { x: -1, y: direction.y }
         );
         bounced = true;
+        bouncedDuringStep = true;
         bounceCount += 1;
       }
 
@@ -6396,6 +6427,7 @@ function simulateScannerBeamBounceSamples(options = {}) {
           { x: direction.x, y: 1 }
         );
         bounced = true;
+        bouncedDuringStep = true;
         bounceCount += 1;
       } else if (nextY > 1 - safePad) {
         nextY = (1 - safePad) - (nextY - (1 - safePad));
@@ -6405,11 +6437,17 @@ function simulateScannerBeamBounceSamples(options = {}) {
           { x: direction.x, y: -1 }
         );
         bounced = true;
+        bouncedDuringStep = true;
         bounceCount += 1;
       }
 
       if (!bounced) break;
     }
+
+    const targetBeamAngle = Math.atan2(direction.y || 0.0001, direction.x || 0.0001);
+    const turnTauMs = bouncedDuringStep ? bounceTurnResponseMs : turnResponseMs;
+    const turnBlend = 1 - Math.exp(-((dtSeconds * 1000) / Math.max(1, turnTauMs)));
+    beamAngle = lerpScannerAngle(beamAngle, targetBeamAngle, turnBlend);
 
     position = {
       x: clampScannerNumber(nextX, safePad, 1 - safePad),
@@ -6422,7 +6460,8 @@ function simulateScannerBeamBounceSamples(options = {}) {
     finalSample: samples[samples.length - 1] || {
       x: position.x,
       y: position.y,
-      angle: Math.atan2(direction.y || 0.0001, direction.x || 0.0001),
+      angle: beamAngle,
+      travelAngle: Math.atan2(direction.y || 0.0001, direction.x || 0.0001),
       vx: 0,
       vy: 0,
       progress: 1,
