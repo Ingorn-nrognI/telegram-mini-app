@@ -3679,15 +3679,18 @@ const SCANNER_RETICLE_ACTIVE_SPIN_SPEED = 0.0034;
 const SCANNER_RETICLE_IDLE_WOBBLE = 0.08;
 const SCANNER_RETICLE_ACTIVE_WOBBLE = 0.16;
 const SCANNER_BEAM_SMOOTH_TAU_MS = 62;
-const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 118;
+const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 164;
 const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
 const SCANNER_BEAM_HARD_RESET_ANGLE = Math.PI * 0.985;
 const SCANNER_BEAM_DIRECTION_EPSILON = 0.00001;
 const SCANNER_BEAM_RENDER_ANGLE_OFFSET = Math.PI / 2;
-const SCANNER_BEAM_TURN_RESPONSE_MS = 108;
-const SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS = 196;
+const SCANNER_BEAM_TURN_RESPONSE_MS = 156;
+const SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS = 336;
+const SCANNER_BEAM_SHARP_TURN_TAU_MULTIPLIER = 1.7;
+const SCANNER_BEAM_STEP_ANGLE_INFLUENCE = 0.24;
+const SCANNER_BEAM_BOUNCE_STEP_ANGLE_INFLUENCE = 0.12;
 const SCANNER_BEAM_SCAN_IDLE_SPEED = 0.96;
 const SCANNER_BEAM_SCAN_ACTIVE_SPEED = 1.22;
 const SCANNER_BEAM_SCAN_IDLE_SWEEP = 0.42;
@@ -6067,9 +6070,16 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   }
 
   const positionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
-  const angleTauMs = Math.max(1, Number(options.angleTauMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS);
+  const baseAngleTauMs = Math.max(
+    1,
+    Number(options.angleTauMs) || Number(target.turnTauMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS
+  );
+  const sharpTurnFactor = smoothstep(Math.PI * 0.12, Math.PI * 0.88, hardAngle);
+  const adaptiveAngleTauMs = baseAngleTauMs * (1 + sharpTurnFactor * (SCANNER_BEAM_SHARP_TURN_TAU_MULTIPLIER - 1));
+  const renderAngleTauMs = Math.max(adaptiveAngleTauMs, Number(target.renderTurnTauMs) || 0);
   const positionBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / positionTauMs);
-  const angleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / angleTauMs);
+  const angleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / adaptiveAngleTauMs);
+  const renderAngleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / renderAngleTauMs);
 
   const nextX = previous.x + (target.x - previous.x) * positionBlend;
   const nextY = previous.y + (target.y - previous.y) * positionBlend;
@@ -6078,13 +6088,22 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     nextY - previous.y,
     targetAngles.travelAngle
   );
+  const stepAngleInfluence = clampScannerNumber(
+    Number.isFinite(Number(target.stepAngleInfluence))
+      ? Number(target.stepAngleInfluence)
+      : (sharpTurnFactor > 0.001
+        ? SCANNER_BEAM_BOUNCE_STEP_ANGLE_INFLUENCE
+        : SCANNER_BEAM_STEP_ANGLE_INFLUENCE),
+    0,
+    1
+  );
   const desiredTravelAngle = hardDistance > SCANNER_BEAM_DIRECTION_EPSILON
-    ? motionAngleFromStep
+    ? lerpScannerAngle(targetAngles.travelAngle, motionAngleFromStep, stepAngleInfluence)
     : targetAngles.travelAngle;
   const renderAngleOffset = getScannerAngleDelta(targetAngles.travelAngle, targetAngles.renderAngle);
   const desiredRenderAngle = desiredTravelAngle + renderAngleOffset;
   const smoothedTravelAngle = lerpScannerAngle(previousTravelAngle, desiredTravelAngle, angleBlend);
-  const smoothedRenderAngle = lerpScannerAngle(previousRenderAngle, desiredRenderAngle, angleBlend);
+  const smoothedRenderAngle = lerpScannerAngle(previousRenderAngle, desiredRenderAngle, renderAngleBlend);
 
   const nextSample = {
     x: nextX,
@@ -6475,6 +6494,8 @@ function simulateScannerBeamBounceSamples(options = {}) {
   let beamAngle = Number.isFinite(Number(options.startAngle))
     ? Number(options.startAngle)
     : Math.atan2(direction.y || 0.0001, direction.x || 0.0001);
+  let sampleTurnTauMs = turnResponseMs;
+  let sampleStepAngleInfluence = SCANNER_BEAM_STEP_ANGLE_INFLUENCE;
 
   const samples = [];
 
@@ -6488,6 +6509,9 @@ function simulateScannerBeamBounceSamples(options = {}) {
       y: clampScannerNumber(position.y, safePad, 1 - safePad),
       angle: beamAngle,
       travelAngle: currentTravelAngle,
+      turnTauMs: sampleTurnTauMs,
+      renderTurnTauMs: sampleTurnTauMs,
+      stepAngleInfluence: sampleStepAngleInfluence,
       progress,
       vx: direction.x * safeBaseSpeed * speedFactor,
       vy: direction.y * safeBaseSpeed * speedFactor,
@@ -6566,6 +6590,10 @@ function simulateScannerBeamBounceSamples(options = {}) {
     const turnTauMs = bouncedDuringStep ? bounceTurnResponseMs : turnResponseMs;
     const turnBlend = 1 - Math.exp(-((dtSeconds * 1000) / Math.max(1, turnTauMs)));
     beamAngle = lerpScannerAngle(beamAngle, targetBeamAngle, turnBlend);
+    sampleTurnTauMs = turnTauMs;
+    sampleStepAngleInfluence = bouncedDuringStep
+      ? SCANNER_BEAM_BOUNCE_STEP_ANGLE_INFLUENCE
+      : SCANNER_BEAM_STEP_ANGLE_INFLUENCE;
 
     position = {
       x: clampScannerNumber(nextX, safePad, 1 - safePad),
@@ -7154,11 +7182,14 @@ function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = Date.now
 function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestampMs = Date.now()) {
   const safeSample = beamSample || { x: 0.5, y: 0.5, angle: 0 };
   const baseAngle = getScannerBeamMotionAngle(safeSample);
+  const explicitBeamAngle = Number.isFinite(Number(safeSample.renderAngle))
+    ? Number(safeSample.renderAngle)
+    : (Number.isFinite(Number(safeSample.angle)) ? Number(safeSample.angle) : baseAngle);
   const scanOffset = shouldApplyScannerBeamScanOffset(safeSample, roundStatus)
     ? getScannerBeamScanOffset(roundStatus, renderKey, timestampMs)
     : 0;
 
-  const renderAngle = baseAngle + scanOffset + SCANNER_BEAM_RENDER_ANGLE_OFFSET;
+  const renderAngle = explicitBeamAngle + scanOffset + SCANNER_BEAM_RENDER_ANGLE_OFFSET;
 
   return {
     ...safeSample,
