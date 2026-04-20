@@ -3684,11 +3684,11 @@ const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
 const SCANNER_BEAM_HARD_RESET_ANGLE = Math.PI * 0.985;
-const SCANNER_BEAM_SCAN_IDLE_SPEED = 1.18;
-const SCANNER_BEAM_SCAN_ACTIVE_SPEED = 1.74;
-const SCANNER_BEAM_SCAN_IDLE_SWEEP = 0.96;
-const SCANNER_BEAM_SCAN_ACTIVE_SWEEP = 0.58;
-const SCANNER_BEAM_SCAN_PREPARING_SWEEP = 0.42;
+const SCANNER_BEAM_SCAN_IDLE_SPEED = 0.96;
+const SCANNER_BEAM_SCAN_ACTIVE_SPEED = 1.22;
+const SCANNER_BEAM_SCAN_IDLE_SWEEP = 0.42;
+const SCANNER_BEAM_SCAN_ACTIVE_SWEEP = 0.24;
+const SCANNER_BEAM_SCAN_PREPARING_SWEEP = 0.16;
 const SCANNER_HEARTBEAT_MS = 20000;
 const SCANNER_STALE_LOBBY_MS = 90000;
 const SCANNER_RUNTIME_COLLECTION = "pvp_runtime";
@@ -6980,7 +6980,7 @@ function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = Date.now
   );
 }
 
-function getScannerVisualBeamSample(beamSample, roundStatus, renderKey, timestampMs = Date.now(), frameTime = performance.now()) {
+function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestampMs = Date.now()) {
   const safeSample = beamSample || { x: 0.5, y: 0.5, angle: 0 };
   return {
     ...safeSample,
@@ -9824,17 +9824,16 @@ function renderScannerCanvas() {
   if (!hasGrid) {
     if (roundStatus === "preparing_next_round" && roundData) {
       const preparingBeamSample = getSmoothedScannerBeamSample(
-        getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+        getScannerBeamTargetSample(
+          getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+          roundStatus,
+          beamRenderKey,
+          nowMs
+        ),
         beamRenderKey,
         now
       );
-      const preparingVisualBeamSample = getScannerVisualBeamSample(
-        preparingBeamSample,
-        roundStatus,
-        beamRenderKey,
-        nowMs,
-        now
-      );
+      const preparingVisualBeamSample = preparingBeamSample;
       drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
         waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
@@ -9842,17 +9841,16 @@ function renderScannerCanvas() {
       });
     } else {
       const idleBeamSample = getSmoothedScannerBeamSample(
-        getScannerSharedLobbyBeamSample(nowMs),
+        getScannerBeamTargetSample(
+          getScannerSharedLobbyBeamSample(nowMs),
+          roundStatus,
+          beamRenderKey,
+          nowMs
+        ),
         beamRenderKey,
         now
       );
-      const idleVisualBeamSample = getScannerVisualBeamSample(
-        idleBeamSample,
-        roundStatus,
-        beamRenderKey,
-        nowMs,
-        now
-      );
+      const idleVisualBeamSample = idleBeamSample;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
@@ -9887,17 +9885,16 @@ function renderScannerCanvas() {
     previewBadgeAlpha = 1 - shuffleProgress;
   } else if (roundStatus === "preparing_next_round") {
     const preparingBeamSample = getSmoothedScannerBeamSample(
-      getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+      getScannerBeamTargetSample(
+        getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+        roundStatus,
+        beamRenderKey,
+        nowMs
+      ),
       beamRenderKey,
       now
     );
-    const preparingVisualBeamSample = getScannerVisualBeamSample(
-      preparingBeamSample,
-      roundStatus,
-      beamRenderKey,
-      nowMs,
-      now
-    );
+    const preparingVisualBeamSample = preparingBeamSample;
     drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
       waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
       reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
@@ -9919,19 +9916,22 @@ function renderScannerCanvas() {
   }
 
   beamSample = getSmoothedScannerBeamSample(
-    getScannerUnifiedBeamSample(
+    getScannerBeamTargetSample(
+      getScannerUnifiedBeamSample(
+        roundStatus,
+        roundData,
+        scannerGridState.players || [],
+        nowMs
+      ),
       roundStatus,
-      roundData,
-      scannerGridState.players || [],
+      beamRenderKey,
       nowMs
     ),
     beamRenderKey,
     now
   );
 
-  const visualBeamSample = beamSample
-    ? getScannerVisualBeamSample(beamSample, roundStatus, beamRenderKey, nowMs, now)
-    : null;
+  const visualBeamSample = beamSample || null;
 
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
