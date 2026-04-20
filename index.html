@@ -5943,14 +5943,51 @@ function getScannerBeamSampleDistance(fromSample, toSample) {
   return Math.hypot((Number(to.x) || 0) - (Number(from.x) || 0), (Number(to.y) || 0) - (Number(from.y) || 0));
 }
 
+function getScannerBeamMotionAngle(sample) {
+  if (!sample || typeof sample !== "object") return 0;
+
+  const explicitTravelAngle = Number(sample.travelAngle);
+  if (Number.isFinite(explicitTravelAngle)) {
+    return explicitTravelAngle;
+  }
+
+  const vx = Number(sample.vx) || 0;
+  const vy = Number(sample.vy) || 0;
+  if (Math.hypot(vx, vy) > 0.00001) {
+    return Math.atan2(vy, vx);
+  }
+
+  const explicitAngle = Number(sample.angle);
+  return Number.isFinite(explicitAngle) ? explicitAngle : 0;
+}
+
+function shouldApplyScannerBeamScanOffset(sample, roundStatus) {
+  const safeStatus = String(roundStatus || "idle");
+  if (["countdown", "shuffling", "active", "finished", "preparing_next_round"].includes(safeStatus)) {
+    return false;
+  }
+
+  if (Number.isFinite(Number(sample?.travelAngle))) {
+    return false;
+  }
+
+  const vx = Number(sample?.vx) || 0;
+  const vy = Number(sample?.vy) || 0;
+  return Math.hypot(vx, vy) <= 0.00001;
+}
+
 function resetScannerBeamRenderState(sample = null, key = "") {
   const nextSample = sample || { x: 0.5, y: 0.5, angle: 0 };
+  const motionAngle = getScannerBeamMotionAngle(nextSample);
   scannerBeamRenderState.initialized = true;
   scannerBeamRenderState.key = String(key || "");
   scannerBeamRenderState.sample = {
     x: clampScannerNumber(nextSample.x, -0.18, 1.18),
     y: clampScannerNumber(nextSample.y, -0.18, 1.18),
-    angle: Number(nextSample.angle) || 0
+    angle: motionAngle,
+    travelAngle: motionAngle,
+    vx: Number(nextSample.vx) || 0,
+    vy: Number(nextSample.vy) || 0
   };
   scannerBeamRenderState.lastFrameAt = performance.now();
   return scannerBeamRenderState.sample;
@@ -5961,15 +5998,28 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const safeFrameTime = Number.isFinite(Number(frameTime)) ? Number(frameTime) : performance.now();
   const safeKey = String(renderKey || "");
 
-  if (!scannerBeamRenderState.initialized || scannerBeamRenderState.key !== safeKey) {
+  if (!scannerBeamRenderState.initialized) {
     return resetScannerBeamRenderState(target, safeKey);
   }
 
   const previous = scannerBeamRenderState.sample || { x: 0.5, y: 0.5, angle: 0 };
+  const previousAngle = getScannerBeamMotionAngle(previous);
+  const targetAngle = getScannerBeamMotionAngle(target);
+  const hardDistance = getScannerBeamSampleDistance(previous, target);
+  const hardAngle = Math.abs(getScannerAngleDelta(previousAngle, targetAngle));
+
+  if (scannerBeamRenderState.key !== safeKey) {
+    if (
+      hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE ||
+      hardAngle >= SCANNER_BEAM_HARD_RESET_ANGLE
+    ) {
+      return resetScannerBeamRenderState(target, safeKey);
+    }
+    scannerBeamRenderState.key = safeKey;
+  }
+
   const rawDeltaMs = Math.max(0, safeFrameTime - (scannerBeamRenderState.lastFrameAt || safeFrameTime));
   const deltaMs = Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, rawDeltaMs);
-  const hardDistance = getScannerBeamSampleDistance(previous, target);
-  const hardAngle = Math.abs(getScannerAngleDelta(previous.angle || 0, target.angle || 0));
 
   if (
     rawDeltaMs >= SCANNER_BEAM_SNAP_DELTA_MS ||
@@ -5987,7 +6037,10 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const nextSample = {
     x: previous.x + (target.x - previous.x) * positionBlend,
     y: previous.y + (target.y - previous.y) * positionBlend,
-    angle: lerpScannerAngle(previous.angle || 0, target.angle || 0, angleBlend)
+    angle: lerpScannerAngle(previousAngle, targetAngle, angleBlend),
+    travelAngle: targetAngle,
+    vx: Number(target.vx) || 0,
+    vy: Number(target.vy) || 0
   };
 
   scannerBeamRenderState.sample = nextSample;
@@ -5998,7 +6051,15 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
 
 function interpolateScannerSampleSequence(samples, progress) {
   if (!Array.isArray(samples) || samples.length < 2) {
-    return samples?.[0] || { x: 0.5, y: 0.5, angle: 0 };
+    const single = samples?.[0] || { x: 0.5, y: 0.5, angle: 0 };
+    const baseAngle = getScannerBeamMotionAngle(single);
+    return {
+      ...single,
+      angle: baseAngle,
+      travelAngle: baseAngle,
+      vx: Number(single?.vx) || 0,
+      vy: Number(single?.vy) || 0
+    };
   }
 
   const clamped = clampScannerNumber(progress, 0, 1);
@@ -6013,30 +6074,24 @@ function interpolateScannerSampleSequence(samples, progress) {
   const dx = (Number(to?.x) || 0) - (Number(from?.x) || 0);
   const dy = (Number(to?.y) || 0) - (Number(from?.y) || 0);
   const hasDirection = Math.hypot(dx, dy) > 0.00001;
+  const vx = (Number(from?.vx) || 0) + ((Number(to?.vx) || 0) - (Number(from?.vx) || 0)) * t;
+  const vy = (Number(from?.vy) || 0) + ((Number(to?.vy) || 0) - (Number(from?.vy) || 0)) * t;
 
-  const fromAngle = Number(from?.angle);
-  const toAngle = Number(to?.angle);
-  const hasExplicitAngle = Number.isFinite(fromAngle) || Number.isFinite(toAngle);
-  const resolvedFromAngle = Number.isFinite(fromAngle)
-    ? fromAngle
-    : Number.isFinite(toAngle)
-      ? toAngle
-      : 0;
-  const resolvedToAngle = Number.isFinite(toAngle)
-    ? toAngle
-    : Number.isFinite(fromAngle)
-      ? fromAngle
-      : resolvedFromAngle;
-  const travelAngle = hasDirection ? Math.atan2(dy, dx) : lerpScannerAngle(resolvedFromAngle, resolvedToAngle, t);
-  const angle = hasExplicitAngle
-    ? lerpScannerAngle(resolvedFromAngle, resolvedToAngle, t)
-    : travelAngle;
+  const fromMotionAngle = getScannerBeamMotionAngle(from);
+  const toMotionAngle = getScannerBeamMotionAngle(to);
+  const travelAngle = hasDirection
+    ? Math.atan2(dy, dx)
+    : (Math.hypot(vx, vy) > 0.00001
+      ? Math.atan2(vy, vx)
+      : lerpScannerAngle(fromMotionAngle, toMotionAngle, t));
 
   return {
     x: Math.max(-0.18, Math.min(1.18, x)),
     y: Math.max(-0.18, Math.min(1.18, y)),
-    angle,
-    travelAngle
+    angle: travelAngle,
+    travelAngle,
+    vx,
+    vy
   };
 }
 
@@ -6535,7 +6590,11 @@ function getScannerWallLatchMeta(sample, pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING)
     targetY = side === "bottom" ? 1 - safePad : safePad;
   }
 
-  const targetAngle = getScannerWallAlignedAngle(fallbackAngle, side || "top");
+  const latchDx = targetX - position.x;
+  const latchDy = targetY - position.y;
+  const targetAngle = Math.hypot(latchDx, latchDy) > 0.00001
+    ? Math.atan2(latchDy, latchDx)
+    : fallbackAngle;
 
   return {
     side,
@@ -6543,6 +6602,7 @@ function getScannerWallLatchMeta(sample, pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING)
       x: targetX,
       y: targetY,
       angle: targetAngle,
+      travelAngle: targetAngle,
       vx: 0,
       vy: 0
     }
@@ -6553,20 +6613,25 @@ function buildScannerLatchSamples(startSample, durationMs, steps) {
   const meta = getScannerWallLatchMeta(startSample, SCANNER_ACTIVE_BEAM_EDGE_PADDING);
   const safeSteps = Math.max(2, Math.floor(Number(steps) || 2));
   const samples = [];
+  const latchDx = (meta.sample.x - startSample.x) || 0;
+  const latchDy = (meta.sample.y - startSample.y) || 0;
+  const latchAngle = Math.hypot(latchDx, latchDy) > 0.00001
+    ? Math.atan2(latchDy, latchDx)
+    : getScannerBeamMotionAngle(startSample);
 
   for (let step = 0; step < safeSteps; step += 1) {
     const progress = step / Math.max(1, safeSteps - 1);
     const eased = smoothstep(0, 1, progress);
     const nextX = startSample.x + (meta.sample.x - startSample.x) * eased;
     const nextY = startSample.y + (meta.sample.y - startSample.y) * eased;
-    const nextAngle = lerpScannerAngle(startSample.angle || 0, meta.sample.angle || 0, eased);
 
     samples.push({
       x: nextX,
       y: nextY,
-      angle: nextAngle,
-      vx: 0,
-      vy: 0,
+      angle: latchAngle,
+      travelAngle: latchAngle,
+      vx: latchDx,
+      vy: latchDy,
       progress
     });
   }
@@ -6576,6 +6641,10 @@ function buildScannerLatchSamples(startSample, durationMs, steps) {
     samples,
     targetSample: {
       ...meta.sample,
+      angle: latchAngle,
+      travelAngle: latchAngle,
+      vx: latchDx,
+      vy: latchDy,
       progress: 1
     }
   };
@@ -7021,13 +7090,15 @@ function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = Date.now
 
 function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestampMs = Date.now()) {
   const safeSample = beamSample || { x: 0.5, y: 0.5, angle: 0 };
+  const baseAngle = getScannerBeamMotionAngle(safeSample);
+  const scanOffset = shouldApplyScannerBeamScanOffset(safeSample, roundStatus)
+    ? getScannerBeamScanOffset(roundStatus, renderKey, timestampMs)
+    : 0;
+
   return {
     ...safeSample,
-    angle: (Number(safeSample.angle) || 0) + getScannerBeamScanOffset(
-      roundStatus,
-      renderKey,
-      timestampMs
-    )
+    angle: baseAngle + scanOffset,
+    travelAngle: baseAngle
   };
 }
 
