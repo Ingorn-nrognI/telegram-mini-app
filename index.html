@@ -3670,24 +3670,24 @@ const SCANNER_COUNTDOWN_BEAM_STEPS = 960;
 const SCANNER_LOBBY_BEAM_SWAY_AMPLITUDE = 0.026;
 const SCANNER_LOBBY_BEAM_SWAY_SECONDARY_AMPLITUDE = 0.012;
 const SCANNER_LOBBY_BEAM_SWAY_LOOKAHEAD_MS = 26;
-const SCANNER_BEAM_CURVE_STRENGTH = 0.055;
-const SCANNER_BEAM_CURVE_SECONDARY_STRENGTH = 0.024;
-const SCANNER_BEAM_BOUNCE_BEND_STRENGTH = 0.18;
-const SCANNER_BEAM_BOUNCE_NORMAL_BIAS = 0.14;
+const SCANNER_BEAM_CURVE_STRENGTH = 0.038;
+const SCANNER_BEAM_CURVE_SECONDARY_STRENGTH = 0.014;
+const SCANNER_BEAM_BOUNCE_BEND_STRENGTH = 0.075;
+const SCANNER_BEAM_BOUNCE_NORMAL_BIAS = 0.04;
 const SCANNER_RETICLE_IDLE_SPIN_SPEED = 0.0017;
 const SCANNER_RETICLE_ACTIVE_SPIN_SPEED = 0.0034;
 const SCANNER_RETICLE_IDLE_WOBBLE = 0.08;
 const SCANNER_RETICLE_ACTIVE_WOBBLE = 0.16;
 const SCANNER_BEAM_SMOOTH_TAU_MS = 62;
-const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 118;
+const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 168;
 const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
 const SCANNER_BEAM_HARD_RESET_ANGLE = Math.PI * 0.985;
 const SCANNER_BEAM_DIRECTION_EPSILON = 0.00001;
-const SCANNER_BEAM_RENDER_ANGLE_OFFSET = Math.PI / 2;
-const SCANNER_BEAM_TURN_RESPONSE_MS = 108;
-const SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS = 196;
+const SCANNER_BEAM_RENDER_ANGLE_OFFSET = 0;
+const SCANNER_BEAM_TURN_RESPONSE_MS = 152;
+const SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS = 360;
 const SCANNER_BEAM_SCAN_IDLE_SPEED = 0.96;
 const SCANNER_BEAM_SCAN_ACTIVE_SPEED = 1.22;
 const SCANNER_BEAM_SCAN_IDLE_SWEEP = 0.42;
@@ -6066,25 +6066,27 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     return resetScannerBeamRenderState(target, safeKey);
   }
 
-  const positionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
-  const angleTauMs = Math.max(1, Number(options.angleTauMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS);
+  const positionTauMs = Math.max(1, Number(target.positionTauMs) || Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
+  const baseTravelTurnMs = Math.max(1, Number(target.travelTurnResponseMs) || Number(options.travelAngleTauMs) || SCANNER_BEAM_TURN_RESPONSE_MS);
+  const baseRenderTurnMs = Math.max(1, Number(target.renderTurnResponseMs) || Number(target.turnResponseMs) || Number(options.renderAngleTauMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS);
   const positionBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / positionTauMs);
-  const angleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / angleTauMs);
+  const travelAngleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / baseTravelTurnMs);
+  const renderAngleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / baseRenderTurnMs);
 
   const nextX = previous.x + (target.x - previous.x) * positionBlend;
   const nextY = previous.y + (target.y - previous.y) * positionBlend;
-  const motionAngleFromStep = getScannerBeamAngleFromDelta(
-    nextX - previous.x,
-    nextY - previous.y,
+  const hasExplicitTargetDirection = Number.isFinite(Number(target.travelAngle)) || Math.hypot(Number(target.vx) || 0, Number(target.vy) || 0) > SCANNER_BEAM_DIRECTION_EPSILON;
+  const motionAngleFromTarget = getScannerBeamAngleFromDelta(
+    (Number(target.x) || 0) - (Number(previous.x) || 0),
+    (Number(target.y) || 0) - (Number(previous.y) || 0),
     targetAngles.travelAngle
   );
-  const desiredTravelAngle = hardDistance > SCANNER_BEAM_DIRECTION_EPSILON
-    ? motionAngleFromStep
-    : targetAngles.travelAngle;
-  const renderAngleOffset = getScannerAngleDelta(targetAngles.travelAngle, targetAngles.renderAngle);
-  const desiredRenderAngle = desiredTravelAngle + renderAngleOffset;
-  const smoothedTravelAngle = lerpScannerAngle(previousTravelAngle, desiredTravelAngle, angleBlend);
-  const smoothedRenderAngle = lerpScannerAngle(previousRenderAngle, desiredRenderAngle, angleBlend);
+  const desiredTravelAngle = hasExplicitTargetDirection
+    ? targetAngles.travelAngle
+    : motionAngleFromTarget;
+  const desiredRenderAngle = targetAngles.renderAngle;
+  const smoothedTravelAngle = lerpScannerAngle(previousTravelAngle, desiredTravelAngle, travelAngleBlend);
+  const smoothedRenderAngle = lerpScannerAngle(previousRenderAngle, desiredRenderAngle, renderAngleBlend);
 
   const nextSample = {
     x: nextX,
@@ -6093,7 +6095,10 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     renderAngle: smoothedRenderAngle,
     travelAngle: smoothedTravelAngle,
     vx: Number(target.vx) || 0,
-    vy: Number(target.vy) || 0
+    vy: Number(target.vy) || 0,
+    travelTurnResponseMs: baseTravelTurnMs,
+    renderTurnResponseMs: baseRenderTurnMs,
+    turnResponseMs: Math.max(baseTravelTurnMs, baseRenderTurnMs)
   };
 
   scannerBeamRenderState.sample = nextSample;
@@ -6113,7 +6118,10 @@ function interpolateScannerSampleSequence(samples, progress) {
       renderAngle: baseRenderAngle,
       travelAngle: baseTravelAngle,
       vx: Number(single?.vx) || 0,
-      vy: Number(single?.vy) || 0
+      vy: Number(single?.vy) || 0,
+      travelTurnResponseMs: Number(single?.travelTurnResponseMs) || SCANNER_BEAM_TURN_RESPONSE_MS,
+      renderTurnResponseMs: Number(single?.renderTurnResponseMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS,
+      turnResponseMs: Number(single?.turnResponseMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS
     };
   }
 
@@ -6150,7 +6158,13 @@ function interpolateScannerSampleSequence(samples, progress) {
     renderAngle,
     travelAngle,
     vx,
-    vy
+    vy,
+    travelTurnResponseMs: (Number(from?.travelTurnResponseMs) || SCANNER_BEAM_TURN_RESPONSE_MS)
+      + ((Number(to?.travelTurnResponseMs) || SCANNER_BEAM_TURN_RESPONSE_MS) - (Number(from?.travelTurnResponseMs) || SCANNER_BEAM_TURN_RESPONSE_MS)) * t,
+    renderTurnResponseMs: (Number(from?.renderTurnResponseMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS)
+      + ((Number(to?.renderTurnResponseMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS) - (Number(from?.renderTurnResponseMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS)) * t,
+    turnResponseMs: (Number(from?.turnResponseMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS)
+      + ((Number(to?.turnResponseMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS) - (Number(from?.turnResponseMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS)) * t
   };
 }
 
@@ -6455,6 +6469,8 @@ function simulateScannerBeamBounceSamples(options = {}) {
   const rateB = 1.24 + ((seed >>> 7) % 27) / 11;
   const rateC = 1.62 + ((seed >>> 11) % 23) / 10;
   let bounceCount = 0;
+  let nextTravelTurnResponseMs = Math.max(72, turnResponseMs * 0.78);
+  let nextRenderTurnResponseMs = Math.max(SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS, turnResponseMs);
 
   function getCurveOffset(progress) {
     const safeProgress = clampScannerNumber(progress, 0, 1);
@@ -6487,11 +6503,15 @@ function simulateScannerBeamBounceSamples(options = {}) {
       x: clampScannerNumber(position.x, safePad, 1 - safePad),
       y: clampScannerNumber(position.y, safePad, 1 - safePad),
       angle: beamAngle,
+      renderAngle: beamAngle,
       travelAngle: currentTravelAngle,
       progress,
       vx: direction.x * safeBaseSpeed * speedFactor,
       vy: direction.y * safeBaseSpeed * speedFactor,
-      speedFactor
+      speedFactor,
+      travelTurnResponseMs: nextTravelTurnResponseMs,
+      renderTurnResponseMs: nextRenderTurnResponseMs,
+      turnResponseMs: nextRenderTurnResponseMs
     });
 
     if (step >= steps - 1 || dtSeconds <= 0 || safeBaseSpeed <= 0) continue;
@@ -6566,6 +6586,12 @@ function simulateScannerBeamBounceSamples(options = {}) {
     const turnTauMs = bouncedDuringStep ? bounceTurnResponseMs : turnResponseMs;
     const turnBlend = 1 - Math.exp(-((dtSeconds * 1000) / Math.max(1, turnTauMs)));
     beamAngle = lerpScannerAngle(beamAngle, targetBeamAngle, turnBlend);
+    nextTravelTurnResponseMs = bouncedDuringStep
+      ? Math.max(turnResponseMs * 0.9, bounceTurnResponseMs * 0.5)
+      : Math.max(72, turnResponseMs * 0.78);
+    nextRenderTurnResponseMs = bouncedDuringStep
+      ? Math.max(bounceTurnResponseMs, SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS * 1.75)
+      : Math.max(SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS, turnResponseMs);
 
     position = {
       x: clampScannerNumber(nextX, safePad, 1 - safePad),
@@ -6579,11 +6605,15 @@ function simulateScannerBeamBounceSamples(options = {}) {
       x: position.x,
       y: position.y,
       angle: beamAngle,
+      renderAngle: beamAngle,
       travelAngle: Math.atan2(direction.y || 0.0001, direction.x || 0.0001),
       vx: 0,
       vy: 0,
       progress: 1,
-      speedFactor: 0
+      speedFactor: 0,
+      travelTurnResponseMs: nextTravelTurnResponseMs,
+      renderTurnResponseMs: nextRenderTurnResponseMs,
+      turnResponseMs: nextRenderTurnResponseMs
     },
     finalDirection: direction
   };
@@ -6692,10 +6722,14 @@ function buildScannerLatchSamples(startSample, durationMs, steps) {
       x: nextX,
       y: nextY,
       angle: latchAngle,
+      renderAngle: latchAngle,
       travelAngle: latchAngle,
       vx: latchDx,
       vy: latchDy,
-      progress
+      progress,
+      travelTurnResponseMs: Math.max(120, SCANNER_BEAM_TURN_RESPONSE_MS),
+      renderTurnResponseMs: Math.max(240, SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS * 0.75),
+      turnResponseMs: Math.max(240, SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS * 0.75)
     });
   }
 
@@ -6705,10 +6739,14 @@ function buildScannerLatchSamples(startSample, durationMs, steps) {
     targetSample: {
       ...meta.sample,
       angle: latchAngle,
+      renderAngle: latchAngle,
       travelAngle: latchAngle,
       vx: latchDx,
       vy: latchDy,
-      progress: 1
+      progress: 1,
+      travelTurnResponseMs: Math.max(120, SCANNER_BEAM_TURN_RESPONSE_MS),
+      renderTurnResponseMs: Math.max(240, SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS * 0.75),
+      turnResponseMs: Math.max(240, SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS * 0.75)
     }
   };
 }
@@ -7176,6 +7214,10 @@ function stopScannerVisualAnimation() {
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
   const tick = () => {
+    if (document.visibilityState === "hidden") {
+      scannerGridVisualFrame = null;
+      return;
+    }
     scannerGridVisualFrame = requestAnimationFrame(tick);
     if (shouldRenderScannerCanvasLive()) {
       renderScannerCanvas();
@@ -10437,6 +10479,7 @@ function enterScannerGridMode(event) {
 function handleVisibilityChange() {
   updateScannerHeartbeat().catch(() => {});
   if (document.visibilityState === "visible") {
+    ensureScannerVisualLoop();
     bootstrapScannerRoundFromRecentState({ force: true }).catch(() => {});
   }
 }
