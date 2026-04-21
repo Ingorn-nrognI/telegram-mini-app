@@ -6474,6 +6474,7 @@ function simulateScannerBeamBounceSamples(options = {}) {
   const rateB = 1.24 + ((seed >>> 7) % 27) / 11;
   const rateC = 1.62 + ((seed >>> 11) % 23) / 10;
   let bounceCount = 0;
+  let bounceAngleState = { active: false, startX: 0.5, startY: 0.5, startAngle: 0, targetAngle: 0 };
 
   function getCurveOffset(progress) {
     const safeProgress = clampScannerNumber(progress, 0, 1);
@@ -6587,13 +6588,35 @@ function simulateScannerBeamBounceSamples(options = {}) {
     }
 
     const targetBeamAngle = Math.atan2(direction.y || 0.0001, direction.x || 0.0001);
-    const turnTauMs = bouncedDuringStep ? bounceTurnResponseMs : turnResponseMs;
-    const turnBlend = 1 - Math.exp(-((dtSeconds * 1000) / Math.max(1, turnTauMs)));
-    beamAngle = lerpScannerAngle(beamAngle, targetBeamAngle, turnBlend);
-    sampleTurnTauMs = turnTauMs;
-    sampleStepAngleInfluence = bouncedDuringStep
-      ? SCANNER_BEAM_BOUNCE_STEP_ANGLE_INFLUENCE
-      : SCANNER_BEAM_STEP_ANGLE_INFLUENCE;
+
+    if (bouncedDuringStep) {
+      bounceAngleState = {
+        active: true,
+        startX: position.x,
+        startY: position.y,
+        startAngle: beamAngle,
+        targetAngle: targetBeamAngle
+      };
+    }
+
+    if (bounceAngleState.active) {
+      const wallDist = Math.hypot(bounceAngleState.startX - 0.5, bounceAngleState.startY - 0.5);
+      const curDist  = Math.hypot(position.x - 0.5, position.y - 0.5);
+      const rawProgress = wallDist > 0.01 ? clampScannerNumber(1 - curDist / wallDist, 0, 1) : 1;
+      const turnProgress = smoothstep(0, 1, rawProgress);
+      beamAngle = lerpScannerAngle(bounceAngleState.startAngle, bounceAngleState.targetAngle, turnProgress);
+      if (rawProgress >= 0.99) {
+        beamAngle = bounceAngleState.targetAngle;
+        bounceAngleState.active = false;
+      }
+      sampleTurnTauMs = bounceTurnResponseMs;
+      sampleStepAngleInfluence = SCANNER_BEAM_BOUNCE_STEP_ANGLE_INFLUENCE;
+    } else {
+      const turnBlend = 1 - Math.exp(-((dtSeconds * 1000) / Math.max(1, turnResponseMs)));
+      beamAngle = lerpScannerAngle(beamAngle, targetBeamAngle, turnBlend);
+      sampleTurnTauMs = turnResponseMs;
+      sampleStepAngleInfluence = SCANNER_BEAM_STEP_ANGLE_INFLUENCE;
+    }
 
     position = {
       x: clampScannerNumber(nextX, safePad, 1 - safePad),
