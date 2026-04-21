@@ -3634,6 +3634,19 @@ let appNoticeTimer = null;
 
 let tgUser = null;
 const tgApp = window.Telegram?.WebApp || null;
+
+if (tgApp) {
+  tgApp.ready();                    // ← обязательно
+  tgApp.expand();                   // ← расширяет на весь экран
+  tgApp.setHeaderColor('#050816');
+  tgApp.setBackgroundColor('#050816');
+  
+  // Back button (уже есть обработчик handleTelegramAppBack)
+  if (tgApp.BackButton) {
+    tgApp.BackButton.onClick(handleTelegramAppBack);
+    tgApp.BackButton.show();        // показываем кнопку назад
+  }
+}
 let telegramBackButtonHandler = null;
 let historyLoading = false;
 let expandedHistoryMatchId = null;
@@ -9014,12 +9027,12 @@ function renderScannerBetBar() {
     button.setAttribute("aria-label", bettingLocked ? "Ставки заблокированы до окончания раунда" : `Поставить ${formatTon(normalizedValue)}`);
   });
 
-  if (allInButton) {
+    if (allInButton) {
     allInButton.disabled = shouldDisable;
     allInButton.classList.toggle("is-locked", bettingLocked);
   }
 
-  requestScannerBetBarVisibilityUpdate();
+  forceScannerBetBarVisibilityRefresh();   // ← новая правильная функция
 }
 
 function isScannerBetBarContextActive() {
@@ -9083,44 +9096,18 @@ function updateScannerTopUiForArenaFocus(shouldHide = null) {
   topBar.classList.toggle("scanner-focus-ui", focused);
 }
 
-function updateScannerBetBarVisibility() {
-  const bar = document.getElementById("scannerBetBar");
-  if (!bar) return;
-
-  const shouldShow = getScannerArenaFocusState();
-  bar.classList.toggle("is-visible", shouldShow);
-  updateScannerTopUiForArenaFocus(shouldShow);
-
-  const notice = document.getElementById("appNotice");
-  if (notice?.classList.contains("open")) {
-    updateAppNoticePosition();
-  }
-}
-function requestScannerBetBarVisibilityUpdate() {
-  if (scannerBetBarVisibilityFrame) return;
-  scannerBetBarVisibilityFrame = requestAnimationFrame(() => {
-    scannerBetBarVisibilityFrame = null;
-    updateScannerBetBarVisibility();
-  });
-}
-
-function forceScannerBetBarVisibilityRefresh() {
-  requestScannerBetBarVisibilityUpdate();
-  setTimeout(requestScannerBetBarVisibilityUpdate, 80);
-  setTimeout(requestScannerBetBarVisibilityUpdate, 220);
-  setTimeout(requestScannerBetBarVisibilityUpdate, 520);
-}
-
 function setupScannerBetBarVisibilityTracking() {
-  if (scannerBetBarScrollAttached) return;
-  const homeScreen = document.getElementById("homeScreen");
-  if (homeScreen) {
-    homeScreen.addEventListener("scroll", requestScannerBetBarVisibilityUpdate, { passive: true });
-  }
+  const canvas = document.getElementById("scannerGridCanvas");
+  if (!canvas) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    const isVisible = entries[0].isIntersecting && entries[0].intersectionRatio > 0.25;
+    document.getElementById("scannerBetBar").classList.toggle("is-visible", isVisible);
+    updateScannerTopUiForArenaFocus(isVisible);
+  }, { threshold: [0.25, 0.5, 0.75] });
+
+  observer.observe(canvas);
   window.addEventListener("resize", forceScannerBetBarVisibilityRefresh, { passive: true });
-  window.addEventListener("orientationchange", forceScannerBetBarVisibilityRefresh, { passive: true });
-  scannerBetBarScrollAttached = true;
-  forceScannerBetBarVisibilityRefresh();
 }
 
 function renderScannerButtons() {
@@ -9426,7 +9413,7 @@ function drawScannerBeam(ctx, length, options = {}) {
   const coreBlur = Math.max(0, Number(options.coreBlur) || 10);
   const centerGap = Math.max(0, Number(options.centerGap) || 0);
   const halfLength = safeLength / 2;
-  const gapHalf = Math.min(halfLength - 2, centerGap / 2);
+  const gapHalf = Math.max(0, Math.min(halfLength - 2, (centerGap || 0) / 2));
 
   const segments = gapHalf > 0
     ? [
@@ -9770,6 +9757,17 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   cache.glowCtx.restore();
 }
 
+const SCANNER_WAITING_TEXT_VISUALS = {
+  baseAlpha: 0.92,
+  baseShadowBlurFactor: 0.85,
+  baseShadowColor: '#2de1ff',
+  fillStyle: '#f6fbff',
+  glowAlpha: 0.75,
+  glowShadowBlurFactor: 1.35,
+  glowShadowColor: '#2de1ff',
+  glowFinalAlpha: 0.65
+};
+  
 function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   const text = "Ожидание раунда...";
   const fontSize = Math.max(22, Math.min(38, size * 0.074));
@@ -10082,11 +10080,10 @@ function renderScannerCanvas() {
       );
       const idleVisualBeamSample = idleBeamSample;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
-        waitingTextAlpha: 1,
-        reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
-        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
-      });
-    }
+  waitingTextAlpha: 1,
+  reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
+  reticleWobble: Math.max(0.04, SCANNER_RETICLE_IDLE_WOBBLE)
+});   }
     return;
   }
 
@@ -10113,25 +10110,25 @@ function renderScannerCanvas() {
       renderScannerActiveTransition(ctx, size, cellSize, shuffleProgress);
     }
     previewBadgeAlpha = 1 - shuffleProgress;
-  } else if (roundStatus === "preparing_next_round") {
-    const preparingBeamSample = getSmoothedScannerBeamSample(
-      getScannerBeamTargetSample(
-        getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
-        roundStatus,
+      } else if (roundStatus === "preparing_next_round") {
+      const preparingBeamSample = getSmoothedScannerBeamSample(
+        getScannerBeamTargetSample(
+          getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+          roundStatus,
+          beamRenderKey,
+          nowMs
+        ),
         beamRenderKey,
-        nowMs
-      ),
-      beamRenderKey,
-      now
-    );
-    const preparingVisualBeamSample = preparingBeamSample;
-    drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
-      waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
-      reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
-      reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
-    });
-    return;
-  } else if (scannerGridCache?.canvas) {
+        now
+      );
+      const preparingVisualBeamSample = preparingBeamSample;
+      drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
+        waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
+        reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
+        reticleWobble: Math.max(0.04, SCANNER_RETICLE_IDLE_WOBBLE)
+      });
+      return;
+    } else if (scannerGridCache?.canvas) {
     ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
   }
 
@@ -10447,6 +10444,7 @@ function initializeScannerGridFeature() {
   subscribeScannerHistory();
   syncScannerDerivedState();
   renderScannerRound();
+  forceScannerBetBarVisibilityRefresh();
 
   setupScannerCanvasMetricsTracking();
 
@@ -10537,13 +10535,19 @@ scannerQuickStakeValues = loadScannerQuickStakeValues();
 scannerStakeSettingsState.draftValues = scannerQuickStakeValues.map((value) => String(value));
 
 renderTopProfile();
-resetAllDemoTonBalancesTo1000Once()
-  .catch((error) => {
-    console.error("Не удалось выполнить миграцию demo TON-балансов до 1000:", error);
-  })
-  .then(() => ensureDemoBalanceForCurrentUser())
-  .then(() => subscribeCurrentUserBalance())
-  .catch((error) => console.error("Не удалось подготовить demo TON-баланс:", error));
+if (!localStorage.getItem('demoResetDone')) {
+  resetAllDemoTonBalancesTo1000Once()
+    .catch((error) => {
+      console.error("Не удалось выполнить миграцию demo TON-балансов до 1000:", error);
+    })
+    .then(() => {
+      localStorage.setItem('demoResetDone', '1');
+      return ensureDemoBalanceForCurrentUser();
+    })
+    .catch((error) => console.error("Не удалось подготовить demo TON-баланс:", error));
+} else {
+  ensureDemoBalanceForCurrentUser().catch((error) => console.error("Не удалось подготовить demo TON-баланс:", error));
+}
 homeScreenContext = "games";
 setMenuView("home");
 setActiveBottomNav("games");
