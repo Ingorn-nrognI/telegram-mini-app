@@ -3706,9 +3706,19 @@ const SCANNER_DEFAULT_QUICK_STAKES = [1, 10, 25];
 const SCANNER_QUICK_STAKES_STORAGE_KEY = "bobr_world_scanner_quick_stakes_v1";
 
   let serverTimestampOffset = 0;
+  let smoothNetOffset = null; // Хранит разницу для плавности
 
 function getNetworkTime() {
-  return Date.now() + serverTimestampOffset;
+  const rawTime = Date.now() + serverTimestampOffset;
+  if (typeof performance === 'undefined') return rawTime;
+  
+  const perfTime = performance.now();
+  // Если локальные часы сбились (например, вкладку свернули), перекалибруем плавно
+  if (smoothNetOffset === null || Math.abs((rawTime - perfTime) - smoothNetOffset) > 50) {
+    smoothNetOffset = rawTime - perfTime;
+  }
+  // Возвращаем серверное время, но с идеальной точностью до микросекунд!
+  return perfTime + smoothNetOffset;
 }
 
 function syncServerTime() {
@@ -7020,7 +7030,7 @@ function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetwo
 }
 
 function getScannerActiveBeamSample(round, players, progressOverride = null) {
-  return getScannerActiveBeamSampleAtTime(round, players, Date.now(), progressOverride);
+  return getScannerActiveBeamSampleAtTime(round, players, getNetworkTime(), progressOverride);
 }
 
 function getScannerCountdownLatchProgress(round) {
@@ -7204,7 +7214,8 @@ function getScannerBeamScanConfig(roundStatus) {
 
 function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = getNetworkTime()) {
   const safeStatus = String(roundStatus || "idle");
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ?
+Number(timestampMs) : getNetworkTime();
   const safeKey = String(renderKey || "idle");
   const config = getScannerBeamScanConfig(safeStatus);
   const seed = hashString(`scanner_beam_scan_${safeKey}`);
