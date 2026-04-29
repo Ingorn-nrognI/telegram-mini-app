@@ -3705,6 +3705,24 @@ const SCANNER_HISTORY_COLLECTION = "pvp_rounds_scanner_grid_history";
 const SCANNER_DEFAULT_QUICK_STAKES = [1, 10, 25];
 const SCANNER_QUICK_STAKES_STORAGE_KEY = "bobr_world_scanner_quick_stakes_v1";
 
+  let serverTimestampOffset = 0;
+
+function getNetworkTime() {
+  return Date.now() + serverTimestampOffset;
+}
+
+function syncServerTime() {
+  if (typeof firebase !== 'undefined' && firebase.database) {
+    const offsetRef = firebase.database().ref(".info/serverTimeOffset");
+    offsetRef.on("value", (snap) => {
+      serverTimestampOffset = snap.val() || 0;
+      console.log("System: Смещение времени сервера обновлено:", serverTimestampOffset);
+    });
+  }
+}
+// Запускаем синхронизацию
+syncServerTime();
+
 let scannerQuickStakeValues = SCANNER_DEFAULT_QUICK_STAKES.slice();
 const scannerStakeSettingsState = {
   activeIndex: 0,
@@ -5418,7 +5436,7 @@ function tsToMs(value) {
 }
 
 function createTimestampFromNow(offsetMs = 0) {
-  return firebase.firestore.Timestamp.fromMillis(Date.now() + offsetMs);
+  return firebase.firestore.Timestamp.fromMillis(getNetworkTime() + offsetMs);
 }
 
 function getScannerColorById(id, scopeKey = "") {
@@ -6205,7 +6223,7 @@ function reflectScannerValueWithinRange(value, min, max) {
 }
 
 function getScannerLobbyFlowOffsets(timestampMs, motionState, seedValue = "scanner_shared_lobby_motion_v2") {
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
   const timeSeconds = safeTimestamp / 1000;
   const seed = hashString(`lobby_flow_${seedValue}_${Math.round(tsToMs(motionState?.anchorAt || 0) / 1000)}`);
   const phaseA = ((seed >>> 1) % 360) * (Math.PI / 180);
@@ -6233,7 +6251,7 @@ function getScannerLobbyFlowOffsets(timestampMs, motionState, seedValue = "scann
 }
 
 function getScannerLobbyBeamSampleCore(state, timestampMs, options = {}) {
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
   const safePad = clampScannerNumber(options.pad ?? SCANNER_LOBBY_BEAM_EDGE_PADDING, 0, 0.24);
   const min = safePad;
   const max = 1 - safePad;
@@ -6351,8 +6369,8 @@ function getScannerRoundCountdownBeamState(round) {
   return normalizeScannerBeamMotionState(rawMotion, `${round?.id || "round"}::${round?.entropySeed || "seed"}::countdown`);
 }
 
-function createScannerIdleBeamMotionFromSample(sample, timestampMs = Date.now()) {
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+function createScannerIdleBeamMotionFromSample(sample, timestampMs = getNetworkTime()) {
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
   const normalizedVelocity = normalizeScannerVector(
     sample?.vx,
     sample?.vy,
@@ -6409,10 +6427,10 @@ function getScannerReflectedAxisState(start, velocityPerSecond, elapsedSeconds, 
   };
 }
 
-function getScannerBeamSampleFromMotionState(motionState, timestampMs = Date.now(), options = {}) {
+function getScannerBeamSampleFromMotionState(motionState, timestampMs = getNetworkTime(), options = {}) {
   const seedValue = String(options.seedValue || "scanner_shared_lobby_motion_v2");
   const state = normalizeScannerBeamMotionState(motionState, seedValue);
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
   const current = getScannerLobbyBeamSampleCore(state, safeTimestamp, options);
   const lookaheadMs = Math.max(8, Number(options.lookaheadMs) || SCANNER_LOBBY_BEAM_SWAY_LOOKAHEAD_MS);
   const future = getScannerLobbyBeamSampleCore(state, safeTimestamp + lookaheadMs, options);
@@ -6432,7 +6450,7 @@ function getScannerBeamSampleFromMotionState(motionState, timestampMs = Date.now
   };
 }
 
-function getScannerSharedLobbyBeamSampleAt(timestampMs = Date.now(), seedValue = "scanner_shared_lobby_motion_v2", runtimeData = scannerRealtime.runtimeData) {
+function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedValue = "scanner_shared_lobby_motion_v2", runtimeData = scannerRealtime.runtimeData) {
   const motionState = runtimeData?.idleBeamMotion || runtimeData?.idleBeamState
     ? getScannerRuntimeIdleBeamState(runtimeData)
     : getScannerDefaultIdleBeamMotion(seedValue);
@@ -6443,7 +6461,7 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = Date.now(), seedValue =
   });
 }
 
-function getScannerSharedLobbyBeamSample(timestampMs = Date.now()) {
+function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 function simulateScannerBeamBounceSamples(options = {}) {
@@ -6854,14 +6872,14 @@ function getScannerCountdownBeamCache(round) {
   return scannerCountdownBeamCache;
 }
 
-function getScannerCountdownBeamSampleAtTime(round, timestampMs = Date.now(), fallbackSample = null) {
+function getScannerCountdownBeamSampleAtTime(round, timestampMs = getNetworkTime(), fallbackSample = null) {
   const cache = getScannerCountdownBeamCache(round);
   if (!cache) return fallbackSample || getScannerSharedLobbyBeamSampleAt(timestampMs);
   const progress = clampScannerNumber((timestampMs - cache.timing.startedAt) / Math.max(1, cache.timing.durationMs), 0, 1);
   return interpolateScannerSampleSequence(cache.samples, progress);
 }
 
-function getScannerCurrentLobbyOrCountdownSample(round, runtimeData = scannerRealtime.runtimeData, timestampMs = Date.now()) {
+function getScannerCurrentLobbyOrCountdownSample(round, runtimeData = scannerRealtime.runtimeData, timestampMs = getNetworkTime()) {
   const status = String(round?.status || "waiting");
   if (status === "countdown") {
     return getScannerCountdownBeamSampleAtTime(
@@ -6962,22 +6980,22 @@ function getScannerBeamMotionProgress(round, progressOverride = null) {
   const startedAt = tsToMs(round?.activeStartedAt);
   const activeEndsAt = tsToMs(round?.activeEndsAt);
   if (startedAt > 0 && activeEndsAt > startedAt) {
-    return clampScannerNumber((Date.now() - startedAt) / Math.max(1, activeEndsAt - startedAt), 0, 1);
+    return clampScannerNumber((getNetworkTime() - startedAt) / Math.max(1, activeEndsAt - startedAt), 0, 1);
   }
 
   if (startedAt > 0) {
-    return clampScannerNumber((Date.now() - startedAt) / SCANNER_ACTIVE_MS, 0, 1);
+    return clampScannerNumber((getNetworkTime() - startedAt) / SCANNER_ACTIVE_MS, 0, 1);
   }
 
   return 0;
 }
 
-function getScannerActiveBeamProgressAtTime(round, timestampMs = Date.now(), progressOverride = null) {
+function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(), progressOverride = null) {
   if (Number.isFinite(Number(progressOverride))) {
     return clampScannerNumber(progressOverride, 0, 1);
   }
 
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
   const startedAt = tsToMs(round?.activeStartedAt);
   const activeEndsAt = tsToMs(round?.activeEndsAt);
 
@@ -6992,7 +7010,7 @@ function getScannerActiveBeamProgressAtTime(round, timestampMs = Date.now(), pro
   return 0;
 }
 
-function getScannerActiveBeamSampleAtTime(round, players, timestampMs = Date.now(), progressOverride = null) {
+function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetworkTime(), progressOverride = null) {
   const cache = getScannerActiveBeamCache(round, players);
   if (!cache) return { x: 0.5, y: 0.5, angle: 0 };
   return interpolateScannerSampleSequence(
@@ -7010,7 +7028,7 @@ function getScannerCountdownLatchProgress(round) {
   if (!cache) return 0;
   const total = Math.max(1, cache.timing.durationMs);
   const latchDuration = Math.min(SCANNER_EDGE_LATCH_MS, total);
-  const elapsed = clampScannerNumber((Date.now() - cache.timing.startedAt) / total, 0, 1) * total;
+  const elapsed = clampScannerNumber((getNetworkTime() - cache.timing.startedAt) / total, 0, 1) * total;
   if (elapsed <= total - latchDuration) return 0;
   return clampScannerNumber((elapsed - (total - latchDuration)) / latchDuration, 0, 1);
 }
@@ -7027,7 +7045,7 @@ function interpolateScannerBeamState(fromSample, toSample, progress) {
 }
 
 function getScannerCountdownBeamSample(round, fallbackSample, players) {
-  return getScannerCountdownBeamSampleAtTime(round, Date.now(), fallbackSample || getScannerSharedLobbyBeamSample());
+  return getScannerCountdownBeamSampleAtTime(round, getNetworkTime(), fallbackSample || getScannerSharedLobbyBeamSample());
 }
 
 function getScannerShuffleProgress(round) {
@@ -7035,10 +7053,10 @@ function getScannerShuffleProgress(round) {
   const startedAt = tsToMs(round?.shuffleStartedAt);
   const endsAt = tsToMs(round?.shuffleEndsAt);
   if (startedAt > 0 && endsAt > startedAt) {
-    return clampScannerNumber((Date.now() - startedAt) / Math.max(1, endsAt - startedAt), 0, 1);
+    return clampScannerNumber((getNetworkTime() - startedAt) / Math.max(1, endsAt - startedAt), 0, 1);
   }
   if (startedAt > 0) {
-    return clampScannerNumber((Date.now() - startedAt) / SCANNER_SHUFFLING_MS, 0, 1);
+    return clampScannerNumber((getNetworkTime() - startedAt) / SCANNER_SHUFFLING_MS, 0, 1);
   }
   return 0;
 }
@@ -7054,10 +7072,10 @@ function getScannerPreparingProgress(round) {
   const startedAt = tsToMs(round?.preparingStartedAt);
   const endsAt = tsToMs(round?.preparingEndsAt);
   if (startedAt > 0 && endsAt > startedAt) {
-    return clampScannerNumber((Date.now() - startedAt) / Math.max(1, endsAt - startedAt), 0, 1);
+    return clampScannerNumber((getNetworkTime() - startedAt) / Math.max(1, endsAt - startedAt), 0, 1);
   }
   if (startedAt > 0) {
-    return clampScannerNumber((Date.now() - startedAt) / Math.max(1, SCANNER_PREPARING_MS), 0, 1);
+    return clampScannerNumber((getNetworkTime() - startedAt) / Math.max(1, SCANNER_PREPARING_MS), 0, 1);
   }
   return 0;
 }
@@ -7082,9 +7100,9 @@ function getScannerPreparingBeamSample(round, players) {
   return getScannerSharedLobbyBeamSample();
 }
 
-function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampMs = Date.now()) {
+function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampMs = getNetworkTime()) {
   const safeStatus = String(roundStatus || "idle");
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
   const safePlayers = Array.isArray(players) ? players : [];
 
   if (!roundData) {
@@ -7184,7 +7202,7 @@ function getScannerBeamScanConfig(roundStatus) {
   };
 }
 
-function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = Date.now()) {
+function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = getNetworkTime()) {
   const safeStatus = String(roundStatus || "idle");
   const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
   const safeKey = String(renderKey || "idle");
@@ -7202,7 +7220,7 @@ function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = Date.now
   );
 }
 
-function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestampMs = Date.now()) {
+function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestampMs = getNetworkTime()) {
   const safeSample = beamSample || { x: 0.5, y: 0.5, angle: 0 };
   const baseAngle = getScannerBeamMotionAngle(safeSample);
   const explicitBeamAngle = Number.isFinite(Number(safeSample.renderAngle))
@@ -7365,10 +7383,10 @@ function hasScannerRoundVisibleState(round) {
 
 function syncScannerDerivedState() {
   const currentPlayer = getCurrentPlayer();
-  const now = Date.now();
+  const now = getNetworkTime(); // <-- Изменено для точного интерфейса
   scannerGridState.myPlayerId = currentPlayer.id;
 
-  const round = scannerRealtime.roundData || null;
+  const round = scannerRealtime.roundData || null; 
   const participantsSnapshot = Array.isArray(scannerRealtime.participants) ? scannerRealtime.participants.slice() : [];
   const roundStatus = String(round?.status || "idle");
   const participantsReady = !round?.id || (!!scannerRealtime.participantsReady && !scannerRealtime.participantsError);
@@ -10043,9 +10061,8 @@ function renderScannerCanvas() {
   const { ctx, size, cellSize } = metrics;
   const roundStatus = scannerGridState.status;
   const hasGrid = scannerGridState.players.length > 0;
-  const now = performance.now();
-  const nowMs = Date.now();
-
+  const now = performance.now(); // Это оставляем для плавности (fps)
+  const nowMs = getNetworkTime(); // <-- Изменено для точной физики!
   ctx.clearRect(0, 0, size, size);
 
   const roundData = scannerGridState.roundData || null;
