@@ -3705,30 +3705,10 @@ const SCANNER_HISTORY_COLLECTION = "pvp_rounds_scanner_grid_history";
 const SCANNER_DEFAULT_QUICK_STAKES = [1, 10, 25];
 const SCANNER_QUICK_STAKES_STORAGE_KEY = "bobr_world_scanner_quick_stakes_v1";
 
- let serverTimestampOffset = 0;
-  let smoothNetOffset = null; 
+  let serverTimestampOffset = 0;
 
 function getNetworkTime() {
-  const rawTime = Date.now() + serverTimestampOffset;
-  if (typeof performance === 'undefined') return rawTime;
-  
-  const perfTime = performance.now();
-  // Вычисляем разницу между системным и высокоточным временем один раз
-  if (smoothNetOffset === null || Math.abs((rawTime - perfTime) - smoothNetOffset) > 50) {
-    smoothNetOffset = rawTime - perfTime;
-  }
-  // Теперь время течет идеально плавно
-  return perfTime + smoothNetOffset;
-}
-  if (typeof performance === 'undefined') return rawTime;
-  
-  const perfTime = performance.now();
-  // Если локальные часы сбились (например, вкладку свернули), перекалибруем плавно
-  if (smoothNetOffset === null || Math.abs((rawTime - perfTime) - smoothNetOffset) > 50) {
-    smoothNetOffset = rawTime - perfTime;
-  }
-  // Возвращаем серверное время, но с идеальной точностью до микросекунд!
-  return perfTime + smoothNetOffset;
+  return Date.now() + serverTimestampOffset;
 }
 
 function syncServerTime() {
@@ -7040,7 +7020,7 @@ function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetwo
 }
 
 function getScannerActiveBeamSample(round, players, progressOverride = null) {
-  return getScannerActiveBeamSampleAtTime(round, players, getNetworkTime(), progressOverride);
+  return getScannerActiveBeamSampleAtTime(round, players, Date.now(), progressOverride);
 }
 
 function getScannerCountdownLatchProgress(round) {
@@ -7125,23 +7105,15 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
   const safePlayers = Array.isArray(players) ? players : [];
 
-  // ИСПРАВЛЕНИЕ №1: Если нет данных раунда или статус "ожидание", рисуем плавный круг математикой
-  if (!roundData || safeStatus === "waiting_for_players" || safeStatus === "idle") {
-    const t = safeTimestamp / 1000;
-    return {
-      x: 0.5 + 0.25 * Math.cos(t * 0.6), // Плавное движение по X
-      y: 0.5 + 0.25 * Math.sin(t * 0.8), // Плавное движение по Y
-      angle: (t * 0.4) % (Math.PI * 2),
-      payload: { isIdle: true }
-    };
+  if (!roundData) {
+    return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
   }
 
   if (safeStatus === "countdown") {
     return getScannerCountdownBeamSampleAtTime(
       roundData,
       safeTimestamp,
-      // Тут тоже заменяем прыгающее лобби на плавную точку
-      { x: 0.5, y: 0.5, angle: 0 } 
+      getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
     );
   }
 
@@ -7151,7 +7123,7 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
       || getScannerCountdownBeamSampleAtTime(
         roundData,
         tsToMs(roundData?.countdownEndsAt) || safeTimestamp,
-        { x: 0.5, y: 0.5, angle: 0 }
+        getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
       );
   }
 
@@ -7172,14 +7144,7 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
     return getScannerPreparingBeamSample(roundData, safePlayers);
   }
 
-  // ИСПРАВЛЕНИЕ №2: Финальный возврат тоже делаем плавным
-  const finalT = safeTimestamp / 1000;
-  return {
-    x: 0.5 + 0.25 * Math.cos(finalT * 0.6),
-    y: 0.5 + 0.25 * Math.sin(finalT * 0.8),
-    angle: (finalT * 0.4) % (Math.PI * 2),
-    payload: { isIdle: true }
-  };
+  return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 
 function getScannerBeamRenderKey(roundStatus, roundData, variant = "grid") {
@@ -7239,21 +7204,20 @@ function getScannerBeamScanConfig(roundStatus) {
 
 function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = getNetworkTime()) {
   const safeStatus = String(roundStatus || "idle");
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
-  
-  // ДОБАВЛЯЕМ ЭТОТ БЛОК: если мы в ожидании, используем упрощенную плавную формулу
-  if (safeStatus === "waiting_for_players" || safeStatus === "idle") {
-    const t = safeTimestamp / 2000; 
-    return Math.sin(t * 0.8); // Простое плавное покачивание
-  }
-
+  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
   const safeKey = String(renderKey || "idle");
   const config = getScannerBeamScanConfig(safeStatus);
   const seed = hashString(`scanner_beam_scan_${safeKey}`);
   const primaryPhase = ((seed >>> 1) % 360) * (Math.PI / 180);
+  const secondaryPhase = ((seed >>> 6) % 360) * (Math.PI / 180);
+  const tertiaryPhase = ((seed >>> 11) % 360) * (Math.PI / 180);
   const time = safeTimestamp / 1000;
 
-  return Math.sin(time * config.speed + primaryPhase) * config.sweep;
+  return (
+    Math.sin(time * config.speed + primaryPhase) * config.sweep +
+    Math.sin(time * (config.speed * 1.67) + secondaryPhase) * (config.sweep * 0.22) +
+    Math.cos(time * (config.speed * 0.61) + tertiaryPhase) * (config.sweep * 0.08)
+  );
 }
 
 function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestampMs = getNetworkTime()) {
