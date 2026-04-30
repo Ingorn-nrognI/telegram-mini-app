@@ -10071,6 +10071,8 @@ function renderScannerCanvas() {
   const canvas = document.getElementById("scannerCanvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
   const size = canvas.width;
   const now = performance.now();
   const nowMs = getNetworkTime();
@@ -10098,7 +10100,7 @@ function renderScannerCanvas() {
         drawScannerActiveState(ctx, size, smoothed);
       }
     } else {
-      // Режим ожидания (IDLE) - здесь мы исправили плавность
+      // РЕЖИМ ОЖИДАНИЯ
       const idleTarget = getScannerSharedLobbyBeamSample(now); 
       if (idleTarget) {
         const idleBeamSample = getSmoothedScannerBeamSample(
@@ -10113,13 +10115,13 @@ function renderScannerCanvas() {
           reticleWobble: 0.05
         });
       }
-    }
-  } catch (e) {
-    console.error("Ошибка отрисовки арены:", e);
+    } // Конец else
+  } catch (error) {
+    console.error("Ошибка в renderScannerCanvas:", error);
   }
 
   requestAnimationFrame(renderScannerCanvas);
-}
+} // ФИНАЛЬНАЯ СКОБКА ФУНКЦИИ. ПОСЛЕ НЕЕ НЕ ДОЛЖНО БЫТЬ ЕЩЕ ОДНОЙ '}'
   
   const idleVisualBeamSample = idleBeamSample;
   drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
