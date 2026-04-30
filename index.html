@@ -10068,68 +10068,55 @@ function drawScannerWinnerHighlight(ctx, cellSize) {
 }
 
 function renderScannerCanvas() {
-  const canvas = document.getElementById("scannerCanvas");
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  const size = canvas.width;
+  const metrics = getScannerCanvasMetrics();
+  if (!metrics) return;
+  const { ctx, size, cellSize } = metrics;
+  const roundStatus = scannerGridState.status;
+  const hasGrid = scannerGridState.players.length > 0;
   const now = performance.now();
-  const nowMs = getNetworkTime();
-
-  const state = scannerGridState;
-  const { status, roundStatus, beamRenderKey } = state;
-
+  const nowMs = getNetworkTime(); 
   ctx.clearRect(0, 0, size, size);
 
-  try {
-    if (status === "active" || status === "countdown") {
-      const sample = getScannerCurrentLobbyOrCountdownSample(state, nowMs);
-      const smoothed = getSmoothedScannerBeamSample(
-        getScannerBeamTargetSample(sample, roundStatus, beamRenderKey, nowMs),
+  const roundData = scannerGridState.roundData || null;
+  const beamRenderKey = getScannerBeamRenderKey(roundStatus, roundData, hasGrid ? "grid" : "empty");
+
+  if (!hasGrid) {
+    if (roundStatus === "preparing_next_round" && roundData) {
+      const preparingBeamSample = getSmoothedScannerBeamSample(
+        getScannerBeamTargetSample(
+          getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+          roundStatus,
+          beamRenderKey,
+          nowMs
+        ),
         beamRenderKey,
         now
       );
-
-      if (status === "countdown") {
-        const round = scannerRoundState;
-        const timing = getScannerCountdownTiming(round);
-        const progress = Math.max(0, Math.min(1, (nowMs - timing.start) / (timing.end - timing.start)));
-        drawScannerCountdownState(ctx, size, smoothed, progress);
-      } else {
-        drawScannerActiveState(ctx, size, smoothed);
-      }
+      const preparingVisualBeamSample = preparingBeamSample;
+      drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
+        waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
+        reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
+        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
+      });
     } else {
-      // РЕЖИМ ОЖИДАНИЯ
-      const idleTarget = getScannerSharedLobbyBeamSample(now); 
-      if (idleTarget) {
-        const idleBeamSample = getSmoothedScannerBeamSample(
-          getScannerBeamTargetSample(idleTarget, roundStatus, beamRenderKey, now),
+      // ИСПРАВЛЕННАЯ ПЛАВНОСТЬ В РЕЖИМЕ ОЖИДАНИЯ
+      const idleBeamSample = getSmoothedScannerBeamSample(
+        getScannerBeamTargetSample(
+          getScannerSharedLobbyBeamSample(now), // Используем точное время now
+          roundStatus,
           beamRenderKey,
-          now
-        );
-        
-        drawScannerEmptyArenaState(ctx, size, idleBeamSample, {
-          waitingTextAlpha: 1,
-          reticleRotation: now * 0.001,
-          reticleWobble: 0.05
-        });
-      }
-    } // Конец else
-  } catch (error) {
-    console.error("Ошибка в renderScannerCanvas:", error);
-  }
-
-  requestAnimationFrame(renderScannerCanvas);
-} // ФИНАЛЬНАЯ СКОБКА ФУНКЦИИ. ПОСЛЕ НЕЕ НЕ ДОЛЖНО БЫТЬ ЕЩЕ ОДНОЙ '}'
-  
-  const idleVisualBeamSample = idleBeamSample;
-  drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
-    waitingTextAlpha: 1,
-    reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
-    reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
-  });
-  }
+          now // Используем точное время now
+        ),
+        beamRenderKey,
+        now
+      );
+      const idleVisualBeamSample = idleBeamSample;
+      drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
+        waitingTextAlpha: 1,
+        reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
+        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
+      });
+    }
     return;
   }
 
@@ -10137,7 +10124,6 @@ function renderScannerCanvas() {
 
   let beamSample = null;
   let previewBadgeAlpha = 0;
-
   if (roundStatus === "waiting" || roundStatus === "countdown") {
     if (scannerGridPreviewCanvasCache?.canvas) {
       ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
@@ -10203,7 +10189,6 @@ function renderScannerCanvas() {
     beamRenderKey,
     now
   );
-
   const visualBeamSample = beamSample || null;
 
   if (visualBeamSample) {
