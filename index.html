@@ -6253,16 +6253,14 @@ function getScannerLobbyFlowOffsets(timestampMs, motionState, seedValue = "scann
 function getScannerLobbyBeamSampleCore(state, timestampMs, options = {}) {
   const seed = getScannerStringSeed(options.seedValue || "scanner_shared_lobby_motion_v2");
   
-  // Исправление: проверяем, какое время нам пришло (сетевое или локальное)
   const anchor = Number(state.anchorAt || 0);
   let timeSeconds = 0;
   
-  // Если timestampMs — это Unix время (большое число), вычитаем anchor
-  // Если это performance.now (маленькое число), используем как есть
-  if (timestampMs > 1000000000000) { 
-    timeSeconds = (timestampMs - anchor) / 1000;
+  // Проверяем, пришло ли время сервера (большое число) или локальное performance.now
+  if (Number(timestampMs) > 1000000000000) { 
+    timeSeconds = (Number(timestampMs) - anchor) / 1000;
   } else {
-    timeSeconds = timestampMs / 1000;
+    timeSeconds = Number(timestampMs) / 1000;
   }
   
   const phaseA = (seed % 37) / 7;
@@ -6286,9 +6284,7 @@ function getScannerLobbyBeamSampleCore(state, timestampMs, options = {}) {
     vx: Math.cos(timeSeconds * rateA + phaseA) * rateA,
     vy: -Math.sin(timeSeconds * rateC + phaseC) * rateC
   };
-}
-
-function getScannerLobbySeedConfig(seedValue = "scanner_shared_lobby_motion_v2") {
+}function getScannerLobbySeedConfig(seedValue = "scanner_shared_lobby_motion_v2") {
   const rnd = mulberry32(hashString(`lobby_seed_${seedValue}`));
   const pad = SCANNER_LOBBY_BEAM_EDGE_PADDING;
   const startX = pad + (0.18 + rnd() * 0.64) * (1 - pad * 2);
@@ -10102,27 +10098,32 @@ function renderScannerCanvas() {
         reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
       });
     } else {
-      // Используем локальное время 'now' для идеальной плавности
+      // Режим ожидания/IDLE
       const idleTarget = getScannerSharedLobbyBeamSample(now); 
       
-      const idleBeamSample = getSmoothedScannerBeamSample(
-        getScannerBeamTargetSample(
-          idleTarget,
-          roundStatus,
+      if (idleTarget) {
+        const idleBeamSample = getSmoothedScannerBeamSample(
+          getScannerBeamTargetSample(
+            idleTarget,
+            roundStatus,
+            beamRenderKey,
+            now 
+          ),
           beamRenderKey,
-          now 
-        ),
-        beamRenderKey,
-        now
-      );
-      
-      // Рисуем пустую арену с плавно движущимся лазером
-      drawScannerEmptyArenaState(ctx, size, idleBeamSample, {
-        waitingTextAlpha: 1,
-        reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
-        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
-      });
+          now
+        );
+        
+        drawScannerEmptyArenaState(ctx, size, idleBeamSample, {
+          waitingTextAlpha: 1,
+          reticleRotation: now * (typeof SCANNER_RETICLE_IDLE_SPIN_SPEED !== 'undefined' ? SCANNER_RETICLE_IDLE_SPIN_SPEED : 0.001),
+          reticleWobble: typeof SCANNER_RETICLE_IDLE_WOBBLE !== 'undefined' ? SCANNER_RETICLE_IDLE_WOBBLE : 0.05
+        });
+      }
     }
+  } catch (e) {
+    console.error("Ошибка в renderScannerCanvas:", e);
+  }
+} 
   
   const idleVisualBeamSample = idleBeamSample;
   drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
