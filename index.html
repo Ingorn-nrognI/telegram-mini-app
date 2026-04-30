@@ -3678,9 +3678,9 @@ const SCANNER_RETICLE_IDLE_SPIN_SPEED = 0.0017;
 const SCANNER_RETICLE_ACTIVE_SPIN_SPEED = 0.0034;
 const SCANNER_RETICLE_IDLE_WOBBLE = 0.08;
 const SCANNER_RETICLE_ACTIVE_WOBBLE = 0.16;
-const SCANNER_BEAM_SMOOTH_TAU_MS = 62;
+const SCANNER_BEAM_SMOOTH_TAU_MS = 100;
 const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 164;
-const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
+const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 64;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
 const SCANNER_BEAM_HARD_RESET_ANGLE = Math.PI * 0.985;
@@ -6251,25 +6251,30 @@ function getScannerLobbyFlowOffsets(timestampMs, motionState, seedValue = "scann
 }
 
 function getScannerLobbyBeamSampleCore(state, timestampMs, options = {}) {
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
-  const safePad = clampScannerNumber(options.pad ?? SCANNER_LOBBY_BEAM_EDGE_PADDING, 0, 0.24);
-  const min = safePad;
-  const max = 1 - safePad;
-  const elapsedSeconds = Math.max(0, (safeTimestamp - state.anchorAt) / 1000);
-  const seedValue = String(options.seedValue || "scanner_shared_lobby_motion_v2");
+  const seed = getScannerStringSeed(options.seedValue || "scanner_shared_lobby_motion_v2");
+  // Используем более точный коэффициент для времени
+  const timeSeconds = (Number(timestampMs) - Number(state.anchorAt || 0)) / 1000;
+  
+  const phaseA = (seed % 37) / 7;
+  const phaseB = ((seed >>> 4) % 29) / 5;
+  const phaseC = ((seed >>> 8) % 41) / 9;
+  const phaseD = ((seed >>> 12) % 31) / 6;
 
-  const xState = getScannerReflectedAxisState(state.x, state.vx, elapsedSeconds, min, max);
-  const yState = getScannerReflectedAxisState(state.y, state.vy, elapsedSeconds, min, max);
-  const flow = getScannerLobbyFlowOffsets(safeTimestamp, state, seedValue);
+  const rateA = 0.85 + ((seed >>> 3) % 23) / 34;
+  const rateB = 1.32 + ((seed >>> 7) % 31) / 34;
+  const rateC = 0.56 + ((seed >>> 11) % 19) / 42;
+  const rateD = 1.18 + ((seed >>> 15) % 27) / 28;
 
-  const x = reflectScannerValueWithinRange(xState.position + flow.x, min, max);
-  const y = reflectScannerValueWithinRange(yState.position + flow.y, min, max);
+  const ax = Math.sin(timeSeconds * rateA + phaseA) * SCANNER_LOBBY_BEAM_SWAY_AMPLITUDE;
+  const bx = Math.sin(timeSeconds * rateB + phaseB) * SCANNER_LOBBY_BEAM_SWAY_SECONDARY_AMPLITUDE;
+  const ay = Math.cos(timeSeconds * rateC + phaseC) * SCANNER_LOBBY_BEAM_SWAY_AMPLITUDE;
+  const by = Math.sin(timeSeconds * rateD + phaseD) * SCANNER_LOBBY_BEAM_SWAY_SECONDARY_AMPLITUDE;
 
   return {
-    x,
-    y,
-    vx: xState.velocity + flow.dx,
-    vy: yState.velocity + flow.dy
+    x: 0.5 + ax + bx, // Центрируем относительно 0.5
+    y: 0.5 + ay + by,
+    vx: (Math.cos(timeSeconds * rateA + phaseA) * rateA),
+    vy: (-Math.sin(timeSeconds * rateC + phaseC) * rateC)
   };
 }
 
@@ -10087,23 +10092,27 @@ function renderScannerCanvas() {
         reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
       });
     } else {
-      const idleBeamSample = getSmoothedScannerBeamSample(
-        getScannerBeamTargetSample(
-          getScannerSharedLobbyBeamSample(nowMs),
-          roundStatus,
-          beamRenderKey,
-          nowMs
-        ),
-        beamRenderKey,
-        now
-      );
-      const idleVisualBeamSample = idleBeamSample;
-      drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
-        waitingTextAlpha: 1,
-        reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
-        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
-      });
-    }
+  // Используем performance.now() через переменную now для идеальной плавности
+  const idleTarget = getScannerSharedLobbyBeamSample(now); 
+  
+  const idleBeamSample = getSmoothedScannerBeamSample(
+    getScannerBeamTargetSample(
+      idleTarget,
+      roundStatus,
+      beamRenderKey,
+      now
+    ),
+    beamRenderKey,
+    now
+  );
+  
+  const idleVisualBeamSample = idleBeamSample;
+  drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
+    waitingTextAlpha: 1,
+    reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
+    reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
+  });
+}
     return;
   }
 
