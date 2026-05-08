@@ -1244,6 +1244,8 @@ button {
   border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(7, 12, 26, 1), rgba(4, 7, 18, 0.98));
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .scanner-overlay-badges {
@@ -9431,6 +9433,8 @@ function buildScannerGridLinesCache(size, cellSize) {
   return cacheCanvas;
 }
 
+let _scannerBeamHaloCache = { key: null, gradient: null };
+
 function drawScannerBeam(ctx, length, options = {}) {
   const safeLength = Math.max(0, Number(length) || 0);
   if (!safeLength) return;
@@ -9440,8 +9444,6 @@ function drawScannerBeam(ctx, length, options = {}) {
   const glowWidth = Math.max(1, Number(options.glowWidth) || 10);
   const coreWidth = Math.max(0.6, Number(options.coreWidth) || 2.8);
   const innerWidth = Math.max(0.3, Number(options.innerWidth) || 0.9);
-  const glowBlur = Math.max(0, Number(options.glowBlur) || 24);
-  const coreBlur = Math.max(0, Number(options.coreBlur) || 10);
   const centerGap = Math.max(0, Number(options.centerGap) || 0);
   const halfLength = safeLength / 2;
   const gapHalf = Math.min(halfLength - 2, centerGap / 2);
@@ -9453,16 +9455,31 @@ function drawScannerBeam(ctx, length, options = {}) {
       ]
     : [{ from: -halfLength, to: halfLength }];
 
-  const drawSegment = (from, to, width, color, blur, alpha = 1) => {
+  // Замена shadowBlur: имитация свечения через несколько полупрозрачных слоёв
+  const drawSegmentGlow = (from, to, baseWidth, color, alpha) => {
+    if (!Number.isFinite(from) || !Number.isFinite(to) || Math.abs(to - from) < 0.5) return;
+    const layers = 4;
+    for (let i = layers; i >= 1; i--) {
+      ctx.save();
+      ctx.globalAlpha = alpha * (0.07 * i / layers);
+      ctx.lineWidth = baseWidth + baseWidth * 1.4 * (i / layers);
+      ctx.strokeStyle = color;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(from, 0);
+      ctx.lineTo(to, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  const drawSegmentSolid = (from, to, width, color, alpha) => {
     if (!Number.isFinite(from) || !Number.isFinite(to) || Math.abs(to - from) < 0.5) return;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.lineCap = "round";
-    ctx.lineJoin = "round";
     ctx.lineWidth = width;
     ctx.strokeStyle = color;
-    ctx.shadowBlur = blur;
-    ctx.shadowColor = color;
     ctx.beginPath();
     ctx.moveTo(from, 0);
     ctx.lineTo(to, 0);
@@ -9470,15 +9487,20 @@ function drawScannerBeam(ctx, length, options = {}) {
     ctx.restore();
   };
 
-  ctx.save();
-  const halo = ctx.createLinearGradient(-halfLength, 0, halfLength, 0);
-  halo.addColorStop(0, "rgba(45, 225, 255, 0)");
-  halo.addColorStop(0.18, "rgba(45, 225, 255, 0.12)");
-  halo.addColorStop(0.5, "rgba(45, 225, 255, 0.22)");
-  halo.addColorStop(0.82, "rgba(45, 225, 255, 0.12)");
-  halo.addColorStop(1, "rgba(45, 225, 255, 0)");
-  ctx.fillStyle = halo;
+  // Градиент-хало: кешируем, не создаём каждый кадр
+  const haloKey = Math.round(halfLength);
+  if (_scannerBeamHaloCache.key !== haloKey) {
+    _scannerBeamHaloCache.gradient = ctx.createLinearGradient(-halfLength, 0, halfLength, 0);
+    _scannerBeamHaloCache.gradient.addColorStop(0,    "rgba(45, 225, 255, 0)");
+    _scannerBeamHaloCache.gradient.addColorStop(0.18, "rgba(45, 225, 255, 0.12)");
+    _scannerBeamHaloCache.gradient.addColorStop(0.5,  "rgba(45, 225, 255, 0.22)");
+    _scannerBeamHaloCache.gradient.addColorStop(0.82, "rgba(45, 225, 255, 0.12)");
+    _scannerBeamHaloCache.gradient.addColorStop(1,    "rgba(45, 225, 255, 0)");
+    _scannerBeamHaloCache.key = haloKey;
+  }
 
+  ctx.save();
+  ctx.fillStyle = _scannerBeamHaloCache.gradient;
   if (gapHalf > 0) {
     ctx.fillRect(-halfLength, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
     ctx.fillRect(gapHalf, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
@@ -9488,9 +9510,9 @@ function drawScannerBeam(ctx, length, options = {}) {
   ctx.restore();
 
   segments.forEach((segment) => {
-    drawSegment(segment.from, segment.to, glowWidth, beamColor, glowBlur, 0.38);
-    drawSegment(segment.from, segment.to, coreWidth, beamColor, coreBlur, 0.96);
-    drawSegment(segment.from, segment.to, innerWidth, innerColor, 0, 0.98);
+    drawSegmentGlow(segment.from, segment.to, glowWidth, beamColor, 0.38);
+    drawSegmentSolid(segment.from, segment.to, coreWidth, beamColor, 0.96);
+    drawSegmentSolid(segment.from, segment.to, innerWidth, innerColor, 0.98);
   });
 }
 
@@ -9506,14 +9528,22 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.translate(x, y);
   ctx.globalAlpha = alpha;
 
-  ctx.shadowBlur = safeRadius * 1.45;
-  ctx.shadowColor = "rgba(45, 225, 255, 0.36)";
+  // Замена shadowBlur: внешнее свечение через 3 концентрических полупрозрачных круга
+  for (let i = 3; i >= 1; i--) {
+    ctx.save();
+    ctx.globalAlpha = alpha * (0.06 * i / 3);
+    ctx.fillStyle = "rgba(45, 225, 255, 1)";
+    ctx.beginPath();
+    ctx.arc(0, 0, safeRadius * 1.18 + safeRadius * 0.38 * (i / 3), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   ctx.fillStyle = "rgba(45, 225, 255, 0.12)";
   ctx.beginPath();
   ctx.arc(0, 0, safeRadius * 1.18, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.shadowBlur = 0;
   ctx.fillStyle = "rgba(255,255,255,0.86)";
   ctx.beginPath();
   ctx.arc(0, 0, safeRadius * 0.24, 0, Math.PI * 2);
@@ -9550,14 +9580,19 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.stroke();
   ctx.restore();
 
+  // Замена shadowBlur для орбитальной точки: маленький ореол без blur
   ctx.save();
-  ctx.shadowBlur = safeRadius * 0.9;
-  ctx.shadowColor = "rgba(45,225,255,0.44)";
+  ctx.globalAlpha = alpha * 0.22;
+  ctx.fillStyle = "rgba(45,225,255,1)";
+  ctx.beginPath();
+  ctx.arc(orbitX, orbitY, orbitDotRadius * 2.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.beginPath();
   ctx.arc(orbitX, orbitY, orbitDotRadius, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
 
   ctx.restore();
 }
@@ -9747,7 +9782,7 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   const bx = Math.max(-0.24, Math.min(1.24, Number(beamSample.x) || 0.5)) * size;
   const by = Math.max(-0.24, Math.min(1.24, Number(beamSample.y) || 0.5)) * size;
   const angle = Number.isFinite(Number(beamSample.angle)) ? Number(beamSample.angle) : 0;
-  const beamLength = size * 4.7;
+  const beamLength = size * 1.48;
   const halfLength = beamLength / 2;
   const gapHalf = Math.max(0, Math.min(halfLength - 2, Number(centerGap || 0) / 2));
   const softWidth = Math.max(7, Math.min(18, fontSize * 0.34));
@@ -9840,7 +9875,7 @@ function drawScannerArenaBase(ctx, size) {
 function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const safeSample = beamSample || getScannerSharedLobbyBeamSample();
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
-  const beamLength = size * 4.6;
+  const beamLength = size * 1.48;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
   const cx = size * safeSample.x;
   const cy = size * safeSample.y;
@@ -10184,7 +10219,7 @@ function renderScannerCanvas() {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const px = visualBeamSample.x * size;
     const py = visualBeamSample.y * size;
-    const beamLength = size * (isHotBeam ? 4.85 : 4.5);
+    const beamLength = size * (isHotBeam ? 1.52 : 1.48);
     const reticleRadius = Math.max(10.2, size * 0.031);
     const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
 
