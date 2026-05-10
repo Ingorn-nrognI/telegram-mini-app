@@ -7557,7 +7557,6 @@ function stopScannerVisualAnimation() {
 
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
-  let lastFrameAt = 0;
   const tick = (now) => {
     if (!scannerGridVisualFrame) return;
     if (!shouldRenderScannerCanvasLive()) {
@@ -7565,9 +7564,6 @@ function ensureScannerVisualLoop() {
       return;
     }
     scannerGridVisualFrame = requestAnimationFrame(tick);
-    const fpsInterval = getEffectiveQualityTier() === "low" ? 33 : getEffectiveQualityTier() === "mid" ? 22 : 0;
-    if (fpsInterval > 0 && now - lastFrameAt < fpsInterval) return;
-    lastFrameAt = now;
     try {
       renderScannerCanvas();
     } catch (err) {
