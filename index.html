@@ -5391,7 +5391,7 @@ function handleModalBackdropClick(modalId, event) {
 }
 
 function shouldRenderScannerCanvasLive() {
-  return currentMenuView === "home";
+  return currentMenuView === "home" && !document.hidden;
 }
 
 function scannerRuntimeRef() {
@@ -9980,15 +9980,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const cx = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.x));
   const cy = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.y));
 
-  const laserNow = performance.now();
-  if (scannerLobbyLaserVisual.angle === null) {
-    scannerLobbyLaserVisual.angle = 0;
-  } else {
-    const laserDt = Math.min(80, laserNow - scannerLobbyLaserVisual.lastAt);
-    scannerLobbyLaserVisual.angle += SCANNER_LOBBY_LASER_TURN_SPEED * laserDt / 1000;
-  }
-  scannerLobbyLaserVisual.lastAt = laserNow;
-  const angle = scannerLobbyLaserVisual.angle;
+  const angle = (getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED;
   const reticleRotation = Number.isFinite(Number(options.reticleRotation))
     ? Number(options.reticleRotation)
     : performance.now() * SCANNER_RETICLE_IDLE_SPIN_SPEED;
@@ -10023,7 +10015,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     ctx.globalAlpha = waitingTextAlpha;
     drawScannerWaitingText(ctx, size, safeSample, {
       centerGap: idleReticleRadius * 2.7,
-      beamAngle: scannerLobbyLaserVisual.angle,
+      beamAngle: angle,
       text: options.waitingText
     });
     ctx.restore();
@@ -10336,15 +10328,7 @@ function renderScannerCanvas() {
 
     let beamRenderAngle;
     if (!isHotBeam) {
-      const laserNow = performance.now();
-      if (scannerLobbyLaserVisual.angle === null) {
-        scannerLobbyLaserVisual.angle = 0;
-      } else {
-        const laserDt = Math.min(80, laserNow - scannerLobbyLaserVisual.lastAt);
-        scannerLobbyLaserVisual.angle += SCANNER_LOBBY_LASER_TURN_SPEED * laserDt / 1000;
-      }
-      scannerLobbyLaserVisual.lastAt = laserNow;
-      beamRenderAngle = scannerLobbyLaserVisual.angle;
+      beamRenderAngle = (getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED;
     } else {
       beamRenderAngle = Number.isFinite(Number(visualBeamSample.renderAngle))
         ? Number(visualBeamSample.renderAngle)
