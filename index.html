@@ -9867,7 +9867,7 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
 }
 
 function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
-  const text = "Ожидание раунда...";
+  const text = options.text || "Ожидание раунда...";
   const fontSize = Math.max(22, Math.min(38, size * 0.074));
   const centerX = size / 2;
   const centerY = size / 2;
@@ -9977,7 +9977,8 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     ctx.globalAlpha = waitingTextAlpha;
     drawScannerWaitingText(ctx, size, safeSample, {
       centerGap: idleReticleRadius * 2.7,
-      beamAngle: scannerLobbyLaserVisual.angle
+      beamAngle: scannerLobbyLaserVisual.angle,
+      text: options.waitingText
     });
     ctx.restore();
   }
@@ -10199,6 +10200,7 @@ function renderScannerCanvas() {
       const idleVisualBeamSample = idleBeamSample;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
+        waitingText: scannerRealtime.runtimeReady ? undefined : "Подключение...",
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
         reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
       });
@@ -10440,17 +10442,21 @@ function subscribeScannerRuntime() {
     const activeRoundId = data.activeRoundId || null;
     if (scannerRealtime.activeRoundId !== activeRoundId) {
       subscribeScannerRound(activeRoundId);
-    } else if (!activeRoundId) {
-      bootstrapScannerRoundFromRecentState().catch((error) => {
-        console.warn("Не удалось восстановить текущее состояние общего раунда:", error);
-        scannerRealtime.roundData = null;
-        scannerRealtime.roundReady = true;
-        scannerRealtime.participants = [];
-        scannerRealtime.participantsReady = true;
-        scannerRealtime.participantsError = false;
-        syncScannerDerivedState();
-        renderScannerRound();
-      });
+    } else {
+      if (!activeRoundId) {
+        bootstrapScannerRoundFromRecentState().catch((error) => {
+          console.warn("Не удалось восстановить текущее состояние общего раунда:", error);
+          scannerRealtime.roundData = null;
+          scannerRealtime.roundReady = true;
+          scannerRealtime.participants = [];
+          scannerRealtime.participantsReady = true;
+          scannerRealtime.participantsError = false;
+          syncScannerDerivedState();
+          renderScannerRound();
+        });
+      }
+      syncScannerDerivedState();
+      renderScannerRound();
     }
   }, (error) => {
     console.error("Ошибка подписки на runtime общего раунда:", error);
@@ -10511,6 +10517,11 @@ async function bootstrapScannerRoundFromRecentState(options = {}) {
     if (fallbackRound) {
       scannerRealtime.fallbackRoundId = fallbackRound.id;
       if (scannerRealtime.activeRoundId !== fallbackRound.id) {
+        if (!scannerRealtime.roundData) {
+          scannerRealtime.roundData = fallbackRound;
+          syncScannerDerivedState();
+          renderScannerRound();
+        }
         subscribeScannerRound(fallbackRound.id);
       } else {
         scannerRealtime.roundData = scannerRealtime.roundData || fallbackRound;
