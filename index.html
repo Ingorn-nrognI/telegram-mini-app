@@ -4635,6 +4635,7 @@ function scheduleInitialHomeGameScroll() {
 function setMenuView(view, options = {}) {
   const { preserveNav = false, keepHistory = false } = options;
   currentMenuView = view;
+  if (view === "home") ensureScannerVisualLoop();
 
   const homeScreen = document.getElementById("homeScreen");
   const bobrRunScreen = document.getElementById("bobrRunScreen");
@@ -7278,6 +7279,10 @@ function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestam
 }
 
 function stopScannerVisualAnimation() {
+  if (scannerGridVisualFrame) {
+    cancelAnimationFrame(scannerGridVisualFrame);
+    scannerGridVisualFrame = null;
+  }
   scannerBeamRenderState.initialized = false;
   scannerBeamRenderState.key = "";
 }
@@ -7285,13 +7290,16 @@ function stopScannerVisualAnimation() {
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
   const tick = (now) => {
+    if (!scannerGridVisualFrame) return;
+    if (!shouldRenderScannerCanvasLive()) {
+      scannerGridVisualFrame = null;
+      return;
+    }
     scannerGridVisualFrame = requestAnimationFrame(tick);
-    if (shouldRenderScannerCanvasLive()) {
-      try {
-        renderScannerCanvas();
-      } catch (err) {
-        console.warn("Scanner canvas render error:", err);
-      }
+    try {
+      renderScannerCanvas();
+    } catch (err) {
+      console.warn("Scanner canvas render error:", err);
     }
   };
   scannerGridVisualFrame = requestAnimationFrame(tick);
@@ -9359,7 +9367,9 @@ function renderScannerRound(options = {}) {
   renderScannerBetBar();
   renderScannerParticipants();
   renderScannerRecentList();
-  if (forceCanvas || !scannerGridVisualFrame) {
+  const loopWasRunning = !!scannerGridVisualFrame;
+  ensureScannerVisualLoop();
+  if (forceCanvas || !loopWasRunning) {
     renderScannerCanvas();
   }
 }
