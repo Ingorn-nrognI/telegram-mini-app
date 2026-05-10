@@ -7564,6 +7564,9 @@ function ensureScannerVisualLoop() {
       return;
     }
     scannerGridVisualFrame = requestAnimationFrame(tick);
+    const tier = getEffectiveQualityTier();
+    if (tier === "low" && now - (ensureScannerVisualLoop._lastFrame || 0) < 20) return;
+    if (tier === "low") ensureScannerVisualLoop._lastFrame = now;
     try {
       renderScannerCanvas();
     } catch (err) {
@@ -10248,7 +10251,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const cx = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.x));
   const cy = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.y));
 
-  scannerLobbyLaserVisual.angle = (getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED;
+  scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
   const reticleRotation = Number.isFinite(Number(options.reticleRotation))
     ? Number(options.reticleRotation)
@@ -10597,7 +10600,7 @@ function renderScannerCanvas() {
 
     let beamRenderAngle;
     if (!isHotBeam) {
-      scannerLobbyLaserVisual.angle = (getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED;
+      scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
       beamRenderAngle = scannerLobbyLaserVisual.angle;
     } else {
       beamRenderAngle = Number.isFinite(Number(visualBeamSample.renderAngle))
