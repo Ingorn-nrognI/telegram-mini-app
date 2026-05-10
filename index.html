@@ -9984,7 +9984,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   if (scannerLobbyLaserVisual.angle === null) {
     scannerLobbyLaserVisual.angle = 0;
   } else {
-    const laserDt = Math.min(80, laserNow - scannerLobbyLaserVisual.lastAt);
+    const laserDt = Math.min(33, laserNow - scannerLobbyLaserVisual.lastAt);
     scannerLobbyLaserVisual.angle += SCANNER_LOBBY_LASER_TURN_SPEED * laserDt / 1000;
   }
   scannerLobbyLaserVisual.lastAt = laserNow;
@@ -10340,7 +10340,7 @@ function renderScannerCanvas() {
       if (scannerLobbyLaserVisual.angle === null) {
         scannerLobbyLaserVisual.angle = 0;
       } else {
-        const laserDt = Math.min(80, laserNow - scannerLobbyLaserVisual.lastAt);
+        const laserDt = Math.min(33, laserNow - scannerLobbyLaserVisual.lastAt);
         scannerLobbyLaserVisual.angle += SCANNER_LOBBY_LASER_TURN_SPEED * laserDt / 1000;
       }
       scannerLobbyLaserVisual.lastAt = laserNow;
@@ -10677,6 +10677,7 @@ function enterScannerGridMode(event) {
 function handleVisibilityChange() {
   updateScannerHeartbeat().catch(() => {});
   if (document.visibilityState === "visible") {
+    scannerLobbyLaserVisual.lastAt = performance.now();
     bootstrapScannerRoundFromRecentState({ force: true }).catch(() => {});
   }
 }
