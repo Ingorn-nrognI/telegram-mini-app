@@ -4058,6 +4058,13 @@ function getDeviceTier() {
 }
 const scannerDeviceTier = getDeviceTier();
 
+function getEffectiveQualityTier() {
+  if (typeof appSettings !== "undefined" && appSettings.quality) {
+    return appSettings.quality;
+  }
+  return scannerDeviceTier;
+}
+
 const scannerCanvasMetricsState = {
   canvas: null,
   ctx: null,
@@ -7551,7 +7558,6 @@ function stopScannerVisualAnimation() {
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
   let lastFrameAt = 0;
-  const fpsInterval = scannerDeviceTier === "low" ? 33 : scannerDeviceTier === "mid" ? 22 : 0;
   const tick = (now) => {
     if (!scannerGridVisualFrame) return;
     if (!shouldRenderScannerCanvasLive()) {
@@ -7559,6 +7565,7 @@ function ensureScannerVisualLoop() {
       return;
     }
     scannerGridVisualFrame = requestAnimationFrame(tick);
+    const fpsInterval = getEffectiveQualityTier() === "low" ? 33 : getEffectiveQualityTier() === "mid" ? 22 : 0;
     if (fpsInterval > 0 && now - lastFrameAt < fpsInterval) return;
     lastFrameAt = now;
     try {
@@ -10245,14 +10252,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const cx = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.x));
   const cy = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.y));
 
-  const laserNow = performance.now();
-  if (scannerLobbyLaserVisual.angle === null) {
-    scannerLobbyLaserVisual.angle = 0;
-  } else {
-    const laserDt = Math.min(33, laserNow - scannerLobbyLaserVisual.lastAt);
-    scannerLobbyLaserVisual.angle += SCANNER_LOBBY_LASER_TURN_SPEED * laserDt / 1000;
-  }
-  scannerLobbyLaserVisual.lastAt = laserNow;
+  scannerLobbyLaserVisual.angle = (getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED;
   const angle = scannerLobbyLaserVisual.angle;
   const reticleRotation = Number.isFinite(Number(options.reticleRotation))
     ? Number(options.reticleRotation)
@@ -10601,14 +10601,7 @@ function renderScannerCanvas() {
 
     let beamRenderAngle;
     if (!isHotBeam) {
-      const laserNow = performance.now();
-      if (scannerLobbyLaserVisual.angle === null) {
-        scannerLobbyLaserVisual.angle = 0;
-      } else {
-        const laserDt = Math.min(33, laserNow - scannerLobbyLaserVisual.lastAt);
-        scannerLobbyLaserVisual.angle += SCANNER_LOBBY_LASER_TURN_SPEED * laserDt / 1000;
-      }
-      scannerLobbyLaserVisual.lastAt = laserNow;
+      scannerLobbyLaserVisual.angle = (getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED;
       beamRenderAngle = scannerLobbyLaserVisual.angle;
     } else {
       beamRenderAngle = Number.isFinite(Number(visualBeamSample.renderAngle))
