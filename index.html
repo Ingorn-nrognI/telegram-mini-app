@@ -3658,28 +3658,31 @@ const SCANNER_PREVIEW_TRANSITION_MS = 1100;
 const SCANNER_SHUFFLING_MS = SCANNER_PREVIEW_TRANSITION_MS + SCANNER_PREPARING_MS;
 const SCANNER_EDGE_LATCH_MS = 3400;
 const SCANNER_ACTIVE_BEAM_STEPS = 1800;
-const SCANNER_ACTIVE_BEAM_BASE_SPEED = 1.34;
+const SCANNER_ACTIVE_BEAM_BASE_SPEED = 2.75;
 const SCANNER_ACTIVE_BEAM_MIN_SPEED_FACTOR = 0.16;
 const SCANNER_ACTIVE_BEAM_SLOWDOWN_START = 0.22;
 const SCANNER_ACTIVE_BEAM_EDGE_PADDING = 0.012;
 const SCANNER_LOBBY_BEAM_EDGE_PADDING = 0.012;
-const SCANNER_LOBBY_BEAM_BASE_SPEED = 0.285;
+const SCANNER_LOBBY_BEAM_BASE_SPEED = 0.58;
 const SCANNER_LOBBY_BEAM_COUNTDOWN_MIN_SPEED_FACTOR = 0.34;
 const SCANNER_LOBBY_BEAM_EPOCH_MS = Date.UTC(2026, 0, 1, 0, 0, 0);
 const SCANNER_COUNTDOWN_BEAM_STEPS = 960;
-const SCANNER_LOBBY_BEAM_SWAY_AMPLITUDE = 0.026;
-const SCANNER_LOBBY_BEAM_SWAY_SECONDARY_AMPLITUDE = 0.012;
+const SCANNER_LOBBY_BEAM_SWAY_AMPLITUDE = 0;
+const SCANNER_LOBBY_BEAM_SWAY_SECONDARY_AMPLITUDE = 0;
 const SCANNER_LOBBY_BEAM_SWAY_LOOKAHEAD_MS = 26;
-const SCANNER_BEAM_CURVE_STRENGTH = 0.055;
-const SCANNER_BEAM_CURVE_SECONDARY_STRENGTH = 0.024;
+const SCANNER_BEAM_CURVE_STRENGTH = 0;
+const SCANNER_BEAM_CURVE_SECONDARY_STRENGTH = 0;
 const SCANNER_BEAM_BOUNCE_BEND_STRENGTH = 0.18;
 const SCANNER_BEAM_BOUNCE_NORMAL_BIAS = 0.14;
+const SCANNER_BEAM_MIN_BOUNCE_NORMAL = 0.45;
 const SCANNER_RETICLE_IDLE_SPIN_SPEED = 0.0017;
 const SCANNER_RETICLE_ACTIVE_SPIN_SPEED = 0.0034;
 const SCANNER_RETICLE_IDLE_WOBBLE = 0.08;
 const SCANNER_RETICLE_ACTIVE_WOBBLE = 0.16;
 const SCANNER_BEAM_SMOOTH_TAU_MS = 20;
 const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 60;
+const SCANNER_BEAM_LOBBY_RENDER_TURN_TAU_MS = 900;
+const SCANNER_LOBBY_LASER_TURN_SPEED = 0.65;
 const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
@@ -3688,6 +3691,9 @@ const SCANNER_BEAM_DIRECTION_EPSILON = 0.00001;
 const SCANNER_BEAM_RENDER_ANGLE_OFFSET = Math.PI / 2;
 const SCANNER_BEAM_TURN_RESPONSE_MS = 156;
 const SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS = 336;
+const SCANNER_BEAM_BOUNCE_TURN_DISTANCE = 0.9;
+const SCANNER_BEAM_LASER_TURN_CARRY = 0.5;
+const SCANNER_BEAM_LASER_TURN_EASE_END = 0.75;
 const SCANNER_BEAM_SHARP_TURN_TAU_MULTIPLIER = 1.7;
 const SCANNER_BEAM_STEP_ANGLE_INFLUENCE = 0.24;
 const SCANNER_BEAM_BOUNCE_STEP_ANGLE_INFLUENCE = 0.12;
@@ -3837,6 +3843,10 @@ const scannerBeamRenderState = {
   sample: { x: 0.5, y: 0.5, angle: 0, renderAngle: 0, travelAngle: 0 },
   lastFrameAt: 0
 };
+
+// Independent visual angle for the lobby laser — updated at a fixed angular
+// speed so it never snaps or reverses when a new bounce changes direction.
+const scannerLobbyLaserVisual = { angle: null, lastAt: 0 };
 
 const scannerCanvasMetricsState = {
   canvas: null,
@@ -6119,8 +6129,12 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     ? lerpScannerAngle(targetAngles.travelAngle, motionAngleFromStep, stepAngleInfluence)
     : targetAngles.travelAngle;
   const renderAngleOffset = getScannerAngleDelta(targetAngles.travelAngle, targetAngles.renderAngle);
-  const desiredRenderAngle = desiredTravelAngle + renderAngleOffset;
+  // smoothedTravelAngle first — desiredRenderAngle is based on it so the render
+  // target changes gradually instead of snapping to the new direction instantly.
+  // This prevents lerpScannerAngle from picking a "shortest path" that reverses
+  // an in-progress rotation when a second bounce arrives mid-turn.
   const smoothedTravelAngle = lerpScannerAngle(previousTravelAngle, desiredTravelAngle, angleBlend);
+  const desiredRenderAngle = smoothedTravelAngle + renderAngleOffset;
   const smoothedRenderAngle = lerpScannerAngle(previousRenderAngle, desiredRenderAngle, renderAngleBlend);
 
   const nextSample = {
@@ -6173,11 +6187,17 @@ function interpolateScannerSampleSequence(samples, progress) {
   const toMotionAngle = getScannerBeamMotionAngle(to);
   const fromRenderAngle = getScannerBeamRenderAngle(from, fromMotionAngle);
   const toRenderAngle = getScannerBeamRenderAngle(to, toMotionAngle);
-  const travelAngle = hasDirection
-    ? Math.atan2(dy, dx)
-    : (Math.hypot(vx, vy) > 0.00001
-      ? Math.atan2(vy, vx)
-      : lerpScannerAngle(fromMotionAngle, toMotionAngle, t));
+  // Use the samples' own travelAngle when explicitly set (e.g. gradual laser rotation
+  // from applyScannerBeamLaserAngles), so the smoother never sees a sudden direction
+  // jump and the laser rotates independently of the reticle's instant bounce.
+  const hasExplicitTravel = Number.isFinite(Number(from?.travelAngle)) && Number.isFinite(Number(to?.travelAngle));
+  const travelAngle = hasExplicitTravel
+    ? lerpScannerAngle(fromMotionAngle, toMotionAngle, t)
+    : (hasDirection
+      ? Math.atan2(dy, dx)
+      : (Math.hypot(vx, vy) > 0.00001
+        ? Math.atan2(vy, vx)
+        : lerpScannerAngle(fromMotionAngle, toMotionAngle, t)));
   const renderAngle = lerpScannerAngle(fromRenderAngle, toRenderAngle, t);
 
   return {
@@ -6446,7 +6466,8 @@ function getScannerBeamSampleFromMotionState(motionState, timestampMs = getNetwo
     renderAngle: motionAngle,
     travelAngle: motionAngle,
     vx: current.vx,
-    vy: current.vy
+    vy: current.vy,
+    renderTurnTauMs: SCANNER_BEAM_LOBBY_RENDER_TURN_TAU_MS
   };
 }
 
@@ -6464,7 +6485,9 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
-function simulateScannerBeamBounceSamples(options = {}) {
+// ─── Reticle (point) simulator ───────────────────────────────────────────────
+// Отвечает за движение точки: скорость, направление и физику отскока от стен.
+function simulateScannerReticleSamples(options = {}) {
   const durationMs = Math.max(0, Number(options.durationMs) || 0);
   const safePad = clampScannerNumber(options.pad ?? SCANNER_ACTIVE_BEAM_EDGE_PADDING, 0, 0.24);
   const safeBaseSpeed = Math.max(0, Number(options.baseSpeed) || 0);
@@ -6480,10 +6503,6 @@ function simulateScannerBeamBounceSamples(options = {}) {
   const bounceBendStrength = Math.max(0, Number(options.bounceBendStrength) || SCANNER_BEAM_BOUNCE_BEND_STRENGTH);
   const bounceNormalBias = Math.max(0, Number(options.bounceNormalBias) || SCANNER_BEAM_BOUNCE_NORMAL_BIAS);
   const turnResponseMs = Math.max(1, Number(options.turnResponseMs) || SCANNER_BEAM_TURN_RESPONSE_MS);
-  const bounceTurnResponseMs = Math.max(
-    turnResponseMs,
-    Number(options.bounceTurnResponseMs) || SCANNER_BEAM_BOUNCE_TURN_RESPONSE_MS
-  );
   const seed = hashString(`beam_curve_${seedValue}`);
   const phaseA = ((seed >>> 1) % 360) * (Math.PI / 180);
   const phaseB = ((seed >>> 5) % 360) * (Math.PI / 180);
@@ -6492,7 +6511,7 @@ function simulateScannerBeamBounceSamples(options = {}) {
   const rateB = 1.24 + ((seed >>> 7) % 27) / 11;
   const rateC = 1.62 + ((seed >>> 11) % 23) / 10;
   let bounceCount = 0;
-  let bounceAngleState = { active: false, startX: 0.5, startY: 0.5, startAngle: 0, targetAngle: 0 };
+  const bounceLog = [];
 
   function getCurveOffset(progress) {
     const safeProgress = clampScannerNumber(progress, 0, 1);
@@ -6510,11 +6529,10 @@ function simulateScannerBeamBounceSamples(options = {}) {
     options.startVelocity?.y,
     { x: 1, y: 0 }
   );
-  let beamAngle = Number.isFinite(Number(options.startAngle))
+  const initialBeamAngle = Number.isFinite(Number(options.startAngle))
     ? Number(options.startAngle)
     : Math.atan2(direction.y || 0.0001, direction.x || 0.0001);
-  let sampleTurnTauMs = turnResponseMs;
-  let sampleStepAngleInfluence = SCANNER_BEAM_STEP_ANGLE_INFLUENCE;
+  let currentBeamAngle = initialBeamAngle;
 
   const samples = [];
 
@@ -6526,11 +6544,11 @@ function simulateScannerBeamBounceSamples(options = {}) {
     samples.push({
       x: clampScannerNumber(position.x, safePad, 1 - safePad),
       y: clampScannerNumber(position.y, safePad, 1 - safePad),
-      angle: beamAngle,
+      angle: 0,
       travelAngle: currentTravelAngle,
-      turnTauMs: sampleTurnTauMs,
-      renderTurnTauMs: sampleTurnTauMs,
-      stepAngleInfluence: sampleStepAngleInfluence,
+      turnTauMs: turnResponseMs,
+      renderTurnTauMs: turnResponseMs,
+      stepAngleInfluence: SCANNER_BEAM_STEP_ANGLE_INFLUENCE,
       progress,
       vx: direction.x * safeBaseSpeed * speedFactor,
       vy: direction.y * safeBaseSpeed * speedFactor,
@@ -6555,14 +6573,12 @@ function simulateScannerBeamBounceSamples(options = {}) {
 
     for (let attempt = 0; attempt < 4; attempt += 1) {
       let bounced = false;
-      const impactPhase = nextProgress * Math.PI * 2 * (1.08 + bounceCount * 0.037) + phaseC;
-      const tangentKick = Math.sin(impactPhase) * bounceBendStrength;
 
       if (nextX < safePad) {
         nextX = safePad + (safePad - nextX);
         direction = normalizeScannerVector(
-          Math.abs(direction.x) * (1 + bounceNormalBias),
-          direction.y + tangentKick,
+          Math.max(Math.abs(direction.x) * (1 + bounceNormalBias), SCANNER_BEAM_MIN_BOUNCE_NORMAL),
+          direction.y + bounceBendStrength,
           { x: 1, y: direction.y }
         );
         bounced = true;
@@ -6571,8 +6587,8 @@ function simulateScannerBeamBounceSamples(options = {}) {
       } else if (nextX > 1 - safePad) {
         nextX = (1 - safePad) - (nextX - (1 - safePad));
         direction = normalizeScannerVector(
-          -Math.abs(direction.x) * (1 + bounceNormalBias),
-          direction.y + tangentKick,
+          -Math.max(Math.abs(direction.x) * (1 + bounceNormalBias), SCANNER_BEAM_MIN_BOUNCE_NORMAL),
+          direction.y - bounceBendStrength,
           { x: -1, y: direction.y }
         );
         bounced = true;
@@ -6583,8 +6599,8 @@ function simulateScannerBeamBounceSamples(options = {}) {
       if (nextY < safePad) {
         nextY = safePad + (safePad - nextY);
         direction = normalizeScannerVector(
-          direction.x + tangentKick,
-          Math.abs(direction.y) * (1 + bounceNormalBias),
+          direction.x + bounceBendStrength,
+          Math.max(Math.abs(direction.y) * (1 + bounceNormalBias), SCANNER_BEAM_MIN_BOUNCE_NORMAL),
           { x: direction.x, y: 1 }
         );
         bounced = true;
@@ -6593,8 +6609,8 @@ function simulateScannerBeamBounceSamples(options = {}) {
       } else if (nextY > 1 - safePad) {
         nextY = (1 - safePad) - (nextY - (1 - safePad));
         direction = normalizeScannerVector(
-          direction.x + tangentKick,
-          -Math.abs(direction.y) * (1 + bounceNormalBias),
+          direction.x - bounceBendStrength,
+          -Math.max(Math.abs(direction.y) * (1 + bounceNormalBias), SCANNER_BEAM_MIN_BOUNCE_NORMAL),
           { x: direction.x, y: -1 }
         );
         bounced = true;
@@ -6605,35 +6621,10 @@ function simulateScannerBeamBounceSamples(options = {}) {
       if (!bounced) break;
     }
 
-    const targetBeamAngle = Math.atan2(direction.y || 0.0001, direction.x || 0.0001);
-
     if (bouncedDuringStep) {
-      bounceAngleState = {
-        active: true,
-        startX: position.x,
-        startY: position.y,
-        startAngle: beamAngle,
-        targetAngle: targetBeamAngle
-      };
-    }
-
-    if (bounceAngleState.active) {
-      const wallDist = Math.hypot(bounceAngleState.startX - 0.5, bounceAngleState.startY - 0.5);
-      const curDist  = Math.hypot(position.x - 0.5, position.y - 0.5);
-      const rawProgress = wallDist > 0.01 ? clampScannerNumber(1 - curDist / wallDist, 0, 1) : 1;
-      const turnProgress = smoothstep(0, 1, rawProgress);
-      beamAngle = lerpScannerAngle(bounceAngleState.startAngle, bounceAngleState.targetAngle, turnProgress);
-      if (rawProgress >= 0.99) {
-        beamAngle = bounceAngleState.targetAngle;
-        bounceAngleState.active = false;
-      }
-      sampleTurnTauMs = bounceTurnResponseMs;
-      sampleStepAngleInfluence = SCANNER_BEAM_BOUNCE_STEP_ANGLE_INFLUENCE;
-    } else {
-      const turnBlend = 1 - Math.exp(-((dtSeconds * 1000) / Math.max(1, turnResponseMs)));
-      beamAngle = lerpScannerAngle(beamAngle, targetBeamAngle, turnBlend);
-      sampleTurnTauMs = turnResponseMs;
-      sampleStepAngleInfluence = SCANNER_BEAM_STEP_ANGLE_INFLUENCE;
+      const newAngle = Math.atan2(direction.y || 0.0001, direction.x || 0.0001);
+      bounceLog.push({ step, fromAngle: currentBeamAngle, toAngle: newAngle });
+      currentBeamAngle = newAngle;
     }
 
     position = {
@@ -6642,19 +6633,61 @@ function simulateScannerBeamBounceSamples(options = {}) {
     };
   }
 
+  return { samples, bounceLog, initialBeamAngle, finalDirection: direction, finalPosition: position };
+}
+
+// ─── Laser beam rotation applier ─────────────────────────────────────────────
+// Отвечает за скорость визуального разворота луча после отскока от стены.
+// options.turnCarry — доля оставшегося угла, которую луч проворачивает за один
+// отрезок пути (0..1). Меньше = медленнее. По умолчанию SCANNER_BEAM_LASER_TURN_CARRY.
+function applyScannerBeamLaserAngles(samples, bounceLog, initialBeamAngle, options = {}) {
+  const turnCarry = Math.max(0.001, Math.min(1, Number(options.turnCarry) || SCANNER_BEAM_LASER_TURN_CARRY));
+  const turnEaseEnd = Math.max(0.1, Math.min(1, Number(options.turnEaseEnd) || SCANNER_BEAM_LASER_TURN_EASE_END));
+  const steps = samples.length;
+  const fillAngle = (s, a) => { samples[s].angle = a; samples[s].renderAngle = a; samples[s].travelAngle = a; };
+
+  if (bounceLog.length === 0) {
+    for (let s = 0; s < steps; s++) fillAngle(s, initialBeamAngle);
+  } else {
+    for (let s = 0; s < bounceLog[0].step; s++) fillAngle(s, initialBeamAngle);
+
+    let carriedAngle = initialBeamAngle;
+    for (let i = 0; i < bounceLog.length; i++) {
+      const { step: startStep, toAngle } = bounceLog[i];
+      const endStep = i + 1 < bounceLog.length ? bounceLog[i + 1].step : steps - 1;
+      const span = endStep - startStep;
+      const segmentEndAngle = lerpScannerAngle(carriedAngle, toAngle, turnCarry);
+      for (let s = startStep; s <= endStep; s++) {
+        const t = span > 0 ? (s - startStep) / span : 1;
+        // Rotation completes at turnEaseEnd (0.75 = 3/4 of journey), then holds.
+        fillAngle(s, lerpScannerAngle(carriedAngle, segmentEndAngle, smoothstep(0, turnEaseEnd, t)));
+      }
+      carriedAngle = segmentEndAngle;
+    }
+  }
+}
+
+// ─── Combined simulator (неизменный публичный API) ───────────────────────────
+// Вызывает simulateScannerReticleSamples + applyScannerBeamLaserAngles.
+function simulateScannerBeamBounceSamples(options = {}) {
+  const { samples, bounceLog, initialBeamAngle, finalDirection, finalPosition } =
+    simulateScannerReticleSamples(options);
+
+  applyScannerBeamLaserAngles(samples, bounceLog, initialBeamAngle, options);
+
   return {
     samples,
     finalSample: samples[samples.length - 1] || {
-      x: position.x,
-      y: position.y,
-      angle: beamAngle,
-      travelAngle: Math.atan2(direction.y || 0.0001, direction.x || 0.0001),
+      x: finalPosition.x,
+      y: finalPosition.y,
+      angle: initialBeamAngle,
+      travelAngle: Math.atan2(finalDirection.y || 0.0001, finalDirection.x || 0.0001),
       vx: 0,
       vy: 0,
       progress: 1,
       speedFactor: 0
     },
-    finalDirection: direction
+    finalDirection
   };
 }
 
@@ -7247,12 +7280,8 @@ function stopScannerVisualAnimation() {
 
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
-  const SCANNER_TARGET_FRAME_MS = 33;
-  let scannerLastTickAt = 0;
   const tick = (now) => {
     scannerGridVisualFrame = requestAnimationFrame(tick);
-    if (now - scannerLastTickAt < SCANNER_TARGET_FRAME_MS) return;
-    scannerLastTickAt = now;
     if (shouldRenderScannerCanvasLive()) {
       try {
         renderScannerCanvas();
@@ -9159,9 +9188,13 @@ function renderScannerButtons() {
   let disabled = false;
 
   if (scannerGridState.status === "waiting") {
-    text = hasMe ? `Добавить ${formatTon(scannerGridState.selectedStake)}` : "Войти в раунд";
+    text = hasMe
+      ? `Добавить ${formatTon(scannerGridState.selectedStake)}`
+      : `Войти — ${formatTon(scannerGridState.selectedStake)}`;
   } else if (scannerGridState.status === "countdown") {
-    text = hasMe ? `Добавить ${formatTon(scannerGridState.selectedStake)}` : "Войти до старта";
+    text = hasMe
+      ? `Добавить ${formatTon(scannerGridState.selectedStake)}`
+      : `Войти до старта — ${formatTon(scannerGridState.selectedStake)}`;
     if (!hasMe && scannerGridState.totalPlayers >= scannerGridState.maxPlayers) {
       text = "Раунд заполнен";
       disabled = true;
@@ -9461,23 +9494,6 @@ function drawScannerBeam(ctx, length, options = {}) {
       ]
     : [{ from: -halfLength, to: halfLength }];
 
-  const drawSegment = (from, to, width, color, blur, alpha = 1) => {
-    if (!Number.isFinite(from) || !Number.isFinite(to) || Math.abs(to - from) < 0.5) return;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = width;
-    ctx.strokeStyle = color;
-    ctx.shadowBlur = blur;
-    ctx.shadowColor = color;
-    ctx.beginPath();
-    ctx.moveTo(from, 0);
-    ctx.lineTo(to, 0);
-    ctx.stroke();
-    ctx.restore();
-  };
-
   ctx.save();
   const halo = ctx.createLinearGradient(-halfLength, 0, halfLength, 0);
   halo.addColorStop(0, "rgba(45, 225, 255, 0)");
@@ -9495,10 +9511,28 @@ function drawScannerBeam(ctx, length, options = {}) {
   }
   ctx.restore();
 
-  segments.forEach((segment) => {
-    drawSegment(segment.from, segment.to, glowWidth, beamColor, glowBlur, 0.38);
-    drawSegment(segment.from, segment.to, coreWidth, beamColor, coreBlur, 0.96);
-    drawSegment(segment.from, segment.to, innerWidth, innerColor, 0, 0.98);
+  const validSegments = segments.filter((s) => Math.abs(s.to - s.from) >= 0.5);
+  if (!validSegments.length) return;
+
+  const layers = [
+    { width: glowWidth, color: beamColor, blur: glowBlur, alpha: 0.38 },
+    { width: coreWidth, color: beamColor, blur: coreBlur, alpha: 0.96 },
+    { width: innerWidth, color: innerColor, blur: 0, alpha: 0.98 }
+  ];
+
+  layers.forEach(({ width, color, blur, alpha }) => {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.shadowBlur = blur;
+    ctx.shadowColor = color;
+    ctx.beginPath();
+    validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
+    ctx.stroke();
+    ctx.restore();
   });
 }
 
@@ -9686,7 +9720,7 @@ function fadeScannerWaitingTextGlowLayer(cache) {
   const elapsed = cache.lastUpdateAt ? Math.min(90, Math.max(0, now - cache.lastUpdateAt)) : 16;
   cache.lastUpdateAt = now;
 
-  const retainedAlpha = Math.pow(0.035, elapsed / 620);
+  const retainedAlpha = Math.pow(0.035, elapsed / 1200);
   const fadeAlpha = Math.max(0.035, Math.min(0.18, 1 - retainedAlpha));
   const ctx = cache.glowCtx;
 
@@ -9749,16 +9783,18 @@ function drawScannerWaitingTextPointGlow(layerCtx, x, y, radius) {
   layerCtx.restore();
 }
 
-function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, centerGap = 0) {
+function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, centerGap = 0, overrideAngle = undefined) {
   if (!cache?.paintCtx || !cache.paintCanvas || !cache.maskCanvas || !cache.glowCtx || !beamSample) return;
 
   const bx = Math.max(-0.24, Math.min(1.24, Number(beamSample.x) || 0.5)) * size;
   const by = Math.max(-0.24, Math.min(1.24, Number(beamSample.y) || 0.5)) * size;
-  const angle = Number.isFinite(Number(beamSample.angle)) ? Number(beamSample.angle) : 0;
+  const angle = Number.isFinite(Number(overrideAngle))
+    ? Number(overrideAngle)
+    : (Number.isFinite(Number(beamSample.angle)) ? Number(beamSample.angle) : 0);
   const beamLength = size * 4.7;
   const halfLength = beamLength / 2;
   const gapHalf = Math.max(0, Math.min(halfLength - 2, Number(centerGap || 0) / 2));
-  const softWidth = Math.max(7, Math.min(18, fontSize * 0.34));
+  const softWidth = Math.max(8, Math.min(22, fontSize * 0.48));
   const coreWidth = Math.max(1.6, Math.min(4.2, fontSize * 0.095));
   const visualPointRadius = centerGap > 0
     ? Math.max(softWidth, Number(centerGap || 0) / 2.7)
@@ -9766,34 +9802,49 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   const textPointInfluenceRadius = Math.max(visualPointRadius, fontSize * 0.48);
   const paintCtx = cache.paintCtx;
 
-  paintCtx.clearRect(0, 0, cache.paintCanvas.width, cache.paintCanvas.height);
-  paintCtx.save();
-  paintCtx.translate(bx, by);
-  paintCtx.rotate(angle);
-  paintCtx.globalCompositeOperation = "source-over";
-  paintCtx.globalAlpha = 0.9;
+  // Interpolate between previous and current angle each frame to fill angular gaps
+  const prevAngle = Number.isFinite(cache.lastPaintAngle) ? cache.lastPaintAngle : angle;
+  cache.lastPaintAngle = angle;
 
-  if (gapHalf > 0) {
-    drawScannerWaitingTextBeamStrip(paintCtx, -halfLength, -gapHalf, softWidth, coreWidth);
-    drawScannerWaitingTextBeamStrip(paintCtx, gapHalf, halfLength, softWidth, coreWidth);
-  } else {
-    drawScannerWaitingTextBeamStrip(paintCtx, -halfLength, halfLength, softWidth, coreWidth);
+  let span = angle - prevAngle;
+  span -= 2 * Math.PI * Math.round(span / (2 * Math.PI));
+  const spanAlt = span > 0 ? span - Math.PI : span + Math.PI;
+  if (Math.abs(spanAlt) < Math.abs(span)) span = spanAlt;
+
+  const steps = Math.max(1, Math.min(24, Math.ceil(Math.abs(span) / 0.003)));
+  const alphaPerStep = 0.72 / steps;
+
+  for (let i = 1; i <= steps; i++) {
+    const stepAngle = prevAngle + span * (i / steps);
+
+    paintCtx.clearRect(0, 0, cache.paintCanvas.width, cache.paintCanvas.height);
+    paintCtx.save();
+    paintCtx.translate(bx, by);
+    paintCtx.rotate(stepAngle);
+    paintCtx.globalCompositeOperation = "source-over";
+    paintCtx.globalAlpha = 0.9;
+
+    if (gapHalf > 0) {
+      drawScannerWaitingTextBeamStrip(paintCtx, -halfLength, -gapHalf, softWidth, coreWidth);
+      drawScannerWaitingTextBeamStrip(paintCtx, gapHalf, halfLength, softWidth, coreWidth);
+    } else {
+      drawScannerWaitingTextBeamStrip(paintCtx, -halfLength, halfLength, softWidth, coreWidth);
+    }
+    paintCtx.restore();
+
+    drawScannerWaitingTextPointGlow(paintCtx, bx, by, textPointInfluenceRadius);
+
+    paintCtx.save();
+    paintCtx.globalCompositeOperation = "destination-in";
+    paintCtx.drawImage(cache.maskCanvas, 0, 0);
+    paintCtx.restore();
+
+    cache.glowCtx.save();
+    cache.glowCtx.globalCompositeOperation = "lighter";
+    cache.glowCtx.globalAlpha = alphaPerStep;
+    cache.glowCtx.drawImage(cache.paintCanvas, 0, 0);
+    cache.glowCtx.restore();
   }
-
-  paintCtx.restore();
-
-  drawScannerWaitingTextPointGlow(paintCtx, bx, by, textPointInfluenceRadius);
-
-  paintCtx.save();
-  paintCtx.globalCompositeOperation = "destination-in";
-  paintCtx.drawImage(cache.maskCanvas, 0, 0);
-  paintCtx.restore();
-
-  cache.glowCtx.save();
-  cache.glowCtx.globalCompositeOperation = "lighter";
-  cache.glowCtx.globalAlpha = 0.72;
-  cache.glowCtx.drawImage(cache.paintCanvas, 0, 0);
-  cache.glowCtx.restore();
 }
 
 function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
@@ -9802,6 +9853,22 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   const centerX = size / 2;
   const centerY = size / 2;
   const font = `900 ${fontSize}px Arial`;
+  const centerGap = Number(options.centerGap) || 0;
+
+  // Measure text to build the left-aligned mask canvas
+  ctx.save();
+  ctx.font = font;
+  const measuredWidth = ctx.measureText(text).width;
+  ctx.restore();
+  const startX = centerX - measuredWidth / 2;
+
+  // Get/initialise the 3-layer cache (mask / glow / paint canvases)
+  const cache = getScannerWaitingTextCache(text, font, size, startX, centerY, fontSize, measuredWidth);
+  // Decay existing glow, then stamp current beam position onto it
+  fadeScannerWaitingTextGlowLayer(cache);
+  if (beamSample) {
+    addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, centerGap, options.beamAngle);
+  }
 
   ctx.save();
   ctx.font = font;
@@ -9822,6 +9889,13 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   ctx.fillStyle = SCANNER_WAITING_TEXT_VISUALS.fillStyle;
   ctx.fillText(text, centerX, centerY);
 
+  // Слой 3: накопленное свечение от луча, клипированное по форме букв
+  if (cache.glowCanvas) {
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.94;
+    ctx.drawImage(cache.glowCanvas, 0, 0, size, size);
+  }
+
   ctx.restore();
 }
 
@@ -9838,9 +9912,18 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
-  const cx = size * safeSample.x;
-  const cy = size * safeSample.y;
-  const angle = safeSample.angle;
+  const cx = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.x));
+  const cy = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.y));
+
+  const laserNow = performance.now();
+  if (scannerLobbyLaserVisual.angle === null) {
+    scannerLobbyLaserVisual.angle = 0;
+  } else {
+    const laserDt = Math.min(80, laserNow - scannerLobbyLaserVisual.lastAt);
+    scannerLobbyLaserVisual.angle += SCANNER_LOBBY_LASER_TURN_SPEED * laserDt / 1000;
+  }
+  scannerLobbyLaserVisual.lastAt = laserNow;
+  const angle = scannerLobbyLaserVisual.angle;
   const reticleRotation = Number.isFinite(Number(options.reticleRotation))
     ? Number(options.reticleRotation)
     : performance.now() * SCANNER_RETICLE_IDLE_SPIN_SPEED;
@@ -9874,7 +9957,8 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     ctx.save();
     ctx.globalAlpha = waitingTextAlpha;
     drawScannerWaitingText(ctx, size, safeSample, {
-      centerGap: idleReticleRadius * 2.7
+      centerGap: idleReticleRadius * 2.7,
+      beamAngle: scannerLobbyLaserVisual.angle
     });
     ctx.restore();
   }
@@ -10178,15 +10262,28 @@ function renderScannerCanvas() {
 
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
-    const px = visualBeamSample.x * size;
-    const py = visualBeamSample.y * size;
-    const beamLength = size * (isHotBeam ? 4.85 : 4.5);
     const reticleRadius = Math.max(10.2, size * 0.031);
+    const px = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.x * size));
+    const py = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.y * size));
+    const beamLength = size * (isHotBeam ? 4.85 : 4.5);
     const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
 
-    const beamRenderAngle = Number.isFinite(Number(visualBeamSample.renderAngle))
-      ? Number(visualBeamSample.renderAngle)
-      : (Number(visualBeamSample.angle) || 0);
+    let beamRenderAngle;
+    if (!isHotBeam) {
+      const laserNow = performance.now();
+      if (scannerLobbyLaserVisual.angle === null) {
+        scannerLobbyLaserVisual.angle = 0;
+      } else {
+        const laserDt = Math.min(80, laserNow - scannerLobbyLaserVisual.lastAt);
+        scannerLobbyLaserVisual.angle += SCANNER_LOBBY_LASER_TURN_SPEED * laserDt / 1000;
+      }
+      scannerLobbyLaserVisual.lastAt = laserNow;
+      beamRenderAngle = scannerLobbyLaserVisual.angle;
+    } else {
+      beamRenderAngle = Number.isFinite(Number(visualBeamSample.renderAngle))
+        ? Number(visualBeamSample.renderAngle)
+        : (Number(visualBeamSample.angle) || 0);
+    }
 
     ctx.save();
     ctx.translate(px, py);
