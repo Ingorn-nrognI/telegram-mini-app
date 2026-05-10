@@ -3879,6 +3879,15 @@ const scannerBeamRenderState = {
 // speed so it never snaps or reverses when a new bounce changes direction.
 const scannerLobbyLaserVisual = { angle: null, lastAt: 0 };
 
+function getDeviceTier() {
+  const cores = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory || 4;
+  if (cores <= 2 || mem <= 2) return "low";
+  if (cores <= 4) return "mid";
+  return "high";
+}
+const scannerDeviceTier = getDeviceTier();
+
 const scannerCanvasMetricsState = {
   canvas: null,
   ctx: null,
@@ -5391,7 +5400,7 @@ function handleModalBackdropClick(modalId, event) {
 }
 
 function shouldRenderScannerCanvasLive() {
-  return currentMenuView === "home";
+  return currentMenuView === "home" && !document.hidden;
 }
 
 function scannerRuntimeRef() {
@@ -7316,6 +7325,8 @@ function stopScannerVisualAnimation() {
 
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
+  let lastFrameAt = 0;
+  const fpsInterval = scannerDeviceTier === "low" ? 33 : scannerDeviceTier === "mid" ? 22 : 0;
   const tick = (now) => {
     if (!scannerGridVisualFrame) return;
     if (!shouldRenderScannerCanvasLive()) {
@@ -7323,6 +7334,8 @@ function ensureScannerVisualLoop() {
       return;
     }
     scannerGridVisualFrame = requestAnimationFrame(tick);
+    if (fpsInterval > 0 && now - lastFrameAt < fpsInterval) return;
+    lastFrameAt = now;
     try {
       renderScannerCanvas();
     } catch (err) {
@@ -9453,7 +9466,8 @@ function getScannerCanvasMetrics() {
     scannerCanvasMetricsState.dirty = true;
   }
 
-  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  const dprCap = scannerDeviceTier === "low" ? 1 : scannerDeviceTier === "mid" ? 1.5 : 2;
+  const dpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1));
   let size = scannerCanvasMetricsState.size;
   if (scannerCanvasMetricsState.dirty || !size) {
     const measuredWidth = canvas.clientWidth || canvas.getBoundingClientRect().width || 320;
@@ -9592,7 +9606,7 @@ function drawScannerBeam(ctx, length, options = {}) {
     ctx.lineJoin = "round";
     ctx.lineWidth = width;
     ctx.strokeStyle = color;
-    ctx.shadowBlur = blur;
+    ctx.shadowBlur = scannerDeviceTier === "low" ? 0 : scannerDeviceTier === "mid" ? blur * 0.5 : blur;
     ctx.shadowColor = color;
     ctx.beginPath();
     validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
@@ -9613,7 +9627,7 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.translate(x, y);
   ctx.globalAlpha = alpha;
 
-  ctx.shadowBlur = safeRadius * 1.45;
+  ctx.shadowBlur = scannerDeviceTier === "low" ? 0 : scannerDeviceTier === "mid" ? safeRadius * 0.725 : safeRadius * 1.45;
   ctx.shadowColor = "rgba(45, 225, 255, 0.36)";
   ctx.fillStyle = "rgba(45, 225, 255, 0.12)";
   ctx.beginPath();
@@ -9658,7 +9672,7 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.restore();
 
   ctx.save();
-  ctx.shadowBlur = safeRadius * 0.9;
+  ctx.shadowBlur = scannerDeviceTier === "low" ? 0 : scannerDeviceTier === "mid" ? safeRadius * 0.45 : safeRadius * 0.9;
   ctx.shadowColor = "rgba(45,225,255,0.44)";
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.beginPath();
@@ -9919,6 +9933,19 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   const centerY = size / 2;
   const font = `900 ${fontSize}px Arial`;
   const centerGap = Number(options.centerGap) || 0;
+
+  if (scannerDeviceTier === "low") {
+    ctx.save();
+    ctx.font = font;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.baseAlpha;
+    ctx.fillStyle = SCANNER_WAITING_TEXT_VISUALS.fillStyle;
+    ctx.fillText(text, centerX, centerY);
+    ctx.restore();
+    return;
+  }
 
   // Measure text to build the left-aligned mask canvas
   ctx.save();
