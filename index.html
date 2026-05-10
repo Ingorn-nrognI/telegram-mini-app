@@ -1246,6 +1246,30 @@ button {
     linear-gradient(180deg, rgba(7, 12, 26, 1), rgba(4, 7, 18, 0.98));
 }
 
+.scanner-connecting-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #02050c 0%, #050913 100%);
+  opacity: 1;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.scanner-connecting-overlay.scanner-connecting-done {
+  opacity: 0;
+}
+.scanner-connecting-text {
+  font-size: 22px;
+  font-weight: 900;
+  font-family: Arial, sans-serif;
+  color: rgba(45, 225, 255, 0.85);
+  text-shadow: 0 0 24px rgba(45, 225, 255, 0.38);
+  letter-spacing: 0.01em;
+}
+
 .scanner-overlay-badges {
   position: absolute;
   left: 20px;
@@ -3267,6 +3291,9 @@ button {
 
         <div class="scanner-canvas-shell">
           <canvas id="scannerGridCanvas"></canvas>
+          <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
+            <span class="scanner-connecting-text">Подключение...</span>
+          </div>
         </div>
 
         <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
@@ -9289,6 +9316,24 @@ function getScannerCountdownChipText() {
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
 }
 
+function updateScannerConnectingOverlay() {
+  const overlay = document.getElementById("scannerConnectingOverlay");
+  if (!overlay) return;
+  const isReady = scannerRealtime.runtimeReady && scannerRealtime.roundReady;
+  if (isReady) {
+    if (!overlay.classList.contains("scanner-connecting-done")) {
+      overlay.classList.add("scanner-connecting-done");
+      overlay.addEventListener("transitionend", function onEnd() {
+        overlay.style.display = "none";
+        overlay.removeEventListener("transitionend", onEnd);
+      });
+    }
+  } else {
+    overlay.style.display = "";
+    overlay.classList.remove("scanner-connecting-done");
+  }
+}
+
 function renderScannerRound(options = {}) {
   const { forceCanvas = false } = options;
   renderScannerChips("scannerStakeChips", SCANNER_STAKE_PRESETS, scannerGridState.selectedStake, "setScannerStakeAndJoin", " TON");
@@ -9367,6 +9412,7 @@ function renderScannerRound(options = {}) {
   renderScannerBetBar();
   renderScannerParticipants();
   renderScannerRecentList();
+  updateScannerConnectingOverlay();
   const loopWasRunning = !!scannerGridVisualFrame;
   ensureScannerVisualLoop();
   if (forceCanvas || !loopWasRunning) {
@@ -10200,7 +10246,6 @@ function renderScannerCanvas() {
       const idleVisualBeamSample = idleBeamSample;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
-        waitingText: scannerRealtime.runtimeReady ? undefined : "Подключение...",
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
         reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
       });
@@ -10461,6 +10506,7 @@ function subscribeScannerRuntime() {
   }, (error) => {
     console.error("Ошибка подписки на runtime общего раунда:", error);
     scannerRealtime.runtimeReady = true;
+    renderScannerRound();
   });
 }
 
