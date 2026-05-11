@@ -9463,6 +9463,7 @@ function isScannerBetBarContextActive() {
 function getScannerArenaFocusState() {
   const arena = document.getElementById("scannerGridCanvas");
   if (!arena || !isScannerBetBarContextActive()) return false;
+  if (window._isScrolling) return true;
 
   const rect = arena.getBoundingClientRect();
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
@@ -9525,7 +9526,14 @@ function setupScannerBetBarVisibilityTracking() {
   if (scannerBetBarScrollAttached) return;
   const homeScreen = document.getElementById("homeScreen");
   if (homeScreen) {
-    homeScreen.addEventListener("scroll", requestScannerBetBarVisibilityUpdate, { passive: true });
+    homeScreen.addEventListener("scroll", () => {
+      window._isScrolling = true;
+      clearTimeout(window._scrollEndTimer);
+      window._scrollEndTimer = setTimeout(() => {
+        window._isScrolling = false;
+        requestScannerBetBarVisibilityUpdate();
+      }, 150);
+    }, { passive: true });
   }
   window.addEventListener("resize", forceScannerBetBarVisibilityRefresh, { passive: true });
   window.addEventListener("orientationchange", forceScannerBetBarVisibilityRefresh, { passive: true });
