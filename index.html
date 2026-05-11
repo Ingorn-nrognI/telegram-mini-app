@@ -4056,7 +4056,7 @@ function getDeviceTier() {
   if (cores <= 4) return "mid";
   return "high";
 }
-const scannerDeviceTier = getDeviceTier();
+let scannerDeviceTier = getDeviceTier();
 
 function getEffectiveQualityTier() {
   if (typeof appSettings !== "undefined" && appSettings.quality) {
@@ -9698,7 +9698,7 @@ function getScannerCanvasMetrics() {
     scannerCanvasMetricsState.dirty = true;
   }
 
-  const dprCap = scannerDeviceTier === "low" ? 1 : scannerDeviceTier === "mid" ? 1.5 : 2;
+  const dprCap = getEffectiveQualityTier() === "low" ? 1 : getEffectiveQualityTier() === "mid" ? 1.5 : window.devicePixelRatio > 2 ? 1.5 : 2;
   const dpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1));
   let size = scannerCanvasMetricsState.size;
   if (scannerCanvasMetricsState.dirty || !size) {
@@ -9831,17 +9831,30 @@ function drawScannerBeam(ctx, length, options = {}) {
     { width: innerWidth, color: innerColor, blur: 0, alpha: 0.98 }
   ];
 
-  const useShadow = getEffectiveQualityTier() !== "low";
   layers.forEach(({ width, color, blur, alpha }) => {
     ctx.save();
-    ctx.globalAlpha = alpha;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.lineWidth = width;
     ctx.strokeStyle = color;
-    ctx.shadowBlur = useShadow ? blur : 0;
-    if (useShadow) ctx.shadowColor = color;
-    if (getEffectiveQualityTier() === "mid") ctx.shadowBlur = blur * 0.4;
+    if (blur > 0) {
+      ctx.lineWidth = width * 4;
+      ctx.globalAlpha = alpha / 3;
+      ctx.beginPath();
+      validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
+      ctx.stroke();
+      ctx.lineWidth = width * 2.5;
+      ctx.globalAlpha = alpha / 5;
+      ctx.beginPath();
+      validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
+      ctx.stroke();
+      ctx.lineWidth = width * 1.5;
+      ctx.globalAlpha = alpha / 8;
+      ctx.beginPath();
+      validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
+      ctx.stroke();
+    }
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = width;
     ctx.beginPath();
     validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
     ctx.stroke();
@@ -9861,14 +9874,14 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.translate(x, y);
   ctx.globalAlpha = alpha;
 
-  ctx.shadowBlur = getEffectiveQualityTier() === "high" ? safeRadius * 1.45 : getEffectiveQualityTier() === "mid" ? safeRadius * 1.45 * 0.5 : 0;
-  ctx.shadowColor = "rgba(45, 225, 255, 0.36)";
+  ctx.fillStyle = "rgba(45, 225, 255, 0.06)";
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius * 1.72, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = "rgba(45, 225, 255, 0.12)";
   ctx.beginPath();
   ctx.arc(0, 0, safeRadius * 1.18, 0, Math.PI * 2);
   ctx.fill();
-
-  ctx.shadowBlur = 0;
   ctx.fillStyle = "rgba(255,255,255,0.86)";
   ctx.beginPath();
   ctx.arc(0, 0, safeRadius * 0.24, 0, Math.PI * 2);
@@ -9906,8 +9919,10 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.restore();
 
   ctx.save();
-  ctx.shadowBlur = getEffectiveQualityTier() === "high" ? safeRadius * 0.9 : getEffectiveQualityTier() === "mid" ? safeRadius * 0.9 * 0.5 : 0;
-  ctx.shadowColor = "rgba(45,225,255,0.44)";
+  ctx.fillStyle = "rgba(45,225,255,0.18)";
+  ctx.beginPath();
+  ctx.arc(orbitX, orbitY, orbitDotRadius * 3, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.beginPath();
   ctx.arc(orbitX, orbitY, orbitDotRadius, 0, Math.PI * 2);
@@ -10191,7 +10206,7 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   // Get/initialise the 3-layer cache (mask / glow / paint canvases)
   const cache = getScannerWaitingTextCache(text, font, size, startX, centerY, fontSize, measuredWidth);
   // Decay existing glow, then stamp current beam position onto it
-  if (getEffectiveQualityTier() !== "low") {
+  if (getEffectiveQualityTier() === "high") {
     fadeScannerWaitingTextGlowLayer(cache);
     if (beamSample) {
       addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, centerGap, options.beamAngle);
@@ -10218,7 +10233,7 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   ctx.fillText(text, centerX, centerY);
 
   // Слой 3: накопленное свечение от луча, клипированное по форме букв
-  if (getEffectiveQualityTier() !== "low" && cache.glowCanvas) {
+  if (getEffectiveQualityTier() === "high" && cache.glowCanvas) {
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 0.94;
     ctx.drawImage(cache.glowCanvas, 0, 0, size, size);
