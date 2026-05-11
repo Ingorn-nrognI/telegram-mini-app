@@ -10189,7 +10189,7 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   const beamLength = size * 4.7;
   const halfLength = beamLength / 2;
   const gapHalf = Math.max(0, Math.min(halfLength - 2, Number(centerGap || 0) / 2));
-  const softWidth = Math.max(8, Math.min(22, fontSize * 0.48));
+  const softWidth = Math.max(14, Math.min(38, fontSize * 0.82));
   const coreWidth = Math.max(1.6, Math.min(4.2, fontSize * 0.095));
   const visualPointRadius = centerGap > 0
     ? Math.max(softWidth, Number(centerGap || 0) / 2.7)
@@ -10206,7 +10206,7 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   const spanAlt = span > 0 ? span - Math.PI : span + Math.PI;
   if (Math.abs(spanAlt) < Math.abs(span)) span = spanAlt;
 
-  const steps = Math.max(1, Math.min(4, Math.ceil(Math.abs(span) / 0.003)));
+  const steps = Math.max(2, Math.min(8, Math.ceil(Math.abs(span) / 0.003)));
   const alphaPerStep = 0.72 / steps;
 
   for (let i = 1; i <= steps; i++) {
