@@ -9825,15 +9825,11 @@ function drawScannerBeam(ctx, length, options = {}) {
   const validSegments = segments.filter((s) => Math.abs(s.to - s.from) >= 0.5);
   if (!validSegments.length) return;
 
-  const layers = scannerDeviceTier === "high"
-    ? [
-        { width: glowWidth, color: beamColor, blur: glowBlur, alpha: 0.38 },
-        { width: coreWidth, color: beamColor, blur: coreBlur, alpha: 0.96 },
-        { width: innerWidth, color: innerColor, blur: 0, alpha: 0.98 }
-      ]
-    : [
-        { width: glowWidth, color: beamColor, blur: glowBlur, alpha: 0.38 }
-      ];
+  const layers = [
+    { width: glowWidth, color: beamColor, blur: glowBlur, alpha: 0.38 },
+    { width: coreWidth, color: beamColor, blur: coreBlur, alpha: 0.96 },
+    { width: innerWidth, color: innerColor, blur: 0, alpha: 0.98 }
+  ];
 
   layers.forEach(({ width, color, blur, alpha }) => {
     ctx.save();
@@ -9842,10 +9838,8 @@ function drawScannerBeam(ctx, length, options = {}) {
     ctx.lineJoin = "round";
     ctx.lineWidth = width;
     ctx.strokeStyle = color;
-    if (scannerDeviceTier !== "low") {
-      ctx.shadowBlur = scannerDeviceTier === "mid" ? blur * 0.5 : blur;
-      ctx.shadowColor = color;
-    }
+    ctx.shadowBlur = blur;
+    ctx.shadowColor = color;
     ctx.beginPath();
     validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
     ctx.stroke();
@@ -9865,34 +9859,30 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.translate(x, y);
   ctx.globalAlpha = alpha;
 
-  if (scannerDeviceTier !== "low") {
-    ctx.shadowBlur = scannerDeviceTier === "mid" ? safeRadius * 0.725 : safeRadius * 1.45;
-    ctx.shadowColor = "rgba(45, 225, 255, 0.36)";
-  }
+  ctx.shadowBlur = safeRadius * 1.45;
+  ctx.shadowColor = "rgba(45, 225, 255, 0.36)";
   ctx.fillStyle = "rgba(45, 225, 255, 0.12)";
   ctx.beginPath();
   ctx.arc(0, 0, safeRadius * 1.18, 0, Math.PI * 2);
   ctx.fill();
 
-  if (scannerDeviceTier !== "low") {
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(255,255,255,0.86)";
-    ctx.beginPath();
-    ctx.arc(0, 0, safeRadius * 0.24, 0, Math.PI * 2);
-    ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "rgba(255,255,255,0.86)";
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius * 0.24, 0, Math.PI * 2);
+  ctx.fill();
 
-    ctx.lineWidth = Math.max(1.4, safeRadius * 0.18);
-    ctx.strokeStyle = "rgba(255,255,255,0.94)";
-    ctx.beginPath();
-    ctx.arc(0, 0, safeRadius * 0.72, 0, Math.PI * 2);
-    ctx.stroke();
+  ctx.lineWidth = Math.max(1.4, safeRadius * 0.18);
+  ctx.strokeStyle = "rgba(255,255,255,0.94)";
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius * 0.72, 0, Math.PI * 2);
+  ctx.stroke();
 
-    ctx.lineWidth = Math.max(1, safeRadius * 0.08);
-    ctx.strokeStyle = "rgba(45, 225, 255, 0.92)";
-    ctx.beginPath();
-    ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
-    ctx.stroke();
-  }
+  ctx.lineWidth = Math.max(1, safeRadius * 0.08);
+  ctx.strokeStyle = "rgba(45, 225, 255, 0.92)";
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
+  ctx.stroke();
 
   const orbitRadius = safeRadius * (0.54 + wobble * 0.12);
   const orbitX = Math.cos(rotation) * orbitRadius;
@@ -9913,16 +9903,14 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.stroke();
   ctx.restore();
 
-  if (scannerDeviceTier !== "low") {
-    ctx.save();
-    ctx.shadowBlur = scannerDeviceTier === "mid" ? safeRadius * 0.45 : safeRadius * 0.9;
-    ctx.shadowColor = "rgba(45,225,255,0.44)";
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.beginPath();
-    ctx.arc(orbitX, orbitY, orbitDotRadius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
+  ctx.save();
+  ctx.shadowBlur = safeRadius * 0.9;
+  ctx.shadowColor = "rgba(45,225,255,0.44)";
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.beginPath();
+  ctx.arc(orbitX, orbitY, orbitDotRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 
   ctx.restore();
 }
