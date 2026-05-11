@@ -25,7 +25,7 @@
   --shadow-glow: 0 0 32px rgba(83, 159, 255, 0.16);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --bottom-nav-height: 66px;
+  --bottom-nav-height: 56px;
   --bottom-nav-offset: 4px;
   --bottom-stack-gap: 16px;
 }
@@ -2102,7 +2102,7 @@ button {
   left: 50%;
   bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + var(--bottom-nav-offset) + var(--bottom-stack-gap));
   width: min(calc(100vw - 24px), 480px);
-  min-height: 64px;
+  min-height: 54px;
   padding: 9px;
   display: grid;
   grid-template-columns: 46px repeat(3, minmax(54px, 1fr)) 72px;
@@ -2133,7 +2133,7 @@ button {
 
 .scanner-bet-btn {
   min-width: 0;
-  height: 46px;
+  height: 38px;
   border-radius: 16px;
   display: inline-flex;
   align-items: center;
@@ -2785,7 +2785,7 @@ button {
 }
 
 .bottom-btn {
-  height: 50px;
+  height: 42px;
   border-radius: 16px;
   gap: 4px;
 }
@@ -2799,8 +2799,8 @@ button {
 }
 
 .center-fab {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   margin-top: 0;
   border-radius: 22px;
   background:
@@ -11081,7 +11081,7 @@ resetAllDemoTonBalancesTo1000Once()
   .catch((error) => console.error("Не удалось подготовить demo TON-баланс:", error));
 homeScreenContext = "games";
 setMenuView("home");
-setActiveBottomNav("games");
+currentBottomNav = "games";
 scheduleInitialHomeGameScroll();
 forceScannerBetBarVisibilityRefresh();
 window.addEventListener("load", () => {
