@@ -3747,7 +3747,7 @@ button {
       <div class="app-settings-handle"></div>
       <div class="app-settings-header">
         <span class="app-settings-title" id="appSettingsTitle">Настройки</span>
-        <button class="app-settings-close" onclick="closeAppSettings()" aria-label="Закрыть">✕</button>
+        <button class="app-settings-close" onclick="closeSettings()" aria-label="Закрыть">✕</button>
       </div>
 
       <div class="app-settings-section">
@@ -3770,8 +3770,8 @@ button {
       <div class="app-settings-section">
         <div class="app-settings-section-title">Вибрация</div>
         <div class="app-settings-chips">
-          <button id="settingsVibOn" class="app-settings-chip" onclick="setAppVibration('on')">Вкл</button>
-          <button id="settingsVibOff" class="app-settings-chip" onclick="setAppVibration('off')">Выкл</button>
+          <button id="settingsVibOn" class="app-settings-chip" onclick="setAppVibration(true)">Вкл</button>
+          <button id="settingsVibOff" class="app-settings-chip" onclick="setAppVibration(false)">Выкл</button>
         </div>
       </div>
     </div>
@@ -5490,11 +5490,27 @@ function openWallet() {
   alert("Кошелёк");
 }
 
+const SETTINGS_STORAGE_KEY = "bobr_world_app_settings_v1";
+
+(function () {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || "null");
+    if (saved && typeof saved === "object") {
+      window._savedAppSettings = saved;
+    }
+  } catch (e) {}
+})();
+
 const appSettings = {
-  language: localStorage.getItem("appLang") || "ru",
-  quality: localStorage.getItem("appQuality") || (scannerDeviceTier || "mid"),
-  vibration: localStorage.getItem("appVibration") || "on",
+  language: window._savedAppSettings?.language || "ru",
+  quality: window._savedAppSettings?.quality || (scannerDeviceTier || "mid"),
+  vibration: window._savedAppSettings?.vibration !== undefined ? window._savedAppSettings.vibration : true,
 };
+delete window._savedAppSettings;
+
+function saveAppSettings() {
+  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
+}
 
 function renderAppSettings() {
   const chipMap = {
@@ -5503,8 +5519,8 @@ function renderAppSettings() {
     settingsQualityLow: appSettings.quality === "low",
     settingsQualityMid: appSettings.quality === "mid",
     settingsQualityHigh: appSettings.quality === "high",
-    settingsVibOn: appSettings.vibration === "on",
-    settingsVibOff: appSettings.vibration === "off",
+    settingsVibOn: appSettings.vibration === true,
+    settingsVibOff: appSettings.vibration === false,
   };
   for (const [id, active] of Object.entries(chipMap)) {
     const el = document.getElementById(id);
@@ -5515,42 +5531,44 @@ function renderAppSettings() {
 function openSettings() {
   const overlay = document.getElementById("appSettingsOverlay");
   if (!overlay) return;
-  renderAppSettings();
-  overlay.removeAttribute("aria-hidden");
   overlay.classList.add("open");
+  overlay.removeAttribute("aria-hidden");
+  renderAppSettings();
+  syncAppBackButton({ forceShow: true, onClick: closeSettings });
 }
 
-function closeAppSettings() {
+function closeSettings() {
   const overlay = document.getElementById("appSettingsOverlay");
   if (!overlay) return;
   overlay.classList.remove("open");
   overlay.setAttribute("aria-hidden", "true");
+  syncAppBackButton();
 }
 
 function handleAppSettingsBackdrop(event) {
   if (event.target === document.getElementById("appSettingsOverlay")) {
-    closeAppSettings();
+    closeSettings();
   }
 }
 
 function setAppLanguage(lang) {
   appSettings.language = lang;
-  localStorage.setItem("appLang", lang);
+  saveAppSettings();
   renderAppSettings();
 }
 
-function setAppQuality(quality) {
-  appSettings.quality = quality;
-  localStorage.setItem("appQuality", quality);
+function setAppQuality(level) {
+  appSettings.quality = level;
   if (typeof scannerDeviceTier !== "undefined") {
-    scannerDeviceTier = quality;
+    scannerDeviceTier = level;
   }
+  saveAppSettings();
   renderAppSettings();
 }
 
-function setAppVibration(state) {
-  appSettings.vibration = state;
-  localStorage.setItem("appVibration", state);
+function setAppVibration(enabled) {
+  appSettings.vibration = enabled;
+  saveAppSettings();
   renderAppSettings();
 }
 
@@ -11046,6 +11064,12 @@ window.renderProfileScreen = renderProfileScreen;
 window.showProfilePlaceholderAction = showProfilePlaceholderAction;
 window.handleTelegramAppBack = handleTelegramAppBack;
 window.openSettings = openSettings;
+window.closeSettings = closeSettings;
+window.renderAppSettings = renderAppSettings;
+window.handleAppSettingsBackdrop = handleAppSettingsBackdrop;
+window.setAppLanguage = setAppLanguage;
+window.setAppQuality = setAppQuality;
+window.setAppVibration = setAppVibration;
 window.openWallet = openWallet;
 window.toggleHistoryPanel = toggleHistoryPanel;
 window.toggleHistoryMatchDetails = toggleHistoryMatchDetails;
