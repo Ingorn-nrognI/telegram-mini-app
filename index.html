@@ -5603,11 +5603,16 @@ function setAppLanguage(lang) {
 
 function setAppQuality(level) {
   appSettings.quality = level;
-  if (typeof scannerDeviceTier !== "undefined") {
-    scannerDeviceTier = level;
-  }
+  scannerDeviceTier = level;
   saveAppSettings();
   renderAppSettings();
+  scannerGridCache = null;
+  scannerGridLinesCache = null;
+  scannerActiveBeamCache = null;
+  scannerCountdownBeamCache = null;
+  scannerGridPreviewCanvasCache = null;
+  invalidateScannerCanvasMetrics();
+  renderScannerCanvas();
 }
 
 function setAppVibration(enabled) {
