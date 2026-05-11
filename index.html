@@ -5508,6 +5508,50 @@ const appSettings = {
 };
 delete window._savedAppSettings;
 
+const APP_TRANSLATIONS = {
+  ru: {
+    balance: "Баланс", wallet: "Кошелёк", tabLeaderboard: "Таблица",
+    tabGames: "Игры", tabPvp: "PvP", tabSkins: "Скины", tabHistory: "История",
+    settingsTitle: "Настройки", connecting: "Подключение...",
+    waitingRound: "Ожидание раунда...", players: "Игроки",
+    recentRounds: "Последние раунды", scanner: "Сканер"
+  },
+  en: {
+    balance: "Balance", wallet: "Wallet", tabLeaderboard: "Leaderboard",
+    tabGames: "Games", tabPvp: "PvP", tabSkins: "Skins", tabHistory: "History",
+    settingsTitle: "Settings", connecting: "Connecting...",
+    waitingRound: "Waiting for round...", players: "Players",
+    recentRounds: "Recent rounds", scanner: "Scanner"
+  }
+};
+
+function applyAppLanguage(lang) {
+  const t = APP_TRANSLATIONS[lang] || APP_TRANSLATIONS["ru"];
+  const set = (sel, text) => { const el = document.querySelector(sel); if (el) el.textContent = text; };
+  set("#balanceLabel", t.balance);
+  set("#walletLabel", t.wallet);
+  set('[data-nav="leaderboard"] .bottom-nav-label', t.tabLeaderboard);
+  set('[data-nav="games"] .bottom-nav-label', t.tabGames);
+  set('[data-nav="pvp"] .bottom-nav-label', t.tabPvp);
+  set('[data-nav="skins"] .bottom-nav-label', t.tabSkins);
+  set('[data-nav="history"] .bottom-nav-label', t.tabHistory);
+  set("#appSettingsTitle", t.settingsTitle);
+  set("#scannerConnectingLabel", t.connecting);
+  set("#scannerWaitingLabel", t.waitingRound);
+  set("#scannerRecentRoundsLabel", t.recentRounds);
+  set("#scannerTabLabel", t.scanner);
+  // Players heading: update first text node only, preserving the count <span> child
+  const playersEl = document.querySelector(".scanner-players-heading-title .scanner-inline-section-title");
+  if (playersEl) {
+    for (const node of playersEl.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        node.textContent = t.players + " ";
+        break;
+      }
+    }
+  }
+}
+
 function saveAppSettings() {
   localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
 }
@@ -5555,6 +5599,7 @@ function setAppLanguage(lang) {
   appSettings.language = lang;
   saveAppSettings();
   renderAppSettings();
+  applyAppLanguage(lang);
 }
 
 function setAppQuality(level) {
@@ -11011,6 +11056,7 @@ window.enterScannerGridMode = enterScannerGridMode;
 scannerQuickStakeValues = loadScannerQuickStakeValues();
 scannerStakeSettingsState.draftValues = scannerQuickStakeValues.map((value) => String(value));
 
+applyAppLanguage(appSettings.language);
 renderTopProfile();
 resetAllDemoTonBalancesTo1000Once()
   .catch((error) => {
@@ -11070,6 +11116,7 @@ window.handleAppSettingsBackdrop = handleAppSettingsBackdrop;
 window.setAppLanguage = setAppLanguage;
 window.setAppQuality = setAppQuality;
 window.setAppVibration = setAppVibration;
+window.applyAppLanguage = applyAppLanguage;
 window.openWallet = openWallet;
 window.toggleHistoryPanel = toggleHistoryPanel;
 window.toggleHistoryMatchDetails = toggleHistoryMatchDetails;
