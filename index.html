@@ -10139,7 +10139,7 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   const spanAlt = span > 0 ? span - Math.PI : span + Math.PI;
   if (Math.abs(spanAlt) < Math.abs(span)) span = spanAlt;
 
-  const steps = Math.max(1, Math.min(24, Math.ceil(Math.abs(span) / 0.003)));
+  const steps = Math.max(1, Math.min(4, Math.ceil(Math.abs(span) / 0.003)));
   const alphaPerStep = 0.72 / steps;
 
   for (let i = 1; i <= steps; i++) {
@@ -10219,15 +10219,21 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   ctx.textBaseline = "middle";
 
   // Слой 1: мягкое голубое свечение вокруг текста
-  ctx.shadowBlur = Math.max(8, fontSize * 0.42);
-  ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.glowShadowColor;
-  ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.glowFinalAlpha;
-  ctx.fillStyle = "rgba(45,225,255,0.22)";
-  ctx.fillText(text, centerX, centerY);
+  if (getEffectiveQualityTier() !== "low") {
+    ctx.shadowBlur = Math.max(8, fontSize * 0.42);
+    ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.glowShadowColor;
+    ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.glowFinalAlpha;
+    ctx.fillStyle = "rgba(45,225,255,0.22)";
+    ctx.fillText(text, centerX, centerY);
+  }
 
   // Слой 2: основной текст с небольшой тенью
-  ctx.shadowBlur = Math.max(3, fontSize * SCANNER_WAITING_TEXT_VISUALS.baseShadowBlurFactor);
-  ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.baseShadowColor;
+  if (getEffectiveQualityTier() !== "low") {
+    ctx.shadowBlur = Math.max(3, fontSize * SCANNER_WAITING_TEXT_VISUALS.baseShadowBlurFactor);
+    ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.baseShadowColor;
+  } else {
+    ctx.shadowBlur = 0;
+  }
   ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.baseAlpha;
   ctx.fillStyle = SCANNER_WAITING_TEXT_VISUALS.fillStyle;
   ctx.fillText(text, centerX, centerY);
