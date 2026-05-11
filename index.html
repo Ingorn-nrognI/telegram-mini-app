@@ -5527,28 +5527,27 @@ const APP_TRANSLATIONS = {
 
 function applyAppLanguage(lang) {
   const t = APP_TRANSLATIONS[lang] || APP_TRANSLATIONS["ru"];
-  const set = (sel, text) => { const el = document.querySelector(sel); if (el) el.textContent = text; };
-  set("#balanceLabel", t.balance);
-  set("#walletLabel", t.wallet);
-  set('[data-nav="leaderboard"] .bottom-nav-label', t.tabLeaderboard);
-  set('[data-nav="games"] .bottom-nav-label', t.tabGames);
-  set('[data-nav="pvp"] .bottom-nav-label', t.tabPvp);
-  set('[data-nav="skins"] .bottom-nav-label', t.tabSkins);
-  set('[data-nav="history"] .bottom-nav-label', t.tabHistory);
+  const set = (sel, text) => {
+    document.querySelectorAll(sel).forEach(el => { el.textContent = text; });
+  };
+  set(".balance-label", t.balance);
+  set(".wallet-text", t.wallet);
+  set("#navLeaderboard .nav-label", t.tabLeaderboard);
+  set("#navGames .nav-label", t.tabGames);
+  set("#navPvp .nav-label", t.tabPvp);
+  set("#navSkins .nav-label", t.tabSkins);
+  set("#navHistory .nav-label", t.tabHistory);
   set("#appSettingsTitle", t.settingsTitle);
-  set("#scannerConnectingLabel", t.connecting);
-  set("#scannerWaitingLabel", t.waitingRound);
-  set("#scannerRecentRoundsLabel", t.recentRounds);
-  set("#scannerTabLabel", t.scanner);
-  // Players heading: update first text node only, preserving the count <span> child
-  const playersEl = document.querySelector(".scanner-players-heading-title .scanner-inline-section-title");
-  if (playersEl) {
-    for (const node of playersEl.childNodes) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        node.textContent = t.players + " ";
-        break;
-      }
-    }
+  set(".scanner-connecting-text", t.connecting);
+  set(".scanner-game-title", t.scanner);
+  set(".scanner-recent-heading-title", t.recentRounds);
+  const playersTitle = document.querySelector(".scanner-players-heading-title");
+  if (playersTitle) {
+    const countSpan = playersTitle.querySelector(".scanner-players-count");
+    playersTitle.childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) node.textContent = t.players + " ";
+    });
+    if (countSpan && !playersTitle.contains(countSpan)) playersTitle.appendChild(countSpan);
   }
 }
 
