@@ -10114,6 +10114,7 @@ function fadeScannerWaitingTextGlowLayer(cache) {
   const now = performance.now();
   const elapsed = cache.lastUpdateAt ? Math.min(90, Math.max(0, now - cache.lastUpdateAt)) : 16;
   cache.lastUpdateAt = now;
+  cache.lastElapsed = elapsed;
 
   const retainedAlpha = Math.pow(0.035, elapsed / 1200);
   const fadeAlpha = Math.max(0.035, Math.min(0.18, 1 - retainedAlpha));
@@ -10207,7 +10208,8 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   if (Math.abs(spanAlt) < Math.abs(span)) span = spanAlt;
 
   const steps = Math.max(2, Math.min(8, Math.ceil(Math.abs(span) / 0.003)));
-  const alphaPerStep = 0.72 / steps;
+  const frameScale = Math.max(1, Math.min(3, (cache.lastElapsed || 16) / 16.67));
+  const alphaPerStep = (0.72 / steps) * frameScale;
 
   for (let i = 1; i <= steps; i++) {
     const stepAngle = prevAngle + span * (i / steps);
