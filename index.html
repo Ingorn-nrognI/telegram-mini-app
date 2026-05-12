@@ -4897,6 +4897,10 @@ function toggleModePopup(event) {
 function closeModePopup() {
   const modePopup = document.getElementById("modePopup");
   if (modePopup) modePopup.classList.remove("open");
+  if (currentBottomNav === "games") {
+    currentBottomNav = "";
+    document.querySelectorAll("[data-nav]").forEach(btn => btn.classList.remove("is-active"));
+  }
 }
 
 function enterBobrRunMode(event) {
