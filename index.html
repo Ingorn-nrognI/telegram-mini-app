@@ -4862,7 +4862,7 @@ function setMenuView(view, options = {}) {
   if (modePopup) modePopup.classList.remove("open");
   if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
 
-  if (!preserveNav) {
+  if (!preserveNav && document.readyState === "complete") {
     setActiveBottomNav(view === "home" ? getPreferredHomeNav() : "pvp");
   }
 
@@ -11081,7 +11081,7 @@ resetAllDemoTonBalancesTo1000Once()
   .catch((error) => console.error("Не удалось подготовить demo TON-баланс:", error));
 homeScreenContext = "games";
 setMenuView("home");
-currentBottomNav = "games";
+currentBottomNav = "";
 scheduleInitialHomeGameScroll();
 forceScannerBetBarVisibilityRefresh();
 window.addEventListener("load", () => {
