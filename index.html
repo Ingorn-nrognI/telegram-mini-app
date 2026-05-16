@@ -7109,7 +7109,7 @@ function getScannerWallSideFromPosition(sample, pad = SCANNER_ACTIVE_BEAM_EDGE_P
   return null;
 }
 
-function getScannerWallLatchMeta(sample, pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING) {
+function getScannerWallLatchMeta(sample, pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING, remainingMs = Infinity) {
   const safePad = clampScannerNumber(pad, 0, 0.24);
   const position = {
     x: clampScannerNumber(sample?.x, safePad, 1 - safePad),
@@ -7134,11 +7134,23 @@ function getScannerWallLatchMeta(sample, pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING)
       ? (position.y - safePad) / Math.abs(rawVelocity.y)
       : Number.POSITIVE_INFINITY;
 
+  const timeNeeded = Math.min(timeToX, timeToY) / SCANNER_LOBBY_BEAM_BASE_SPEED * 1000;
+
   let side = null;
   let targetX = position.x;
   let targetY = position.y;
 
-  if (timeToX <= timeToY) {
+  if (timeNeeded > remainingMs) {
+    const distLeft   = position.x - safePad;
+    const distRight  = 1 - safePad - position.x;
+    const distTop    = position.y - safePad;
+    const distBottom = 1 - safePad - position.y;
+    const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+    if (minDist === distLeft)        { side = "left";   targetX = safePad;       targetY = position.y; }
+    else if (minDist === distRight)  { side = "right";  targetX = 1 - safePad;   targetY = position.y; }
+    else if (minDist === distTop)    { side = "top";    targetX = position.x;    targetY = safePad; }
+    else                             { side = "bottom"; targetX = position.x;    targetY = 1 - safePad; }
+  } else if (timeToX <= timeToY) {
     side = rawVelocity.x >= 0 ? "right" : "left";
     targetX = side === "right" ? 1 - safePad : safePad;
     targetY = clampScannerNumber(position.y + rawVelocity.y * Math.max(0, timeToX), safePad, 1 - safePad);
@@ -7167,8 +7179,8 @@ function getScannerWallLatchMeta(sample, pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING)
   };
 }
 
-function buildScannerLatchSamples(startSample, durationMs, steps) {
-  const meta = getScannerWallLatchMeta(startSample, SCANNER_ACTIVE_BEAM_EDGE_PADDING);
+function buildScannerLatchSamples(startSample, durationMs, steps, remainingMs = Infinity) {
+  const meta = getScannerWallLatchMeta(startSample, SCANNER_ACTIVE_BEAM_EDGE_PADDING, remainingMs);
   const safeSteps = Math.max(2, Math.floor(Number(steps) || 2));
   const samples = [];
   const latchDx = (meta.sample.x - startSample.x) || 0;
@@ -7285,15 +7297,12 @@ function getScannerCountdownBeamCache(round) {
     curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
     curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
     bounceBendStrength: SCANNER_BEAM_BOUNCE_BEND_STRENGTH * 0.7,
-    speedFactorAt: (progress) => {
-      const eased = smoothstep(0, 1, progress);
-      return 1 - (1 - SCANNER_LOBBY_BEAM_COUNTDOWN_MIN_SPEED_FACTOR) * eased;
-    }
+    speedFactorAt: () => 1
   });
 
   const latchStartSample = cruiseSimulation.finalSample || lobbyStartSample;
   const latchSteps = Math.max(18, SCANNER_COUNTDOWN_BEAM_STEPS - Math.max(2, cruiseSteps) + 2);
-  const latchSimulation = buildScannerLatchSamples(latchStartSample, latchDurationMs, latchSteps);
+  const latchSimulation = buildScannerLatchSamples(latchStartSample, latchDurationMs, latchSteps, latchDurationMs);
   const samples = mergeScannerSampleSequences(cruiseSimulation.samples, latchSimulation.samples);
 
   scannerCountdownBeamCache = {
