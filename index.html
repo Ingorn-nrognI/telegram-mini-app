@@ -7117,35 +7117,23 @@ function getScannerWallLatchMeta(sample, pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING)
   };
 
   const fallbackAngle = Number(sample?.angle) || 0;
-  const rawVelocity = normalizeScannerVector(
-    sample?.vx,
-    sample?.vy,
-    { x: Math.cos(fallbackAngle) || 1, y: Math.sin(fallbackAngle) || 0 }
-  );
 
-  const timeToX = rawVelocity.x > 0.000001
-    ? (1 - safePad - position.x) / rawVelocity.x
-    : rawVelocity.x < -0.000001
-      ? (position.x - safePad) / Math.abs(rawVelocity.x)
-      : Number.POSITIVE_INFINITY;
-  const timeToY = rawVelocity.y > 0.000001
-    ? (1 - safePad - position.y) / rawVelocity.y
-    : rawVelocity.y < -0.000001
-      ? (position.y - safePad) / Math.abs(rawVelocity.y)
-      : Number.POSITIVE_INFINITY;
+  // Pick the nearest wall by straight-line distance — no velocity projection.
+  const distLeft   = position.x - safePad;
+  const distRight  = 1 - safePad - position.x;
+  const distTop    = position.y - safePad;
+  const distBottom = 1 - safePad - position.y;
+  const minDist = Math.min(distLeft, distRight, distTop, distBottom);
 
-  let side = null;
-  let targetX = position.x;
-  let targetY = position.y;
-
-  if (timeToX <= timeToY) {
-    side = rawVelocity.x >= 0 ? "right" : "left";
-    targetX = side === "right" ? 1 - safePad : safePad;
-    targetY = clampScannerNumber(position.y + rawVelocity.y * Math.max(0, timeToX), safePad, 1 - safePad);
+  let side, targetX, targetY;
+  if (minDist === distLeft) {
+    side = "left";   targetX = safePad;       targetY = position.y;
+  } else if (minDist === distRight) {
+    side = "right";  targetX = 1 - safePad;   targetY = position.y;
+  } else if (minDist === distTop) {
+    side = "top";    targetX = position.x;     targetY = safePad;
   } else {
-    side = rawVelocity.y >= 0 ? "bottom" : "top";
-    targetX = clampScannerNumber(position.x + rawVelocity.x * Math.max(0, timeToY), safePad, 1 - safePad);
-    targetY = side === "bottom" ? 1 - safePad : safePad;
+    side = "bottom"; targetX = position.x;     targetY = 1 - safePad;
   }
 
   const latchDx = targetX - position.x;
