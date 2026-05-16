@@ -7189,11 +7189,10 @@ function buildScannerLatchSamples(startSample, durationMs, steps) {
 
   for (let step = 0; step < safeSteps; step += 1) {
     const progress = step / Math.max(1, safeSteps - 1);
-    const eased = smoothstep(0, 1, progress);
-    const nextX = startSample.x + (meta.sample.x - startSample.x) * eased;
-    const nextY = startSample.y + (meta.sample.y - startSample.y) * eased;
-    // Rotation begins once the laser is ~40% of the way to the wall (progress 0.4→0.95).
-    const rotationProgress = smoothstep(0.4, 0.95, progress);
+    const nextX = startSample.x + (meta.sample.x - startSample.x) * progress;
+    const nextY = startSample.y + (meta.sample.y - startSample.y) * progress;
+    // Rotation begins once the laser is ~40% of the way to the wall (linear remap 0.4→0.95 → 0→1).
+    const rotationProgress = Math.max(0, Math.min(1, (progress - 0.4) / 0.55));
     const stepAngle = lerpScannerAngle(latchAngle, wallAlignedAngle, rotationProgress);
 
     samples.push({
