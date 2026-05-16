@@ -11160,13 +11160,6 @@ scannerStakeSettingsState.draftValues = scannerQuickStakeValues.map((value) => S
 
 applyAppLanguage(appSettings.language);
 renderTopProfile();
-resetAllDemoTonBalancesTo1000Once()
-  .catch((error) => {
-    console.error("Не удалось выполнить миграцию demo TON-балансов до 1000:", error);
-  })
-  .then(() => ensureDemoBalanceForCurrentUser())
-  .then(() => subscribeCurrentUserBalance())
-  .catch((error) => console.error("Не удалось подготовить demo TON-баланс:", error));
 homeScreenContext = "games";
 setMenuView("home");
 currentBottomNav = "";
@@ -11186,6 +11179,9 @@ window.addEventListener("pageshow", () => {
 const _unsubAppAuth = firebase.auth().onAuthStateChanged((user) => {
   if (!user) return;
   _unsubAppAuth();
+  ensureDemoBalanceForCurrentUser()
+    .then(() => subscribeCurrentUserBalance())
+    .catch((error) => console.error("Не удалось подготовить demo TON-баланс:", error));
   initializeScannerGridFeature();
 });
 
