@@ -9717,7 +9717,8 @@ function getScannerRoundOverlayRight() {
 
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
-  if (["countdown", "shuffling", "active", "finished", "preparing_next_round"].includes(status)) {
+  if (status === "active") return "Раунд";
+  if (["countdown", "shuffling", "finished", "preparing_next_round"].includes(status)) {
     return formatCountdownMs(scannerGridState.countdownMs || 0);
   }
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
