@@ -4096,7 +4096,7 @@ const scannerBeamRenderState = {
 
 // Independent visual angle for the lobby laser — updated at a fixed angular
 // speed so it never snaps or reverses when a new bounce changes direction.
-const scannerLobbyLaserVisual = { angle: null, lastAt: 0 };
+const scannerLobbyLaserVisual = { angle: null };
 
 function getDeviceTier() {
   const cores = navigator.hardwareConcurrency || 4;
@@ -7177,17 +7177,30 @@ function buildScannerLatchSamples(startSample, durationMs, steps) {
     ? Math.atan2(latchDy, latchDx)
     : getScannerBeamMotionAngle(startSample);
 
+  // Wall-aligned angle: beam lies parallel to the wall surface.
+  // Left/right wall (vertical) → ±π/2; top/bottom wall (horizontal) → 0 or ±π.
+  // Pick the direction that aligns with the tangential component of travel.
+  let wallAlignedAngle;
+  if (meta.side === "left" || meta.side === "right") {
+    wallAlignedAngle = latchDy >= 0 ? Math.PI / 2 : -Math.PI / 2;
+  } else {
+    wallAlignedAngle = latchDx >= 0 ? 0 : Math.PI;
+  }
+
   for (let step = 0; step < safeSteps; step += 1) {
     const progress = step / Math.max(1, safeSteps - 1);
     const eased = smoothstep(0, 1, progress);
     const nextX = startSample.x + (meta.sample.x - startSample.x) * eased;
     const nextY = startSample.y + (meta.sample.y - startSample.y) * eased;
+    // Rotation begins once the laser is ~40% of the way to the wall (progress 0.4→0.95).
+    const rotationProgress = smoothstep(0.4, 0.95, progress);
+    const stepAngle = lerpScannerAngle(latchAngle, wallAlignedAngle, rotationProgress);
 
     samples.push({
       x: nextX,
       y: nextY,
-      angle: latchAngle,
-      travelAngle: latchAngle,
+      angle: stepAngle,
+      travelAngle: stepAngle,
       vx: latchDx,
       vy: latchDy,
       progress
@@ -7199,8 +7212,8 @@ function buildScannerLatchSamples(startSample, durationMs, steps) {
     samples,
     targetSample: {
       ...meta.sample,
-      angle: latchAngle,
-      travelAngle: latchAngle,
+      angle: wallAlignedAngle,
+      travelAngle: wallAlignedAngle,
       vx: latchDx,
       vy: latchDy,
       progress: 1
@@ -11091,7 +11104,6 @@ function enterScannerGridMode(event) {
 function handleVisibilityChange() {
   updateScannerHeartbeat().catch(() => {});
   if (document.visibilityState === "visible") {
-    scannerLobbyLaserVisual.lastAt = performance.now();
     bootstrapScannerRoundFromRecentState({ force: true }).catch(() => {});
   }
 }

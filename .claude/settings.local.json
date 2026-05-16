@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(Select-String -Path \"c:\\\\Users\\\\SystemX\\\\Desktop\\\\myprojects\\\\telegram-mini-app\\\\index.html\" -Pattern \"^</div>\")",
-      "Bash(Select-Object -Last 5)"
+      "Bash(Select-Object -Last 5)",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\SystemX\\\\Desktop\\\\myprojects\\\\telegram-mini-app\\\\index.html\"\\).Count)"
     ]
   }
 }
