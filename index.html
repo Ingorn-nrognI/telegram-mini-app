@@ -7454,7 +7454,10 @@ function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(
     return clampScannerNumber((safeTimestamp - startedAt) / SCANNER_ACTIVE_MS, 0, 1);
   }
 
-  return 0;
+  if (!window._localRoundStart) window._localRoundStart = {};
+  const rid = round?.id || "x";
+  if (!window._localRoundStart[rid]) window._localRoundStart[rid] = Date.now();
+  return clampScannerNumber((Date.now() - window._localRoundStart[rid]) / SCANNER_ACTIVE_MS, 0, 1);
 }
 
 function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetworkTime(), progressOverride = null) {
