@@ -7446,7 +7446,7 @@ function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(
   const startedAt = tsToMs(round?.activeStartedAt);
   const activeEndsAt = tsToMs(round?.activeEndsAt);
 
-  if (startedAt > 0 && activeEndsAt > startedAt) {
+  if (startedAt > 0 && activeEndsAt > startedAt && safeTimestamp >= startedAt) {
     return clampScannerNumber((safeTimestamp - startedAt) / Math.max(1, activeEndsAt - startedAt), 0, 1);
   }
 
