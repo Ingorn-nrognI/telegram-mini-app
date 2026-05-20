@@ -7381,7 +7381,7 @@ function getScannerActiveBeamCacheKey(round, players) {
 }
 
 function getScannerActiveBeamCache(round, players) {
-  if (!round || !Array.isArray(players) || !players.length) return null;
+  if (!round) return null;
 
   const key = getScannerActiveBeamCacheKey(round, players);
   if (scannerActiveBeamCache?.key === key && Array.isArray(scannerActiveBeamCache?.samples) && scannerActiveBeamCache.samples.length > 1) {
