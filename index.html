@@ -7441,19 +7441,15 @@ function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(
   if (Number.isFinite(Number(progressOverride))) {
     return clampScannerNumber(progressOverride, 0, 1);
   }
-
   const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
   const startedAt = tsToMs(round?.activeStartedAt);
   const activeEndsAt = tsToMs(round?.activeEndsAt);
-
   if (startedAt > 0 && activeEndsAt > startedAt && safeTimestamp >= startedAt) {
     return clampScannerNumber((safeTimestamp - startedAt) / Math.max(1, activeEndsAt - startedAt), 0, 1);
   }
-
   if (startedAt > 0 && safeTimestamp >= startedAt) {
     return clampScannerNumber((safeTimestamp - startedAt) / SCANNER_ACTIVE_MS, 0, 1);
   }
-
   if (!window._localRoundStart) window._localRoundStart = {};
   const rid = round?.id || "x";
   if (!window._localRoundStart[rid]) window._localRoundStart[rid] = Date.now();
@@ -7462,6 +7458,8 @@ function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(
 
 function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetworkTime(), progressOverride = null) {
   const cache = getScannerActiveBeamCache(round, players);
+  const _prog = getScannerActiveBeamProgressAtTime(round, timestampMs, progressOverride);
+  if (Math.random() < 0.02) console.log('[LASER]', { progress: _prog, hasCache: !!cache, samples: cache?.samples?.length, startedAt: tsToMs(round?.activeStartedAt), now: getNetworkTime() });
   if (!cache) return { x: 0.5, y: 0.5, angle: 0 };
   return interpolateScannerSampleSequence(
     cache.samples,
