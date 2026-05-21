@@ -7438,7 +7438,7 @@ function getScannerBeamMotionProgress(round, progressOverride = null) {
 }
 
 function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(), progressOverride = null) {
-  if (Number.isFinite(Number(progressOverride))) {
+  if (progressOverride != null && Number.isFinite(Number(progressOverride))) {
     return clampScannerNumber(progressOverride, 0, 1);
   }
   const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
