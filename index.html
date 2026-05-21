@@ -7458,6 +7458,8 @@ function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(
 
 function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetworkTime(), progressOverride = null) {
   const cache = getScannerActiveBeamCache(round, players);
+  const _p = getScannerActiveBeamProgressAtTime(round, timestampMs, progressOverride);
+  if (Math.random() < 0.03) console.log('[TEST]', { progress: _p, status: round?.status, startedAt: tsToMs(round?.activeStartedAt), now: getNetworkTime(), diff: getNetworkTime() - tsToMs(round?.activeStartedAt) });
   const _prog = getScannerActiveBeamProgressAtTime(round, timestampMs, progressOverride);
   if (Math.random() < 0.02) console.log('[LASER]', { progress: _prog, hasCache: !!cache, samples: cache?.samples?.length, startedAt: tsToMs(round?.activeStartedAt), now: getNetworkTime() });
   if (!cache) return { x: 0.5, y: 0.5, angle: 0 };
