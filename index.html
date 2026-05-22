@@ -3415,6 +3415,7 @@ button {
 }
 
 </style>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
 <div id="menu" onclick="handleMenuBackgroundClick(event)">
@@ -3853,6 +3854,21 @@ button {
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script>
+const SOCKET_SERVER = 'http://178.105.218.192:3000';
+let _serverBeamPos = null;
+let _socket = null;
+
+function initSocketConnection() {
+  _socket = io(SOCKET_SERVER, { transports: ['websocket'], reconnection: true });
+  _socket.on('connect', () => console.log('[Socket] Подключён к серверу'));
+  _socket.on('disconnect', () => console.log('[Socket] Отключён'));
+  _socket.on('beam_position', (data) => {
+    _serverBeamPos = data;
+  });
+}
+
+initSocketConnection();
+
 const firebaseConfig = {
   apiKey: "AIzaSyCxJb69UOCu38RvSbJVnf6jtD8VYDVHPD4",
   authDomain: "web3-bobrup.firebaseapp.com",
@@ -7459,17 +7475,17 @@ function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(
 function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetworkTime(), progressOverride = null) {
   const cache = getScannerActiveBeamCache(round, players);
   const _p = getScannerActiveBeamProgressAtTime(round, timestampMs, progressOverride);
-  if (Math.random() < 0.03) console.log('[TEST]', { progress: _p, status: round?.status, startedAt: tsToMs(round?.activeStartedAt), now: getNetworkTime(), diff: getNetworkTime() - tsToMs(round?.activeStartedAt) });
   const _prog = getScannerActiveBeamProgressAtTime(round, timestampMs, progressOverride);
-  if (Math.random() < 0.02) console.log('[LASER]', { progress: _prog, hasCache: !!cache, samples: cache?.samples?.length, startedAt: tsToMs(round?.activeStartedAt), now: getNetworkTime() });
   if (!cache) return { x: 0.5, y: 0.5, angle: 0 };
   return interpolateScannerSampleSequence(
     cache.samples,
     getScannerActiveBeamProgressAtTime(round, timestampMs, progressOverride)
   );
 }
-
 function getScannerActiveBeamSample(round, players, progressOverride = null) {
+  if (_serverBeamPos && _serverBeamPos.x !== undefined) {
+    return { x: _serverBeamPos.x, y: _serverBeamPos.y };
+  }
   return getScannerActiveBeamSampleAtTime(round, players, Date.now(), progressOverride);
 }
 
