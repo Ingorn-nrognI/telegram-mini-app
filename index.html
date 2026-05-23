@@ -5601,7 +5601,8 @@ const APP_TRANSLATIONS = {
     waitingPlayers: "Ожидание игроков...", bestWin: "Лучший выигрыш в раунде",
     joinRound: "Войти в раунд", lobbyFull: "Раунд заполнен", shuffling: "Перемешивание",
     roundActive: "Раунд идёт", roundFinished: "Показ результата", preparing: "Подготовка",
-    addStake: "Добавить", joinBeforeStart: "Войти до старта"
+    addStake: "Добавить", joinBeforeStart: "Войти до старта",
+    stakeSettings: "Настройка ставок", reset: "Сбросить", save: "Сохранить"
   },
   en: {
     balance: "Balance", wallet: "Wallet", tabLeaderboard: "Leaderboard",
@@ -5624,7 +5625,8 @@ const APP_TRANSLATIONS = {
     waitingPlayers: "Waiting for players...", bestWin: "Best win in round",
     joinRound: "Join round", lobbyFull: "Round full", shuffling: "Shuffling",
     roundActive: "Round active", roundFinished: "Results", preparing: "Preparing",
-    addStake: "Add", joinBeforeStart: "Join before start"
+    addStake: "Add", joinBeforeStart: "Join before start",
+    stakeSettings: "Stake settings", reset: "Reset", save: "Save"
   }
 };
 
@@ -5680,6 +5682,10 @@ function applyAppLanguage(lang) {
       el.textContent = t.waitingRound;
     }
   });
+
+  set("#scannerStakeSettingsTitle", t.stakeSettings);
+  document.querySelectorAll(".scanner-stake-settings-action.reset").forEach(el => { el.textContent = t.reset; });
+  document.querySelectorAll(".scanner-stake-settings-action.save").forEach(el => { el.textContent = t.save; });
 
   document.documentElement.lang = lang;
   renderScannerRound && renderScannerRound();
