@@ -5583,14 +5583,46 @@ const APP_TRANSLATIONS = {
     tabGames: "Игры", tabPvp: "PvP", tabSkins: "Скины", tabHistory: "История",
     settingsTitle: "Настройки", connecting: "Подключение...",
     waitingRound: "Ожидание раунда...", players: "Игроки",
-    recentRounds: "Последние раунды", scanner: "Сканер"
+    recentRounds: "Последние раунды", scanner: "Сканер",
+    bank: "Банк", myChance: "Мои шансы", joinRound: "Войти в раунд",
+    leaveRound: "Выйти", roundActive: "Раунд идёт!", roundFinished: "Раунд завершён",
+    countdown: "Обратный отсчёт", shuffling: "Перемешивание...",
+    winner: "Победитель", youWon: "Вы победили!", youLost: "Не повезло",
+    stake: "Ставка", allIn: "Ва-банк", population: "Игроки",
+    settingsLang: "Язык", settingsQuality: "Качество графики",
+    settingsVibration: "Вибрация", qualityLow: "Низкое",
+    qualityMid: "Среднее", qualityHigh: "Высокое",
+    vibOn: "Вкл", vibOff: "Выкл", waitingPlayers: "Ожидание игроков...",
+    roundWaiting: "Ожидание раунда...", noRounds: "Раундов пока нет",
+    pot: "Банк", chance: "Шанс", place: "место",
+    profile: "Профиль", totalWins: "Всего побед",
+    totalRounds: "Раундов сыграно", bestWin: "Лучший выигрыш",
+    insufficientBalance: "Недостаточно баланса",
+    roundClosed: "Раунд закрыт для входа",
+    lobbyFull: "Лобби заполнено"
   },
   en: {
     balance: "Balance", wallet: "Wallet", tabLeaderboard: "Leaderboard",
     tabGames: "Games", tabPvp: "PvP", tabSkins: "Skins", tabHistory: "History",
     settingsTitle: "Settings", connecting: "Connecting...",
     waitingRound: "Waiting for round...", players: "Players",
-    recentRounds: "Recent rounds", scanner: "Scanner"
+    recentRounds: "Recent rounds", scanner: "Scanner",
+    bank: "Bank", myChance: "My chance", joinRound: "Join round",
+    leaveRound: "Leave", roundActive: "Round in progress!", roundFinished: "Round finished",
+    countdown: "Countdown", shuffling: "Shuffling...",
+    winner: "Winner", youWon: "You won!", youLost: "Better luck next time",
+    stake: "Stake", allIn: "All in", population: "Players",
+    settingsLang: "Language", settingsQuality: "Graphics quality",
+    settingsVibration: "Vibration", qualityLow: "Low",
+    qualityMid: "Medium", qualityHigh: "High",
+    vibOn: "On", vibOff: "Off", waitingPlayers: "Waiting for players...",
+    roundWaiting: "Waiting for round...", noRounds: "No rounds yet",
+    pot: "Pot", chance: "Chance", place: "place",
+    profile: "Profile", totalWins: "Total wins",
+    totalRounds: "Rounds played", bestWin: "Best win",
+    insufficientBalance: "Insufficient balance",
+    roundClosed: "Round closed for joining",
+    lobbyFull: "Lobby is full"
   }
 };
 
@@ -5610,6 +5642,9 @@ function applyAppLanguage(lang) {
   set(".scanner-connecting-text", t.connecting);
   set(".scanner-game-title", t.scanner);
   set(".scanner-recent-heading-title", t.recentRounds);
+  set(".scanner-bet-allin", t.allIn);
+  set(".profile-stat-label:first-of-type", t.totalWins);
+
   const playersTitle = document.querySelector(".scanner-players-heading-title");
   if (playersTitle) {
     const countSpan = playersTitle.querySelector(".scanner-players-count");
@@ -5618,6 +5653,17 @@ function applyAppLanguage(lang) {
     });
     if (countSpan && !playersTitle.contains(countSpan)) playersTitle.appendChild(countSpan);
   }
+
+  const waitingEl = document.querySelector(".scanner-waiting-text, .scanner-round-status");
+  if (waitingEl) waitingEl.textContent = t.waitingRound;
+
+  document.querySelectorAll(".scanner-transient-message").forEach(el => {
+    if (el.textContent.includes("Ожидание") || el.textContent.includes("Waiting")) {
+      el.textContent = t.waitingRound;
+    }
+  });
+
+  document.documentElement.lang = lang;
 }
 
 function saveAppSettings() {
