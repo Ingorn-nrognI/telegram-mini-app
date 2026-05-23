@@ -3618,7 +3618,7 @@ button {
       <section class="profile-hero-card">
         <div id="profileScreenAvatar" class="profile-avatar profile-screen-avatar">И</div>
         <div class="profile-screen-copy">
-          <div class="profile-screen-kicker">Профиль игрока</div>
+          <div id="profileKickerLabel" class="profile-screen-kicker">Профиль игрока</div>
           <h1 id="profileScreenName" class="profile-screen-name">Игрок</h1>
           <div id="profileScreenId" class="profile-screen-id">ID: —</div>
         </div>
@@ -3628,20 +3628,20 @@ button {
         <div class="profile-card-heading">
           <div>
             <div class="profile-card-kicker">Demo TON</div>
-            <h2 class="profile-card-title">Баланс</h2>
+            <h2 id="profileBalanceTitle" class="profile-card-title">Баланс</h2>
           </div>
           <div id="profileScreenBalanceValue" class="profile-balance-value">0.00 TON</div>
         </div>
 
         <div class="profile-action-grid">
           <button type="button" class="profile-action-btn primary" onclick="openWallet()">💼 Кошелёк</button>
-          <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('topup')">Пополнить</button>
-          <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('withdraw')">Вывести</button>
+          <button id="profileTopupBtn" type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('topup')">Пополнить</button>
+          <button id="profileWithdrawBtn" type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('withdraw')">Вывести</button>
         </div>
       </section>
 
       <section class="profile-stat-card">
-        <div class="profile-stat-label">Лучший выигрыш в раунде</div>
+        <div id="profileStatLabel" class="profile-stat-label">Лучший выигрыш в раунде</div>
         <div id="profileBestWinValue" class="profile-stat-value">0.00 TON</div>
       </section>
 
@@ -3799,7 +3799,7 @@ button {
       </div>
 
       <div class="app-settings-section">
-        <div class="app-settings-section-title">Язык</div>
+        <div id="settingsLangLabel" class="app-settings-section-title">Язык</div>
         <div class="app-settings-chips">
           <button id="settingsLangRu" class="app-settings-chip" onclick="setAppLanguage('ru')">🇷🇺 Русский</button>
           <button id="settingsLangEn" class="app-settings-chip" onclick="setAppLanguage('en')">🇬🇧 English</button>
@@ -3807,7 +3807,7 @@ button {
       </div>
 
       <div class="app-settings-section">
-        <div class="app-settings-section-title">Качество графики</div>
+        <div id="settingsQualityLabel" class="app-settings-section-title">Качество графики</div>
         <div class="app-settings-chips">
           <button id="settingsQualityLow" class="app-settings-chip" onclick="setAppQuality('low')">Низкое</button>
           <button id="settingsQualityMid" class="app-settings-chip" onclick="setAppQuality('mid')">Среднее</button>
@@ -3816,7 +3816,7 @@ button {
       </div>
 
       <div class="app-settings-section">
-        <div class="app-settings-section-title">Вибрация</div>
+        <div id="settingsVibLabel" class="app-settings-section-title">Вибрация</div>
         <div class="app-settings-chips">
           <button id="settingsVibOn" class="app-settings-chip" onclick="setAppVibration(true)">Вкл</button>
           <button id="settingsVibOff" class="app-settings-chip" onclick="setAppVibration(false)">Выкл</button>
@@ -3831,7 +3831,7 @@ button {
 <div id="leaderboardModal" class="app-modal" onclick="handleModalBackdropClick('leaderboardModal', event)">
   <div class="app-modal-card" onclick="event.stopPropagation()">
     <div class="leaderboardHeader">
-      <h2>🏆 Таблица лидеров</h2>
+      <h2 id="leaderboardTitle">🏆 Таблица лидеров</h2>
       <span class="closeBtn" onclick="closeLeaderboard()">✕</span>
     </div>
     <div id="leaderboardContent"></div>
@@ -5052,9 +5052,10 @@ function closeHistoryPanel(options = {}) {
 }
 
 function getHistoryPanelHeaderHtml() {
+  const _pt = window._t || APP_TRANSLATIONS["ru"];
   return `
     <div class="history-panel-header">
-      <div class="history-panel-title">История игр</div>
+      <div class="history-panel-title">${_pt.gameHistory}</div>
       <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">✕</button>
     </div>
   `;
@@ -5209,6 +5210,7 @@ function getScannerHistoryAvatarHtml(name, avatar) {
 }
 
 function getScannerHistoryEntryHtml(item, index, matchId) {
+  const _ht = window._t || APP_TRANSLATIONS["ru"];
   const currentPlayer = getCurrentPlayer();
   const safeMatchId = String(matchId || `scanner_${index}`);
   const detailsId = getHistoryDetailsDomId(safeMatchId);
@@ -5216,7 +5218,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
   const winnerMeta = getScannerHistoryWinnerMeta(item);
   const youWon = item?.youWon === true || (winnerMeta.id && winnerMeta.id === String(currentPlayer.id));
   const resultClass = youWon ? "win" : "lose";
-  const resultWord = youWon ? "Выиграл" : "Проиграл";
+  const resultWord = youWon ? _ht.won : _ht.lost;
   const wonAmount = getScannerHistoryMoneyValue(item?.winnerPayout, item?.payout, item?.winPayout, item?.reward, item?.prize);
   const amountText = youWon ? `+${formatTon(wonAmount)}` : `- ${formatTon(myMeta.stake)}`;
   const playedAtText = formatHistoryDate(item?.playedAt || item?.finishedAt || item?.createdAt);
@@ -5232,7 +5234,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
       ${getScannerHistoryAvatarHtml(winnerMeta.name, winnerMeta.avatar)}
       <div class="scanner-player-copy">
         <div class="scanner-history-player-name">${escapeHtml(winnerMeta.name)}</div>
-        <div class="scanner-history-player-meta">Победитель раунда</div>
+        <div class="scanner-history-player-meta">${_ht.winner}</div>
       </div>
       <div class="scanner-history-winner-payout">+${formatTon(winnerMeta.payout)}</div>
     </div>
@@ -5240,7 +5242,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
 
   return `
     <div class="history-match-card scanner-history-card${expandedClass}" onclick="toggleScannerHistoryDetails('${safeClickId}', event)">
-      <div class="scanner-history-topline">Режим: Сканер</div>
+      <div class="scanner-history-topline">${_ht.modeScanner}</div>
       <div class="scanner-history-result-line">
         <div class="scanner-history-result-word ${resultClass}">${resultWord}</div>
         <div class="scanner-history-amount ${resultClass}">${amountText}</div>
@@ -5253,25 +5255,25 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
           ${getScannerHistoryAvatarHtml(myMeta.name, myMeta.avatar)}
           <div class="scanner-player-copy">
             <div class="scanner-history-player-name">${escapeHtml(myMeta.name)}</div>
-            <div class="scanner-history-player-meta">Твой цвет в арене этого раунда</div>
+            <div class="scanner-history-player-meta">${_ht.yourColor}</div>
           </div>
         </div>
 
         <div class="scanner-history-detail-grid">
           <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Игроки в раунде</div>
+            <div class="scanner-history-detail-label">${_ht.playersInRound}</div>
             <div class="scanner-history-detail-value">${formatCompactNumber(participantCount)}</div>
           </div>
           <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Моя ставка</div>
+            <div class="scanner-history-detail-label">${_ht.myStake}</div>
             <div class="scanner-history-detail-value">${formatTon(myMeta.stake)}</div>
           </div>
           <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Общий банк</div>
+            <div class="scanner-history-detail-label">${_ht.totalBank}</div>
             <div class="scanner-history-detail-value">${formatTon(totalPot)}</div>
           </div>
           <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Мой результат</div>
+            <div class="scanner-history-detail-label">${_ht.myResult}</div>
             <div class="scanner-history-detail-value ${resultClass}">${resultWord}</div>
           </div>
         </div>
@@ -5596,7 +5598,10 @@ const APP_TRANSLATIONS = {
     vibration: "ВИБРАЦИЯ", low: "Низкое", medium: "Среднее", high: "Высокое",
     on: "Вкл", off: "Выкл", winner: "Победитель",
     dateTime: "Дата и время", playersCount: "Игроков", stake: "Ставка",
-    waitingPlayers: "Ожидание игроков..."
+    waitingPlayers: "Ожидание игроков...", bestWin: "Лучший выигрыш в раунде",
+    joinRound: "Войти в раунд", lobbyFull: "Раунд заполнен", shuffling: "Перемешивание",
+    roundActive: "Раунд идёт", roundFinished: "Показ результата", preparing: "Подготовка",
+    addStake: "Добавить", joinBeforeStart: "Войти до старта"
   },
   en: {
     balance: "Balance", wallet: "Wallet", tabLeaderboard: "Leaderboard",
@@ -5616,7 +5621,10 @@ const APP_TRANSLATIONS = {
     vibration: "VIBRATION", low: "Low", medium: "Medium", high: "High",
     on: "On", off: "Off", winner: "Winner",
     dateTime: "Date and time", playersCount: "Players", stake: "Stake",
-    waitingPlayers: "Waiting for players..."
+    waitingPlayers: "Waiting for players...", bestWin: "Best win in round",
+    joinRound: "Join round", lobbyFull: "Round full", shuffling: "Shuffling",
+    roundActive: "Round active", roundFinished: "Results", preparing: "Preparing",
+    addStake: "Add", joinBeforeStart: "Join before start"
   }
 };
 
@@ -5639,17 +5647,17 @@ function applyAppLanguage(lang) {
   set(".scanner-game-title", t.scanner);
   set(".scanner-recent-heading-title", t.recentRounds);
   set(".scanner-bet-allin", t.allIn);
-  set(".leaderboard-title", t.leaderboard);
+  set("#leaderboardTitle", "🏆 " + t.leaderboard);
   set(".history-panel-title", t.gameHistory);
-  set(".profile-player-label", t.playerProfile);
-  set(".profile-balance-label", t.balance);
-  set(".profile-deposit-btn", t.deposit);
-  set(".profile-withdraw-btn", t.withdraw);
-  set(".profile-wins-label", t.totalWins);
+  set("#profileKickerLabel", t.playerProfile);
+  set("#profileBalanceTitle", t.balance);
+  set("#profileTopupBtn", t.deposit);
+  set("#profileWithdrawBtn", t.withdraw);
+  set("#profileStatLabel", t.bestWin);
   set(".profile-settings-btn", "⚙️ " + t.settings);
-  set(".app-settings-lang-label", t.language);
-  set(".app-settings-quality-label", t.graphicsQuality);
-  set(".app-settings-vibration-label", t.vibration);
+  set("#settingsLangLabel", t.language);
+  set("#settingsQualityLabel", t.graphicsQuality);
+  set("#settingsVibLabel", t.vibration);
   set("#settingsQualityLow", t.low);
   set("#settingsQualityMid", t.medium);
   set("#settingsQualityHigh", t.high);
@@ -5695,7 +5703,7 @@ function renderAppSettings() {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("active", active);
   }
-  const langLabel = document.querySelector(".app-settings-lang-label");
+  const langLabel = document.getElementById("settingsLangLabel");
   if (langLabel) langLabel.textContent = (window._t || APP_TRANSLATIONS["ru"]).language;
 }
 
@@ -9470,6 +9478,7 @@ function renderScannerParticipants() {
 }
 
 function renderScannerRecentList() {
+  const _rt = window._t || APP_TRANSLATIONS["ru"];
   const container = document.getElementById("scannerRecentRounds");
   const toggleButton = document.getElementById("scannerRecentToggle");
   if (!container) return;
@@ -9527,8 +9536,8 @@ function renderScannerRecentList() {
       <div class="scanner-recent-card">
         <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
         <div class="scanner-recent-copy">
-          <div class="scanner-recent-title">Победитель: ${escapeHtml(winnerNickname)}</div>
-          <div class="scanner-recent-meta">Дата и время: ${finishedAtText} · Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText}</div>
+          <div class="scanner-recent-title">${_rt.winner}: ${escapeHtml(winnerNickname)}</div>
+          <div class="scanner-recent-meta">${_rt.dateTime}: ${finishedAtText} · ${_rt.playersCount}: ${playersCountText} · ${_rt.stake}: ${formatTon(winnerStake)} · ${multiplierText}</div>
         </div>
         <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
       </div>
@@ -9708,42 +9717,43 @@ function setupScannerBetBarVisibilityTracking() {
 }
 
 function renderScannerButtons() {
+  const _bt = window._t || APP_TRANSLATIONS["ru"];
   const joinButton = document.getElementById("scannerJoinButton");
   if (!joinButton) return;
 
   const currentPlayer = getCurrentPlayer();
   const hasMe = !!getScannerParticipantById(currentPlayer.id);
-  let text = "Войти в раунд";
+  let text = _bt.joinRound;
   let disabled = false;
 
   if (scannerGridState.status === "waiting") {
     text = hasMe
-      ? `Добавить ${formatTon(scannerGridState.selectedStake)}`
-      : `Войти — ${formatTon(scannerGridState.selectedStake)}`;
+      ? `${_bt.addStake} ${formatTon(scannerGridState.selectedStake)}`
+      : `${_bt.joinRound} — ${formatTon(scannerGridState.selectedStake)}`;
   } else if (scannerGridState.status === "countdown") {
     text = hasMe
-      ? `Добавить ${formatTon(scannerGridState.selectedStake)}`
-      : `Войти до старта — ${formatTon(scannerGridState.selectedStake)}`;
+      ? `${_bt.addStake} ${formatTon(scannerGridState.selectedStake)}`
+      : `${_bt.joinBeforeStart} — ${formatTon(scannerGridState.selectedStake)}`;
     if (!hasMe && scannerGridState.totalPlayers >= scannerGridState.maxPlayers) {
-      text = "Раунд заполнен";
+      text = _bt.lobbyFull;
       disabled = true;
     }
   } else if (scannerGridState.status === "shuffling") {
-    text = "Перемешивание";
+    text = _bt.shuffling;
     disabled = true;
   } else if (scannerGridState.status === "active") {
-    text = "Раунд идёт";
+    text = _bt.roundActive;
     disabled = true;
   } else if (scannerGridState.status === "finished") {
-    text = "Показ результата";
+    text = _bt.roundFinished;
     disabled = true;
   } else if (scannerGridState.status === "preparing_next_round") {
-    text = "Подготовка";
+    text = _bt.preparing;
     disabled = true;
   }
 
   if (scannerRealtime.isJoinBusy) {
-    text = "Подключение...";
+    text = _bt.connecting;
     disabled = true;
   }
 
@@ -9846,8 +9856,9 @@ function renderScannerRound(options = {}) {
     setTextContentIfChanged(countdown, getScannerCountdownChipText());
     countdown.classList.toggle("is-round-active", scannerGridState.status === "active");
   }
-  if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(isArenaResetPhase ? 0 : (scannerGridState.totalPot || 0))}`);
-  if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${isArenaResetPhase ? "0%" : myChanceValue}`);
+  const _tt = window._t || APP_TRANSLATIONS["ru"];
+  if (poolChip) setTextContentIfChanged(poolChip, `${_tt.bank}: ${formatTon(isArenaResetPhase ? 0 : (scannerGridState.totalPot || 0))}`);
+  if (chanceChip) setTextContentIfChanged(chanceChip, `${_tt.myChance}: ${isArenaResetPhase ? "0%" : myChanceValue}`);
   if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
   if (selectedPopulation) setTextContentIfChanged(selectedPopulation, scannerGridState.roundData ? formatCompactNumber(scannerGridState.maxPlayers || 0) : formatCompactNumber(scannerGridState.selectedPopulation));
   if (cellsValue) setTextContentIfChanged(cellsValue, formatCompactNumber(SCANNER_GRID_TOTAL_CELLS));
@@ -10420,7 +10431,8 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
 }
 
 function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
-  const text = options.text || "Ожидание раунда...";
+  const _wt = window._t || APP_TRANSLATIONS["ru"];
+  const text = options.text || _wt.waitingRound;
   const fontSize = Math.max(22, Math.min(38, size * 0.074));
   const centerX = size / 2;
   const centerY = size / 2;
