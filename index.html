@@ -3634,7 +3634,7 @@ button {
         </div>
 
         <div class="profile-action-grid">
-          <button type="button" class="profile-action-btn primary" onclick="openWallet()">💼 Кошелёк</button>
+          <button id="profileWalletBtn" type="button" class="profile-action-btn primary" onclick="openWallet()">💼 Кошелёк</button>
           <button id="profileTopupBtn" type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('topup')">Пополнить</button>
           <button id="profileWithdrawBtn" type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('withdraw')">Вывести</button>
         </div>
@@ -4743,9 +4743,13 @@ function openProfileScreen(event) {
   currentProfileBestRoundWin = 0;
   renderProfileScreen({ reloadBestWin: true });
   setMenuView("profile", { preserveNav: true });
+  document.querySelector(".top-bar").style.opacity = "0";
+  document.querySelector(".top-bar").style.pointerEvents = "none";
 }
 
 function closeProfileScreen() {
+  document.querySelector(".top-bar").style.opacity = "1";
+  document.querySelector(".top-bar").style.pointerEvents = "";
   setMenuView("home", { preserveNav: true });
   renderTopProfile();
 }
@@ -4924,6 +4928,11 @@ function setMenuView(view, options = {}) {
   if (homeScreen) homeScreen.classList.toggle("active", view === "home");
   if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "bobrRun");
   if (profileScreen) profileScreen.classList.toggle("active", view === "profile");
+  const topBar = document.querySelector(".top-bar");
+  if (topBar) {
+    topBar.style.opacity = view === "profile" ? "0" : "1";
+    topBar.style.pointerEvents = view === "profile" ? "none" : "";
+  }
   if (modePopup) modePopup.classList.remove("open");
   if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
 
@@ -5683,6 +5692,8 @@ function applyAppLanguage(lang) {
     }
   });
 
+  const walletBtn = document.getElementById("profileWalletBtn");
+  if (walletBtn) walletBtn.innerHTML = "💼 " + t.wallet;
   set("#scannerStakeSettingsTitle", t.stakeSettings);
   document.querySelectorAll(".scanner-stake-settings-action.reset").forEach(el => { el.textContent = t.reset; });
   document.querySelectorAll(".scanner-stake-settings-action.save").forEach(el => { el.textContent = t.save; });
