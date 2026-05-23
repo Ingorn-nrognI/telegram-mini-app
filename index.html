@@ -5584,22 +5584,19 @@ const APP_TRANSLATIONS = {
     settingsTitle: "Настройки", connecting: "Подключение...",
     waitingRound: "Ожидание раунда...", players: "Игроки",
     recentRounds: "Последние раунды", scanner: "Сканер",
-    bank: "Банк", myChance: "Мои шансы", joinRound: "Войти в раунд",
-    leaveRound: "Выйти", roundActive: "Раунд идёт!", roundFinished: "Раунд завершён",
-    countdown: "Обратный отсчёт", shuffling: "Перемешивание...",
-    winner: "Победитель", youWon: "Вы победили!", youLost: "Не повезло",
-    stake: "Ставка", allIn: "Ва-банк", population: "Игроки",
-    settingsLang: "Язык", settingsQuality: "Качество графики",
-    settingsVibration: "Вибрация", qualityLow: "Низкое",
-    qualityMid: "Среднее", qualityHigh: "Высокое",
-    vibOn: "Вкл", vibOff: "Выкл", waitingPlayers: "Ожидание игроков...",
-    roundWaiting: "Ожидание раунда...", noRounds: "Раундов пока нет",
-    pot: "Банк", chance: "Шанс", place: "место",
-    profile: "Профиль", totalWins: "Всего побед",
-    totalRounds: "Раундов сыграно", bestWin: "Лучший выигрыш",
-    insufficientBalance: "Недостаточно баланса",
-    roundClosed: "Раунд закрыт для входа",
-    lobbyFull: "Лобби заполнено"
+    bank: "Банк", myChance: "Мои шансы", allIn: "Ва-банк",
+    play: "Играть", history: "История", leaderboard: "Таблица лидеров",
+    gameHistory: "История игр", modeScanner: "Режим: Сканер",
+    won: "Выиграл", lost: "Проиграл", yourColor: "Твой цвет в арене этого раунда",
+    playersInRound: "Игроки в раунде", myStake: "Моя ставка",
+    totalBank: "Общий банк", myResult: "Мой результат",
+    playerProfile: "ПРОФИЛЬ ИГРОКА", deposit: "Пополнить", withdraw: "Вывести",
+    totalWins: "ВСЕГО ПОБЕД", settings: "Настройки",
+    language: "ЯЗЫК", graphicsQuality: "КАЧЕСТВО ГРАФИКИ",
+    vibration: "ВИБРАЦИЯ", low: "Низкое", medium: "Среднее", high: "Высокое",
+    on: "Вкл", off: "Выкл", winner: "Победитель",
+    dateTime: "Дата и время", playersCount: "Игроков", stake: "Ставка",
+    waitingPlayers: "Ожидание игроков..."
   },
   en: {
     balance: "Balance", wallet: "Wallet", tabLeaderboard: "Leaderboard",
@@ -5607,27 +5604,26 @@ const APP_TRANSLATIONS = {
     settingsTitle: "Settings", connecting: "Connecting...",
     waitingRound: "Waiting for round...", players: "Players",
     recentRounds: "Recent rounds", scanner: "Scanner",
-    bank: "Bank", myChance: "My chance", joinRound: "Join round",
-    leaveRound: "Leave", roundActive: "Round in progress!", roundFinished: "Round finished",
-    countdown: "Countdown", shuffling: "Shuffling...",
-    winner: "Winner", youWon: "You won!", youLost: "Better luck next time",
-    stake: "Stake", allIn: "All in", population: "Players",
-    settingsLang: "Language", settingsQuality: "Graphics quality",
-    settingsVibration: "Vibration", qualityLow: "Low",
-    qualityMid: "Medium", qualityHigh: "High",
-    vibOn: "On", vibOff: "Off", waitingPlayers: "Waiting for players...",
-    roundWaiting: "Waiting for round...", noRounds: "No rounds yet",
-    pot: "Pot", chance: "Chance", place: "place",
-    profile: "Profile", totalWins: "Total wins",
-    totalRounds: "Rounds played", bestWin: "Best win",
-    insufficientBalance: "Insufficient balance",
-    roundClosed: "Round closed for joining",
-    lobbyFull: "Lobby is full"
+    bank: "Bank", myChance: "My chances", allIn: "All in",
+    play: "Play", history: "History", leaderboard: "Leaderboard",
+    gameHistory: "Game history", modeScanner: "Mode: Scanner",
+    won: "Won", lost: "Lost", yourColor: "Your color in arena for this round",
+    playersInRound: "Players in round", myStake: "My stake",
+    totalBank: "Total bank", myResult: "My result",
+    playerProfile: "PLAYER PROFILE", deposit: "Deposit", withdraw: "Withdraw",
+    totalWins: "TOTAL WINS", settings: "Settings",
+    language: "LANGUAGE", graphicsQuality: "GRAPHICS QUALITY",
+    vibration: "VIBRATION", low: "Low", medium: "Medium", high: "High",
+    on: "On", off: "Off", winner: "Winner",
+    dateTime: "Date and time", playersCount: "Players", stake: "Stake",
+    waitingPlayers: "Waiting for players..."
   }
 };
 
 function applyAppLanguage(lang) {
   const t = APP_TRANSLATIONS[lang] || APP_TRANSLATIONS["ru"];
+  window._currentLang = lang;
+  window._t = t;
   const set = (sel, text) => {
     document.querySelectorAll(sel).forEach(el => { el.textContent = text; });
   };
@@ -5643,7 +5639,24 @@ function applyAppLanguage(lang) {
   set(".scanner-game-title", t.scanner);
   set(".scanner-recent-heading-title", t.recentRounds);
   set(".scanner-bet-allin", t.allIn);
-  set(".profile-stat-label:first-of-type", t.totalWins);
+  set(".leaderboard-title", t.leaderboard);
+  set(".history-panel-title", t.gameHistory);
+  set(".profile-player-label", t.playerProfile);
+  set(".profile-balance-label", t.balance);
+  set(".profile-deposit-btn", t.deposit);
+  set(".profile-withdraw-btn", t.withdraw);
+  set(".profile-wins-label", t.totalWins);
+  set(".profile-settings-btn", "⚙️ " + t.settings);
+  set(".app-settings-lang-label", t.language);
+  set(".app-settings-quality-label", t.graphicsQuality);
+  set(".app-settings-vibration-label", t.vibration);
+  set("#settingsQualityLow", t.low);
+  set("#settingsQualityMid", t.medium);
+  set("#settingsQualityHigh", t.high);
+  set("#settingsVibOn", t.on);
+  set("#settingsVibOff", t.off);
+  set(".mode-hero-card .card-action:first-child", "▶ " + t.play);
+  set(".mode-hero-card .card-action:last-child", "🕐 " + t.history);
 
   const playersTitle = document.querySelector(".scanner-players-heading-title");
   if (playersTitle) {
@@ -5654,16 +5667,14 @@ function applyAppLanguage(lang) {
     if (countSpan && !playersTitle.contains(countSpan)) playersTitle.appendChild(countSpan);
   }
 
-  const waitingEl = document.querySelector(".scanner-waiting-text, .scanner-round-status");
-  if (waitingEl) waitingEl.textContent = t.waitingRound;
-
-  document.querySelectorAll(".scanner-transient-message").forEach(el => {
+  document.querySelectorAll(".scanner-round-status-text").forEach(el => {
     if (el.textContent.includes("Ожидание") || el.textContent.includes("Waiting")) {
       el.textContent = t.waitingRound;
     }
   });
 
   document.documentElement.lang = lang;
+  renderScannerRound && renderScannerRound();
 }
 
 function saveAppSettings() {
@@ -5684,6 +5695,8 @@ function renderAppSettings() {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("active", active);
   }
+  const langLabel = document.querySelector(".app-settings-lang-label");
+  if (langLabel) langLabel.textContent = (window._t || APP_TRANSLATIONS["ru"]).language;
 }
 
 function openSettings() {
