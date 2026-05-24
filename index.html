@@ -3819,7 +3819,6 @@ button {
       <div class="app-settings-section">
         <div id="settingsFpsLabel" class="app-settings-section-title">Частота кадров</div>
         <div class="app-settings-chips">
-          <button id="settingsFpsAuto" class="app-settings-chip" onclick="setAppFps('auto')">Авто</button>
           <button id="settingsFps30" class="app-settings-chip" onclick="setAppFps('30')">30 FPS</button>
           <button id="settingsFps45" class="app-settings-chip" onclick="setAppFps('45')">45 FPS</button>
           <button id="settingsFpsNative" class="app-settings-chip" onclick="setAppFps('native')">60-120 FPS</button>
@@ -5603,7 +5602,7 @@ const appSettings = {
   language: window._savedAppSettings?.language || "ru",
   quality: window._savedAppSettings?.quality || "auto",
   vibration: window._savedAppSettings?.vibration !== undefined ? window._savedAppSettings.vibration : true,
-  fps: window._savedAppSettings?.fps || "auto",
+  fps: window._savedAppSettings?.fps || "30",
 };
 delete window._savedAppSettings;
 
@@ -5740,7 +5739,6 @@ function renderAppSettings() {
     settingsQualityHigh: appSettings.quality === "high",
     settingsVibOn: appSettings.vibration === true,
     settingsVibOff: appSettings.vibration === false,
-    settingsFpsAuto: appSettings.fps === "auto",
     settingsFps30: appSettings.fps === "30",
     settingsFps45: appSettings.fps === "45",
     settingsFpsNative: appSettings.fps === "native",
@@ -5749,6 +5747,21 @@ function renderAppSettings() {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("active", active);
   }
+
+  const autoQualityMap = {
+    low: "settingsQualityLow",
+    mid: "settingsQualityMid",
+    high: "settingsQualityHigh"
+  };
+  if (appSettings.quality === "auto") {
+    const detectedTier = getDeviceTier();
+    const detectedId = autoQualityMap[detectedTier];
+    if (detectedId) {
+      const detectedEl = document.getElementById(detectedId);
+      if (detectedEl) detectedEl.classList.add("active");
+    }
+  }
+
   const langLabel = document.getElementById("settingsLangLabel");
   if (langLabel) langLabel.textContent = (window._t || APP_TRANSLATIONS["ru"]).language;
 }
