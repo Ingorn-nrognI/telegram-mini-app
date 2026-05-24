@@ -3819,6 +3819,7 @@ button {
       <div class="app-settings-section">
         <div id="settingsFpsLabel" class="app-settings-section-title">Частота кадров</div>
         <div class="app-settings-chips">
+          <button id="settingsFpsAuto" class="app-settings-chip" onclick="setAppFps('auto')">Авто</button>
           <button id="settingsFps30" class="app-settings-chip" onclick="setAppFps('30')">30 FPS</button>
           <button id="settingsFps45" class="app-settings-chip" onclick="setAppFps('45')">45 FPS</button>
           <button id="settingsFpsNative" class="app-settings-chip" onclick="setAppFps('native')">60-120 FPS</button>
@@ -5737,11 +5738,12 @@ function renderAppSettings() {
     settingsQualityLow: appSettings.quality === "low",
     settingsQualityMid: appSettings.quality === "mid",
     settingsQualityHigh: appSettings.quality === "high",
-    settingsVibOn: appSettings.vibration === true,
-    settingsVibOff: appSettings.vibration === false,
+    settingsFpsAuto: appSettings.fps === "auto",
     settingsFps30: appSettings.fps === "30",
     settingsFps45: appSettings.fps === "45",
     settingsFpsNative: appSettings.fps === "native",
+    settingsVibOn: appSettings.vibration === true,
+    settingsVibOff: appSettings.vibration === false,
   };
   for (const [id, active] of Object.entries(chipMap)) {
     const el = document.getElementById(id);
@@ -5798,7 +5800,12 @@ function setAppLanguage(lang) {
 
 function setAppQuality(level) {
   appSettings.quality = level;
+  if (level === "auto") {
+    appSettings.fps = "auto";
+  }
   scannerDeviceTier = level === "auto" ? getDeviceTier() : level;
+  document.body.classList.remove("quality-low", "quality-mid", "quality-high", "quality-auto");
+  document.body.classList.add("quality-" + (level === "auto" ? getDeviceTier() : level));
   saveAppSettings();
   renderAppSettings();
   scannerGridCache = null;
@@ -5818,6 +5825,12 @@ function setAppVibration(enabled) {
 
 function setAppFps(value) {
   appSettings.fps = value;
+  if (value === "auto") {
+    appSettings.quality = "auto";
+    scannerDeviceTier = getDeviceTier();
+    document.body.classList.remove("quality-low", "quality-mid", "quality-high", "quality-auto");
+    document.body.classList.add("quality-" + getDeviceTier());
+  }
   saveAppSettings();
   renderAppSettings();
 }
