@@ -3809,9 +3809,20 @@ button {
       <div class="app-settings-section">
         <div id="settingsQualityLabel" class="app-settings-section-title">Качество графики</div>
         <div class="app-settings-chips">
+          <button id="settingsQualityAuto" class="app-settings-chip" onclick="setAppQuality('auto')">Авто</button>
           <button id="settingsQualityLow" class="app-settings-chip" onclick="setAppQuality('low')">Низкое</button>
           <button id="settingsQualityMid" class="app-settings-chip" onclick="setAppQuality('mid')">Среднее</button>
           <button id="settingsQualityHigh" class="app-settings-chip" onclick="setAppQuality('high')">Высокое</button>
+        </div>
+      </div>
+
+      <div class="app-settings-section">
+        <div id="settingsFpsLabel" class="app-settings-section-title">Частота кадров</div>
+        <div class="app-settings-chips">
+          <button id="settingsFpsAuto" class="app-settings-chip" onclick="setAppFps('auto')">Авто</button>
+          <button id="settingsFps30" class="app-settings-chip" onclick="setAppFps('30')">30 FPS</button>
+          <button id="settingsFps45" class="app-settings-chip" onclick="setAppFps('45')">45 FPS</button>
+          <button id="settingsFpsNative" class="app-settings-chip" onclick="setAppFps('native')">60-120 FPS</button>
         </div>
       </div>
 
@@ -4124,10 +4135,17 @@ function getDeviceTier() {
 let scannerDeviceTier = getDeviceTier();
 
 function getEffectiveQualityTier() {
-  if (typeof appSettings !== "undefined" && appSettings.quality) {
-    return appSettings.quality;
-  }
-  return scannerDeviceTier;
+  const q = (typeof appSettings !== "undefined" && appSettings.quality) ? appSettings.quality : "auto";
+  if (q === "auto") return getDeviceTier();
+  return q;
+}
+
+function getEffectiveFps() {
+  if (appSettings.fps && appSettings.fps !== "auto") return appSettings.fps;
+  const tier = getDeviceTier();
+  if (tier === "low") return "30";
+  if (tier === "mid") return "45";
+  return "native";
 }
 
 const scannerCanvasMetricsState = {
@@ -5583,8 +5601,9 @@ const SETTINGS_STORAGE_KEY = "bobr_world_app_settings_v1";
 
 const appSettings = {
   language: window._savedAppSettings?.language || "ru",
-  quality: window._savedAppSettings?.quality || (scannerDeviceTier || "mid"),
+  quality: window._savedAppSettings?.quality || "auto",
   vibration: window._savedAppSettings?.vibration !== undefined ? window._savedAppSettings.vibration : true,
+  fps: window._savedAppSettings?.fps || "auto",
 };
 delete window._savedAppSettings;
 
@@ -5611,7 +5630,8 @@ const APP_TRANSLATIONS = {
     joinRound: "Войти в раунд", lobbyFull: "Раунд заполнен", shuffling: "Перемешивание",
     roundActive: "Раунд идёт", roundFinished: "Показ результата", preparing: "Подготовка",
     addStake: "Добавить", joinBeforeStart: "Войти до старта",
-    stakeSettings: "Настройка ставок", reset: "Сбросить", save: "Сохранить"
+    stakeSettings: "Настройка ставок", reset: "Сбросить", save: "Сохранить",
+    qualityAuto: "Авто", fpsLabel: "ЧАСТОТА КАДРОВ", fpsAuto: "Авто"
   },
   en: {
     balance: "Balance", wallet: "Wallet", tabLeaderboard: "Leaderboard",
@@ -5635,7 +5655,8 @@ const APP_TRANSLATIONS = {
     joinRound: "Join round", lobbyFull: "Round full", shuffling: "Shuffling",
     roundActive: "Round active", roundFinished: "Results", preparing: "Preparing",
     addStake: "Add", joinBeforeStart: "Join before start",
-    stakeSettings: "Stake settings", reset: "Reset", save: "Save"
+    stakeSettings: "Stake settings", reset: "Reset", save: "Save",
+    qualityAuto: "Auto", fpsLabel: "FRAME RATE", fpsAuto: "Auto"
   }
 };
 
@@ -5697,6 +5718,9 @@ function applyAppLanguage(lang) {
   set("#scannerStakeSettingsTitle", t.stakeSettings);
   document.querySelectorAll(".scanner-stake-settings-action.reset").forEach(el => { el.textContent = t.reset; });
   document.querySelectorAll(".scanner-stake-settings-action.save").forEach(el => { el.textContent = t.save; });
+  set("#settingsQualityAuto", t.qualityAuto);
+  set("#settingsFpsLabel", t.fpsLabel);
+  set("#settingsFpsAuto", t.fpsAuto);
 
   document.documentElement.lang = lang;
   renderScannerRound && renderScannerRound();
@@ -5710,11 +5734,16 @@ function renderAppSettings() {
   const chipMap = {
     settingsLangRu: appSettings.language === "ru",
     settingsLangEn: appSettings.language === "en",
+    settingsQualityAuto: appSettings.quality === "auto",
     settingsQualityLow: appSettings.quality === "low",
     settingsQualityMid: appSettings.quality === "mid",
     settingsQualityHigh: appSettings.quality === "high",
     settingsVibOn: appSettings.vibration === true,
     settingsVibOff: appSettings.vibration === false,
+    settingsFpsAuto: appSettings.fps === "auto",
+    settingsFps30: appSettings.fps === "30",
+    settingsFps45: appSettings.fps === "45",
+    settingsFpsNative: appSettings.fps === "native",
   };
   for (const [id, active] of Object.entries(chipMap)) {
     const el = document.getElementById(id);
@@ -5756,7 +5785,7 @@ function setAppLanguage(lang) {
 
 function setAppQuality(level) {
   appSettings.quality = level;
-  scannerDeviceTier = level;
+  scannerDeviceTier = level === "auto" ? getDeviceTier() : level;
   saveAppSettings();
   renderAppSettings();
   scannerGridCache = null;
@@ -5770,6 +5799,12 @@ function setAppQuality(level) {
 
 function setAppVibration(enabled) {
   appSettings.vibration = enabled;
+  saveAppSettings();
+  renderAppSettings();
+}
+
+function setAppFps(value) {
+  appSettings.fps = value;
   saveAppSettings();
   renderAppSettings();
 }
@@ -7808,9 +7843,9 @@ function ensureScannerVisualLoop() {
       return;
     }
     scannerGridVisualFrame = requestAnimationFrame(tick);
-    const tier = getEffectiveQualityTier();
-    if (tier === "low" && now - (ensureScannerVisualLoop._lastFrame || 0) < 20) return;
-    if (tier === "low") ensureScannerVisualLoop._lastFrame = now;
+    const minFrameMs = getEffectiveFps() === "30" ? 33 : getEffectiveFps() === "45" ? 22 : 0;
+    if (minFrameMs > 0 && now - (ensureScannerVisualLoop._lastFrame || 0) < minFrameMs) return;
+    if (minFrameMs > 0) ensureScannerVisualLoop._lastFrame = now;
     try {
       renderScannerCanvas();
     } catch (err) {
@@ -11321,6 +11356,7 @@ window.handleAppSettingsBackdrop = handleAppSettingsBackdrop;
 window.setAppLanguage = setAppLanguage;
 window.setAppQuality = setAppQuality;
 window.setAppVibration = setAppVibration;
+window.setAppFps = setAppFps;
 window.applyAppLanguage = applyAppLanguage;
 window.openWallet = openWallet;
 window.toggleHistoryPanel = toggleHistoryPanel;
