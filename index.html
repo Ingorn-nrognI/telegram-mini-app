@@ -6238,7 +6238,7 @@ function finalizeScannerPlayers(players, versionSeed) {
   };
 }
 
-function buildScannerPreviewCellOwners(players, totalCells, versionSeed) {
+function buildScannerPreviewCellOwners(players, totalCells, versionSeed, stableKey = null) {
   const owners = new Array(totalCells).fill(-1);
   if (!players.length) return owners;
   if (players.length === 1) {
@@ -6248,7 +6248,11 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed) {
 
   const seed = hashString(`preview_${versionSeed}`);
   const rnd = mulberry32(seed);
-  const layoutMode = seed % 2 === 0 ? "vertical" : "horizontal";
+  // Направление раздела — стабильное на весь раунд, не зависит от round.version
+  const layoutDetermineSeed = stableKey
+    ? hashString(`layout_${stableKey}`)
+    : seed;
+  const layoutMode = layoutDetermineSeed % 2 === 0 ? "vertical" : "horizontal";
   const axisCount = layoutMode === "vertical" ? SCANNER_GRID_ROWS : SCANNER_GRID_COLS;
   const spanCount = layoutMode === "vertical" ? SCANNER_GRID_COLS : SCANNER_GRID_ROWS;
   const shares = players.map((player) => {
@@ -6457,7 +6461,8 @@ function getScannerDerivedVisualState(round, participants) {
 
   const finalized = buildScannerPlayersFromFirestore(round, participants);
   const previewVersion = `${finalized.gridVersion}_preview_${round?.status || "idle"}`;
-  const previewCellOwners = buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
+  const stableRoundKey = round?.entropySeed || round?.id || "round";
+  const previewCellOwners = buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion, stableRoundKey);
   const previewZones = buildScannerPreviewZones(previewCellOwners, finalized.players);
   const nextValue = {
     key: cacheKey,
