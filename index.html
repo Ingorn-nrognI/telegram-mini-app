@@ -5763,6 +5763,19 @@ function renderAppSettings() {
       if (detectedEl) detectedEl.classList.add("active");
     }
   }
+  const autoFpsMap = {
+    "30": "settingsFps30",
+    "45": "settingsFps45",
+    "native": "settingsFpsNative"
+  };
+  if (appSettings.fps === "auto") {
+    const detectedFps = getEffectiveFps();
+    const detectedFpsId = autoFpsMap[detectedFps];
+    if (detectedFpsId) {
+      const detectedFpsEl = document.getElementById(detectedFpsId);
+      if (detectedFpsEl) detectedFpsEl.classList.add("active");
+    }
+  }
 
   const langLabel = document.getElementById("settingsLangLabel");
   if (langLabel) langLabel.textContent = (window._t || APP_TRANSLATIONS["ru"]).language;
