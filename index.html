@@ -11145,9 +11145,10 @@ function subscribeScannerRuntime() {
             renderScannerRound();
           });
         }
-        syncScannerDerivedState();
-        renderScannerRound();
       }
+      syncScannerDerivedState();
+      renderScannerRound();
+    }
   }, (error) => {
     console.error("Ошибка подписки на runtime общего раунда:", error);
     scannerRealtime.runtimeReady = true;
