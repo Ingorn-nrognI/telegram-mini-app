@@ -10723,13 +10723,17 @@ function drawScannerPreviewBadges(ctx, size, alpha = 1) {
 }
 
 function ensureScannerSurfaceCaches(size) {
-  if (
-    !scannerGridCache ||
-    scannerGridCache.version !== scannerGridState.gridVersion ||
-    scannerGridCache.size !== size
-  ) {
-    scannerGridCanvasCache = buildScannerCanvasCache(size, scannerGridState.cellOwners || [], scannerGridState.players || []);
-    scannerGridCache = { version: scannerGridState.gridVersion, size, canvas: scannerGridCanvasCache };
+  const skipFullGrid = ["waiting", "countdown"].includes(scannerGridState.status);
+
+  if (!skipFullGrid) {
+    if (
+      !scannerGridCache ||
+      scannerGridCache.version !== scannerGridState.gridVersion ||
+      scannerGridCache.size !== size
+    ) {
+      scannerGridCanvasCache = buildScannerCanvasCache(size, scannerGridState.cellOwners || [], scannerGridState.players || []);
+      scannerGridCache = { version: scannerGridState.gridVersion, size, canvas: scannerGridCanvasCache };
+    }
   }
 
   if (
@@ -11104,6 +11108,7 @@ function subscribeScannerRuntime() {
     const activeRoundId = data.activeRoundId || null;
     if (scannerRealtime.activeRoundId !== activeRoundId) {
       subscribeScannerRound(activeRoundId);
+      ensureScannerVisualLoop();
     } else {
       if (!activeRoundId) {
         bootstrapScannerRoundFromRecentState().catch((error) => {
@@ -11294,6 +11299,7 @@ function enterScannerGridMode(event) {
 function handleVisibilityChange() {
   updateScannerHeartbeat().catch(() => {});
   if (document.visibilityState === "visible") {
+    ensureScannerVisualLoop();
     bootstrapScannerRoundFromRecentState({ force: true }).catch(() => {});
   }
 }
