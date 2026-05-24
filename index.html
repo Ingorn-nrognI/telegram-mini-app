@@ -7541,9 +7541,14 @@ function getScannerActiveLaunchState(round, latchSample) {
 
 function getScannerActiveSpeedFactor(progress) {
   const t = clampScannerNumber(progress, 0, 1);
-  const eased = 1 - smoothstep(SCANNER_ACTIVE_BEAM_SLOWDOWN_START, 1, t);
   if (t >= 0.999) return 0;
-  return Math.max(SCANNER_ACTIVE_BEAM_MIN_SPEED_FACTOR, Math.pow(Math.max(0, eased), 0.76));
+  // Плавный старт: начинает с 20% скорости, разгоняется за первые 12%
+  const softStart = 0.2 + 0.8 * smoothstep(0, 0.12, t);
+  // Плавное замедление на протяжении всего раунда
+  const decel = Math.pow(Math.max(0, 1 - t), 0.65);
+  // Мягкое угасание в конце (последние 12%)
+  const endFade = 1 - smoothstep(0.88, 0.999, t);
+  return Math.max(0, softStart * decel * endFade);
 }
 
 function getScannerActiveBeamCacheKey(round, players) {
@@ -7704,24 +7709,29 @@ function getScannerPreparingProgress(round) {
   return 0;
 }
 
-function getScannerPreparingBeamSample(round, players) {
+function getScannerPreparingBeamSample(round, players, timestampMs = getNetworkTime()) {
   const activeCache = getScannerActiveBeamCache(round, players || []);
-  if (activeCache?.finalSample) {
-    return activeCache.finalSample;
+  const finalSample = activeCache?.finalSample;
+  const progress = getScannerPreparingProgress(round);
+
+  // Если время preparing_next_round истекло (Firestore задержка) — сразу в лобби
+  if (!finalSample || progress >= 0.999) {
+    return getScannerSharedLobbyBeamSample(timestampMs);
   }
 
-  if (Number.isInteger(round?.winningCellIndex)) {
-    const center = getScannerCellCenter(round.winningCellIndex);
-    return {
-      x: center.x,
-      y: center.y,
-      angle: 0,
-      vx: 0,
-      vy: 0
-    };
-  }
+  // Первые 20% — стоим на месте победителя, потом плавно уходим в лобби
+  const t = smoothstep(0.2, 1.0, progress);
+  const idleSample = getScannerSharedLobbyBeamSample(timestampMs);
 
-  return getScannerSharedLobbyBeamSample();
+  return {
+    x: finalSample.x + (idleSample.x - finalSample.x) * t,
+    y: finalSample.y + (idleSample.y - finalSample.y) * t,
+    vx: idleSample.vx * t,
+    vy: idleSample.vy * t,
+    angle: idleSample.angle,
+    travelAngle: idleSample.travelAngle,
+    renderAngle: idleSample.renderAngle
+  };
 }
 
 function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampMs = getNetworkTime()) {
@@ -7910,10 +7920,15 @@ function stopScannerHeartbeat() {
 
 function startScannerLifecycleTimer() {
   if (scannerRealtime.lifecycleTimer) return;
+  scannerRealtime._lifecycleTick = 0;
   scannerRealtime.lifecycleTimer = setInterval(() => {
     syncScannerDerivedState();
     renderScannerRound();
-    ensureScannerRoundLifecycle().catch((error) => console.warn("Не удалось продвинуть фазу раунда:", error));
+    scannerRealtime._lifecycleTick = (scannerRealtime._lifecycleTick || 0) + 1;
+    // Lifecycle (Firestore транзакции) — раз в 8 секунд вместо каждые 500мс
+    if (scannerRealtime._lifecycleTick % 16 === 0) {
+      ensureScannerRoundLifecycle().catch((error) => console.warn("Не удалось продвинуть фазу раунда:", error));
+    }
   }, 500);
 }
 
@@ -11111,20 +11126,23 @@ function subscribeScannerRuntime() {
       ensureScannerVisualLoop();
     } else {
       if (!activeRoundId) {
-        bootstrapScannerRoundFromRecentState().catch((error) => {
-          console.warn("Не удалось восстановить текущее состояние общего раунда:", error);
-          scannerRealtime.roundData = null;
-          scannerRealtime.roundReady = true;
-          scannerRealtime.participants = [];
-          scannerRealtime.participantsReady = true;
-          scannerRealtime.participantsError = false;
-          syncScannerDerivedState();
-          renderScannerRound();
-        });
+        const _nowBoot = Date.now();
+        if (!scannerRealtime._lastBootstrapAt || _nowBoot - scannerRealtime._lastBootstrapAt > 60000) {
+          scannerRealtime._lastBootstrapAt = _nowBoot;
+          bootstrapScannerRoundFromRecentState().catch((error) => {
+            console.warn("Не удалось восстановить текущее состояние общего раунда:", error);
+            scannerRealtime.roundData = null;
+            scannerRealtime.roundReady = true;
+            scannerRealtime.participants = [];
+            scannerRealtime.participantsReady = true;
+            scannerRealtime.participantsError = false;
+            syncScannerDerivedState();
+            renderScannerRound();
+          });
+        }
+        syncScannerDerivedState();
+        renderScannerRound();
       }
-      syncScannerDerivedState();
-      renderScannerRound();
-    }
   }, (error) => {
     console.error("Ошибка подписки на runtime общего раунда:", error);
     scannerRealtime.runtimeReady = true;
