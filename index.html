@@ -7057,6 +7057,17 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 }
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
+  if (_serverBeamPos && _serverBeamPos.x !== undefined && !_serverBeamPos.roundId) {
+    return {
+      x: _serverBeamPos.x,
+      y: _serverBeamPos.y,
+      vx: 0,
+      vy: 0,
+      angle: 0,
+      travelAngle: 0,
+      renderAngle: 0
+    };
+  }
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 // ─── Reticle (point) simulator ───────────────────────────────────────────────
