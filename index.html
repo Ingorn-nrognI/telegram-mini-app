@@ -6247,7 +6247,9 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed, stableK
   }
 
   const seed = hashString(`preview_${versionSeed}`);
-  const rnd = mulberry32(seed);
+  // Стабильный сид для формы волн — не меняется при инкременте round.version
+  const stableSeed = stableKey ? hashString(`wave_${stableKey}`) : seed;
+  const stableRnd = mulberry32(stableSeed);
   // Направление раздела — стабильное на весь раунд, не зависит от round.version
   const layoutDetermineSeed = stableKey
     ? hashString(`layout_${stableKey}`)
@@ -6260,11 +6262,11 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed, stableK
     return rawShare > 0 ? rawShare : 1 / Math.max(1, players.length);
   });
 
-  const phaseA = shares.map(() => rnd() * Math.PI * 2);
-  const phaseB = shares.map(() => rnd() * Math.PI * 2);
-  const freqA = shares.map(() => 0.72 + rnd() * 1.18);
-  const freqB = shares.map(() => 1.4 + rnd() * 2.35);
-  const drift = shares.map(() => (rnd() - 0.5) * 0.22);
+  const phaseA = shares.map(() => stableRnd() * Math.PI * 2);
+  const phaseB = shares.map(() => stableRnd() * Math.PI * 2);
+  const freqA = shares.map(() => 0.72 + stableRnd() * 1.18);
+  const freqB = shares.map(() => 1.4 + stableRnd() * 2.35);
+  const drift = shares.map(() => (stableRnd() - 0.5) * 0.22);
 
   for (let axis = 0; axis < axisCount; axis += 1) {
     const t = axisCount > 1 ? axis / (axisCount - 1) : 0;
