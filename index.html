@@ -7057,18 +7057,30 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 }
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
-  if (_serverBeamPos && _serverBeamPos.x !== undefined && !_serverBeamPos.roundId) {
-    return {
-      x: _serverBeamPos.x,
-      y: _serverBeamPos.y,
-      vx: 0,
-      vy: 0,
-      angle: 0,
-      travelAngle: 0,
-      renderAngle: 0
-    };
+  const maxAgeMs = 500;
+  const isServerFresh = _serverBeamPos &&
+    _serverBeamPos.x !== undefined &&
+    !_serverBeamPos.roundId &&
+    (Date.now() - (_serverBeamPos.timestamp || 0)) < maxAgeMs;
+
+  if (isServerFresh) {
+    const vx = _serverBeamPos.vx || 0;
+    const vy = _serverBeamPos.vy || 0;
+    if (Math.abs(vx) < 0.001 && Math.abs(vy) < 0.001) {
+      return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
+    }
+    const elapsed = Math.min(0.1, (Date.now() - _serverBeamPos.timestamp) / 1000);
+    const pad = SCANNER_LOBBY_BEAM_EDGE_PADDING;
+    const x = Math.max(pad, Math.min(1 - pad, _serverBeamPos.x + vx * elapsed));
+    const y = Math.max(pad, Math.min(1 - pad, _serverBeamPos.y + vy * elapsed));
+    const angle = Math.atan2(vy || 0.0001, vx || 0.0001);
+    return { x, y, vx, vy, angle, travelAngle: angle, renderAngle: angle };
   }
-  return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
+
+  // Сокет не отвечает > 500мс — переключаемся на детерминированную физику
+  return getScannerSharedLobbyBeamSampleAt(
+    timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData
+  );
 }
 // ─── Reticle (point) simulator ───────────────────────────────────────────────
 // Отвечает за движение точки: скорость, направление и физику отскока от стен.
