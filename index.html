@@ -3937,7 +3937,12 @@ function applySocketRoundState(data) {
 }
 
 function applySocketRoundPatch(patch) {
-  if (!patch || !scannerRealtime.roundData) return;
+  if (!patch) return;
+  
+  if (!scannerRealtime.roundData) {
+    scannerRealtime.roundData = {};
+  }
+
   if (patch.version != null && scannerRealtime.roundData.version != null &&
       patch.version <= scannerRealtime.roundData.version) return;
 
@@ -3946,8 +3951,10 @@ function applySocketRoundPatch(patch) {
       scannerRealtime.roundData.countdownBeamMotion = patch.beamMotion;
     } else if (key === 'participants') {
       scannerRealtime.participants = patch.participants;
+      scannerRealtime.participantsReady = true;
     } else if (key === 'roundId') {
-      // identity field — skip
+      scannerRealtime.roundData.id = patch.roundId;
+      scannerRealtime.activeRoundId = patch.roundId;
     } else {
       scannerRealtime.roundData[key] = patch[key];
     }
