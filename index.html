@@ -3938,7 +3938,8 @@ function applySocketRoundState(data) {
 
 function applySocketRoundPatch(patch) {
   if (!patch) return;
-  
+  console.log('[patch] получен:', JSON.stringify(patch));
+
   if (!scannerRealtime.roundData) {
     scannerRealtime.roundData = {};
     scannerRealtime.participantsReady = true;
