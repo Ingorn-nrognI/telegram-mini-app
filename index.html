@@ -8350,6 +8350,7 @@ async function joinOrCreateScannerRound() {
         stake: stakeToAdd,
         maxPlayers: desiredMaxPlayers
       }, (response) => {
+        console.log('[join] callback response:', JSON.stringify(response));
         if (response?.ok) {
           resolve(response);
         } else {
