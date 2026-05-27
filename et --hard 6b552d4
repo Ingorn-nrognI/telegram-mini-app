@@ -1,0 +1,20 @@
+[33mfaeb4b0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: stop cancelling rAF in resetScannerRoundVisualState, fixes idle laser freeze
+[33m5bb8fa2[m fix: pure sine-based idle beam, no Firebase dependency
+[33m6ee76e0[m fix: stop resetting beam smoother every 500ms in idle
+[33m6b552d4[m fix: laser lokalno
+[33m474073e[m fix: zero-velocity beam fix + server cache merge
+[33mec8802f[m fix: sync lobby beam position from server via socket
+[33mba466ff[m fix: stable preview wave params, no arena desync on version bump
+[33m6f7d70a[m fix: syntax error in subscribeScannerRuntime
+[33mbb9d07c[m fix: stable preview layout direction (no flip on round.version change)
+[33m685a0b2[m fix: laser speed curve, post-round freeze, firebase traffic
+[33m690d312[m fix: restart visual loop on round change and visibility restore
+[33m181c734[m highlight detected fps on auto
+[33m2022da6[m add fps auto, sync quality+fps auto
+[33m0f49055[m fix fps auto, settings persist, auto quality highlight
+[33mf97b11d[m add auto quality and fps setting
+[33m2366be1[m fix wallet btn translation and hide top bar on profile
+[33m16e5e96[m translate stake settings
+[33m0f32c70[m full translations
+[33m941624b[m improve translations
+[33m432be9c[m add full en translations
