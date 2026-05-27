@@ -3941,6 +3941,9 @@ function applySocketRoundPatch(patch) {
   
   if (!scannerRealtime.roundData) {
     scannerRealtime.roundData = {};
+    scannerRealtime.participantsReady = true;
+    scannerRealtime.participantsError = false;
+    scannerRealtime.roundReady = true;
   }
 
   if (patch.version != null && scannerRealtime.roundData.version != null &&
@@ -3952,6 +3955,7 @@ function applySocketRoundPatch(patch) {
     } else if (key === 'participants') {
       scannerRealtime.participants = patch.participants;
       scannerRealtime.participantsReady = true;
+      scannerRealtime.participantsError = false;
     } else if (key === 'roundId') {
       scannerRealtime.roundData.id = patch.roundId;
       scannerRealtime.activeRoundId = patch.roundId;
