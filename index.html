@@ -8321,9 +8321,6 @@ async function joinOrCreateScannerRound() {
   renderScannerBetBar();
 
   try {
-    console.log('[join] ensureBalance start');
-await ensureDemoBalanceForCurrentUser();
-console.log('[join] ensureBalance done');
 
     const player = getCurrentPlayer();
     const stakeToAdd = normalizeStakeValue(scannerGridState.selectedStake);
