@@ -8338,6 +8338,7 @@ console.log('[join] ensureBalance done');
     }
 
     await new Promise((resolve, reject) => {
+    console.log('[join] socket connected:', _socket?.connected, 'emit round:join now');
       _socket.emit('round:join', {
         playerId: player.id,
         name: player.name,
