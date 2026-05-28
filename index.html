@@ -3867,6 +3867,7 @@ button {
 <script>
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
+let _serverTimeOffset = 0;
 let _socket = null;
 
 function initSocketConnection() {
@@ -3875,7 +3876,12 @@ function initSocketConnection() {
     console.log('[Socket] Подключён к серверу');
   });
   _socket.on('disconnect', () => console.log('[Socket] Отключён'));
-  _socket.on('beam_position', (data) => { _serverBeamPos = data; });
+  _socket.on('beam_position', (data) => {
+    _serverBeamPos = data;
+    if (data?.timestamp) {
+      _serverTimeOffset = data.timestamp - Date.now();
+    }
+  });
   _socket.on('beam:position', (data) => { _serverBeamPos = data; });
   _socket.on('round:state', (data) => { applySocketRoundState(data); });
   _socket.on('round:patch', (patch) => { applySocketRoundPatch(patch); });
@@ -4101,7 +4107,7 @@ const SCANNER_QUICK_STAKES_STORAGE_KEY = "bobr_world_scanner_quick_stakes_v1";
   let serverTimestampOffset = 0;
 
 function getNetworkTime() {
-  return Date.now() + serverTimestampOffset;
+  return Date.now() + _serverTimeOffset;
 }
 
 function syncServerTime() {
