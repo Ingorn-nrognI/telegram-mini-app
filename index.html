@@ -3944,6 +3944,9 @@ function applySocketRoundState(data) {
 
 function applySocketRoundPatch(patch) {
   if (!patch) return;
+  if (patch.timestamp && typeof patch.timestamp === 'number') {
+    _serverTimeOffset = patch.timestamp - Date.now();
+  }
   console.log('[patch] получен:', JSON.stringify(patch));
 
   if (!scannerRealtime.roundData) {
