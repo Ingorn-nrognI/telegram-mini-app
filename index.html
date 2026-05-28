@@ -7803,8 +7803,16 @@ function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetwo
   );
 }
 function getScannerActiveBeamSample(round, players, progressOverride = null) {
-  if (_serverBeamPos && _serverBeamPos.x !== undefined) {
-    return { x: _serverBeamPos.x, y: _serverBeamPos.y };
+  if (_serverBeamPos &&
+      _serverBeamPos.x !== undefined &&
+      _serverBeamPos.roundId === scannerGridState.roundId) {
+    return {
+      x: _serverBeamPos.x,
+      y: _serverBeamPos.y,
+      angle: _serverBeamPos.angle || 0,
+      travelAngle: _serverBeamPos.angle || 0,
+      renderAngle: _serverBeamPos.angle || 0
+    };
   }
   return getScannerActiveBeamSampleAtTime(round, players, Date.now(), progressOverride);
 }
