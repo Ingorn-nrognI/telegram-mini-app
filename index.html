@@ -3885,7 +3885,7 @@ function initSocketConnection() {
         _serverTimeOffset = newOffset;
         _serverTimeOffsetSmoothed = newOffset;
       } else {
-        _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.15;
+        _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.5;
         _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
       }
     }
@@ -3898,7 +3898,7 @@ function initSocketConnection() {
         _serverTimeOffset = newOffset;
         _serverTimeOffsetSmoothed = newOffset;
       } else {
-        _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.15;
+        _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.5;
         _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
       }
     }
@@ -3970,7 +3970,7 @@ function applySocketRoundPatch(patch) {
       _serverTimeOffset = newOffset;
       _serverTimeOffsetSmoothed = newOffset;
     } else {
-      _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.15;
+      _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.5;
       _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
     }
   }
@@ -3980,7 +3980,7 @@ function applySocketRoundPatch(patch) {
       _serverTimeOffset = newOffset;
       _serverTimeOffsetSmoothed = newOffset;
     } else {
-      _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.15;
+      _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.5;
       _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
     }
   }
