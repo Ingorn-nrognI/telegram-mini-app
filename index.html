@@ -7986,22 +7986,20 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "shuffling") {
-    if (_serverBeamPos && _serverBeamPos.roundId === (roundData?.id || null)) {
+    const countdownCache = getScannerCountdownBeamCache(roundData);
+    const latchSample = countdownCache?.latchSample;
+    if (latchSample) {
       return {
-        x: _serverBeamPos.x,
-        y: _serverBeamPos.y,
-        angle: _serverBeamPos.angle || 0,
-        travelAngle: _serverBeamPos.angle || 0,
-        renderAngle: _serverBeamPos.angle || 0
+        x: latchSample.x,
+        y: latchSample.y,
+        angle: latchSample.angle || 0,
+        travelAngle: latchSample.travelAngle || 0,
+        renderAngle: latchSample.renderAngle || 0,
+        vx: 0,
+        vy: 0
       };
     }
-    const countdownCache = getScannerCountdownBeamCache(roundData);
-    return countdownCache?.latchSample
-      || getScannerCountdownBeamSampleAtTime(
-        roundData,
-        tsToMs(roundData?.countdownEndsAt) || safeTimestamp,
-        getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
-      );
+    return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
   }
 
   if (safeStatus === "active") {
