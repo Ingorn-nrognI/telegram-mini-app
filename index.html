@@ -3883,11 +3883,11 @@ function initSocketConnection() {
       const _newOffset = data.timestamp - Date.now();
       const _offsetDiff = Math.abs(_newOffset - _serverTimeOffsetSmoothed);
       if (_offsetDiff > 5000) {
-        _serverTimeOffset = _newOffset;
+        // _serverTimeOffset = _newOffset;
         _serverTimeOffsetSmoothed = _newOffset;
       } else {
         _serverTimeOffsetSmoothed = _serverTimeOffsetSmoothed + (_newOffset - _serverTimeOffsetSmoothed) * 0.1;
-        _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+        // _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
       }
     }
   });
@@ -3897,11 +3897,11 @@ function initSocketConnection() {
       const _newOffset = data.serverTime - Date.now();
       const _offsetDiff = Math.abs(_newOffset - _serverTimeOffsetSmoothed);
       if (_offsetDiff > 5000) {
-        _serverTimeOffset = _newOffset;
+        // _serverTimeOffset = _newOffset;
         _serverTimeOffsetSmoothed = _newOffset;
       } else {
         _serverTimeOffsetSmoothed = _serverTimeOffsetSmoothed + (_newOffset - _serverTimeOffsetSmoothed) * 0.1;
-        _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+        // _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
       }
     }
     applySocketRoundState(data);
@@ -3970,22 +3970,22 @@ function applySocketRoundPatch(patch) {
     const _newOffset = patch.serverTime - Date.now();
     const _offsetDiff = Math.abs(_newOffset - _serverTimeOffsetSmoothed);
     if (_offsetDiff > 5000) {
-      _serverTimeOffset = _newOffset;
+      // _serverTimeOffset = _newOffset;
       _serverTimeOffsetSmoothed = _newOffset;
     } else {
       _serverTimeOffsetSmoothed = _serverTimeOffsetSmoothed + (_newOffset - _serverTimeOffsetSmoothed) * 0.1;
-      _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+      // _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
     }
   }
   if (patch.timestamp && typeof patch.timestamp === 'number') {
     const _newOffset = patch.timestamp - Date.now();
     const _offsetDiff = Math.abs(_newOffset - _serverTimeOffsetSmoothed);
     if (_offsetDiff > 5000) {
-      _serverTimeOffset = _newOffset;
+      // _serverTimeOffset = _newOffset;
       _serverTimeOffsetSmoothed = _newOffset;
     } else {
       _serverTimeOffsetSmoothed = _serverTimeOffsetSmoothed + (_newOffset - _serverTimeOffsetSmoothed) * 0.1;
-      _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+      // _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
     }
   }
   console.log('[patch] получен:', JSON.stringify(patch));
@@ -4193,7 +4193,7 @@ const SCANNER_QUICK_STAKES_STORAGE_KEY = "bobr_world_scanner_quick_stakes_v1";
   let serverTimestampOffset = 0;
 
 function getNetworkTime() {
-  return Date.now() + _serverTimeOffset;
+  return Date.now();
 }
 
 function syncServerTime() {
