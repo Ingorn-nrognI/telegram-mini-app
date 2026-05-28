@@ -3971,6 +3971,13 @@ function applySocketRoundPatch(patch) {
       patch.version <= scannerRealtime.roundData.version) return;
 
   for (const key of Object.keys(patch)) {
+    if (key === 'serverTime') continue;
+    if (key === 'timestamp') continue;
+    if (key === 'countdownEndsAt' &&
+        scannerRealtime.roundData?.countdownEndsAt &&
+        patch.roundId === scannerRealtime.roundData?.id) {
+      continue;
+    }
     if (key === 'countdownStartedAt' && scannerRealtime.roundData?.countdownEndsAt) {
       continue;
     }
