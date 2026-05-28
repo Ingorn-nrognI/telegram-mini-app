@@ -3977,6 +3977,28 @@ function applySocketRoundPatch(patch) {
     }
   }
 
+  if (patch.status === 'idle') {
+    scannerRealtime.roundData = null;
+    scannerRealtime.activeRoundId = null;
+    scannerRealtime.participants = [];
+    scannerRealtime.participantsReady = true;
+    scannerRealtime.participantsError = false;
+    scannerGridState.status = 'idle';
+    scannerGridState.roundId = null;
+    scannerGridState.roundData = null;
+    scannerGridState.players = [];
+    scannerGridState.participants = [];
+    scannerGridState.totalPot = 0;
+    scannerGridState.totalPlayers = 0;
+    scannerGridState.winnerPlayerId = null;
+    scannerGridState.winningCellIndex = null;
+    scannerGridState.winningPlayer = null;
+    scannerCountdownBeamCache = null;
+    scannerActiveBeamCache = null;
+    scannerBeamRenderState.initialized = false;
+    return;
+  }
+
   syncScannerDerivedState();
   renderScannerRound();
 }
