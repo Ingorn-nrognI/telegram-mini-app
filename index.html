@@ -4005,13 +4005,16 @@ function applySocketRoundPatch(patch) {
 
 function applySocketRoundResult(data) {
   if (!data) return;
-  if (scannerRealtime.roundData) {
-    if (data.winnerPlayerId != null) scannerRealtime.roundData.winnerPlayerId = data.winnerPlayerId;
-    if (data.winningCellIndex != null) scannerRealtime.roundData.winningCellIndex = data.winningCellIndex;
-    if (data.status) scannerRealtime.roundData.status = data.status;
-    if (data.winnerPayout != null) scannerRealtime.roundData.winnerPayout = data.winnerPayout;
-    if (data.winnerName != null) scannerRealtime.roundData.winnerName = data.winnerName;
-  }
+  if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+  scannerRealtime.roundData.status = 'finished';
+  scannerRealtime.roundData.winnerPlayerId = data.winnerPlayerId || null;
+  scannerRealtime.roundData.winnerName = data.winnerName || null;
+  scannerRealtime.roundData.winningCellIndex = data.winningCellIndex ?? null;
+  scannerRealtime.roundData.winnerPayout = data.winnerPayout || 0;
+  scannerRealtime.roundData.totalPot = data.totalPot || 0;
+  scannerGridState.winnerPlayerId = data.winnerPlayerId || null;
+  scannerGridState.winningCellIndex = data.winningCellIndex ?? null;
+  scannerGridState.status = 'finished';
   syncScannerDerivedState();
   renderScannerRound();
 }
