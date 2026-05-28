@@ -4060,10 +4060,17 @@ function applySocketRoundPatch(patch) {
     return;
   }
 
-  if (patch.countdownEndsAt && patch.countdownServerSentAt) {
-    const networkLatency = Date.now() - patch.countdownServerSentAt;
-    if (networkLatency > 0 && networkLatency < 10000 && scannerRealtime.roundData) {
-      scannerRealtime.roundData.countdownEndsAt = patch.countdownEndsAt + networkLatency;
+  if (patch.countdownEndsAt) {
+    const networkLatency = patch.countdownServerSentAt
+      ? Date.now() - patch.countdownServerSentAt
+      : 0;
+    const adjustedEndsAt = patch.countdownEndsAt + networkLatency;
+    const remainingMs = adjustedEndsAt - getNetworkTime();
+    console.log('[timer] countdownEndsAt:', patch.countdownEndsAt,
+      'latency:', networkLatency,
+      'remaining:', Math.round(remainingMs/1000), 'sec');
+    if (scannerRealtime.roundData) {
+      scannerRealtime.roundData.countdownEndsAt = adjustedEndsAt;
     }
   }
   syncScannerDerivedState();
