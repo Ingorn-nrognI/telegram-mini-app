@@ -3868,6 +3868,7 @@ button {
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
 let _serverTimeOffset = 0;
+let _serverTimeOffsetSmoothed = 0;
 let _socket = null;
 
 function initSocketConnection() {
@@ -3879,13 +3880,29 @@ function initSocketConnection() {
   _socket.on('beam_position', (data) => {
     _serverBeamPos = data;
     if (data?.timestamp) {
-      _serverTimeOffset = data.timestamp - Date.now();
+      const _newOffset = data.timestamp - Date.now();
+      const _offsetDiff = Math.abs(_newOffset - _serverTimeOffsetSmoothed);
+      if (_offsetDiff > 5000) {
+        _serverTimeOffset = _newOffset;
+        _serverTimeOffsetSmoothed = _newOffset;
+      } else {
+        _serverTimeOffsetSmoothed = _serverTimeOffsetSmoothed + (_newOffset - _serverTimeOffsetSmoothed) * 0.1;
+        _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+      }
     }
   });
   _socket.on('beam:position', (data) => { _serverBeamPos = data; });
   _socket.on('round:state', (data) => {
     if (data?.serverTime) {
-      _serverTimeOffset = data.serverTime - Date.now();
+      const _newOffset = data.serverTime - Date.now();
+      const _offsetDiff = Math.abs(_newOffset - _serverTimeOffsetSmoothed);
+      if (_offsetDiff > 5000) {
+        _serverTimeOffset = _newOffset;
+        _serverTimeOffsetSmoothed = _newOffset;
+      } else {
+        _serverTimeOffsetSmoothed = _serverTimeOffsetSmoothed + (_newOffset - _serverTimeOffsetSmoothed) * 0.1;
+        _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+      }
     }
     applySocketRoundState(data);
   });
@@ -3950,10 +3967,26 @@ function applySocketRoundState(data) {
 function applySocketRoundPatch(patch) {
   if (!patch) return;
   if (patch.serverTime && typeof patch.serverTime === 'number') {
-    _serverTimeOffset = patch.serverTime - Date.now();
+    const _newOffset = patch.serverTime - Date.now();
+    const _offsetDiff = Math.abs(_newOffset - _serverTimeOffsetSmoothed);
+    if (_offsetDiff > 5000) {
+      _serverTimeOffset = _newOffset;
+      _serverTimeOffsetSmoothed = _newOffset;
+    } else {
+      _serverTimeOffsetSmoothed = _serverTimeOffsetSmoothed + (_newOffset - _serverTimeOffsetSmoothed) * 0.1;
+      _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+    }
   }
   if (patch.timestamp && typeof patch.timestamp === 'number') {
-    _serverTimeOffset = patch.timestamp - Date.now();
+    const _newOffset = patch.timestamp - Date.now();
+    const _offsetDiff = Math.abs(_newOffset - _serverTimeOffsetSmoothed);
+    if (_offsetDiff > 5000) {
+      _serverTimeOffset = _newOffset;
+      _serverTimeOffsetSmoothed = _newOffset;
+    } else {
+      _serverTimeOffsetSmoothed = _serverTimeOffsetSmoothed + (_newOffset - _serverTimeOffsetSmoothed) * 0.1;
+      _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+    }
   }
   console.log('[patch] получен:', JSON.stringify(patch));
 
