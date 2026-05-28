@@ -4009,6 +4009,7 @@ function applySocketRoundPatch(patch) {
   for (const key of Object.keys(patch)) {
     if (key === 'serverTime') continue;
     if (key === 'timestamp') continue;
+    if (key === 'countdownServerSentAt') continue;
     if (key === 'countdownEndsAt' &&
         scannerRealtime.roundData?.countdownEndsAt &&
         patch.roundId === scannerRealtime.roundData?.id) {
@@ -4059,6 +4060,12 @@ function applySocketRoundPatch(patch) {
     return;
   }
 
+  if (patch.countdownEndsAt && patch.countdownServerSentAt) {
+    const networkLatency = Date.now() - patch.countdownServerSentAt;
+    if (networkLatency > 0 && networkLatency < 10000 && scannerRealtime.roundData) {
+      scannerRealtime.roundData.countdownEndsAt = patch.countdownEndsAt + networkLatency;
+    }
+  }
   syncScannerDerivedState();
   renderScannerRound();
 }
