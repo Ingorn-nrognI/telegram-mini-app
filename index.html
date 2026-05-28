@@ -7614,11 +7614,14 @@ function getScannerCountdownBeamSampleAtTime(round, timestampMs = getNetworkTime
 function getScannerCurrentLobbyOrCountdownSample(round, runtimeData = scannerRealtime.runtimeData, timestampMs = getNetworkTime()) {
   const status = String(round?.status || "waiting");
   if (status === "countdown") {
-    return getScannerCountdownBeamSampleAtTime(
-      round,
-      timestampMs,
-      getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", runtimeData)
-    );
+    const participantCount = Number(round?.participantCount || scannerGridState.totalPlayers || 0);
+    if (participantCount >= 2) {
+      return getScannerCountdownBeamSampleAtTime(
+        round,
+        timestampMs,
+        getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", runtimeData)
+      );
+    }
   }
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", runtimeData);
 }
