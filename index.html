@@ -10765,6 +10765,9 @@ function drawScannerWinnerHighlight(ctx, cellSize) {
 function renderScannerCanvas() {
   const metrics = getScannerCanvasMetrics();
   if (!metrics) return;
+  if (scannerGridState.status === 'countdown') {
+    console.log('[canvas] countdown players:', scannerGridState.totalPlayers, scannerGridState.participants?.length);
+  }
   const { ctx, size, cellSize } = metrics;
   const roundStatus = scannerGridState.status;
   const hasGrid = scannerGridState.players.length > 0;
