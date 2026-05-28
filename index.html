@@ -3947,6 +3947,12 @@ function applySocketRoundPatch(patch) {
     scannerRealtime.roundReady = true;
   }
 
+  if (patch.roundId && scannerRealtime.roundData?.id !== patch.roundId) {
+    scannerCountdownBeamCache = null;
+    scannerActiveBeamCache = null;
+    scannerBeamRenderState.initialized = false;
+  }
+
   if (patch.version != null && scannerRealtime.roundData.version != null &&
       patch.version <= scannerRealtime.roundData.version) return;
 
