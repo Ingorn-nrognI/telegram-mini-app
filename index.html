@@ -7939,6 +7939,15 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "shuffling") {
+    if (_serverBeamPos && _serverBeamPos.roundId === (roundData?.id || null)) {
+      return {
+        x: _serverBeamPos.x,
+        y: _serverBeamPos.y,
+        angle: _serverBeamPos.angle || 0,
+        travelAngle: _serverBeamPos.angle || 0,
+        renderAngle: _serverBeamPos.angle || 0
+      };
+    }
     const countdownCache = getScannerCountdownBeamCache(roundData);
     return countdownCache?.latchSample
       || getScannerCountdownBeamSampleAtTime(
