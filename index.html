@@ -3963,6 +3963,9 @@ function applySocketRoundPatch(patch) {
       patch.version <= scannerRealtime.roundData.version) return;
 
   for (const key of Object.keys(patch)) {
+    if (key === 'countdownStartedAt' && scannerRealtime.roundData?.countdownEndsAt) {
+      continue;
+    }
     if (key === 'beamMotion') {
       scannerRealtime.roundData.countdownBeamMotion = patch.beamMotion;
     } else if (key === 'participants') {
