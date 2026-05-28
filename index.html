@@ -3883,7 +3883,12 @@ function initSocketConnection() {
     }
   });
   _socket.on('beam:position', (data) => { _serverBeamPos = data; });
-  _socket.on('round:state', (data) => { applySocketRoundState(data); });
+  _socket.on('round:state', (data) => {
+    if (data?.serverTime) {
+      _serverTimeOffset = data.serverTime - Date.now();
+    }
+    applySocketRoundState(data);
+  });
   _socket.on('round:patch', (patch) => { applySocketRoundPatch(patch); });
   _socket.on('round:result', (data) => { applySocketRoundResult(data); });
 }
