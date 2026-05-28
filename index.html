@@ -3983,7 +3983,7 @@ function applySocketRoundPatch(patch) {
     }
   }
 
-  if (patch.status === 'idle') {
+  if (patch.status === 'idle' || (patch.roundId === null && patch.status === undefined)) {
     scannerRealtime.roundData = null;
     scannerRealtime.activeRoundId = null;
     scannerRealtime.participants = [];
@@ -3999,9 +3999,15 @@ function applySocketRoundPatch(patch) {
     scannerGridState.winnerPlayerId = null;
     scannerGridState.winningCellIndex = null;
     scannerGridState.winningPlayer = null;
+    scannerGridState.cellOwners = [];
+    scannerGridState.previewCellOwners = [];
     scannerCountdownBeamCache = null;
     scannerActiveBeamCache = null;
     scannerBeamRenderState.initialized = false;
+    scannerGridCache = null;
+    scannerGridPreviewCanvasCache = null;
+    syncScannerDerivedState();
+    renderScannerRound();
     return;
   }
 
