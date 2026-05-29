@@ -7263,25 +7263,13 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   if (_serverBeamPos &&
       typeof _serverBeamPos.x === 'number' &&
-      typeof _serverBeamPos.y === 'number' &&
-      _serverBeamPos.timestamp) {
-
-    const elapsedSec = Math.min(0.2, (Date.now() - _serverBeamPos.timestamp) / 1000);
+      typeof _serverBeamPos.y === 'number') {
     const vx = _serverBeamPos.vx || 0;
     const vy = _serverBeamPos.vy || 0;
-    const pad = 0.012;
-
-    let predX = _serverBeamPos.x + vx * elapsedSec;
-    let predY = _serverBeamPos.y + vy * elapsedSec;
-
-    predX = Math.max(pad, Math.min(1 - pad, predX));
-    predY = Math.max(pad, Math.min(1 - pad, predY));
-
     const angle = Math.atan2(vy || 0.001, vx || 0.001);
-
     return {
-      x: predX,
-      y: predY,
+      x: _serverBeamPos.x,
+      y: _serverBeamPos.y,
       vx,
       vy,
       angle,
