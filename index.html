@@ -10602,10 +10602,14 @@ function renderScannerCanvas() {
       if (_serverBeamPos && typeof _serverBeamPos.x === 'number') {
         const vx = _serverBeamPos.vx || 0;
         const vy = _serverBeamPos.vy || 0;
+        const elapsed = Math.min(0.05, (Date.now() - (_serverBeamPos.timestamp || Date.now())) / 1000);
+        const pad = 0.012;
+        const px = Math.max(pad, Math.min(1 - pad, _serverBeamPos.x + vx * elapsed));
+        const py = Math.max(pad, Math.min(1 - pad, _serverBeamPos.y + vy * elapsed));
         const angle = Math.atan2(vy || 0.001, vx || 0.001);
         idleVisualBeamSample = {
-          x: _serverBeamPos.x,
-          y: _serverBeamPos.y,
+          x: px,
+          y: py,
           vx, vy, angle,
           renderAngle: angle,
           travelAngle: angle
