@@ -4160,9 +4160,9 @@ const SCANNER_RETICLE_IDLE_SPIN_SPEED = 0.0017;
 const SCANNER_RETICLE_ACTIVE_SPIN_SPEED = 0.0034;
 const SCANNER_RETICLE_IDLE_WOBBLE = 0.08;
 const SCANNER_RETICLE_ACTIVE_WOBBLE = 0.16;
-const SCANNER_BEAM_SMOOTH_TAU_MS = 45;
+const SCANNER_BEAM_SMOOTH_TAU_MS = 28;
 const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 60;
-const SCANNER_BEAM_LOBBY_RENDER_TURN_TAU_MS = 1400;
+const SCANNER_BEAM_LOBBY_RENDER_TURN_TAU_MS = 600;
 const SCANNER_LOBBY_LASER_TURN_SPEED = 0.65;
 const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
@@ -7263,13 +7263,18 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   if (_serverBeamPos &&
       typeof _serverBeamPos.x === 'number' &&
-      typeof _serverBeamPos.y === 'number') {
+      typeof _serverBeamPos.y === 'number' &&
+      _serverBeamPos.timestamp) {
+    const elapsedSec = Math.min(0.08, (Date.now() - _serverBeamPos.timestamp) / 1000);
     const vx = _serverBeamPos.vx || 0;
     const vy = _serverBeamPos.vy || 0;
+    const pad = 0.012;
+    const predX = Math.max(pad, Math.min(1 - pad, _serverBeamPos.x + vx * elapsedSec));
+    const predY = Math.max(pad, Math.min(1 - pad, _serverBeamPos.y + vy * elapsedSec));
     const angle = Math.atan2(vy || 0.001, vx || 0.001);
     return {
-      x: _serverBeamPos.x,
-      y: _serverBeamPos.y,
+      x: predX,
+      y: predY,
       vx,
       vy,
       angle,
