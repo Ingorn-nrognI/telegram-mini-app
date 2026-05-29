@@ -3867,6 +3867,8 @@ button {
 <script>
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
+let _serverBeamPosSmoothed = null;
+let _serverBeamPosLastUpdate = 0;
 let _serverTimeOffset = 0;
 let _serverTimeOffsetSmoothed = 0;
 let _socket = null;
@@ -3879,6 +3881,10 @@ function initSocketConnection() {
   _socket.on('disconnect', () => console.log('[Socket] Отключён'));
   _socket.on('beam_position', (data) => {
     _serverBeamPos = data;
+    _serverBeamPosLastUpdate = Date.now();
+    if (!_serverBeamPosSmoothed) {
+      _serverBeamPosSmoothed = { ...data };
+    }
     if (data?.timestamp) {
       const newOffset = data.timestamp - Date.now();
       if (Math.abs(newOffset - _serverTimeOffsetSmoothed) > 5000) {
@@ -7258,9 +7264,18 @@ function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   if (_serverBeamPos &&
       typeof _serverBeamPos.x === 'number' &&
       typeof _serverBeamPos.y === 'number') {
+
+    if (!_serverBeamPosSmoothed) {
+      _serverBeamPosSmoothed = { ..._serverBeamPos };
+    }
+
+    const alpha = 0.35;
+    _serverBeamPosSmoothed.x += (_serverBeamPos.x - _serverBeamPosSmoothed.x) * alpha;
+    _serverBeamPosSmoothed.y += (_serverBeamPos.y - _serverBeamPosSmoothed.y) * alpha;
+
     return {
-      x: _serverBeamPos.x,
-      y: _serverBeamPos.y,
+      x: _serverBeamPosSmoothed.x,
+      y: _serverBeamPosSmoothed.y,
       vx: _serverBeamPos.vx || 0,
       vy: _serverBeamPos.vy || 0,
       angle: _serverBeamPos.angle || Math.atan2(_serverBeamPos.vy || 0.001, _serverBeamPos.vx || 0.001),
