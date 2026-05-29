@@ -7276,7 +7276,7 @@ function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   if (_lobbyBeamSamples && _lobbyBeamSamples.length > 1) {
     const elapsed = Math.max(0, timestampMs - _lobbyBeamSamplesStartMs);
     const maxT = _lobbyBeamSamples[_lobbyBeamSamples.length - 1].t;
-    const clampedElapsed = Math.max(0, Math.min(elapsed, maxT - 100));
+    const clampedElapsed = elapsed <= maxT ? elapsed : maxT;
     const intervalMs = _lobbyBeamSamples[1].t - _lobbyBeamSamples[0].t || 16;
     const idx = Math.floor(clampedElapsed / intervalMs);
     const i0 = Math.min(idx, _lobbyBeamSamples.length - 1);
