@@ -7261,24 +7261,11 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 }
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
-  if (_serverBeamPos &&
-      typeof _serverBeamPos.x === 'number' &&
-      typeof _serverBeamPos.y === 'number') {
-    const vx = _serverBeamPos.vx || 0;
-    const vy = _serverBeamPos.vy || 0;
-    const angle = Math.atan2(vy || 0.001, vx || 0.001);
-    return {
-      x: _serverBeamPos.x,
-      y: _serverBeamPos.y,
-      vx,
-      vy,
-      angle,
-      renderAngle: angle,
-      travelAngle: angle,
-      renderTurnTauMs: SCANNER_BEAM_LOBBY_RENDER_TURN_TAU_MS
-    };
-  }
-  return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
+  return getScannerSharedLobbyBeamSampleAt(
+    timestampMs,
+    "scanner_shared_lobby_motion_v2",
+    scannerRealtime.runtimeData
+  );
 }
 // ─── Reticle (point) simulator ───────────────────────────────────────────────
 // Отвечает за движение точки: скорость, направление и физику отскока от стен.
