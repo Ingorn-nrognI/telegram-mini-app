@@ -3883,9 +3883,12 @@ function initSocketConnection() {
   _socket.on('disconnect', () => console.log('[Socket] Отключён'));
   _socket.on('lobby:samples', (data) => {
     if (data?.samples && Array.isArray(data.samples) && data.samples.length > 1) {
+      const serverSentAt = data.timestamp || Date.now();
+      const clientReceivedAt = Date.now();
+      const networkDelay = clientReceivedAt - serverSentAt;
       _lobbyBeamSamples = data.samples;
-      _lobbyBeamSamplesStartMs = data.startMs || Date.now();
-      console.log('[lobby] получены samples:', data.samples.length);
+      _lobbyBeamSamplesStartMs = data.startMs + networkDelay;
+      console.log('[lobby] получены samples:', data.samples.length, 'delay:', networkDelay);
     }
   });
   _socket.on('beam_position', (data) => {
@@ -7273,7 +7276,7 @@ function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   if (_lobbyBeamSamples && _lobbyBeamSamples.length > 1) {
     const elapsed = Math.max(0, timestampMs - _lobbyBeamSamplesStartMs);
     const maxT = _lobbyBeamSamples[_lobbyBeamSamples.length - 1].t;
-    const clampedElapsed = Math.min(elapsed, maxT);
+    const clampedElapsed = Math.max(0, Math.min(elapsed, maxT - 100));
     const intervalMs = _lobbyBeamSamples[1].t - _lobbyBeamSamples[0].t || 16;
     const idx = Math.floor(clampedElapsed / intervalMs);
     const i0 = Math.min(idx, _lobbyBeamSamples.length - 1);
