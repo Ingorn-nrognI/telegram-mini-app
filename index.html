@@ -7273,6 +7273,7 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 }
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
+  console.log('[beam] samples:', !!_lobbyBeamSamples, 'startMs:', _lobbyBeamSamplesStartMs, 'now:', Date.now(), 'elapsed:', Date.now() - _lobbyBeamSamplesStartMs);
   if (_lobbyBeamSamples && _lobbyBeamSamples.length > 1) {
     const now = Date.now();
     const elapsed = Math.max(0, now - _lobbyBeamSamplesStartMs);
