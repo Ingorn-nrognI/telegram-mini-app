@@ -7264,18 +7264,9 @@ function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   if (_serverBeamPos &&
       typeof _serverBeamPos.x === 'number' &&
       typeof _serverBeamPos.y === 'number') {
-
-    if (!_serverBeamPosSmoothed) {
-      _serverBeamPosSmoothed = { ..._serverBeamPos };
-    }
-
-    const alpha = 0.35;
-    _serverBeamPosSmoothed.x += (_serverBeamPos.x - _serverBeamPosSmoothed.x) * alpha;
-    _serverBeamPosSmoothed.y += (_serverBeamPos.y - _serverBeamPosSmoothed.y) * alpha;
-
     return {
-      x: _serverBeamPosSmoothed.x,
-      y: _serverBeamPosSmoothed.y,
+      x: _serverBeamPos.x,
+      y: _serverBeamPos.y,
       vx: _serverBeamPos.vx || 0,
       vy: _serverBeamPos.vy || 0,
       angle: _serverBeamPos.angle || Math.atan2(_serverBeamPos.vy || 0.001, _serverBeamPos.vx || 0.001),
