@@ -3885,7 +3885,7 @@ function initSocketConnection() {
     if (data?.samples && Array.isArray(data.samples) && data.samples.length > 1) {
       const serverSentAt = data.timestamp || Date.now();
       const clientReceivedAt = Date.now();
-      const networkDelay = clientReceivedAt - serverSentAt;
+      const networkDelay = Math.max(0, clientReceivedAt - serverSentAt);
       _lobbyBeamSamples = data.samples;
       _lobbyBeamSamplesStartMs = data.startMs + networkDelay;
       console.log('[lobby] получены samples:', data.samples.length, 'delay:', networkDelay);
