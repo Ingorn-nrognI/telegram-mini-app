@@ -7274,13 +7274,11 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   if (_lobbyBeamSamples && _lobbyBeamSamples.length > 1) {
-    const prevX = _lobbyBeamSamples[Math.max(0, Math.floor(Math.max(0, (getNetworkTime() - _lobbyBeamSamplesStartMs - 16)) / ((_lobbyBeamSamples[1]?.t || 16) - (_lobbyBeamSamples[0]?.t || 0))) )]?.x;
-    const elapsed = Math.max(0, Date.now() - _lobbyBeamSamplesStartMs);
-    const _maxT2 = _lobbyBeamSamples[_lobbyBeamSamples.length - 1].t;
-    console.log('[lobby] elapsed:', Math.round(elapsed), 'maxT:', _maxT2, 'startMs:', _lobbyBeamSamplesStartMs, 'now:', Date.now());
+    const now = Date.now();
+    const elapsed = Math.max(0, now - _lobbyBeamSamplesStartMs);
     const maxT = _lobbyBeamSamples[_lobbyBeamSamples.length - 1].t;
-    const clampedElapsed = elapsed <= maxT ? elapsed : maxT;
-    const intervalMs = _lobbyBeamSamples[1].t - _lobbyBeamSamples[0].t || 16;
+    const clampedElapsed = Math.min(elapsed, maxT);
+    const intervalMs = (_lobbyBeamSamples[1].t - _lobbyBeamSamples[0].t) || 16;
     const idx = Math.floor(clampedElapsed / intervalMs);
     const i0 = Math.min(idx, _lobbyBeamSamples.length - 1);
     const i1 = Math.min(idx + 1, _lobbyBeamSamples.length - 1);
@@ -7292,9 +7290,6 @@ function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
     const vx = s0.vx + (s1.vx - s0.vx) * frac;
     const vy = s0.vy + (s1.vy - s0.vy) * frac;
     const angle = Math.atan2(vy || 0.001, vx || 0.001);
-    if (prevX !== undefined && Math.abs(x - prevX) > 0.1) {
-      console.log('[lobby] ПРЫЖОК x:', prevX, '->', x, 'elapsed:', clampedElapsed, 'maxT:', maxT);
-    }
     return { x, y, vx, vy, angle, renderAngle: angle, travelAngle: angle, renderTurnTauMs: SCANNER_BEAM_LOBBY_RENDER_TURN_TAU_MS };
   }
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
