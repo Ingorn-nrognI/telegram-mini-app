@@ -10625,34 +10625,8 @@ function renderScannerCanvas() {
         reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
       });
     } else {
-      let idleVisualBeamSample;
-      if (_serverBeamPos && typeof _serverBeamPos.x === 'number') {
-        const vx = _serverBeamPos.vx || 0;
-        const vy = _serverBeamPos.vy || 0;
-        const elapsed = Math.min(0.05, (Date.now() - (_serverBeamPos.timestamp || Date.now())) / 1000);
-        const pad = 0.012;
-        const px = Math.max(pad, Math.min(1 - pad, _serverBeamPos.x + vx * elapsed));
-        const py = Math.max(pad, Math.min(1 - pad, _serverBeamPos.y + vy * elapsed));
-        const angle = Math.atan2(vy || 0.001, vx || 0.001);
-        idleVisualBeamSample = {
-          x: px,
-          y: py,
-          vx, vy, angle,
-          renderAngle: angle,
-          travelAngle: angle
-        };
-      } else {
-        idleVisualBeamSample = getSmoothedScannerBeamSample(
-          getScannerBeamTargetSample(
-            getScannerSharedLobbyBeamSample(nowMs),
-            roundStatus,
-            beamRenderKey,
-            nowMs
-          ),
-          beamRenderKey,
-          now
-        );
-      }
+      const _rawLobbySample = getScannerSharedLobbyBeamSample(nowMs);
+      const idleVisualBeamSample = _rawLobbySample;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
