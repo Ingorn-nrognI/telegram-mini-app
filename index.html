@@ -8031,7 +8031,7 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "preparing_next_round") {
-    return getScannerPreparingBeamSample(roundData, safePlayers);
+    return getScannerSharedLobbyBeamSample(safeTimestamp);
   }
 
   return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
