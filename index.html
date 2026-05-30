@@ -10664,7 +10664,7 @@ function renderScannerCanvas() {
       now
     );
     drawScannerEmptyArenaState(ctx, size, preparingBeamSample, {
-      waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
+      waitingTextAlpha: 1,
       reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
       reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
     });
