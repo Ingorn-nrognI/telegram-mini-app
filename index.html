@@ -9681,7 +9681,7 @@ function renderScannerRound(options = {}) {
   renderScannerChips("scannerStakeChips", SCANNER_STAKE_PRESETS, scannerGridState.selectedStake, "setScannerStakeAndJoin", " TON");
   renderScannerChips("scannerPopulationChips", SCANNER_POPULATION_PRESETS, scannerGridState.selectedPopulation, "setScannerPopulation", "");
 
-  const isArenaResetPhase = scannerGridState.status === "preparing_next_round";
+  const isArenaResetPhase = false;
   const myPlayer = isArenaResetPhase ? null : getScannerMyPlayer();
   const countdown = document.getElementById("scannerCountdownChip");
   const poolChip = document.getElementById("scannerPoolChip");
