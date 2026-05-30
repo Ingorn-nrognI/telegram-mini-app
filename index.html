@@ -8005,15 +8005,7 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "countdown") {
-    const participantCount = Number(scannerGridState.totalPlayers || scannerGridState.participants?.length || 0);
-    if (participantCount >= 2) {
-      return getScannerCountdownBeamSampleAtTime(
-        roundData,
-        safeTimestamp,
-        getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
-      );
-    }
-    return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
+    return getScannerSharedLobbyBeamSample(safeTimestamp);
   }
 
   if (safeStatus === "shuffling") {
