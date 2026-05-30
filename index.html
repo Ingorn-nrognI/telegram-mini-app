@@ -3867,6 +3867,13 @@ button {
 <script>
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
+let _beamSmoothX = null;
+let _beamSmoothY = null;
+let _beamSmoothAngle = null;
+let _beamSmoothVx = 0;
+let _beamSmoothVy = 0;
+let _beamSmoothLastMs = 0;
+const BEAM_SMOOTH_TAU_MS = 250;
 let _lobbyBeamSamples = null;
 let _lobbyBeamSamplesStartMs = 0;
 let _serverBeamPosSmoothed = null;
@@ -8046,6 +8053,31 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 
+function getScannerUnifiedBeamSampleSmoothed(roundStatus, roundData, players, timestampMs) {
+  const raw = getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampMs);
+  if (!raw) return raw;
+  const nowMs = Date.now();
+  if (_beamSmoothX === null) {
+    _beamSmoothX = raw.x;
+    _beamSmoothY = raw.y;
+    _beamSmoothAngle = raw.angle || 0;
+    _beamSmoothVx = raw.vx || 0;
+    _beamSmoothVy = raw.vy || 0;
+    _beamSmoothLastMs = nowMs;
+    return raw;
+  }
+  const dt = Math.min(nowMs - _beamSmoothLastMs, 100);
+  _beamSmoothLastMs = nowMs;
+  const alpha = 1 - Math.exp(-dt / BEAM_SMOOTH_TAU_MS);
+  _beamSmoothX += (raw.x - _beamSmoothX) * alpha;
+  _beamSmoothY += (raw.y - _beamSmoothY) * alpha;
+  _beamSmoothVx += ((raw.vx || 0) - _beamSmoothVx) * alpha;
+  _beamSmoothVy += ((raw.vy || 0) - _beamSmoothVy) * alpha;
+  const angle = Math.atan2(_beamSmoothVy || 0.001, _beamSmoothVx || 0.001);
+  _beamSmoothAngle = angle;
+  return { ...raw, x: _beamSmoothX, y: _beamSmoothY, vx: _beamSmoothVx, vy: _beamSmoothVy, angle, renderAngle: angle, travelAngle: angle };
+}
+
 function getScannerBeamRenderKey(roundStatus, roundData, variant = "grid") {
   const safeStatus = String(roundStatus || "idle");
   const safeVariant = String(variant || "grid");
@@ -10694,7 +10726,7 @@ function renderScannerCanvas() {
 
   beamSample = getSmoothedScannerBeamSample(
     getScannerBeamTargetSample(
-      getScannerUnifiedBeamSample(
+      getScannerUnifiedBeamSampleSmoothed(
         roundStatus,
         roundData,
         scannerGridState.players || [],
