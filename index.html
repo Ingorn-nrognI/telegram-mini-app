@@ -4021,7 +4021,7 @@ function applySocketRoundPatch(patch) {
   if (patch.roundId && scannerRealtime.roundData?.id !== patch.roundId) {
     scannerCountdownBeamCache = null;
     scannerActiveBeamCache = null;
-    scannerBeamRenderState.initialized = false;
+    scannerBeamRenderState.key = "";
   }
 
   if (patch.version != null && scannerRealtime.roundData.version != null &&
@@ -4073,7 +4073,7 @@ function applySocketRoundPatch(patch) {
     scannerGridState.previewCellOwners = [];
     scannerCountdownBeamCache = null;
     scannerActiveBeamCache = null;
-    scannerBeamRenderState.initialized = false;
+    scannerBeamRenderState.key = "";
     scannerGridCache = null;
     scannerGridPreviewCanvasCache = null;
     syncScannerDerivedState();
