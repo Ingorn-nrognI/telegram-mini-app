@@ -7689,12 +7689,7 @@ function getScannerCountdownBeamCache(round) {
     return scannerCountdownBeamCache;
   }
 
-  const lobbyStartSample = motionState
-    ? getScannerBeamSampleFromMotionState(motionState, timing.startedAt, {
-        pad: SCANNER_ACTIVE_BEAM_EDGE_PADDING,
-        seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::countdown`
-      })
-    : getScannerSharedLobbyBeamSampleAt(timing.startedAt);
+  const lobbyStartSample = getScannerSharedLobbyBeamSample();
 
   const latchDurationMs = Math.min(SCANNER_EDGE_LATCH_MS, timing.durationMs);
   const cruiseDurationMs = Math.max(0, timing.durationMs - latchDurationMs);
@@ -7998,7 +7993,11 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "countdown") {
-    return getScannerSharedLobbyBeamSample(safeTimestamp);
+    return getScannerCountdownBeamSampleAtTime(
+      roundData,
+      safeTimestamp,
+      getScannerSharedLobbyBeamSample()
+    );
   }
 
   if (safeStatus === "shuffling") {
