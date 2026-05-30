@@ -10895,6 +10895,11 @@ function initializeScannerGridFeature() {
     countdownMs: 0
   });
 
+  const _resultBanner = document.getElementById('scannerResultBanner');
+  if (_resultBanner && _resultBanner.parentNode !== document.body) {
+    document.body.appendChild(_resultBanner);
+  }
+
   setupScannerBetBarVisibilityTracking();
   ensureScannerVisualLoop();
   startScannerHeartbeat();
