@@ -10655,7 +10655,7 @@ function renderScannerCanvas() {
   } else if (roundStatus === "preparing_next_round") {
     const preparingBeamSample = getSmoothedScannerBeamSample(
       getScannerBeamTargetSample(
-        getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
+        getScannerSharedLobbyBeamSample(nowMs),
         roundStatus,
         beamRenderKey,
         nowMs
@@ -10663,8 +10663,7 @@ function renderScannerCanvas() {
       beamRenderKey,
       now
     );
-    const preparingVisualBeamSample = preparingBeamSample;
-    drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
+    drawScannerEmptyArenaState(ctx, size, preparingBeamSample, {
       waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
       reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
       reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
