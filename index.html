@@ -3884,11 +3884,11 @@ function initSocketConnection() {
   _socket.on('lobby:samples', (data) => {
     if (data?.samples && Array.isArray(data.samples) && data.samples.length > 1) {
       const serverSentAt = data.timestamp || Date.now();
-      const clientReceivedAt = Date.now();
-      const networkDelay = Math.max(0, clientReceivedAt - serverSentAt);
+      const clientNow = Date.now();
+      const serverClientDiff = serverSentAt - clientNow;
       _lobbyBeamSamples = data.samples;
-      _lobbyBeamSamplesStartMs = data.startMs + networkDelay;
-      console.log('[lobby] получены samples:', data.samples.length, 'delay:', networkDelay);
+      _lobbyBeamSamplesStartMs = data.startMs - serverClientDiff;
+      console.log('[lobby] получены samples:', data.samples.length, 'serverClientDiff:', serverClientDiff, 'adjusted startMs offset:', -serverClientDiff);
     }
   });
   _socket.on('beam_position', (data) => {
