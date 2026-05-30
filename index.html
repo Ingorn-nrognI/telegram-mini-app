@@ -3867,6 +3867,7 @@ button {
 <script>
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
+let _beamTransitionEndMs = 0;
 let _lobbyBeamSamples = null;
 let _lobbyBeamSamplesStartMs = 0;
 let _serverBeamPosSmoothed = null;
@@ -4064,6 +4065,7 @@ function applySocketRoundPatch(patch) {
     scannerGridState.winningPlayer = null;
     scannerGridState.cellOwners = [];
     scannerGridState.previewCellOwners = [];
+    _beamTransitionEndMs = Date.now() + 1200;
     scannerCountdownBeamCache = null;
     scannerActiveBeamCache = null;
     scannerBeamRenderState.initialized = false;
@@ -10679,7 +10681,8 @@ function renderScannerCanvas() {
       nowMs
     ),
     beamRenderKey,
-    now
+    now,
+    { positionTauMs: Date.now() < _beamTransitionEndMs ? 400 : undefined }
   );
 
   const visualBeamSample = beamSample || null;
