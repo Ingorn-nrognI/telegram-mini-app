@@ -1614,24 +1614,24 @@ button {
 
 .scanner-result-banner {
   position: fixed;
-  left: 50%;
-  bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 16px);
-  width: min(calc(100vw - 24px), 480px);
-  padding: 15px 16px;
-  border-radius: 22px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-height: 50vh;
+  padding: 20px 16px calc(var(--safe-bottom) + var(--bottom-nav-height) + 20px);
+  border-radius: 24px 24px 0 0;
   background:
-    linear-gradient(135deg, rgba(18, 35, 84, 0.98), rgba(7, 12, 28, 0.96)),
+    linear-gradient(135deg, rgba(18, 35, 84, 0.99), rgba(7, 12, 28, 0.98)),
     radial-gradient(circle at 100% 0%, rgba(45, 225, 255, 0.18), transparent 36%);
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow:
-    0 22px 42px rgba(0, 0, 0, 0.42),
-    0 0 28px rgba(45, 225, 255, 0.12);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(16px);
-  z-index: 200;
+  z-index: 1000;
   opacity: 0;
   pointer-events: none;
-  transform: translate(-50%, 18px) scale(0.98);
-  transition: opacity 0.28s ease, transform 0.28s ease;
+  transform: translateY(100%);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .scanner-result-banner.open {
@@ -6640,7 +6640,7 @@ function buildScannerPlayersFromFirestore(round, participants) {
     color
   }));
 
-  return finalizeScannerPlayers(normalized, `${round?.entropySeed || round?.id || "round"}_${round?.status || "idle"}_${round?.version || 0}`);
+  return finalizeScannerPlayers(normalized, `${round?.entropySeed || round?.id || "round"}_${round?.version || 0}`);
 }
 
 function resetScannerDerivedVisualCache() {
@@ -9650,8 +9650,8 @@ function getScannerRoundOverlayRight() {
 
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
-  if (status === "active") return "Раунд";
-  if (["countdown", "shuffling", "finished", "preparing_next_round"].includes(status)) {
+  if (status === "active" || status === "finished" || status === "preparing_next_round") return "Раунд";
+  if (["countdown", "shuffling"].includes(status)) {
     return formatCountdownMs(scannerGridState.countdownMs || 0);
   }
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
