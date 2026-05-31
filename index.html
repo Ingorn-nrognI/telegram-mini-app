@@ -9838,6 +9838,7 @@ function buildScannerCanvasCache(size, owners, players) {
   ctx.fillStyle = "#060b17";
   ctx.fillRect(0, 0, size, size);
   const cellSize = size / SCANNER_GRID_COLS;
+  const cellDraw = Math.floor(cellSize);
 
   for (let cellIndex = 0; cellIndex < owners.length; cellIndex += 1) {
     const ownerIndex = owners[cellIndex];
@@ -9845,7 +9846,7 @@ function buildScannerCanvasCache(size, owners, players) {
     const col = cellIndex % SCANNER_GRID_COLS;
     const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
     ctx.fillStyle = players[ownerIndex].color;
-    ctx.fillRect(col * cellSize, row * cellSize, Math.max(1, cellSize - 0.6), Math.max(1, cellSize - 0.6));
+    ctx.fillRect(Math.floor(col * cellSize), Math.floor(row * cellSize), cellDraw, cellDraw);
   }
 
   return cacheCanvas;
