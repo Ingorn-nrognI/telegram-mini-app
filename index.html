@@ -10667,6 +10667,12 @@ function renderScannerCanvas() {
     }
   }
 
+  ctx.save();
+  ctx.strokeStyle = 'rgba(45, 225, 255, 0.75)';
+  ctx.lineWidth = 24;
+  ctx.strokeRect(0, 0, size, size);
+  ctx.restore();
+
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const reticleRadius = Math.max(10.2, size * 0.031);
@@ -10732,12 +10738,6 @@ function renderScannerCanvas() {
       ctx.restore();
     }
   }
-
-  ctx.save();
-  ctx.strokeStyle = 'rgba(45, 225, 255, 0.85)';
-  ctx.lineWidth = 24;
-  ctx.strokeRect(0, 0, size, size);
-  ctx.restore();
 
   if (_zoomScale > 1) ctx.restore();
 
