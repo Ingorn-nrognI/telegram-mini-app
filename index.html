@@ -3387,6 +3387,37 @@ button {
   backface-visibility: hidden;
 }
 
+#scannerReticleOverlay {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.97) 0%, rgba(200,240,255,0.75) 55%, rgba(45,225,255,0.15) 100%);
+  box-shadow: 0 0 22px rgba(45,225,255,0.85), 0 0 44px rgba(45,225,255,0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 20;
+  display: none;
+}
+#scannerReticleOverlay::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28%; height: 4%;
+  background: rgba(45,225,255,0.85);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(45,225,255,0.6);
+}
+#scannerReticleOverlay::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4%; height: 28%;
+  background: rgba(45,225,255,0.85);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(45,225,255,0.6);
+}
+
 /* Targeted balance centering: keeps only the balance block exactly in the middle of the top UI */
 .top-bar {
   grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr) !important;
@@ -3481,6 +3512,7 @@ button {
 
         <div class="scanner-canvas-shell">
           <canvas id="scannerGridCanvas"></canvas>
+          <div id="scannerReticleOverlay"></div>
           <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
             <span class="scanner-connecting-text">Подключение...</span>
           </div>
@@ -10340,8 +10372,9 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
-  const cx = Math.max(0, Math.min(size, size * safeSample.x));
-  const cy = Math.max(0, Math.min(size, size * safeSample.y));
+  const _ibw = Math.max(10, size * 0.031);
+  const cx = Math.max(_ibw, Math.min(size - _ibw, size * safeSample.x));
+  const cy = Math.max(_ibw, Math.min(size - _ibw, size * safeSample.y));
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
@@ -10663,6 +10696,7 @@ function renderScannerCanvas() {
 
   const visualBeamSample = beamSample || null;
 
+  const _reticleOverlay = document.getElementById('scannerReticleOverlay');
   let _zoomScale = 1;
   let _zoomOffsetX = 0;
   let _zoomOffsetY = 0;
@@ -10685,8 +10719,9 @@ function renderScannerCanvas() {
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const reticleRadius = Math.max(10.2, size * 0.031);
-    const px = Math.max(0, Math.min(size, visualBeamSample.x * size));
-    const py = Math.max(0, Math.min(size, visualBeamSample.y * size));
+    const _bw = Math.max(10, size * 0.031);
+    const px = Math.max(_bw, Math.min(size - _bw, visualBeamSample.x * size));
+    const py = Math.max(_bw, Math.min(size - _bw, visualBeamSample.y * size));
     const beamLength = size * (isHotBeam ? 4.85 : 4.5);
     const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
 
@@ -10749,6 +10784,17 @@ function renderScannerCanvas() {
   }
 
   if (_zoomScale > 1) ctx.restore();
+
+  if (_reticleOverlay && visualBeamSample) {
+    const _rr = Math.max(10, size * 0.031);
+    _reticleOverlay.style.display = 'block';
+    _reticleOverlay.style.left = (px / size * 100) + '%';
+    _reticleOverlay.style.top = (py / size * 100) + '%';
+    _reticleOverlay.style.width = (_rr * 2 / size * 100) + '%';
+    _reticleOverlay.style.height = (_rr * 2 / size * 100) + '%';
+  } else if (_reticleOverlay) {
+    _reticleOverlay.style.display = 'none';
+  }
 
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
