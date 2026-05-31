@@ -10705,6 +10705,12 @@ function renderScannerCanvas() {
     ctx.restore();
   }
 
+  ctx.save();
+  ctx.strokeStyle = 'rgba(45, 225, 255, 0.55)';
+  ctx.lineWidth = Math.max(2, size * 0.007);
+  ctx.strokeRect(1, 1, size - 2, size - 2);
+  ctx.restore();
+
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
   }
