@@ -1234,6 +1234,17 @@ button {
   pointer-events: none;
 }
 
+.scanner-canvas-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 6px solid rgba(45, 225, 255, 0.8);
+  border-radius: 20px;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 0 14px rgba(45, 225, 255, 0.3), inset 0 0 14px rgba(45, 225, 255, 0.1);
+}
+
 #scannerGridCanvas {
   position: relative;
   z-index: 2;
@@ -10667,12 +10678,6 @@ function renderScannerCanvas() {
       ctx.scale(_zoomScale, _zoomScale);
     }
   }
-
-  ctx.save();
-  ctx.strokeStyle = 'rgba(45, 225, 255, 0.85)';
-  ctx.lineWidth = 12;
-  ctx.strokeRect(6, 6, size - 12, size - 12);
-  ctx.restore();
 
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
