@@ -6398,46 +6398,20 @@ function allocateCells(players, totalCells) {
 
 function buildScannerCellOwners(players, totalCells, versionSeed) {
   const owners = new Array(totalCells).fill(-1);
-  const pool = players.map((player, index) => ({
-    index,
-    remaining: player.cellCount,
-    weight: Math.max(1, player.cellCount)
-  }));
   const rnd = mulberry32(hashString(versionSeed));
-  let currentIndex = -1;
-  let runLeft = 0;
 
-  function pickNextIndex() {
-    const active = pool.filter((item) => item.remaining > 0);
-    if (!active.length) return -1;
-    const totalRemaining = active.reduce((sum, item) => sum + item.remaining, 0);
-    let cursor = rnd() * totalRemaining;
-    for (const item of active) {
-      cursor -= item.remaining;
-      if (cursor <= 0) return item.index;
-    }
-    return active[active.length - 1].index;
+  const indices = Array.from({ length: totalCells }, (_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
   }
 
-  function computeRunLength(targetPoolItem) {
-    if (!targetPoolItem) return 1;
-    const activePlayers = pool.filter((item) => item.remaining > 0).length;
-    const densityFactor = activePlayers <= 16 ? 9 : activePlayers <= 64 ? 5 : activePlayers <= 180 ? 3 : 1.4;
-    const proportionalFactor = Math.max(1, Math.round((targetPoolItem.remaining / totalCells) * 28));
-    return Math.max(1, Math.min(targetPoolItem.remaining, Math.round(densityFactor + proportionalFactor * rnd())));
-  }
-
-  for (let orderIndex = 0; orderIndex < totalCells; orderIndex += 1) {
-    if (currentIndex === -1 || runLeft <= 0 || pool[currentIndex].remaining <= 0) {
-      currentIndex = pickNextIndex();
-      if (currentIndex === -1) break;
-      runLeft = computeRunLength(pool[currentIndex]);
+  let pos = 0;
+  for (let pi = 0; pi < players.length; pi++) {
+    const count = players[pi].cellCount || 0;
+    for (let c = 0; c < count && pos < totalCells; c++, pos++) {
+      owners[indices[pos]] = pi;
     }
-
-    const targetCellIndex = scannerGridPathOrder[orderIndex] || orderIndex;
-    owners[targetCellIndex] = currentIndex;
-    pool[currentIndex].remaining -= 1;
-    runLeft -= 1;
   }
 
   return owners;
@@ -9838,7 +9812,7 @@ function buildScannerCanvasCache(size, owners, players) {
   ctx.fillStyle = "#060b17";
   ctx.fillRect(0, 0, size, size);
   const cellSize = size / SCANNER_GRID_COLS;
-  const cellDraw = Math.floor(cellSize);
+  const cellDraw = Math.ceil(cellSize);
 
   for (let cellIndex = 0; cellIndex < owners.length; cellIndex += 1) {
     const ownerIndex = owners[cellIndex];
