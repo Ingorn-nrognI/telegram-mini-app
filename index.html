@@ -10672,8 +10672,8 @@ function renderScannerCanvas() {
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const reticleRadius = Math.max(10.2, size * 0.031);
-    const px = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.x * size));
-    const py = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.y * size));
+    const px = Math.max(0, Math.min(size, visualBeamSample.x * size));
+    const py = Math.max(0, Math.min(size, visualBeamSample.y * size));
     const beamLength = size * (isHotBeam ? 4.85 : 4.5);
     const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
 
@@ -10700,7 +10700,7 @@ function renderScannerCanvas() {
         ? "rgba(45, 225, 255, 0.86)"
         : "rgba(45, 225, 255, 0.72)",
       innerColor: "rgba(255,255,255,0.95)",
-      centerGap: 0
+      centerGap: reticleRadius * 2
     });
     drawScannerReticle(ctx, 0, 0, reticleRadius, {
       alpha: isHotBeam ? 0.98 : 0.86,
