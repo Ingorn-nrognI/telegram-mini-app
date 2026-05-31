@@ -10327,8 +10327,8 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
-  const cx = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.x));
-  const cy = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.y));
+  const cx = Math.max(0, Math.min(size, size * safeSample.x));
+  const cy = Math.max(0, Math.min(size, size * safeSample.y));
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
@@ -10350,7 +10350,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     coreBlur: 14,
     beamColor: "rgba(45, 225, 255, 0.74)",
     innerColor: "rgba(255,255,255,0.88)",
-    centerGap: 0
+    centerGap: idleReticleRadius * 2
   });
   drawScannerReticle(ctx, 0, 0, idleReticleRadius, {
     alpha: 0.96,
@@ -10365,7 +10365,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     ctx.save();
     ctx.globalAlpha = waitingTextAlpha;
     drawScannerWaitingText(ctx, size, safeSample, {
-      centerGap: 0,
+      centerGap: idleReticleRadius * 2,
       beamAngle: scannerLobbyLaserVisual.angle,
       text: options.waitingText
     });
