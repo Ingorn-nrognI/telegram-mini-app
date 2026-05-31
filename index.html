@@ -1241,6 +1241,7 @@ button {
   display: block;
   aspect-ratio: 1 / 1;
   border-radius: 20px;
+  overflow: hidden;
   background:
     linear-gradient(180deg, rgba(7, 12, 26, 1), rgba(4, 7, 18, 0.98));
 }
@@ -10668,9 +10669,9 @@ function renderScannerCanvas() {
   }
 
   ctx.save();
-  ctx.strokeStyle = 'rgba(45, 225, 255, 0.75)';
-  ctx.lineWidth = 24;
-  ctx.strokeRect(0, 0, size, size);
+  ctx.strokeStyle = 'rgba(45, 225, 255, 0.85)';
+  ctx.lineWidth = 12;
+  ctx.strokeRect(6, 6, size - 12, size - 12);
   ctx.restore();
 
   if (visualBeamSample) {
