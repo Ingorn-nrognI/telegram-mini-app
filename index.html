@@ -10350,11 +10350,11 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     coreBlur: 14,
     beamColor: "rgba(45, 225, 255, 0.74)",
     innerColor: "rgba(255,255,255,0.88)",
-    centerGap: idleReticleRadius * 2.7
+    centerGap: 0
   });
   drawScannerReticle(ctx, 0, 0, idleReticleRadius, {
     alpha: 0.96,
-    plusScale: 0.72,
+    plusScale: 0.22,
     plusColor: "rgba(6, 10, 16, 0.96)",
     rotation: reticleRotation,
     wobble: reticleWobble
@@ -10365,7 +10365,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     ctx.save();
     ctx.globalAlpha = waitingTextAlpha;
     drawScannerWaitingText(ctx, size, safeSample, {
-      centerGap: idleReticleRadius * 2.7,
+      centerGap: 0,
       beamAngle: scannerLobbyLaserVisual.angle,
       text: options.waitingText
     });
