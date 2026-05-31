@@ -10361,7 +10361,7 @@ function drawScannerArenaBase(ctx, size) {
   ctx.fillRect(0, 0, size, size);
   const bw = Math.max(10, size * 0.031);
   ctx.save();
-  ctx.strokeStyle = 'rgba(45, 225, 255, 0.85)';
+  ctx.strokeStyle = 'rgb(45, 225, 255)';
   ctx.lineWidth = bw;
   ctx.strokeRect(bw / 2, bw / 2, size - bw, size - bw);
   ctx.restore();
@@ -10636,6 +10636,15 @@ function renderScannerCanvas() {
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
         reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
       });
+      const _ro = document.getElementById('scannerReticleOverlay');
+      if (_ro && idleVisualBeamSample) {
+        const _rr2 = Math.max(10, size * 0.031);
+        _ro.style.display = 'block';
+        _ro.style.left = (idleVisualBeamSample.x * 100) + '%';
+        _ro.style.top = (idleVisualBeamSample.y * 100) + '%';
+        _ro.style.width = (_rr2 * 2 / size * 100) + '%';
+        _ro.style.height = (_rr2 * 2 / size * 100) + '%';
+      }
     }
     return;
   }
@@ -10788,8 +10797,8 @@ function renderScannerCanvas() {
   if (_reticleOverlay && visualBeamSample) {
     const _rr = Math.max(10, size * 0.031);
     _reticleOverlay.style.display = 'block';
-    _reticleOverlay.style.left = (px / size * 100) + '%';
-    _reticleOverlay.style.top = (py / size * 100) + '%';
+    _reticleOverlay.style.left = (visualBeamSample.x * 100) + '%';
+    _reticleOverlay.style.top = (visualBeamSample.y * 100) + '%';
     _reticleOverlay.style.width = (_rr * 2 / size * 100) + '%';
     _reticleOverlay.style.height = (_rr * 2 / size * 100) + '%';
   } else if (_reticleOverlay) {
