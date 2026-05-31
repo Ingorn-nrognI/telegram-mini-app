@@ -1243,8 +1243,6 @@ button {
   border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(7, 12, 26, 1), rgba(4, 7, 18, 0.98));
-  border: 12px solid rgba(45, 225, 255, 0.45);
-  box-shadow: 0 0 18px rgba(45, 225, 255, 0.18), inset 0 0 12px rgba(45, 225, 255, 0.06);
 }
 
 .scanner-connecting-overlay {
@@ -10737,7 +10735,7 @@ function renderScannerCanvas() {
 
   ctx.save();
   ctx.strokeStyle = 'rgba(45, 225, 255, 0.85)';
-  ctx.lineWidth = Math.max(3, size * 0.012);
+  ctx.lineWidth = 24;
   ctx.strokeRect(0, 0, size, size);
   ctx.restore();
 
