@@ -6433,25 +6433,20 @@ function finalizeScannerPlayers(players, versionSeed) {
 function buildScannerPreviewCellOwners(players, totalCells, versionSeed, stableKey = null) {
   const owners = new Array(totalCells).fill(-1);
   if (!players.length) return owners;
-  if (players.length === 1) {
-    owners.fill(0);
-    return owners;
-  }
+  if (players.length === 1) { owners.fill(0); return owners; }
 
-  const seed = hashString(`preview_${versionSeed}`);
-  // Стабильный сид для формы волн — не меняется при инкременте round.version
-  const stableSeed = stableKey ? hashString(`wave_${stableKey}`) : seed;
+  const seed = hashString('preview_' + (stableKey || versionSeed));
+  const stableSeed = stableKey ? hashString('wave_' + stableKey) : seed;
   const stableRnd = mulberry32(stableSeed);
-  // Направление раздела — стабильное на весь раунд, не зависит от round.version
-  const layoutDetermineSeed = stableKey
-    ? hashString(`layout_${stableKey}`)
-    : seed;
-  const layoutMode = layoutDetermineSeed % 2 === 0 ? "vertical" : "horizontal";
-  const axisCount = layoutMode === "vertical" ? SCANNER_GRID_ROWS : SCANNER_GRID_COLS;
-  const spanCount = layoutMode === "vertical" ? SCANNER_GRID_COLS : SCANNER_GRID_ROWS;
-  const shares = players.map((player) => {
-    const rawShare = Number(player.cellCount || 0) / Math.max(1, totalCells);
-    return rawShare > 0 ? rawShare : 1 / Math.max(1, players.length);
+  const layoutRnd = mulberry32(stableKey ? hashString('layout_' + stableKey) : seed);
+
+  const angle = layoutRnd() * Math.PI;
+  const cosA = Math.cos(angle);
+  const sinA = Math.sin(angle);
+
+  const shares = players.map(p => {
+    const raw = Number(p.cellCount || 0) / Math.max(1, totalCells);
+    return raw > 0 ? raw : 1 / Math.max(1, players.length);
   });
 
   const phaseA = shares.map(() => stableRnd() * Math.PI * 2);
@@ -6460,38 +6455,29 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed, stableK
   const freqB = shares.map(() => 1.4 + stableRnd() * 2.35);
   const drift = shares.map(() => (stableRnd() - 0.5) * 0.22);
 
-  for (let axis = 0; axis < axisCount; axis += 1) {
-    const t = axisCount > 1 ? axis / (axisCount - 1) : 0;
-    const widths = shares.map((share, index) => {
-      const primaryWave = Math.sin((t + drift[index]) * Math.PI * 2 * freqA[index] + phaseA[index]);
-      const secondaryWave = Math.sin((t * 1.18 - drift[index]) * Math.PI * 2 * freqB[index] + phaseB[index]);
-      const waveStrength = Math.min(0.2, 0.08 + Math.max(0, 0.16 - share * 0.22));
-      const raw = share * (1 + primaryWave * waveStrength + secondaryWave * 0.055);
-      return Math.max(share * 0.45, raw);
+  for (let cellIndex = 0; cellIndex < totalCells; cellIndex++) {
+    const col = cellIndex % SCANNER_GRID_COLS;
+    const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
+    const nx = col / Math.max(1, SCANNER_GRID_COLS - 1);
+    const ny = row / Math.max(1, SCANNER_GRID_ROWS - 1);
+    const t = Math.max(0, Math.min(1, nx * cosA + ny * sinA));
+
+    const widths = shares.map((share, i) => {
+      const w1 = Math.sin((t + drift[i]) * Math.PI * 2 * freqA[i] + phaseA[i]);
+      const w2 = Math.sin((t * 1.18 - drift[i]) * Math.PI * 2 * freqB[i] + phaseB[i]);
+      const ws = Math.min(0.2, 0.08 + Math.max(0, 0.16 - share * 0.22));
+      return Math.max(share * 0.45, share * (1 + w1 * ws + w2 * 0.055));
     });
 
-    const totalWidth = widths.reduce((sum, value) => sum + value, 0) || 1;
-    const cumulative = [];
+    const total = widths.reduce((s, v) => s + v, 0) || 1;
     let cursor = 0;
-
-    widths.forEach((value) => {
-      cursor += value;
-      cumulative.push(cursor);
-    });
-
-    let ownerCursor = 0;
-    for (let span = 0; span < spanCount; span += 1) {
-      const position = ((span + 0.5) / spanCount) * totalWidth;
-      while (ownerCursor < cumulative.length - 1 && position > cumulative[ownerCursor]) {
-        ownerCursor += 1;
-      }
-
-      const cellIndex = layoutMode === "vertical"
-        ? (axis * SCANNER_GRID_COLS) + span
-        : (span * SCANNER_GRID_COLS) + axis;
-
-      owners[cellIndex] = ownerCursor;
+    let owner = widths.length - 1;
+    const pos = (t * total);
+    for (let i = 0; i < widths.length; i++) {
+      cursor += widths[i];
+      if (pos <= cursor) { owner = i; break; }
     }
+    owners[cellIndex] = owner;
   }
 
   return owners;
