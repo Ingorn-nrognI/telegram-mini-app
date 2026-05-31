@@ -3387,36 +3387,7 @@ button {
   backface-visibility: hidden;
 }
 
-#scannerReticleOverlay {
-  position: absolute;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.97) 0%, rgba(200,240,255,0.75) 55%, rgba(45,225,255,0.15) 100%);
-  box-shadow: 0 0 22px rgba(45,225,255,0.85), 0 0 44px rgba(45,225,255,0.4);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 20;
-  display: none;
-}
-#scannerReticleOverlay::after {
-  content: '';
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 28%; height: 4%;
-  background: rgba(45,225,255,0.85);
-  border-radius: 2px;
-  box-shadow: 0 0 6px rgba(45,225,255,0.6);
-}
-#scannerReticleOverlay::before {
-  content: '';
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 4%; height: 28%;
-  background: rgba(45,225,255,0.85);
-  border-radius: 2px;
-  box-shadow: 0 0 6px rgba(45,225,255,0.6);
-}
+
 
 /* Targeted balance centering: keeps only the balance block exactly in the middle of the top UI */
 .top-bar {
@@ -3512,7 +3483,7 @@ button {
 
         <div class="scanner-canvas-shell">
           <canvas id="scannerGridCanvas"></canvas>
-          <div id="scannerReticleOverlay"></div>
+
           <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
             <span class="scanner-connecting-text">Подключение...</span>
           </div>
@@ -10636,15 +10607,7 @@ function renderScannerCanvas() {
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
         reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
       });
-      const _ro = document.getElementById('scannerReticleOverlay');
-      if (_ro && idleVisualBeamSample) {
-        const _rr2 = Math.max(10, size * 0.031);
-        _ro.style.display = 'block';
-        _ro.style.left = (idleVisualBeamSample.x * 100) + '%';
-        _ro.style.top = (idleVisualBeamSample.y * 100) + '%';
-        _ro.style.width = (_rr2 * 2 / size * 100) + '%';
-        _ro.style.height = (_rr2 * 2 / size * 100) + '%';
-      }
+
     }
     return;
   }
@@ -10705,7 +10668,6 @@ function renderScannerCanvas() {
 
   const visualBeamSample = beamSample || null;
 
-  const _reticleOverlay = document.getElementById('scannerReticleOverlay');
   let _zoomScale = 1;
   let _zoomOffsetX = 0;
   let _zoomOffsetY = 0;
@@ -10793,17 +10755,6 @@ function renderScannerCanvas() {
   }
 
   if (_zoomScale > 1) ctx.restore();
-
-  if (_reticleOverlay && visualBeamSample) {
-    const _rr = Math.max(10, size * 0.031);
-    _reticleOverlay.style.display = 'block';
-    _reticleOverlay.style.left = (visualBeamSample.x * 100) + '%';
-    _reticleOverlay.style.top = (visualBeamSample.y * 100) + '%';
-    _reticleOverlay.style.width = (_rr * 2 / size * 100) + '%';
-    _reticleOverlay.style.height = (_rr * 2 / size * 100) + '%';
-  } else if (_reticleOverlay) {
-    _reticleOverlay.style.display = 'none';
-  }
 
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
