@@ -10662,6 +10662,25 @@ function renderScannerCanvas() {
 
   const visualBeamSample = beamSample || null;
 
+  let _zoomScale = 1;
+  let _zoomOffsetX = 0;
+  let _zoomOffsetY = 0;
+  if ((roundStatus === "active" || roundStatus === "finished") && beamSample) {
+    const activeEndsAt = tsToMs(roundData?.activeEndsAt);
+    const timeRemaining = activeEndsAt - getNetworkTime();
+    if (timeRemaining < 5000) {
+      const zp = Math.max(0, Math.min(1, 1 - timeRemaining / 5000));
+      _zoomScale = 1 + zp * 0.55;
+      const bpx = Math.max(0, Math.min(size, beamSample.x * size));
+      const bpy = Math.max(0, Math.min(size, beamSample.y * size));
+      _zoomOffsetX = bpx - bpx / _zoomScale;
+      _zoomOffsetY = bpy - bpy / _zoomScale;
+      ctx.save();
+      ctx.translate(_zoomOffsetX, _zoomOffsetY);
+      ctx.scale(_zoomScale, _zoomScale);
+    }
+  }
+
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const reticleRadius = Math.max(10.2, size * 0.031);
@@ -10703,6 +10722,29 @@ function renderScannerCanvas() {
       wobble: isHotBeam ? SCANNER_RETICLE_ACTIVE_WOBBLE : SCANNER_RETICLE_IDLE_WOBBLE
     });
     ctx.restore();
+
+    if (roundStatus === "shuffling") {
+      const shuffleProgress = getScannerShuffleProgress(roundData);
+      const latch = getScannerCountdownBeamCache(roundData)?.latchSample;
+      const targetAngle = latch ? Math.atan2(latch.vy || 0.001, latch.vx || 0.001) : 0;
+      const spinOffset = (1 - Math.pow(shuffleProgress, 0.6)) * Math.PI * 6;
+      const arrowAngle = targetAngle + spinOffset;
+      const arrowDist = reticleRadius * 2.8;
+      const arrowSize = reticleRadius * 0.7;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(arrowAngle);
+      ctx.beginPath();
+      ctx.moveTo(arrowDist + arrowSize, 0);
+      ctx.lineTo(arrowDist, -arrowSize * 0.55);
+      ctx.lineTo(arrowDist, arrowSize * 0.55);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = 'rgba(45, 225, 255, 0.8)';
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   ctx.save();
@@ -10710,6 +10752,8 @@ function renderScannerCanvas() {
   ctx.lineWidth = Math.max(2, size * 0.007);
   ctx.strokeRect(1, 1, size - 2, size - 2);
   ctx.restore();
+
+  if (_zoomScale > 1) ctx.restore();
 
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
