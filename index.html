@@ -1255,8 +1255,6 @@ button {
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(7, 12, 26, 1), rgba(4, 7, 18, 0.98));
-  border: 3.5vw solid rgb(45, 225, 255);
-  box-sizing: border-box;
 }
 
 .scanner-connecting-overlay {
@@ -1942,6 +1940,7 @@ button {
   box-shadow: none !important;
   border-radius: 28px !important;
   margin: 0 !important;
+  overflow: visible;
 }
 
 .scanner-canvas-shell::before {
@@ -10360,6 +10359,12 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
 function drawScannerArenaBase(ctx, size) {
   ctx.fillStyle = "rgba(7, 12, 26, 0.97)";
   ctx.fillRect(0, 0, size, size);
+  const bw = Math.max(10, size * 0.031);
+  ctx.save();
+  ctx.strokeStyle = 'rgb(45, 225, 255)';
+  ctx.lineWidth = bw;
+  ctx.strokeRect(bw / 2, bw / 2, size - bw, size - bw);
+  ctx.restore();
 }
 
 function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
