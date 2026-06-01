@@ -3388,35 +3388,6 @@ button {
   backface-visibility: hidden;
 }
 
-#scannerReticleOverlay {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.12);
-  border: 2px solid rgba(255,255,255,0.9);
-  box-shadow: 0 0 10px rgba(45,225,255,0.8);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 20;
-  display: none;
-}
-#scannerReticleOverlay::before {
-  content: '';
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 35%; height: 10%;
-  background: rgba(45,225,255,0.95);
-  border-radius: 1px;
-}
-#scannerReticleOverlay::after {
-  content: '';
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 10%; height: 35%;
-  background: rgba(45,225,255,0.95);
-  border-radius: 1px;
-}
 
 /* Targeted balance centering: keeps only the balance block exactly in the middle of the top UI */
 .top-bar {
@@ -10398,7 +10369,13 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     innerColor: "rgba(255,255,255,0.88)",
     centerGap: idleReticleRadius * 2
   });
-  /* reticle drawn by HTML overlay */
+  drawScannerReticle(ctx, 0, 0, idleReticleRadius, {
+    rotation: options.reticleRotation || 0,
+    wobble: options.reticleWobble || 0,
+    centerGap: 0,
+    plusScale: 0.22,
+    plusColor: "rgba(45, 225, 255, 0.9)"
+  });
   ctx.restore();
 
   if (waitingTextAlpha > 0.01) {
@@ -10744,7 +10721,13 @@ function renderScannerCanvas() {
       innerColor: "rgba(255,255,255,0.95)",
       centerGap: reticleRadius * 2
     });
-    /* reticle drawn by HTML overlay */
+    drawScannerReticle(ctx, 0, 0, reticleRadius, {
+      rotation: now * 0.0004,
+      wobble: 0,
+      centerGap: 0,
+      plusScale: 0.22,
+      plusColor: "rgba(45, 225, 255, 0.9)"
+    });
     ctx.restore();
 
     if (roundStatus === "shuffling") {
