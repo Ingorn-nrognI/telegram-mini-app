@@ -1238,11 +1238,11 @@ button {
   content: '';
   position: absolute;
   inset: 0;
-  border: 6px solid rgba(45, 225, 255, 0.8);
+  border: 6px solid rgba(80, 90, 105, 0.95);
   border-radius: 20px;
   pointer-events: none;
   z-index: 10;
-  box-shadow: 0 0 14px rgba(45, 225, 255, 0.3), inset 0 0 14px rgba(45, 225, 255, 0.1);
+  box-shadow: none;
 }
 
 #scannerGridCanvas {
@@ -10348,7 +10348,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
-  const bwInner = Math.max(14, size * 0.048);
+  const bwInner = 6;
   const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
   const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
 
@@ -10382,8 +10382,6 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     plusColor: "rgba(7, 11, 18, 0.96)"
   });
   ctx.restore();
-
-  drawScannerArenaBorder(ctx, size);
 
   if (waitingTextAlpha > 0.01) {
     ctx.save();
@@ -10762,8 +10760,6 @@ function renderScannerCanvas() {
   }
 
   if (_zoomScale > 1) ctx.restore();
-
-  drawScannerArenaBorder(ctx, size);
 
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
