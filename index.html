@@ -10330,8 +10330,13 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
 function drawScannerArenaBase(ctx, size) {
   ctx.fillStyle = "rgba(7, 12, 26, 0.97)";
   ctx.fillRect(0, 0, size, size);
+}
+
+function drawScannerArenaBorder(ctx, size) {
   const bw = Math.max(10, size * 0.031);
   ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
   ctx.strokeStyle = 'rgb(45, 225, 255)';
   ctx.lineWidth = bw;
   ctx.strokeRect(bw / 2, bw / 2, size - bw, size - bw);
@@ -10374,7 +10379,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     wobble: options.reticleWobble || 0,
     centerGap: 0,
     plusScale: 0.22,
-    plusColor: "rgba(45, 225, 255, 0.9)"
+    plusColor: "rgba(7, 11, 18, 0.96)"
   });
   ctx.restore();
 
@@ -10388,6 +10393,8 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     });
     ctx.restore();
   }
+
+  drawScannerArenaBorder(ctx, size);
 }
 
 function drawScannerIdleArena(ctx, size, now) {
@@ -10690,9 +10697,8 @@ function renderScannerCanvas() {
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const reticleRadius = Math.max(10.2, size * 0.031);
-    const _bw = Math.max(10, size * 0.031);
-    const px = Math.max(_bw, Math.min(size - _bw, visualBeamSample.x * size));
-    const py = Math.max(_bw, Math.min(size - _bw, visualBeamSample.y * size));
+    const px = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.x * size));
+    const py = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.y * size));
     const beamLength = size * (isHotBeam ? 4.85 : 4.5);
     const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
 
@@ -10726,7 +10732,7 @@ function renderScannerCanvas() {
       wobble: 0,
       centerGap: 0,
       plusScale: 0.22,
-      plusColor: "rgba(45, 225, 255, 0.9)"
+      plusColor: "rgba(7, 11, 18, 0.96)"
     });
     ctx.restore();
 
@@ -10755,6 +10761,8 @@ function renderScannerCanvas() {
   }
 
   if (_zoomScale > 1) ctx.restore();
+
+  drawScannerArenaBorder(ctx, size);
 
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
