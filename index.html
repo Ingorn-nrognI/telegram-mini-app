@@ -10368,8 +10368,8 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
   const _ibw = Math.max(10, size * 0.031);
-  const cx = Math.max(_ibw * 2, Math.min(size - _ibw * 2, size * safeSample.x));
-  const cy = Math.max(_ibw * 2, Math.min(size - _ibw * 2, size * safeSample.y));
+  const cx = Math.max(0, Math.min(size, size * safeSample.x));
+  const cy = Math.max(0, Math.min(size, size * safeSample.y));
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
@@ -10715,8 +10715,8 @@ function renderScannerCanvas() {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const reticleRadius = Math.max(10.2, size * 0.031);
     const _bw = Math.max(10, size * 0.031);
-    const px = Math.max(_bw * 2, Math.min(size - _bw * 2, visualBeamSample.x * size));
-    const py = Math.max(_bw * 2, Math.min(size - _bw * 2, visualBeamSample.y * size));
+    const px = Math.max(0, Math.min(size, visualBeamSample.x * size));
+    const py = Math.max(0, Math.min(size, visualBeamSample.y * size));
     const beamLength = size * (isHotBeam ? 4.85 : 4.5);
     const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
 
