@@ -10333,7 +10333,7 @@ function drawScannerArenaBase(ctx, size) {
 }
 
 function drawScannerArenaBorder(ctx, size) {
-  const bw = Math.max(10, size * 0.031);
+  const bw = Math.max(14, size * 0.048);
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
@@ -10348,8 +10348,9 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
-  const cx = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.x));
-  const cy = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.y));
+  const bwInner = Math.max(14, size * 0.048);
+  const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
+  const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
@@ -10381,6 +10382,8 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     plusColor: "rgba(7, 11, 18, 0.96)"
   });
   ctx.restore();
+
+  drawScannerArenaBorder(ctx, size);
 
   if (waitingTextAlpha > 0.01) {
     ctx.save();
