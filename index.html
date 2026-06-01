@@ -10328,9 +10328,12 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
   ctx.shadowColor = 'transparent';
-  ctx.strokeStyle = 'rgb(80, 90, 105)';
-  ctx.lineWidth = bw;
-  ctx.strokeRect(bw / 2, bw / 2, size - bw, size - bw);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgb(80, 90, 105)';
+  ctx.fillRect(0, 0, size, bw);
+  ctx.fillRect(0, size - bw, size, bw);
+  ctx.fillRect(0, 0, bw, size);
+  ctx.fillRect(size - bw, 0, bw, size);
   ctx.restore();
 }
 
