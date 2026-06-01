@@ -10393,7 +10393,6 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     ctx.restore();
   }
 
-  drawScannerArenaBorder(ctx, size);
 }
 
 function drawScannerIdleArena(ctx, size, now) {
@@ -10615,7 +10614,6 @@ function renderScannerCanvas() {
       });
 
     }
-    drawScannerArenaBorder(ctx, size);
     return;
   }
 
