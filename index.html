@@ -1255,6 +1255,8 @@ button {
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(7, 12, 26, 1), rgba(4, 7, 18, 0.98));
+  border: 3.5vw solid rgb(45, 225, 255);
+  box-sizing: border-box;
 }
 
 .scanner-connecting-overlay {
@@ -3387,7 +3389,35 @@ button {
   backface-visibility: hidden;
 }
 
-
+#scannerReticleOverlay {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.9);
+  box-shadow: 0 0 10px rgba(45,225,255,0.8);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 20;
+  display: none;
+}
+#scannerReticleOverlay::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 35%; height: 10%;
+  background: rgba(45,225,255,0.95);
+  border-radius: 1px;
+}
+#scannerReticleOverlay::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10%; height: 35%;
+  background: rgba(45,225,255,0.95);
+  border-radius: 1px;
+}
 
 /* Targeted balance centering: keeps only the balance block exactly in the middle of the top UI */
 .top-bar {
@@ -10330,12 +10360,6 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
 function drawScannerArenaBase(ctx, size) {
   ctx.fillStyle = "rgba(7, 12, 26, 0.97)";
   ctx.fillRect(0, 0, size, size);
-  const bw = Math.max(10, size * 0.031);
-  ctx.save();
-  ctx.strokeStyle = 'rgb(45, 225, 255)';
-  ctx.lineWidth = bw;
-  ctx.strokeRect(bw / 2, bw / 2, size - bw, size - bw);
-  ctx.restore();
 }
 
 function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
@@ -10344,8 +10368,8 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
   const _ibw = Math.max(10, size * 0.031);
-  const cx = Math.max(_ibw, Math.min(size - _ibw, size * safeSample.x));
-  const cy = Math.max(_ibw, Math.min(size - _ibw, size * safeSample.y));
+  const cx = Math.max(_ibw * 2, Math.min(size - _ibw * 2, size * safeSample.x));
+  const cy = Math.max(_ibw * 2, Math.min(size - _ibw * 2, size * safeSample.y));
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
@@ -10691,8 +10715,8 @@ function renderScannerCanvas() {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const reticleRadius = Math.max(10.2, size * 0.031);
     const _bw = Math.max(10, size * 0.031);
-    const px = Math.max(_bw, Math.min(size - _bw, visualBeamSample.x * size));
-    const py = Math.max(_bw, Math.min(size - _bw, visualBeamSample.y * size));
+    const px = Math.max(_bw * 2, Math.min(size - _bw * 2, visualBeamSample.x * size));
+    const py = Math.max(_bw * 2, Math.min(size - _bw * 2, visualBeamSample.y * size));
     const beamLength = size * (isHotBeam ? 4.85 : 4.5);
     const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
 
