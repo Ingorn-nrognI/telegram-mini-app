@@ -10373,8 +10373,8 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
   const _ibw = Math.max(10, size * 0.031);
-  const cx = Math.max(0, Math.min(size, size * safeSample.x));
-  const cy = Math.max(0, Math.min(size, size * safeSample.y));
+  const cx = Math.max(_ibw, Math.min(size - _ibw, size * safeSample.x));
+  const cy = Math.max(_ibw, Math.min(size - _ibw, size * safeSample.y));
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
@@ -10398,13 +10398,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     innerColor: "rgba(255,255,255,0.88)",
     centerGap: idleReticleRadius * 2
   });
-  drawScannerReticle(ctx, 0, 0, idleReticleRadius, {
-    alpha: 0.96,
-    plusScale: 0.22,
-    plusColor: "rgba(6, 10, 16, 0.96)",
-    rotation: reticleRotation,
-    wobble: reticleWobble
-  });
+  /* reticle drawn by HTML overlay */
   ctx.restore();
 
   if (waitingTextAlpha > 0.01) {
@@ -10720,8 +10714,8 @@ function renderScannerCanvas() {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const reticleRadius = Math.max(10.2, size * 0.031);
     const _bw = Math.max(10, size * 0.031);
-    const px = Math.max(0, Math.min(size, visualBeamSample.x * size));
-    const py = Math.max(0, Math.min(size, visualBeamSample.y * size));
+    const px = Math.max(_bw, Math.min(size - _bw, visualBeamSample.x * size));
+    const py = Math.max(_bw, Math.min(size - _bw, visualBeamSample.y * size));
     const beamLength = size * (isHotBeam ? 4.85 : 4.5);
     const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
 
@@ -10750,13 +10744,7 @@ function renderScannerCanvas() {
       innerColor: "rgba(255,255,255,0.95)",
       centerGap: reticleRadius * 2
     });
-    drawScannerReticle(ctx, 0, 0, reticleRadius, {
-      alpha: isHotBeam ? 0.98 : 0.86,
-      plusScale: 0.22,
-      plusColor: "rgba(7, 11, 18, 0.96)",
-      rotation: reticleRotation,
-      wobble: isHotBeam ? SCANNER_RETICLE_ACTIVE_WOBBLE : SCANNER_RETICLE_IDLE_WOBBLE
-    });
+    /* reticle drawn by HTML overlay */
     ctx.restore();
 
     if (roundStatus === "shuffling") {
