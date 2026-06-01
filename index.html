@@ -1234,16 +1234,6 @@ button {
   pointer-events: none;
 }
 
-.scanner-canvas-shell::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 12px solid rgb(80, 90, 105);
-  border-radius: 20px;
-  pointer-events: none;
-  z-index: 1;
-  box-shadow: none;
-}
 
 #scannerGridCanvas {
   position: relative;
@@ -10333,10 +10323,11 @@ function drawScannerArenaBase(ctx, size) {
 }
 
 function drawScannerArenaBorder(ctx, size) {
-  const bw = Math.max(14, size * 0.048);
+  const bw = 12;
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
   ctx.strokeStyle = 'rgb(80, 90, 105)';
   ctx.lineWidth = bw;
   ctx.strokeRect(bw / 2, bw / 2, size - bw, size - bw);
@@ -10348,9 +10339,8 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
-  const bwInner = 6;
-  const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
-  const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
+  const cx = Math.max(12, Math.min(size - 12, size * safeSample.x));
+  const cy = Math.max(12, Math.min(size - 12, size * safeSample.y));
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
@@ -10394,6 +10384,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     ctx.restore();
   }
 
+  drawScannerArenaBorder(ctx, size);
 }
 
 function drawScannerIdleArena(ctx, size, now) {
@@ -10760,6 +10751,8 @@ function renderScannerCanvas() {
   }
 
   if (_zoomScale > 1) ctx.restore();
+
+  drawScannerArenaBorder(ctx, size);
 
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
