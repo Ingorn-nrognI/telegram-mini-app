@@ -3529,7 +3529,7 @@ button {
           <div id="scannerPreviewBank" class="scanner-preview-bank">0.00 TON</div>
         </div>
         <div class="scanner-canvas-shell">
-          <canvas id="scannerPreviewCanvas"></canvas>
+          <canvas id="scannerGridCanvas"></canvas>
         </div>
         <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">
           Зайти в Сканер
@@ -3601,7 +3601,6 @@ button {
         </div>
 
         <div class="scanner-canvas-shell">
-          <canvas id="scannerGridCanvas"></canvas>
           <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
             <span class="scanner-connecting-text">Подключение...</span>
           </div>
@@ -5248,6 +5247,13 @@ function setMenuView(view, options = {}) {
   const historyPanel = document.getElementById("historyPanel");
 
   if (homeScreen) homeScreen.classList.toggle("active", view === "home");
+  if (view === "home") {
+    const _canvas = document.getElementById("scannerGridCanvas");
+    const _homeShell = document.querySelector("#scannerHomeBlock .scanner-canvas-shell");
+    if (_canvas && _homeShell && !_homeShell.contains(_canvas)) {
+      _homeShell.insertBefore(_canvas, _homeShell.firstChild);
+    }
+  }
   if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "bobrRun");
   if (scannerScreen) scannerScreen.classList.toggle("active", view === "scannerScreen");
   if (profileScreen) profileScreen.classList.toggle("active", view === "profile");
@@ -11051,6 +11057,11 @@ function initializeScannerGridFeature() {
 
 function enterScannerGridMode(event) {
   if (event) event.stopPropagation();
+  const _canvas = document.getElementById("scannerGridCanvas");
+  const _targetShell = document.querySelector("#scannerScreenContent .scanner-canvas-shell");
+  if (_canvas && _targetShell && !_targetShell.contains(_canvas)) {
+    _targetShell.insertBefore(_canvas, _targetShell.firstChild);
+  }
   closeModePopup();
   closeHistoryPanel({ preserveNav: true });
   closeLeaderboard();
