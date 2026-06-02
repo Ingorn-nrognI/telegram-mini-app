@@ -9508,6 +9508,7 @@ function isScannerBetBarContextActive() {
   const roomsOpen = roomsModal?.style.display === "flex";
   const stakeSettingsOpen = !!stakeSettingsOverlay?.classList.contains("open");
   const scannerScreenEl = document.getElementById("scannerScreen");
+  if (!scannerScreenEl || !scannerScreenEl.classList.contains("active")) return false;
   const homeActive = currentMenuView === "home" && !!homeScreen?.classList.contains("active");
   const scannerScreenActive = currentMenuView === "scannerScreen" && !!scannerScreenEl?.classList.contains("active");
   const bobrRunActive = !!bobrRunScreen?.classList.contains("active");
