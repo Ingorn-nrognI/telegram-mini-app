@@ -10323,7 +10323,7 @@ function drawScannerArenaBase(ctx, size) {
 }
 
 function drawScannerArenaBorder(ctx, size) {
-  const bw = 24;
+  const bw = Math.max(11, size * 0.031) + 1;
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
@@ -10342,7 +10342,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
-  const bwInner = 24;
+  const bwInner = Math.max(11, size * 0.031) + 1;
   const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
   const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
 
