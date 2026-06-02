@@ -6231,7 +6231,7 @@ function handleModalBackdropClick(modalId, event) {
 }
 
 function shouldRenderScannerCanvasLive() {
-  return (currentMenuView === "home" || currentMenuView === "scannerScreen") && !document.hidden;
+  return !document.hidden;
 }
 
 function scannerRuntimeRef() {
@@ -8193,7 +8193,7 @@ function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
   const tick = (now) => {
     if (!scannerGridVisualFrame) return;
-    if (!shouldRenderScannerCanvasLive()) {
+    if (document.hidden) {
       scannerGridVisualFrame = null;
       return;
     }
