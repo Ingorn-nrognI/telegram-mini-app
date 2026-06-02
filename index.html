@@ -3518,21 +3518,10 @@ button {
           <div class="scanner-preview-title">Сканер</div>
           <div id="scannerPreviewBank" class="scanner-preview-bank">0.00 TON</div>
         </div>
-        <div class="scanner-preview-canvas-wrap">
-          <canvas id="scannerGridCanvas"></canvas>
-          <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
-            <span class="scanner-connecting-text">Подключение...</span>
-          </div>
-        </div>
         <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">
           Зайти в Сканер
         </button>
       </section>
-
-      <div id="scannerResultBanner" class="scanner-result-banner">
-        <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
-        <div id="scannerResultText" class="scanner-result-text"></div>
-      </div>
 
       <section class="hero-card scanner-home-hub">
         <div class="hero-topline">🌐 Главный хаб</div>
@@ -3582,6 +3571,73 @@ button {
       </div>
       <div class="history-scroll-area">
         <div class="history-panel-empty">История пуста.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="scannerScreen" class="menu-screen">
+    <div class="screen-inner">
+      <div id="scannerScreenContent">
+
+        <div class="scanner-game-title">Сканер</div>
+
+        <div class="scanner-panel-top">
+          <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
+          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
+          <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
+        </div>
+
+        <div class="scanner-canvas-shell">
+          <canvas id="scannerGridCanvas"></canvas>
+          <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
+            <span class="scanner-connecting-text">Подключение...</span>
+          </div>
+        </div>
+
+        <div id="scannerResultBanner" class="scanner-result-banner">
+          <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
+          <div id="scannerResultText" class="scanner-result-text"></div>
+        </div>
+
+        <div class="scanner-control-divider"></div>
+
+        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-players-heading-row">
+          <div class="scanner-inline-section-title scanner-players-heading-title">
+            Игроки <span id="scannerPlayersCount" class="scanner-players-count">0</span>
+          </div>
+          <button
+            type="button"
+            id="scannerParticipantsToggle"
+            class="scanner-recent-toggle scanner-participants-toggle"
+            onclick="toggleScannerParticipants(event)"
+            aria-label="Показать игроков"
+            aria-expanded="false"
+          >
+            <span class="scanner-recent-toggle-icon">▾</span>
+          </button>
+        </div>
+
+        <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
+        <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
+
+        <div class="scanner-control-divider"></div>
+
+        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-recent-heading-row">
+          <div class="scanner-inline-section-title scanner-recent-heading-title">Последние раунды</div>
+          <button
+            type="button"
+            id="scannerRecentToggle"
+            class="scanner-recent-toggle"
+            onclick="toggleScannerRecentRounds(event)"
+            aria-label="Показать последние раунды"
+            aria-expanded="false"
+          >
+            <span id="scannerRecentToggleIcon" class="scanner-recent-toggle-icon">▾</span>
+          </button>
+        </div>
+
+        <div id="scannerRecentRounds" class="scanner-recent-list"></div>
+
       </div>
     </div>
   </div>
@@ -5169,15 +5225,18 @@ function setMenuView(view, options = {}) {
   const { preserveNav = false, keepHistory = false } = options;
   currentMenuView = view;
   if (view === "home") ensureScannerVisualLoop();
+  if (view === "scannerScreen") ensureScannerVisualLoop();
 
   const homeScreen = document.getElementById("homeScreen");
   const bobrRunScreen = document.getElementById("bobrRunScreen");
+  const scannerScreen = document.getElementById("scannerScreen");
   const profileScreen = document.getElementById("profileScreen");
   const modePopup = document.getElementById("modePopup");
   const historyPanel = document.getElementById("historyPanel");
 
   if (homeScreen) homeScreen.classList.toggle("active", view === "home");
   if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "bobrRun");
+  if (scannerScreen) scannerScreen.classList.toggle("active", view === "scannerScreen");
   if (profileScreen) profileScreen.classList.toggle("active", view === "profile");
   const topBar = document.querySelector(".top-bar");
   if (topBar) {
@@ -6159,7 +6218,7 @@ function handleModalBackdropClick(modalId, event) {
 }
 
 function shouldRenderScannerCanvasLive() {
-  return currentMenuView === "home" && !document.hidden;
+  return (currentMenuView === "home" || currentMenuView === "scannerScreen") && !document.hidden;
 }
 
 function scannerRuntimeRef() {
@@ -9429,11 +9488,13 @@ function isScannerBetBarContextActive() {
   const leaderboardOpen = leaderboardModal?.style.display === "flex";
   const roomsOpen = roomsModal?.style.display === "flex";
   const stakeSettingsOpen = !!stakeSettingsOverlay?.classList.contains("open");
+  const scannerScreenEl = document.getElementById("scannerScreen");
   const homeActive = currentMenuView === "home" && !!homeScreen?.classList.contains("active");
+  const scannerScreenActive = currentMenuView === "scannerScreen" && !!scannerScreenEl?.classList.contains("active");
   const bobrRunActive = !!bobrRunScreen?.classList.contains("active");
   const profileActive = !!profileScreen?.classList.contains("active");
 
-  return homeActive &&
+  return (homeActive || scannerScreenActive) &&
     !bobrRunActive &&
     !profileActive &&
     !historyOpen &&
@@ -10968,11 +11029,9 @@ function enterScannerGridMode(event) {
   ensureScannerVisualLoop();
   setupScannerCanvasMetricsTracking();
   invalidateScannerCanvasMetrics();
-  homeScreenContext = "pvp";
-  setMenuView("home", { preserveNav: true });
+  setMenuView("scannerScreen", { preserveNav: true });
   setActiveBottomNav("pvp");
   requestAnimationFrame(() => {
-    scrollHomeToSection("scannerHomeBlock");
     renderScannerRound();
     forceScannerBetBarVisibilityRefresh();
   });
