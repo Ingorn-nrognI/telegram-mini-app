@@ -1923,6 +1923,56 @@ button {
   border-radius: 28px !important;
 }
 
+.scanner-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+}
+.scanner-preview-timer {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(45, 225, 255, 0.9);
+  min-width: 48px;
+}
+.scanner-preview-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #dce7ff;
+  letter-spacing: 0.5px;
+}
+.scanner-preview-bank {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(45, 225, 255, 0.9);
+  min-width: 48px;
+  text-align: right;
+}
+.scanner-preview-canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+.scanner-preview-canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 12px;
+}
+.scanner-preview-enter-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 13px 0;
+  background: linear-gradient(135deg, rgba(45, 225, 255, 0.18), rgba(45, 225, 255, 0.08));
+  border: 1px solid rgba(45, 225, 255, 0.35);
+  border-radius: 14px;
+  color: rgba(45, 225, 255, 0.95);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+}
+
 .scanner-canvas-shell {
   padding: 0 !important;
   border: none !important;
@@ -3463,66 +3513,26 @@ button {
       </div>
 
       <section id="scannerHomeBlock" class="section-card scanner-arena-card scanner-unified-card scanner-home-main-block">
-        <div class="scanner-game-title">Сканер</div>
-
-        <div class="scanner-panel-top">
-          <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
-          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
-          <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
+        <div class="scanner-preview-header">
+          <div id="scannerPreviewTimer" class="scanner-preview-timer">00:30</div>
+          <div class="scanner-preview-title">Сканер</div>
+          <div id="scannerPreviewBank" class="scanner-preview-bank">0.00 TON</div>
         </div>
-
-        <div class="scanner-canvas-shell">
+        <div class="scanner-preview-canvas-wrap">
           <canvas id="scannerGridCanvas"></canvas>
-
           <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
             <span class="scanner-connecting-text">Подключение...</span>
           </div>
         </div>
-
-        <div id="scannerResultBanner" class="scanner-result-banner">
-          <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
-          <div id="scannerResultText" class="scanner-result-text"></div>
-        </div>
-
-        <div class="scanner-control-divider"></div>
-
-        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-players-heading-row">
-          <div class="scanner-inline-section-title scanner-players-heading-title">
-            Игроки <span id="scannerPlayersCount" class="scanner-players-count">0</span>
-          </div>
-          <button
-            type="button"
-            id="scannerParticipantsToggle"
-            class="scanner-recent-toggle scanner-participants-toggle"
-            onclick="toggleScannerParticipants(event)"
-            aria-label="Показать игроков"
-            aria-expanded="false"
-          >
-            <span class="scanner-recent-toggle-icon">▾</span>
-          </button>
-        </div>
-
-        <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
-        <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
-
-        <div class="scanner-control-divider"></div>
-
-        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-recent-heading-row">
-          <div class="scanner-inline-section-title scanner-recent-heading-title">Последние раунды</div>
-          <button
-            type="button"
-            id="scannerRecentToggle"
-            class="scanner-recent-toggle"
-            onclick="toggleScannerRecentRounds(event)"
-            aria-label="Показать последние раунды"
-            aria-expanded="false"
-          >
-            <span id="scannerRecentToggleIcon" class="scanner-recent-toggle-icon">▾</span>
-          </button>
-        </div>
-
-        <div id="scannerRecentRounds" class="scanner-recent-list"></div>
+        <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">
+          Зайти в Сканер
+        </button>
       </section>
+
+      <div id="scannerResultBanner" class="scanner-result-banner">
+        <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
+        <div id="scannerResultText" class="scanner-result-text"></div>
+      </div>
 
       <section class="hero-card scanner-home-hub">
         <div class="hero-topline">🌐 Главный хаб</div>
@@ -9668,8 +9678,12 @@ function renderScannerRound(options = {}) {
     setTextContentIfChanged(countdown, getScannerCountdownChipText());
     countdown.classList.toggle("is-round-active", scannerGridState.status === "active");
   }
+  const previewTimer = document.getElementById("scannerPreviewTimer");
+  if (previewTimer) setTextContentIfChanged(previewTimer, getScannerCountdownChipText());
   const _tt = window._t || APP_TRANSLATIONS["ru"];
   if (poolChip) setTextContentIfChanged(poolChip, `${_tt.bank}: ${formatTon(isArenaResetPhase ? 0 : (scannerGridState.totalPot || 0))}`);
+  const previewBank = document.getElementById("scannerPreviewBank");
+  if (previewBank) setTextContentIfChanged(previewBank, formatTon(isArenaResetPhase ? 0 : (scannerGridState.totalPot || 0)));
   if (chanceChip) setTextContentIfChanged(chanceChip, `${_tt.myChance}: ${isArenaResetPhase ? "0%" : myChanceValue}`);
   if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
   if (selectedPopulation) setTextContentIfChanged(selectedPopulation, scannerGridState.roundData ? formatCompactNumber(scannerGridState.maxPlayers || 0) : formatCompactNumber(scannerGridState.selectedPopulation));
