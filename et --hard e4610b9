@@ -1,0 +1,10 @@
+[33m8864d6d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: restore scannerHomeBlock original content
+[33m414e8f1[m feat: preview canvas mirrors main arena on home screen
+[33mcac2afd[m feat: scanner full width layout no side padding
+[33m1284ef6[m fix: wider responsive layout up to 640px
+[33me4610b9[m feat: scanner full screen on enter button
+[33m039d543[m feat: scanner preview card on home screen with enter button
+[33m70f4c71[m fix: beam under border, reticle above border
+[33m612d808[m fix: remove reticle aura glow circles
+[33maf51cc3[m fix: remove reticle glow
+[33m94986b8[m fix: border width equals reticle radius + 1px

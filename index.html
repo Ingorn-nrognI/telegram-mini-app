@@ -1247,6 +1247,16 @@ button {
     linear-gradient(180deg, rgba(7, 12, 26, 1), rgba(4, 7, 18, 0.98));
 }
 
+#scannerPreviewCanvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: block;
+  aspect-ratio: 1 / 1;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(7, 12, 26, 1), rgba(4, 7, 18, 0.98));
+}
+
 .scanner-connecting-overlay {
   position: absolute;
   inset: 0;
@@ -3517,6 +3527,9 @@ button {
           <div id="scannerPreviewTimer" class="scanner-preview-timer">00:30</div>
           <div class="scanner-preview-title">Сканер</div>
           <div id="scannerPreviewBank" class="scanner-preview-bank">0.00 TON</div>
+        </div>
+        <div class="scanner-canvas-shell">
+          <canvas id="scannerPreviewCanvas"></canvas>
         </div>
         <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">
           Зайти в Сканер
@@ -10834,6 +10847,21 @@ function renderScannerCanvas() {
 
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
+  }
+
+  const previewCanvas = document.getElementById("scannerPreviewCanvas");
+  if (previewCanvas) {
+    const pw = previewCanvas.clientWidth;
+    if (pw > 0 && previewCanvas.width !== pw) {
+      previewCanvas.width = pw;
+      previewCanvas.height = pw;
+    }
+    const mainCanvas = document.getElementById("scannerGridCanvas");
+    if (mainCanvas && previewCanvas.width > 0) {
+      const pCtx = previewCanvas.getContext("2d");
+      pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+      pCtx.drawImage(mainCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+    }
   }
 }
 
