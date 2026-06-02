@@ -10342,8 +10342,9 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
-  const cx = Math.max(12, Math.min(size - 12, size * safeSample.x));
-  const cy = Math.max(12, Math.min(size - 12, size * safeSample.y));
+  const bwInner = 24;
+  const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
+  const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
