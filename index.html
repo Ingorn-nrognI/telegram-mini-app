@@ -9939,6 +9939,8 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.save();
   ctx.translate(x, y);
   ctx.globalAlpha = alpha;
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
 
   ctx.fillStyle = "rgba(45, 225, 255, 0.06)";
   ctx.beginPath();
