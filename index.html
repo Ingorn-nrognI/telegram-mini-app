@@ -1931,10 +1931,11 @@ button {
   border-radius: 28px !important;
 }
 
-.scanner-preview-chips {
+.scanner-preview-bottom-row {
   display: flex;
-  gap: 8px;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
   padding: 10px 12px 0;
 }
 
@@ -3534,13 +3535,11 @@ button {
         <div class="scanner-canvas-shell">
           <canvas id="scannerGridCanvas"></canvas>
         </div>
-        <div class="scanner-preview-chips">
+        <div class="scanner-preview-bottom-row">
           <div id="scannerPreviewTimer" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
+          <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">Зайти в Сканер</button>
           <div id="scannerPreviewBank" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
         </div>
-        <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">
-          Зайти в Сканер
-        </button>
       </section>
 
       <section class="hero-card scanner-home-hub">
