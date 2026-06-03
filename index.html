@@ -10158,7 +10158,10 @@ function createScannerWaitingTextLayer(size) {
 }
 
 function getScannerWaitingTextCache(text, font, size, startX, centerY, fontSize, measuredWidth) {
-  const state = scannerWaitingTextGlowState;
+  if (!window._scannerWaitingTextCacheMap) window._scannerWaitingTextCacheMap = {};
+  const cacheKeyPre = text + "|" + font + "|" + Math.round(size);
+  if (!window._scannerWaitingTextCacheMap[cacheKeyPre]) window._scannerWaitingTextCacheMap[cacheKeyPre] = {};
+  const state = window._scannerWaitingTextCacheMap[cacheKeyPre];
   const roundedSize = Math.max(1, Math.round(size));
   const cacheKey = [
     text,
