@@ -10395,16 +10395,15 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // Слой 1: мягкое голубое свечение вокруг текста
   if (getEffectiveQualityTier() !== "low") {
     ctx.shadowBlur = Math.max(8, fontSize * 0.42);
     ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.glowShadowColor;
     ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.glowFinalAlpha;
     ctx.fillStyle = "rgba(45,225,255,0.22)";
+    ctx.fillText("Scanner", centerX, scannerY);
     ctx.fillText(text, centerX, centerY);
   }
 
-  // Слой 2: основной текст с небольшой тенью
   if (getEffectiveQualityTier() !== "low") {
     ctx.shadowBlur = Math.max(3, fontSize * SCANNER_WAITING_TEXT_VISUALS.baseShadowBlurFactor);
     ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.baseShadowColor;
@@ -10413,38 +10412,20 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   }
   ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.baseAlpha;
   ctx.fillStyle = SCANNER_WAITING_TEXT_VISUALS.fillStyle;
+  ctx.fillText("Scanner", centerX, scannerY);
   ctx.fillText(text, centerX, centerY);
 
-  // Слой 3: накопленное свечение от луча, клипированное по форме букв
+  if (getEffectiveQualityTier() !== "low" && cache.glowCanvas) {
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.94;
+    ctx.drawImage(cache.glowCanvas, 0, 0, size, size);
+  }
   if (getEffectiveQualityTier() !== "low" && scannerCache.glowCanvas) {
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 0.94;
     ctx.drawImage(scannerCache.glowCanvas, 0, 0, size, size);
   }
 
-  ctx.restore();
-
-  ctx.save();
-  ctx.font = font;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  if (getEffectiveQualityTier() !== "low") {
-    ctx.shadowBlur = Math.max(8, fontSize * 0.42);
-    ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.glowShadowColor;
-    ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.glowFinalAlpha;
-    ctx.fillStyle = "rgba(45,225,255,0.22)";
-    ctx.fillText("Scanner", centerX, scannerY);
-  }
-  ctx.shadowBlur = Math.max(3, fontSize * SCANNER_WAITING_TEXT_VISUALS.baseShadowBlurFactor);
-  ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.baseShadowColor;
-  ctx.globalAlpha = SCANNER_WAITING_TEXT_VISUALS.baseAlpha;
-  ctx.fillStyle = SCANNER_WAITING_TEXT_VISUALS.fillStyle;
-  ctx.fillText("Scanner", centerX, scannerY);
-  if (getEffectiveQualityTier() !== "low" && cache.glowCanvas) {
-    ctx.shadowBlur = 0;
-    ctx.globalAlpha = 0.94;
-    ctx.drawImage(cache.glowCanvas, 0, 0, size, size);
-  }
   ctx.restore();
 }
 
