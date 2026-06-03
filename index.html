@@ -1031,6 +1031,7 @@ button {
 
 #homeScreen .screen-inner {
   position: relative;
+  align-items: stretch;
 }
 
 .home-top-spacer {
@@ -1764,10 +1765,10 @@ button {
 }
 
 .scanner-home-main-block {
-  width: min(calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px), 540px);
+  width: 100%;
   max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px);
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: 0;
+  margin-right: 0;
   left: 50%;
   transform: translateX(-50%);
   background:
