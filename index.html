@@ -10450,7 +10450,10 @@ function addBorderGlowPoint(size, px, py) {
   if (!nearBorder) return;
   const now = performance.now();
   const last = _borderGlowPoints[_borderGlowPoints.length - 1];
-  if (last && now - last.t < 300) return;
+  if (last && now - last.t < 300) {
+    const dx = px - last.x; const dy = py - last.y;
+    if (Math.sqrt(dx*dx + dy*dy) < size * 0.25) return;
+  }
   _borderGlowPoints.push({ x: px, y: py, t: now });
   if (_borderGlowPoints.length > 12) _borderGlowPoints.shift();
 }
@@ -11268,5 +11271,6 @@ document.querySelectorAll(".bottom-btn").forEach(btn => btn.classList.remove("is
 </script>
 </body>
 </html>
+
 
 
