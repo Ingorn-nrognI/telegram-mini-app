@@ -7466,9 +7466,7 @@ function simulateScannerReticleSamples(options = {}) {
         bounced = true;
         bouncedDuringStep = true;
         bounceCount += 1;
-      }
-
-      if (nextY < safePad) {
+      } else if (nextY < safePad) {
         nextY = safePad + (safePad - nextY);
         direction = normalizeScannerVector(
           direction.x + bounceBendStrength,
