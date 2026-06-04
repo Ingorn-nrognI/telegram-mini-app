@@ -7858,10 +7858,6 @@ function getScannerActiveBeamCache(round, players) {
     bounceBendStrength: SCANNER_BEAM_BOUNCE_BEND_STRENGTH,
     bounceNormalBias: SCANNER_BEAM_BOUNCE_NORMAL_BIAS,
     speedFactorAt: (progress) => getScannerActiveSpeedFactor(progress),
-    onBounce: (bx, by) => {
-      const canvas = document.getElementById('scannerGridCanvas');
-      if (canvas) addBorderGlowPoint(canvas.clientWidth, bx * canvas.clientWidth, by * canvas.clientWidth);
-    },
   });
 
   const finalSample = simulation.finalSample || latchSample;
@@ -7871,7 +7867,8 @@ function getScannerActiveBeamCache(round, players) {
     startSample: latchSample,
     launchState,
     finalSample,
-    winningCellIndex: getScannerCellIndexFromPoint(finalSample.x, finalSample.y)
+    winningCellIndex: getScannerCellIndexFromPoint(finalSample.x, finalSample.y),
+    bouncePoints: simulation.bounceLog.map(b => ({ x: b.bounceX, y: b.bounceY, step: b.step })),
   };
   return scannerActiveBeamCache;
 }
@@ -10468,6 +10465,11 @@ function drawScannerArenaBorder(ctx, size) {
 
 function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const safeSample = beamSample || getScannerSharedLobbyBeamSample();
+  const _lobbyCx = Math.max(0, Math.min(size, size * safeSample.x));
+  const _lobbyCy = Math.max(0, Math.min(size, size * safeSample.y));
+  const _lobbyBw = Math.max(11, size * 0.031) + 1;
+  const _lobbyAtBorder = _lobbyCx < _lobbyBw * 1.8 || _lobbyCx > size - _lobbyBw * 1.8 || _lobbyCy < _lobbyBw * 1.8 || _lobbyCy > size - _lobbyBw * 1.8;
+  if (_lobbyAtBorder) addBorderGlowPoint(size, _lobbyCx, _lobbyCy);
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
@@ -10782,6 +10784,19 @@ function renderScannerCanvas() {
 
   if (previewBadgeAlpha > 0.02) {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
+  }
+
+  if (roundStatus === 'active') {
+    const _activeCache = getScannerActiveBeamCache(roundData, scannerGridState.players || []);
+    if (_activeCache?.bouncePoints?.length) {
+      const _progress = getScannerActiveBeamProgressAtTime(roundData, nowMs);
+      const _currentStep = Math.floor(_progress * Math.max(1, (_activeCache.samples.length - 1)));
+      _activeCache.bouncePoints.forEach(bp => {
+        if (Math.abs(bp.step - _currentStep) <= 2) {
+          addBorderGlowPoint(size, bp.x * size, bp.y * size);
+        }
+      });
+    }
   }
 
   beamSample = getSmoothedScannerBeamSample(
