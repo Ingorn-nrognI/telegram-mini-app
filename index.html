@@ -5906,7 +5906,7 @@ const appSettings = {
   language: window._savedAppSettings?.language || "ru",
   quality: window._savedAppSettings?.quality || "auto",
   vibration: window._savedAppSettings?.vibration !== undefined ? window._savedAppSettings.vibration : true,
-  fps: window._savedAppSettings?.fps || "30",
+  fps: window._savedAppSettings?.fps || "native",
 };
 delete window._savedAppSettings;
 
@@ -8177,9 +8177,8 @@ function ensureScannerVisualLoop() {
       return;
     }
     scannerGridVisualFrame = requestAnimationFrame(tick);
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const fpsSetting = getEffectiveFps();
-  const minFrameMs = fpsSetting === "30" ? 33 : fpsSetting === "45" ? 22 : (isMobile ? 16 : 0);
+    const fpsSetting = getEffectiveFps();
+    const minFrameMs = fpsSetting === "30" ? 33 : fpsSetting === "45" ? 22 : 0;
     if (minFrameMs > 0 && now - (ensureScannerVisualLoop._lastFrame || 0) < minFrameMs) return;
     if (minFrameMs > 0) ensureScannerVisualLoop._lastFrame = now;
     try {
