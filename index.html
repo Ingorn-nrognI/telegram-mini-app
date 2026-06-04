@@ -10473,6 +10473,8 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const bwInner = Math.max(11, size * 0.031) + 1;
   const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
   const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
+  const _atBorder = cx <= bwInner * 1.5 || cx >= size - bwInner * 1.5 || cy <= bwInner * 1.5 || cy >= size - bwInner * 1.5;
+  if (_atBorder) addBorderGlowPoint(size, cx, cy);
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
