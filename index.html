@@ -10448,7 +10448,10 @@ function addBorderGlowPoint(size, px, py) {
   const margin = bw * 2;
   const nearBorder = px < margin || px > size - margin || py < margin || py > size - margin;
   if (!nearBorder) return;
-  _borderGlowPoints.push({ x: px, y: py, t: performance.now() });
+  const now = performance.now();
+  const last = _borderGlowPoints[_borderGlowPoints.length - 1];
+  if (last && now - last.t < 300) return;
+  _borderGlowPoints.push({ x: px, y: py, t: now });
   if (_borderGlowPoints.length > 12) _borderGlowPoints.shift();
 }
 
