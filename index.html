@@ -10440,6 +10440,17 @@ function drawScannerArenaBase(ctx, size) {
   ctx.fillRect(0, 0, size, size);
 }
 
+const _borderGlowPoints = [];
+
+function addBorderGlowPoint(size, px, py) {
+  const bw = Math.max(11, size * 0.031) + 1;
+  const margin = bw * 2;
+  const nearBorder = px < margin || px > size - margin || py < margin || py > size - margin;
+  if (!nearBorder) return;
+  _borderGlowPoints.push({ x: px, y: py, t: performance.now() });
+  if (_borderGlowPoints.length > 12) _borderGlowPoints.shift();
+}
+
 function drawScannerArenaBorder(ctx, size) {
   const bw = Math.max(11, size * 0.031) + 1;
   ctx.save();
@@ -10452,6 +10463,28 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.fillRect(0, size - bw, size, bw);
   ctx.fillRect(0, 0, bw, size);
   ctx.fillRect(size - bw, 0, bw, size);
+
+  const now = performance.now();
+  for (let i = _borderGlowPoints.length - 1; i >= 0; i--) {
+    const pt = _borderGlowPoints[i];
+    const age = now - pt.t;
+    if (age > 800) { _borderGlowPoints.splice(i, 1); continue; }
+    const alpha = Math.max(0, 1 - age / 800) * 0.7;
+    const radius = bw * 2.5;
+    const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, radius);
+    grad.addColorStop(0, `rgba(45, 225, 255, ${alpha})`);
+    grad.addColorStop(1, 'rgba(45, 225, 255, 0)');
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, bw);
+    ctx.fillRect(0, size - bw, size, bw);
+    ctx.fillRect(0, 0, bw, size);
+    ctx.fillRect(size - bw, 0, bw, size);
+    ctx.restore();
+  }
+
   ctx.restore();
 }
 
@@ -10463,6 +10496,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const bwInner = Math.max(11, size * 0.031) + 1;
   const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
   const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
+  addBorderGlowPoint(size, cx, cy);
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
@@ -10818,6 +10852,7 @@ function renderScannerCanvas() {
     const rawPy = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.y * size));
     const px = _zoomScale > 1 ? (rawPx - _zoomOffsetX) / _zoomScale : rawPx;
     const py = _zoomScale > 1 ? (rawPy - _zoomOffsetY) / _zoomScale : rawPy;
+    addBorderGlowPoint(size, rawPx, rawPy);
     const beamLength = size * (isHotBeam ? 4.85 : 4.5);
     const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
 
