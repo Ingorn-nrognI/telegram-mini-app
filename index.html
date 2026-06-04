@@ -8208,7 +8208,9 @@ function ensureScannerVisualLoop() {
       return;
     }
     scannerGridVisualFrame = requestAnimationFrame(tick);
-    const minFrameMs = getEffectiveFps() === "30" ? 33 : getEffectiveFps() === "45" ? 22 : 0;
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const fpsSetting = getEffectiveFps();
+  const minFrameMs = fpsSetting === "30" ? 33 : fpsSetting === "45" ? 22 : (isMobile ? 16 : 0);
     if (minFrameMs > 0 && now - (ensureScannerVisualLoop._lastFrame || 0) < minFrameMs) return;
     if (minFrameMs > 0) ensureScannerVisualLoop._lastFrame = now;
     try {
@@ -9862,7 +9864,8 @@ function getScannerCanvasMetrics() {
     scannerCanvasMetricsState.dirty = true;
   }
 
-  const dprCap = getEffectiveQualityTier() === "low" ? 1 : getEffectiveQualityTier() === "mid" ? 1.5 : window.devicePixelRatio > 2 ? 1.5 : 2;
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const dprCap = getEffectiveQualityTier() === "low" ? 1 : getEffectiveQualityTier() === "mid" ? 1 : (isMobile ? 1.5 : (window.devicePixelRatio > 2 ? 1.5 : 2));
   const dpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1));
   let size = scannerCanvasMetricsState.size;
   if (scannerCanvasMetricsState.dirty || !size) {
@@ -10302,7 +10305,10 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   const spanAlt = span > 0 ? span - Math.PI : span + Math.PI;
   if (Math.abs(spanAlt) < Math.abs(span)) span = spanAlt;
 
-  const steps = Math.max(2, Math.min(8, Math.ceil(Math.abs(span) / 0.003)));
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const maxSteps = isMobile ? 1 : 8;
+  const minSteps = isMobile ? 1 : 2;
+  const steps = Math.max(minSteps, Math.min(maxSteps, Math.ceil(Math.abs(span) / 0.003)));
   const frameScale = Math.max(1, Math.min(3, (cache.lastElapsed || 16) / 16.67));
   const alphaPerStep = (0.72 / steps) * frameScale;
 
