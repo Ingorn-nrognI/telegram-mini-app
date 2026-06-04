@@ -10413,15 +10413,12 @@ const _borderGlowPoints = [];
 
 function addBorderGlowPoint(size, px, py) {
   const bw = Math.max(11, size * 0.031) + 1;
-  const margin = bw * 2;
+  const margin = bw * 2.5;
   const nearBorder = px < margin || px > size - margin || py < margin || py > size - margin;
   if (!nearBorder) return;
   const now = performance.now();
   const last = _borderGlowPoints[_borderGlowPoints.length - 1];
-  if (last && now - last.t < 300) {
-    const dx = px - last.x; const dy = py - last.y;
-    if (Math.sqrt(dx*dx + dy*dy) < size * 0.55) return;
-  }
+  if (last && now - last.t < 600) return;
   _borderGlowPoints.push({ x: px, y: py, t: now });
   if (_borderGlowPoints.length > 12) _borderGlowPoints.shift();
 }
@@ -10473,8 +10470,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const bwInner = Math.max(11, size * 0.031) + 1;
   const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
   const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
-  const _atBorder = cx <= bwInner * 1.5 || cx >= size - bwInner * 1.5 || cy <= bwInner * 1.5 || cy >= size - bwInner * 1.5;
-  if (_atBorder) addBorderGlowPoint(size, cx, cy);
+  addBorderGlowPoint(size, cx, cy);
 
   scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
