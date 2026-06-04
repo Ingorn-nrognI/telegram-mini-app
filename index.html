@@ -3955,8 +3955,6 @@ button {
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
 let _beamTransitionEndMs = 0;
-let _lobbyBeamSamples = null;
-let _lobbyBeamSamplesStartMs = 0;
 let _serverBeamPosSmoothed = null;
 let _serverBeamPosLastUpdate = 0;
 let _serverTimeOffset = 0;
@@ -3969,16 +3967,6 @@ function initSocketConnection() {
     console.log('[Socket] Подключён к серверу');
   });
   _socket.on('disconnect', () => console.log('[Socket] Отключён'));
-  _socket.on('lobby:samples', (data) => {
-    if (data?.samples && Array.isArray(data.samples) && data.samples.length > 1) {
-      const serverSentAt = data.timestamp || Date.now();
-      const clientNow = Date.now();
-      const serverClientDiff = serverSentAt - clientNow;
-      _lobbyBeamSamples = data.samples;
-      _lobbyBeamSamplesStartMs = data.startMs - serverClientDiff;
-      console.log('[lobby] получены samples:', data.samples.length, 'serverClientDiff:', serverClientDiff, 'adjusted startMs offset:', -serverClientDiff);
-    }
-  });
   _socket.on('beam_position', (data) => {
     _serverBeamPos = data;
     _serverBeamPosLastUpdate = Date.now();
@@ -7335,26 +7323,6 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 }
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
-  console.log('[beam] samples:', !!_lobbyBeamSamples, 'startMs:', _lobbyBeamSamplesStartMs, 'now:', Date.now(), 'elapsed:', Date.now() - _lobbyBeamSamplesStartMs);
-  if (_lobbyBeamSamples && _lobbyBeamSamples.length > 1) {
-    const now = Date.now();
-    const elapsed = Math.max(0, now - _lobbyBeamSamplesStartMs);
-    const maxT = _lobbyBeamSamples[_lobbyBeamSamples.length - 1].t;
-    const clampedElapsed = maxT > 0 ? elapsed % maxT : 0;
-    const intervalMs = (_lobbyBeamSamples[1].t - _lobbyBeamSamples[0].t) || 16;
-    const idx = Math.floor(clampedElapsed / intervalMs);
-    const i0 = Math.min(idx, _lobbyBeamSamples.length - 1);
-    const i1 = Math.min(idx + 1, _lobbyBeamSamples.length - 1);
-    const s0 = _lobbyBeamSamples[i0];
-    const s1 = _lobbyBeamSamples[i1];
-    const frac = i0 === i1 ? 0 : (clampedElapsed - s0.t) / Math.max(1, s1.t - s0.t);
-    const x = s0.x + (s1.x - s0.x) * frac;
-    const y = s0.y + (s1.y - s0.y) * frac;
-    const vx = s0.vx + (s1.vx - s0.vx) * frac;
-    const vy = s0.vy + (s1.vy - s0.vy) * frac;
-    const angle = Math.atan2(vy || 0.001, vx || 0.001);
-    return { x, y, vx, vy, angle, renderAngle: angle, travelAngle: angle, renderTurnTauMs: SCANNER_BEAM_LOBBY_RENDER_TURN_TAU_MS };
-  }
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 // ─── Reticle (point) simulator ───────────────────────────────────────────────
