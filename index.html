@@ -10463,10 +10463,10 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.shadowColor = 'transparent';
   ctx.globalCompositeOperation = 'source-over';
   ctx.fillStyle = 'rgb(28, 16, 6)';
-  ctx.fillRect(0, 0, size, bw);
-  ctx.fillRect(0, size - bw, size, bw);
-  ctx.fillRect(0, 0, bw, size);
-  ctx.fillRect(size - bw, 0, bw, size);
+  ctx.beginPath();
+  ctx.rect(0, 0, size, size);
+  ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
+  ctx.fill('evenodd');
 
   const now = performance.now();
   for (let i = _borderGlowPoints.length - 1; i >= 0; i--) {
