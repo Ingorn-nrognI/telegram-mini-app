@@ -10484,10 +10484,10 @@ function drawScannerArenaBorder(ctx, size) {
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, bw);
-    ctx.fillRect(0, size - bw, size, bw);
-    ctx.fillRect(0, 0, bw, size);
-    ctx.fillRect(size - bw, 0, bw, size);
+    ctx.beginPath();
+    ctx.rect(0, 0, size, size);
+    ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
+    ctx.fill('evenodd');
     ctx.restore();
   }
 
