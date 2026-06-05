@@ -7919,8 +7919,6 @@ function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(
 
 function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetworkTime(), progressOverride = null) {
   const cache = getScannerActiveBeamCache(round, players);
-  const _p = getScannerActiveBeamProgressAtTime(round, timestampMs, progressOverride);
-  const _prog = getScannerActiveBeamProgressAtTime(round, timestampMs, progressOverride);
   if (!cache) return { x: 0.5, y: 0.5, angle: 0 };
   return interpolateScannerSampleSequence(
     cache.samples,
