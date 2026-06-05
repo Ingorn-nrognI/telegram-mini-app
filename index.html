@@ -10424,7 +10424,7 @@ const _borderGlowPoints = [];
 function addBorderGlowPoint(size, px, py) {
   const now = performance.now();
   const last = _borderGlowPoints[_borderGlowPoints.length - 1];
-  if (last && now - last.t < 600) return;
+  if (last && now - last.t < 50) return;
   _borderGlowPoints.push({ x: px, y: py, t: now });
   if (_borderGlowPoints.length > 12) _borderGlowPoints.shift();
 }
