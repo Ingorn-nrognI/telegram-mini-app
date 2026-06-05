@@ -7308,18 +7308,6 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 }
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
-  if (_serverBeamPos && _serverBeamPos.x !== undefined && !_serverBeamPos.roundId) {
-    const _elapsedDr = Math.min(0.5, Math.max(0, (Date.now() - _serverBeamPosLastUpdate) / 1000));
-    const _vxDr = _serverBeamPos.vx || 0;
-    const _vyDr = _serverBeamPos.vy || 0;
-    const _padDr = 0.031;
-    let _pxDr = _serverBeamPos.x + _vxDr * _elapsedDr;
-    let _pyDr = _serverBeamPos.y + _vyDr * _elapsedDr;
-    _pxDr = Math.max(_padDr, Math.min(1 - _padDr, _pxDr));
-    _pyDr = Math.max(_padDr, Math.min(1 - _padDr, _pyDr));
-    const _angleDr = _serverBeamPos.angle || 0;
-    return { x: _pxDr, y: _pyDr, vx: _vxDr, vy: _vyDr, angle: _angleDr, travelAngle: _angleDr, renderAngle: _angleDr };
-  }
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 // ─── Reticle (point) simulator ───────────────────────────────────────────────
