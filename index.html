@@ -10804,7 +10804,7 @@ function renderScannerCanvas() {
       const _currentStep = Math.floor(_progress * Math.max(1, (_cache.samples.length - 1)));
       if (!_cache._shownBounces) _cache._shownBounces = new Set();
       _cache.bouncePoints.forEach((bp, idx) => {
-        if (!_cache._shownBounces.has(idx) && _currentStep >= bp.step && _currentStep <= bp.step + 3) {
+        if (!_cache._shownBounces.has(idx) && _currentStep >= bp.step - 1 && _currentStep <= bp.step + 6) {
           _cache._shownBounces.add(idx);
           addBorderGlowPoint(size, bp.x * size, bp.y * size);
         }
