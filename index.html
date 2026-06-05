@@ -7763,7 +7763,9 @@ function getScannerCountdownBeamCache(round) {
     startSample: lobbyStartSample,
     latchStartSample,
     latchSample: latchSimulation.targetSample,
-    latchSide: latchSimulation.side
+    latchSide: latchSimulation.side,
+    bouncePoints: cruiseSimulation.bounceLog.map(b => ({ x: b.bounceX, y: b.bounceY, step: b.step })),
+    totalSteps: cruiseSteps,
   };
 
   return scannerCountdownBeamCache;
@@ -10787,15 +10789,23 @@ function renderScannerCanvas() {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
   }
 
-  if (roundStatus === 'active') {
-    const _activeCache = getScannerActiveBeamCache(roundData, scannerGridState.players || []);
-    if (_activeCache?.bouncePoints?.length) {
-      const _progress = getScannerActiveBeamProgressAtTime(roundData, nowMs);
-      const _currentStep = Math.floor(_progress * Math.max(1, (_activeCache.samples.length - 1)));
-      if (!_activeCache._shownBounces) _activeCache._shownBounces = new Set();
-      _activeCache.bouncePoints.forEach((bp, idx) => {
-        if (!_activeCache._shownBounces.has(idx) && _currentStep >= bp.step && _currentStep <= bp.step + 3) {
-          _activeCache._shownBounces.add(idx);
+  {
+    let _cache = null;
+    let _progress = 0;
+    if (roundStatus === 'active') {
+      _cache = getScannerActiveBeamCache(roundData, scannerGridState.players || []);
+      _progress = getScannerActiveBeamProgressAtTime(roundData, nowMs);
+    } else if (roundStatus === 'countdown') {
+      _cache = getScannerCountdownBeamCache(roundData);
+      const _timing = _cache?.timing;
+      if (_timing) _progress = clampScannerNumber((nowMs - _timing.startedAt) / Math.max(1, _timing.durationMs), 0, 1);
+    }
+    if (_cache?.bouncePoints?.length && _cache.samples?.length) {
+      const _currentStep = Math.floor(_progress * Math.max(1, (_cache.samples.length - 1)));
+      if (!_cache._shownBounces) _cache._shownBounces = new Set();
+      _cache.bouncePoints.forEach((bp, idx) => {
+        if (!_cache._shownBounces.has(idx) && _currentStep >= bp.step && _currentStep <= bp.step + 3) {
+          _cache._shownBounces.add(idx);
           addBorderGlowPoint(size, bp.x * size, bp.y * size);
         }
       });
