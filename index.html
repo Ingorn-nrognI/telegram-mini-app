@@ -10476,7 +10476,9 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
   const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
 
-  scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
+  scannerLobbyLaserVisual.angle = (_serverBeamPos?.angle != null && !_serverBeamPos?.roundId)
+    ? _serverBeamPos.angle
+    : ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
   const reticleRotation = Number.isFinite(Number(options.reticleRotation))
     ? Number(options.reticleRotation)
@@ -10888,7 +10890,9 @@ function renderScannerCanvas() {
 
     let beamRenderAngle;
     if (!isHotBeam) {
-      scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
+      scannerLobbyLaserVisual.angle = (_serverBeamPos?.angle != null && !_serverBeamPos?.roundId)
+        ? _serverBeamPos.angle
+        : ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
       beamRenderAngle = scannerLobbyLaserVisual.angle;
     } else {
       beamRenderAngle = Number.isFinite(Number(visualBeamSample.renderAngle))
