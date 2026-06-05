@@ -10825,6 +10825,17 @@ function renderScannerCanvas() {
 
   const visualBeamSample = beamSample || null;
 
+  if (visualBeamSample) {
+    const _pad = Math.max(11, size * 0.031) + 1;
+    const _bx = visualBeamSample.x * size;
+    const _by = visualBeamSample.y * size;
+    const _atWall = _bx < _pad * 1.3 || _bx > size - _pad * 1.3 || _by < _pad * 1.3 || _by > size - _pad * 1.3;
+    if (_atWall && !renderScannerCanvas._wasAtWall) {
+      addBorderGlowPoint(size, _bx, _by);
+    }
+    renderScannerCanvas._wasAtWall = _atWall;
+  }
+
   let _zoomScale = 1;
   let _zoomOffsetX = 0;
   let _zoomOffsetY = 0;
@@ -11260,6 +11271,7 @@ document.querySelectorAll(".bottom-btn").forEach(btn => btn.classList.remove("is
 </script>
 </body>
 </html>
+
 
 
 
