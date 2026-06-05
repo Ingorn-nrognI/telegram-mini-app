@@ -4281,23 +4281,9 @@ const SCANNER_HISTORY_COLLECTION = "pvp_rounds_scanner_grid_history";
 const SCANNER_DEFAULT_QUICK_STAKES = [1, 10, 25];
 const SCANNER_QUICK_STAKES_STORAGE_KEY = "bobr_world_scanner_quick_stakes_v1";
 
-  let serverTimestampOffset = 0;
-
 function getNetworkTime() {
   return Date.now() + _serverTimeOffset;
 }
-
-function syncServerTime() {
-  if (typeof firebase !== 'undefined' && firebase.database) {
-    const offsetRef = firebase.database().ref(".info/serverTimeOffset");
-    offsetRef.on("value", (snap) => {
-      serverTimestampOffset = snap.val() || 0;
-      console.log("System: Смещение времени сервера обновлено:", serverTimestampOffset);
-    });
-  }
-}
-// Запускаем синхронизацию
-syncServerTime();
 
 let scannerQuickStakeValues = SCANNER_DEFAULT_QUICK_STAKES.slice();
 const scannerStakeSettingsState = {
