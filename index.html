@@ -7308,6 +7308,17 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 }
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
+  if (_serverBeamPos && _serverBeamPos.x !== undefined && !_serverBeamPos.roundId) {
+    return {
+      x: _serverBeamPos.x,
+      y: _serverBeamPos.y,
+      vx: _serverBeamPos.vx || 0,
+      vy: _serverBeamPos.vy || 0,
+      angle: _serverBeamPos.angle || 0,
+      travelAngle: _serverBeamPos.angle || 0,
+      renderAngle: _serverBeamPos.angle || 0
+    };
+  }
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 // ─── Reticle (point) simulator ───────────────────────────────────────────────
@@ -10420,7 +10431,7 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.shadowBlur = 0;
   ctx.shadowColor = 'transparent';
   ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = 'rgb(7, 12, 26)';
+  ctx.fillStyle = 'rgb(16, 20, 38)';
   ctx.beginPath();
   ctx.rect(0, 0, size, size);
   ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
