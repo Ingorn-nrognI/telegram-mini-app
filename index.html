@@ -7412,11 +7412,13 @@ function simulateScannerReticleSamples(options = {}) {
     let nextY = position.y + direction.y * distance;
     let bouncedDuringStep = false;
 
+    let _wallX = null, _wallY = null;
     for (let attempt = 0; attempt < 4; attempt += 1) {
       let bounced = false;
 
       if (nextX < safePad) {
         nextX = safePad + (safePad - nextX);
+        _wallX = safePad; _wallY = nextY;
         direction = normalizeScannerVector(
           Math.max(Math.abs(direction.x) * (1 + bounceNormalBias), SCANNER_BEAM_MIN_BOUNCE_NORMAL),
           direction.y + bounceBendStrength,
@@ -7427,6 +7429,7 @@ function simulateScannerReticleSamples(options = {}) {
         bounceCount += 1;
       } else if (nextX > 1 - safePad) {
         nextX = (1 - safePad) - (nextX - (1 - safePad));
+        _wallX = 1 - safePad; _wallY = nextY;
         direction = normalizeScannerVector(
           -Math.max(Math.abs(direction.x) * (1 + bounceNormalBias), SCANNER_BEAM_MIN_BOUNCE_NORMAL),
           direction.y - bounceBendStrength,
@@ -7437,6 +7440,7 @@ function simulateScannerReticleSamples(options = {}) {
         bounceCount += 1;
       } else if (nextY < safePad) {
         nextY = safePad + (safePad - nextY);
+        _wallX = nextX; _wallY = safePad;
         direction = normalizeScannerVector(
           direction.x + bounceBendStrength,
           Math.max(Math.abs(direction.y) * (1 + bounceNormalBias), SCANNER_BEAM_MIN_BOUNCE_NORMAL),
@@ -7447,6 +7451,7 @@ function simulateScannerReticleSamples(options = {}) {
         bounceCount += 1;
       } else if (nextY > 1 - safePad) {
         nextY = (1 - safePad) - (nextY - (1 - safePad));
+        _wallX = nextX; _wallY = 1 - safePad;
         direction = normalizeScannerVector(
           direction.x - bounceBendStrength,
           -Math.max(Math.abs(direction.y) * (1 + bounceNormalBias), SCANNER_BEAM_MIN_BOUNCE_NORMAL),
@@ -7462,7 +7467,7 @@ function simulateScannerReticleSamples(options = {}) {
 
     if (bouncedDuringStep) {
       const newAngle = Math.atan2(direction.y || 0.0001, direction.x || 0.0001);
-      bounceLog.push({ step, fromAngle: currentBeamAngle, toAngle: newAngle, bounceX: nextX, bounceY: nextY });
+      bounceLog.push({ step, fromAngle: currentBeamAngle, toAngle: newAngle, bounceX: _wallX ?? nextX, bounceY: _wallY ?? nextY });
       currentBeamAngle = newAngle;
     }
 
