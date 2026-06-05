@@ -10470,11 +10470,7 @@ function drawScannerArenaBorder(ctx, size) {
 
 function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const safeSample = beamSample || getScannerSharedLobbyBeamSample();
-  const _lobbyCx = Math.max(0, Math.min(size, size * safeSample.x));
-  const _lobbyCy = Math.max(0, Math.min(size, size * safeSample.y));
-  const _lobbyBw = Math.max(11, size * 0.031) + 1;
-  const _lobbyAtBorder = _lobbyCx < _lobbyBw * 1.8 || _lobbyCx > size - _lobbyBw * 1.8 || _lobbyCy < _lobbyBw * 1.8 || _lobbyCy > size - _lobbyBw * 1.8;
-  if (_lobbyAtBorder) addBorderGlowPoint(size, _lobbyCx, _lobbyCy);
+
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
