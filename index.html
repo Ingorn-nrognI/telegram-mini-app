@@ -10745,7 +10745,8 @@ function renderScannerCanvas() {
       const _lobbyBx = idleVisualBeamSample.x * size;
       const _lobbyBy = idleVisualBeamSample.y * size;
       const _lobbyPad = Math.max(11, size * 0.031) + 1;
-      const _lobbyAtWall = _lobbyBx < _lobbyPad * 1.3 || _lobbyBx > size - _lobbyPad * 1.3 || _lobbyBy < _lobbyPad * 1.3 || _lobbyBy > size - _lobbyPad * 1.3;
+      const _lobbySafePad = size * 0.031 + size * 0.012;
+      const _lobbyAtWall = _lobbyBx <= _lobbySafePad || _lobbyBx >= size - _lobbySafePad || _lobbyBy <= _lobbySafePad || _lobbyBy >= size - _lobbySafePad;
       if (_lobbyAtWall && !renderScannerCanvas._wasAtWall) {
         addBorderGlowPoint(size, _lobbyBx, _lobbyBy);
       }
@@ -11279,6 +11280,7 @@ document.querySelectorAll(".bottom-btn").forEach(btn => btn.classList.remove("is
 </script>
 </body>
 </html>
+
 
 
 
