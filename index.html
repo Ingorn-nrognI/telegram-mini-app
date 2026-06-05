@@ -10450,33 +10450,19 @@ function drawScannerArenaBorder(ctx, size) {
     const age = now - pt.t;
     if (age > 800) { _borderGlowPoints.splice(i, 1); continue; }
     const alpha = Math.max(0, 1 - age / 800) * 0.85;
-    const hw = bw * 2.5;
-    const isLeft = pt.x < size * 0.5 && pt.x < pt.y && pt.x < size - pt.y;
-    const isRight = pt.x > size * 0.5 && size - pt.x < pt.y && size - pt.x < size - pt.y;
-    const isTop = pt.y < size * 0.5 && pt.y <= pt.x && pt.y <= size - pt.x;
-    let grad;
-    if (isLeft) {
-      grad = ctx.createLinearGradient(0, 0, bw * 2, 0);
-    } else if (isRight) {
-      grad = ctx.createLinearGradient(size, 0, size - bw * 2, 0);
-    } else if (isTop) {
-      grad = ctx.createLinearGradient(0, 0, 0, bw * 2);
-    } else {
-      grad = ctx.createLinearGradient(0, size, 0, size - bw * 2);
-    }
+    const radius = bw * 2.8;
+    const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, radius);
     grad.addColorStop(0, `rgba(45, 225, 255, ${alpha})`);
-    grad.addColorStop(0.5, `rgba(45, 225, 255, ${alpha * 0.5})`);
+    grad.addColorStop(0.45, `rgba(45, 225, 255, ${alpha * 0.5})`);
     grad.addColorStop(1, 'rgba(45, 225, 255, 0)');
-    const glowX = Math.max(0, Math.min(size, pt.x));
-    const glowY = Math.max(0, Math.min(size, pt.y));
-    const hws = hw * 1.8;
     ctx.save();
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.ellipse(glowX, glowY, hws, hws * 0.5, isLeft || isRight ? 0 : Math.PI / 2, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.rect(0, 0, size, size);
+    ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
+    ctx.fill('evenodd');
     ctx.restore();
   }
 
