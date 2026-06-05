@@ -10742,15 +10742,24 @@ function renderScannerCanvas() {
     } else {
       const _rawLobbySample = getScannerSharedLobbyBeamSample(nowMs);
       const idleVisualBeamSample = _rawLobbySample;
-      const _lobbyBx = idleVisualBeamSample.x * size;
-      const _lobbyBy = idleVisualBeamSample.y * size;
+      const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
+      const _lobbyBx = _rawLobbyForGlow.x * size;
+      const _lobbyBy = _rawLobbyForGlow.y * size;
       const _lobbyPad = Math.max(11, size * 0.031) + 1;
       const _lobbySafePad = size * 0.031 + size * 0.012;
       const _lobbyAtWall = _lobbyBx <= _lobbySafePad || _lobbyBx >= size - _lobbySafePad || _lobbyBy <= _lobbySafePad || _lobbyBy >= size - _lobbySafePad;
       if (_lobbyAtWall && !renderScannerCanvas._wasAtWall) {
         const _bw = Math.max(11, size * 0.031) + 1;
-        const _gwx = _lobbyBx < _lobbySafePad ? _bw * 0.5 : (_lobbyBx > size - _lobbySafePad ? size - _bw * 0.5 : _lobbyBx);
-        const _gwy = _lobbyBy < _lobbySafePad ? _bw * 0.5 : (_lobbyBy > size - _lobbySafePad ? size - _bw * 0.5 : _lobbyBy);
+        const _distL = _lobbyBx;
+        const _distR = size - _lobbyBx;
+        const _distT = _lobbyBy;
+        const _distB = size - _lobbyBy;
+        const _minDist = Math.min(_distL, _distR, _distT, _distB);
+        let _gwx = _lobbyBx, _gwy = _lobbyBy;
+        if (_minDist === _distL) { _gwx = _bw * 0.5; _gwy = _lobbyBy; }
+        else if (_minDist === _distR) { _gwx = size - _bw * 0.5; _gwy = _lobbyBy; }
+        else if (_minDist === _distT) { _gwx = _lobbyBx; _gwy = _bw * 0.5; }
+        else { _gwx = _lobbyBx; _gwy = size - _bw * 0.5; }
         addBorderGlowPoint(size, _gwx, _gwy);
       }
       renderScannerCanvas._wasAtWall = _lobbyAtWall;
@@ -11283,6 +11292,7 @@ document.querySelectorAll(".bottom-btn").forEach(btn => btn.classList.remove("is
 </script>
 </body>
 </html>
+
 
 
 
