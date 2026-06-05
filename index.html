@@ -10747,8 +10747,12 @@ function renderScannerCanvas() {
       const _lobbyBy = _rawLobbyForGlow.y * size;
       const _lobbyPad = Math.max(11, size * 0.031) + 1;
       const _lobbySafePad = size * 0.031 + size * 0.012;
-      const _lobbyAtWall = _lobbyBx <= _lobbySafePad || _lobbyBx >= size - _lobbySafePad || _lobbyBy <= _lobbySafePad || _lobbyBy >= size - _lobbySafePad;
-      if (_lobbyAtWall && !renderScannerCanvas._wasAtWall) {
+      const _bwG = Math.max(11, size * 0.031) + 1;
+      const _dL = _lobbyBx, _dR = size - _lobbyBx, _dT = _lobbyBy, _dB = size - _lobbyBy;
+      const _mD = Math.min(_dL, _dR, _dT, _dB);
+      const _curWall = _mD <= _lobbySafePad ? (_mD === _dL ? 'L' : _mD === _dR ? 'R' : _mD === _dT ? 'T' : 'B') : null;
+      const _lobbyAtWall = !!_curWall;
+      if (_curWall && _curWall !== renderScannerCanvas._lastWall) {
         const _bw = Math.max(11, size * 0.031) + 1;
         const _distL = _lobbyBx;
         const _distR = size - _lobbyBx;
@@ -10762,7 +10766,7 @@ function renderScannerCanvas() {
         else { _gwx = _lobbyBx; _gwy = size - _bw * 0.5; }
         addBorderGlowPoint(size, _gwx, _gwy);
       }
-      renderScannerCanvas._wasAtWall = _lobbyAtWall;
+      renderScannerCanvas._lastWall = _curWall;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
