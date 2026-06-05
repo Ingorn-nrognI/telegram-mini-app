@@ -10449,14 +10449,14 @@ function drawScannerArenaBorder(ctx, size) {
     const pt = _borderGlowPoints[i];
     const age = now - pt.t;
     if (age > 800) { _borderGlowPoints.splice(i, 1); continue; }
-    const alpha = Math.max(0, 1 - age / 800) * 0.9;
-    const radius = bw * 5.5;
+    const alpha = Math.max(0, 1 - age / 800) * 0.6;
+    const radius = bw * 5.0;
     const gx = Math.max(bw * 0.5, Math.min(size - bw * 0.5, pt.x));
     const gy = Math.max(bw * 0.5, Math.min(size - bw * 0.5, pt.y));
     const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, radius);
-    grad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-    grad.addColorStop(0.25, `rgba(45, 225, 255, ${alpha * 0.85})`);
-    grad.addColorStop(0.55, `rgba(45, 225, 255, ${alpha * 0.4})`);
+    grad.addColorStop(0, `rgba(45, 225, 255, ${alpha})`);
+    grad.addColorStop(0.3, `rgba(45, 225, 255, ${alpha * 0.7})`);
+    grad.addColorStop(0.65, `rgba(45, 225, 255, ${alpha * 0.25})`);
     grad.addColorStop(1, 'rgba(45, 225, 255, 0)');
     ctx.save();
     ctx.globalAlpha = 1;
