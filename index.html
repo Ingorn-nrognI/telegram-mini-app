@@ -10739,7 +10739,12 @@ function renderScannerCanvas() {
       });
     } else {
       const _rawLobbySample = getScannerSharedLobbyBeamSample(nowMs);
-      const idleVisualBeamSample = _rawLobbySample;
+      const idleVisualBeamSample = getSmoothedScannerBeamSample(
+        getScannerBeamTargetSample(_rawLobbySample, roundStatus, beamRenderKey, nowMs),
+        beamRenderKey,
+        now,
+        { positionTauMs: 80 }
+      );
       const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
       const _lobbyBx = _rawLobbyForGlow.x * size;
       const _lobbyBy = _rawLobbyForGlow.y * size;
