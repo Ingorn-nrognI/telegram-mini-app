@@ -10790,26 +10790,20 @@ function renderScannerCanvas() {
   }
 
   {
-    let _cache = null;
-    let _progress = 0;
-    if (roundStatus === 'active') {
-      _cache = getScannerActiveBeamCache(roundData, scannerGridState.players || []);
-      _progress = getScannerActiveBeamProgressAtTime(roundData, nowMs);
-    } else if (roundStatus === 'countdown') {
-      _cache = getScannerCountdownBeamCache(roundData);
-      const _timing = _cache?.timing;
-      if (_timing) _progress = clampScannerNumber((nowMs - _timing.startedAt) / Math.max(1, _timing.durationMs), 0, 1);
+    const _pad = Math.max(11, size * 0.031) + 1;
+    const _beamForGlow = beamSample || getScannerSharedLobbyBeamSample(nowMs);
+    const _bx = _beamForGlow.x * size;
+    const _by = _beamForGlow.y * size;
+    const _atWall = _bx < _pad * 1.3 || _bx > size - _pad * 1.3 || _by < _pad * 1.3 || _by > size - _pad * 1.3;
+    const _prevBx = renderScannerCanvas._prevBx || _bx;
+    const _prevBy = renderScannerCanvas._prevBy || _by;
+    const _waAtWall = renderScannerCanvas._wasAtWall || false;
+    if (_atWall && !_waAtWall) {
+      addBorderGlowPoint(size, _bx, _by);
     }
-    if (_cache?.bouncePoints?.length && _cache.samples?.length) {
-      const _currentStep = Math.floor(_progress * Math.max(1, (_cache.samples.length - 1)));
-      if (!_cache._shownBounces) _cache._shownBounces = new Set();
-      _cache.bouncePoints.forEach((bp, idx) => {
-        if (!_cache._shownBounces.has(idx) && _currentStep >= bp.step - 1 && _currentStep <= bp.step + 6) {
-          _cache._shownBounces.add(idx);
-          addBorderGlowPoint(size, bp.x * size, bp.y * size);
-        }
-      });
-    }
+    renderScannerCanvas._prevBx = _bx;
+    renderScannerCanvas._prevBy = _by;
+    renderScannerCanvas._wasAtWall = _atWall;
   }
 
   beamSample = getSmoothedScannerBeamSample(
