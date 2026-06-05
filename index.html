@@ -10476,14 +10476,9 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
   const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
 
-  {
-    const _t = performance.now() / 1000;
-    const _base = (_serverBeamPos?.spinAngle != null && !_serverBeamPos?.roundId)
-      ? _serverBeamPos.spinAngle
-      : (_t * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
-    const _elapsed = (performance.now() - (_serverBeamPosLastUpdate || performance.now())) / 1000;
-    scannerLobbyLaserVisual.angle = (_base + _elapsed * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
-  }
+  scannerLobbyLaserVisual.angle = (_serverBeamPos?.spinAngle != null && !_serverBeamPos?.roundId)
+    ? _serverBeamPos.spinAngle
+    : ((performance.now() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
   const reticleRotation = Number.isFinite(Number(options.reticleRotation))
     ? Number(options.reticleRotation)
@@ -10900,15 +10895,10 @@ function renderScannerCanvas() {
 
     let beamRenderAngle;
     if (!isHotBeam) {
-      {
-        const _t2 = performance.now() / 1000;
-        const _base2 = (_serverBeamPos?.spinAngle != null && !_serverBeamPos?.roundId)
-          ? _serverBeamPos.spinAngle
-          : (_t2 * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
-        const _elapsed2 = (performance.now() - (_serverBeamPosLastUpdate || performance.now())) / 1000;
-        beamRenderAngle = (_base2 + _elapsed2 * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
-        scannerLobbyLaserVisual.angle = beamRenderAngle;
-      }
+      beamRenderAngle = (_serverBeamPos?.spinAngle != null && !_serverBeamPos?.roundId)
+        ? _serverBeamPos.spinAngle
+        : ((performance.now() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
+      scannerLobbyLaserVisual.angle = beamRenderAngle;
     } else {
       beamRenderAngle = Number.isFinite(Number(visualBeamSample.renderAngle))
         ? Number(visualBeamSample.renderAngle)
