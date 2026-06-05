@@ -10748,7 +10748,10 @@ function renderScannerCanvas() {
       const _lobbySafePad = size * 0.031 + size * 0.012;
       const _lobbyAtWall = _lobbyBx <= _lobbySafePad || _lobbyBx >= size - _lobbySafePad || _lobbyBy <= _lobbySafePad || _lobbyBy >= size - _lobbySafePad;
       if (_lobbyAtWall && !renderScannerCanvas._wasAtWall) {
-        addBorderGlowPoint(size, _lobbyBx, _lobbyBy);
+        const _bw = Math.max(11, size * 0.031) + 1;
+        const _gwx = _lobbyBx < _lobbySafePad ? _bw * 0.5 : (_lobbyBx > size - _lobbySafePad ? size - _bw * 0.5 : _lobbyBx);
+        const _gwy = _lobbyBy < _lobbySafePad ? _bw * 0.5 : (_lobbyBy > size - _lobbySafePad ? size - _bw * 0.5 : _lobbyBy);
+        addBorderGlowPoint(size, _gwx, _gwy);
       }
       renderScannerCanvas._wasAtWall = _lobbyAtWall;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
@@ -11280,6 +11283,7 @@ document.querySelectorAll(".bottom-btn").forEach(btn => btn.classList.remove("is
 </script>
 </body>
 </html>
+
 
 
 
