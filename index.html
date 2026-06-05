@@ -8570,7 +8570,7 @@ async function removeParticipantFromRound(roundId, playerId, options = {}) {
     const userData = userSnap.exists ? (userSnap.data() || {}) : {};
     const runtimeSnap = await tx.get(runtimeRef);
     const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
-    const nowMs = Date.now();
+    const nowMs = getNetworkTime();
     const currentRoundForMotion = { id: roundId, ...roundData };
 
     if (roundData.status === "shuffling" || roundData.status === "active" || roundData.status === "finished" || roundData.status === "preparing_next_round" || markLeftOnly) {
@@ -10422,7 +10422,7 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.shadowBlur = 0;
   ctx.shadowColor = 'transparent';
   ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = 'rgb(28, 16, 6)';
+  ctx.fillStyle = 'rgb(7, 12, 26)';
   ctx.beginPath();
   ctx.rect(0, 0, size, size);
   ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
