@@ -3648,14 +3648,15 @@ button {
       </div>
     </div>
 
-    <div id="historyPanel" class="history-panel" onclick="event.stopPropagation()">
-      <div class="history-panel-header">
-        <div class="history-panel-title">История игр</div>
-        <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">✕</button>
-      </div>
-      <div class="history-scroll-area">
-        <div class="history-panel-empty">История пуста.</div>
-      </div>
+  </div>
+
+  <div id="historyPanel" class="history-panel" onclick="event.stopPropagation()">
+    <div class="history-panel-header">
+      <div class="history-panel-title">История игр</div>
+      <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">✕</button>
+    </div>
+    <div class="history-scroll-area">
+      <div class="history-panel-empty">История пуста.</div>
     </div>
   </div>
 
@@ -5351,7 +5352,6 @@ function openRecentHistory() {
   closeModePopup();
 
   requestAnimationFrame(() => {
-    scrollHomeToTop();
     const historyPanel = document.getElementById("historyPanel");
     if (!historyPanel) return;
     historyPanel.classList.add("open");
