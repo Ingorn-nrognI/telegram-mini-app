@@ -7284,10 +7284,10 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   if (_serverBeamPos && _serverBeamPos.x !== undefined && !_serverBeamPos.roundId) {
     const _age = Date.now() - _serverBeamPosLastUpdate;
-    if (_age > 10000) {
+    if (_age > 3000) {
       return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", null);
     }
-    const _dt = Math.min(0.2, Math.max(0, _age / 1000));
+    const _dt = Math.min(0.1, Math.max(0, _age / 1000));
     const _vx = _serverBeamPos.vx || 0;
     const _vy = _serverBeamPos.vy || 0;
     const _pad = 0.031;
