@@ -5841,7 +5841,7 @@ const SETTINGS_STORAGE_KEY = "bobr_world_app_settings_v1";
 })();
 
 const appSettings = {
-  language: window._savedAppSettings?.language || "en",
+  language: window._savedAppSettings?.language || "ru",
   quality: window._savedAppSettings?.quality || "auto",
   vibration: window._savedAppSettings?.vibration !== undefined ? window._savedAppSettings.vibration : true,
   fps: window._savedAppSettings?.fps || "native",
@@ -5850,31 +5850,31 @@ delete window._savedAppSettings;
 
 const APP_TRANSLATIONS = {
   ru: {
-    balance: "������", wallet: "������", tabLeaderboard: "�������",
-    tabGames: "����", tabPvp: "PvP", tabSkins: "�����", tabHistory: "�������",
-    settingsTitle: "���������", connecting: "�����������...",
-    waitingRound: "�������� ������...", players: "������",
-    recentRounds: "��������� ������", scanner: "������",
-    bank: "����", myChance: "��� �����", allIn: "��-����",
-    play: "������", history: "�������", leaderboard: "������� �������",
-    gameHistory: "������� ���", modeScanner: "�����: ������",
-    won: "�������", lost: "��������", yourColor: "���� ���� � ����� ����� ������",
-    playersInRound: "������ � ������", myStake: "��� ������",
-    totalBank: "����� ����", myResult: "��� ���������",
-    playerProfile: "������� ������", deposit: "���������", withdraw: "�������",
-    totalWins: "����� �����", settings: "���������",
-    language: "����", graphicsQuality: "�������� �������",
-    vibration: "��������", low: "������", medium: "�������", high: "�������",
-    on: "���", off: "����", winner: "����������",
-    dateTime: "���� � �����", playersCount: "�������", stake: "������",
-    waitingPlayers: "�������� �������...", bestWin: "������ ������� � ������",
-    joinRound: "����� � �����", lobbyFull: "����� ��������", shuffling: "�������������",
-    roundActive: "����� ���", roundFinished: "����� ����������", preparing: "����������",
-    addStake: "��������", joinBeforeStart: "����� �� ������",
-    stakeSettings: "��������� ������", reset: "��������", save: "���������",
-    qualityAuto: "����", fpsLabel: "������� ������", fpsAuto: "����"
+    balance: "Баланс", wallet: "Кошелёк", tabLeaderboard: "Таблица",
+    tabGames: "Игры", tabPvp: "PvP", tabSkins: "Скины", tabHistory: "История",
+    settingsTitle: "Настройки", connecting: "Подключение...",
+    waitingRound: "Ожидание раунда...", players: "Игроки",
+    recentRounds: "Последние раунды", scanner: "Сканер",
+    bank: "Банк", myChance: "Мои шансы", allIn: "Ва-банк",
+    play: "Играть", history: "История", leaderboard: "Таблица лидеров",
+    gameHistory: "История игр", modeScanner: "Режим: Сканер",
+    won: "Выиграл", lost: "Проиграл", yourColor: "Твой цвет в арене этого раунда",
+    playersInRound: "Игроки в раунде", myStake: "Моя ставка",
+    totalBank: "Общий банк", myResult: "Мой результат",
+    playerProfile: "ПРОФИЛЬ ИГРОКА", deposit: "Пополнить", withdraw: "Вывести",
+    totalWins: "ВСЕГО ПОБЕД", settings: "Настройки",
+    language: "ЯЗЫК", graphicsQuality: "КАЧЕСТВО ГРАФИКИ",
+    vibration: "ВИБРАЦИЯ", low: "Низкое", medium: "Среднее", high: "Высокое",
+    on: "Вкл", off: "Выкл", winner: "Победитель",
+    dateTime: "Дата и время", playersCount: "Игроков", stake: "Ставка",
+    waitingPlayers: "Ожидание игроков...", bestWin: "Лучший выигрыш в раунде",
+    joinRound: "Войти в раунд", lobbyFull: "Раунд заполнен", shuffling: "Перемешивание",
+    roundActive: "Раунд идёт", roundFinished: "Показ результата", preparing: "Подготовка",
+    addStake: "Добавить", joinBeforeStart: "Войти до старта",
+    stakeSettings: "Настройка ставок", reset: "Сбросить", save: "Сохранить",
+    qualityAuto: "Авто", fpsLabel: "ЧАСТОТА КАДРОВ", fpsAuto: "Авто"
   },
-  en: {
+    en: {
     balance: "Balance", wallet: "Wallet", tabLeaderboard: "Leaderboard",
     tabGames: "Games", tabPvp: "PvP", tabSkins: "Skins", tabHistory: "History",
     settingsTitle: "Settings", connecting: "Connecting...",
@@ -11161,7 +11161,7 @@ window.enterScannerGridMode = enterScannerGridMode;
 scannerQuickStakeValues = loadScannerQuickStakeValues();
 scannerStakeSettingsState.draftValues = scannerQuickStakeValues.map((value) => String(value));
 
-applyAppLanguage("en");
+applyAppLanguage("ru");
 renderTopProfile();
 homeScreenContext = "games";
 setMenuView("home");
