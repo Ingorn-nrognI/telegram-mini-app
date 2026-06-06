@@ -3986,16 +3986,6 @@ function initSocketConnection() {
   });
   _socket.on('beam:position', (data) => { _serverBeamPos = data; });
   _socket.on('round:state', (data) => {
-    if (data?.serverTime) {
-      const newOffset = data.serverTime - Date.now();
-      if (Math.abs(newOffset - _serverTimeOffsetSmoothed) > 5000) {
-        _serverTimeOffset = newOffset;
-        _serverTimeOffsetSmoothed = newOffset;
-      } else {
-        _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.5;
-        _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
-      }
-    }
     applySocketRoundState(data);
   });
   _socket.on('round:patch', (patch) => { applySocketRoundPatch(patch); });
@@ -4058,26 +4048,6 @@ function applySocketRoundState(data) {
 
 function applySocketRoundPatch(patch) {
   if (!patch) return;
-  if (patch.serverTime && typeof patch.serverTime === 'number') {
-    const newOffset = patch.serverTime - Date.now();
-    if (Math.abs(newOffset - _serverTimeOffsetSmoothed) > 5000) {
-      _serverTimeOffset = newOffset;
-      _serverTimeOffsetSmoothed = newOffset;
-    } else {
-      _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.5;
-      _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
-    }
-  }
-  if (patch.timestamp && typeof patch.timestamp === 'number') {
-    const newOffset = patch.timestamp - Date.now();
-    if (Math.abs(newOffset - _serverTimeOffsetSmoothed) > 5000) {
-      _serverTimeOffset = newOffset;
-      _serverTimeOffsetSmoothed = newOffset;
-    } else {
-      _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.5;
-      _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
-    }
-  }
   console.log('[patch] получен:', JSON.stringify(patch));
 
   if (!scannerRealtime.roundData) {
