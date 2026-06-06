@@ -4282,7 +4282,7 @@ const SCANNER_DEFAULT_QUICK_STAKES = [1, 10, 25];
 const SCANNER_QUICK_STAKES_STORAGE_KEY = "bobr_world_scanner_quick_stakes_v1";
 
 function getNetworkTime() {
-  return Date.now();
+  return Date.now() + _serverTimeOffset;
 }
 
 let scannerQuickStakeValues = SCANNER_DEFAULT_QUICK_STAKES.slice();
@@ -7312,16 +7312,7 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 }
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
-  const t = (Date.now() % 10000) / 10000;
-  return {
-    x: 0.1 + t * 0.8,
-    y: 0.5,
-    vx: 0.5,
-    vy: 0,
-    angle: 0,
-    travelAngle: 0,
-    renderAngle: 0
-  };
+  return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 // ─── Reticle (point) simulator ───────────────────────────────────────────────
 // Отвечает за движение точки: скорость, направление и физику отскока от стен.
@@ -8152,7 +8143,9 @@ function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestam
   const explicitBeamAngle = Number.isFinite(Number(safeSample.renderAngle))
     ? Number(safeSample.renderAngle)
     : (Number.isFinite(Number(safeSample.angle)) ? Number(safeSample.angle) : baseAngle);
-  const scanOffset = 0;
+  const scanOffset = shouldApplyScannerBeamScanOffset(safeSample, roundStatus)
+    ? getScannerBeamScanOffset(roundStatus, renderKey, timestampMs)
+    : 0;
 
   const renderAngle = explicitBeamAngle + scanOffset + SCANNER_BEAM_RENDER_ANGLE_OFFSET;
 
@@ -10736,7 +10729,12 @@ function renderScannerCanvas() {
       });
     } else {
       const _rawLobbySample = getScannerSharedLobbyBeamSample(nowMs);
-      const idleVisualBeamSample = _rawLobbySample;
+      const idleVisualBeamSample = getSmoothedScannerBeamSample(
+        getScannerBeamTargetSample(_rawLobbySample, roundStatus, beamRenderKey, nowMs),
+        beamRenderKey,
+        now,
+        { positionTauMs: 80 }
+      );
       const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
       const _lobbyBx = _rawLobbyForGlow.x * size;
       const _lobbyBy = _rawLobbyForGlow.y * size;
