@@ -10683,6 +10683,7 @@ function renderScannerCanvas() {
   const roundData = scannerGridState.roundData || null;
   const beamRenderKey = getScannerBeamRenderKey(roundStatus, roundData, hasGrid ? "grid" : "empty");
   if (renderScannerCanvas._lastKey !== beamRenderKey) { console.log("[key changed]", renderScannerCanvas._lastKey, "->", beamRenderKey); renderScannerCanvas._lastKey = beamRenderKey; }
+  if (renderScannerCanvas._lastKey !== beamRenderKey) { console.log("[key changed]", renderScannerCanvas._lastKey, "->", beamRenderKey); renderScannerCanvas._lastKey = beamRenderKey; }
 
   if (!hasGrid) {
     if (roundStatus === "preparing_next_round" && roundData) {
