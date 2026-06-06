@@ -8152,9 +8152,7 @@ function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestam
   const explicitBeamAngle = Number.isFinite(Number(safeSample.renderAngle))
     ? Number(safeSample.renderAngle)
     : (Number.isFinite(Number(safeSample.angle)) ? Number(safeSample.angle) : baseAngle);
-  const scanOffset = shouldApplyScannerBeamScanOffset(safeSample, roundStatus)
-    ? getScannerBeamScanOffset(roundStatus, renderKey, timestampMs)
-    : 0;
+  const scanOffset = 0;
 
   const renderAngle = explicitBeamAngle + scanOffset + SCANNER_BEAM_RENDER_ANGLE_OFFSET;
 
