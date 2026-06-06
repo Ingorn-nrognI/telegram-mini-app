@@ -1521,8 +1521,7 @@ button {
   flex: 0 0 auto;
 }
 
-.scanner-player-row,
-.scanner-recent-card {
+.scanner-player-row {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   gap: 10px;
@@ -1543,10 +1542,16 @@ button {
 }
 
 .scanner-recent-card {
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   gap: 12px;
   padding: 12px 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(19, 28, 62, 0.88), rgba(9, 13, 29, 0.94));
+  border: 1px solid rgba(255,255,255,0.06);
   width: 100%;
+  box-sizing: border-box;
 }
 
 .scanner-player-swatch {
