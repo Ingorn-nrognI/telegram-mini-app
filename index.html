@@ -7312,7 +7312,16 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 }
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
-  return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", null);
+  const t = (Date.now() % 10000) / 10000;
+  return {
+    x: 0.1 + t * 0.8,
+    y: 0.5,
+    vx: 0.5,
+    vy: 0,
+    angle: 0,
+    travelAngle: 0,
+    renderAngle: 0
+  };
 }
 // ─── Reticle (point) simulator ───────────────────────────────────────────────
 // Отвечает за движение точки: скорость, направление и физику отскока от стен.
