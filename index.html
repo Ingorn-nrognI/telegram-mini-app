@@ -3965,6 +3965,13 @@ function initSocketConnection() {
   _socket = io(SOCKET_SERVER, { transports: ['websocket'], reconnection: true });
   _socket.on('connect', () => {
     console.log('[Socket] Подключён к серверу');
+    _socket.emit('ping_time', { clientTime: Date.now() });
+  });
+  _socket.on('pong_time', (data) => {
+    if (data?.serverTime && _serverTimeOffset === 0) {
+      _serverTimeOffset = data.serverTime - Date.now();
+      console.log('[Time] serverTimeOffset set once:', _serverTimeOffset);
+    }
   });
   _socket.on('disconnect', () => console.log('[Socket] Отключён'));
   _socket.on('beam_position', (data) => {
