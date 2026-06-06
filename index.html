@@ -1416,8 +1416,11 @@ button {
 }
 
 .scanner-recent-list {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   width: 100%;
+  overflow: hidden;
 }
 
 .scanner-players-heading-row {
@@ -1543,6 +1546,7 @@ button {
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
   padding: 12px 14px;
+  width: 100%;
 }
 
 .scanner-player-swatch {
