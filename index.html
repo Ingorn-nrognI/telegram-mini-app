@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -3161,7 +3161,7 @@ button {
   display: block;
 }
 
-/* ����������� ������� ��� ���������� ����-�������� */
+/* Подробности Сканера без внутренних мини-карточек */
 .scanner-history-player-card,
 .scanner-history-winner-card {
   display: grid;
@@ -3939,7 +3939,7 @@ let _socket = null;
 function initSocketConnection() {
   _socket = io(SOCKET_SERVER, { transports: ['websocket'], reconnection: true });
   _socket.on('connect', () => {
-    console.log('[Socket] ��������� � �������');
+    console.log('[Socket] Подключено к серверу');
     _socket.emit('ping_time', { clientTime: Date.now() });
   });
   _socket.on('pong_time', (data) => {
@@ -3948,7 +3948,7 @@ function initSocketConnection() {
       console.log('[Time] serverTimeOffset set once:', _serverTimeOffset);
     }
   });
-  _socket.on('disconnect', () => console.log('[Socket] ��������'));
+  _socket.on('disconnect', () => console.log('[Socket] Отключено'));
   _socket.on('beam_position', (data) => {
     _serverBeamPos = data;
     _serverBeamPosLastUpdate = Date.now();
@@ -4030,7 +4030,7 @@ function applySocketRoundState(data) {
 
 function applySocketRoundPatch(patch) {
   if (!patch) return;
-  console.log('[patch] �������:', JSON.stringify(patch));
+  console.log('[patch] Получен:', JSON.stringify(patch));
 
   if (!scannerRealtime.roundData) {
     scannerRealtime.roundData = {};
@@ -4140,14 +4140,14 @@ if (!firebase.apps.length) {
 }
 const db = firebase.firestore();
 firebase.auth().signInAnonymously().catch((err) => {
-  console.error("��������� ����������� �� �������:", err);
+  console.error("Анонимная авторизация не удалась:", err);
 });
 const DEMO_TON_START_BALANCE = 1000;
 const DEMO_TON_RESET_MIGRATION_COLLECTION = "system";
 const DEMO_TON_RESET_MIGRATION_DOC = "demo_ton_balance_reset_to_1000_v1";
 const DEMO_TON_RESET_MIGRATION_TARGET = 1000;
 const DEMO_TON_RESET_MIGRATION_BATCH_SIZE = 450;
-const INSUFFICIENT_BALANCE_MESSAGE = "��� ������ �� ������� �������. ��������� ���� ������ � ��������� �������.";
+const INSUFFICIENT_BALANCE_MESSAGE = "Для ставки не хватает баланса. Пополните свой баланс и повторите попытку.";
 let currentDemoTonBalance = 0;
 let currentDemoTonBalanceLoaded = false;
 let currentUserBalanceUnsub = null;
@@ -4352,7 +4352,7 @@ const scannerBeamRenderState = {
   lastFrameAt: 0
 };
 
-// Independent visual angle for the lobby laser � updated at a fixed angular
+// Independent visual angle for the lobby laser — updated at a fixed angular
 // speed so it never snaps or reverses when a new bounce changes direction.
 const scannerLobbyLaserVisual = { angle: null };
 
@@ -4429,7 +4429,7 @@ function shouldIgnoreExternalConsoleError(message) {
 }
 
 function reportAppError(prefix, error) {
-  const message = error?.message || error?.reason?.message || error?.reason || error || "����������� ������";
+  const message = error?.message || error?.reason?.message || error?.reason || error || "Неизвестная ошибка";
   if (shouldIgnoreExternalConsoleError(message)) {
     console.warn(prefix, message);
     return;
@@ -4441,7 +4441,7 @@ window.addEventListener("error", (event) => {
   const message = event?.message || "";
   if (shouldIgnoreExternalConsoleError(message)) {
     event.preventDefault();
-    console.warn("��������� ��������� ��������/Telegram:", message);
+    console.warn("Стороннее сообщение браузера/Telegram:", message);
   }
 });
 
@@ -4450,10 +4450,10 @@ window.addEventListener("unhandledrejection", (event) => {
   const message = reason?.message || String(reason || "");
   if (shouldIgnoreExternalConsoleError(message)) {
     event.preventDefault();
-    console.warn("������� ������� promise-���������:", message);
+    console.warn("Поймано внешнее promise-сообщение:", message);
     return;
   }
-  console.error("�������������� ������ Promise:", reason);
+  console.error("Необработанная ошибка Promise:", reason);
   event.preventDefault();
 });
 
@@ -4464,7 +4464,7 @@ try {
   tgApp?.setBackgroundColor?.("#050816");
   tgApp?.setHeaderColor?.("#050816");
 } catch (error) {
-  reportAppError("������ ������������� Telegram WebApp:", error);
+  reportAppError("Ошибка инициализации Telegram WebApp:", error);
   tgUser = null;
 }
 
@@ -4487,7 +4487,7 @@ function getStableGuestPlayerId() {
 
 function getCurrentPlayer() {
   const nicknameEl = document.getElementById("nickname");
-  const fallbackName = nicknameEl?.innerText?.trim() || "�����";
+  const fallbackName = nicknameEl?.innerText?.trim() || "Игрок";
   const id = tgUser?.id ? String(tgUser.id) : getStableGuestPlayerId();
   const name = tgUser?.username || tgUser?.first_name || fallbackName;
   return {
@@ -4498,8 +4498,8 @@ function getCurrentPlayer() {
 }
 
 function getPlayerInitial(name) {
-  const value = String(name || "�").trim();
-  if (!value) return "�";
+  const value = String(name || "И").trim();
+  if (!value) return "И";
   return value.charAt(0).toUpperCase();
 }
 
@@ -4562,7 +4562,7 @@ function syncLocalDemoBalance(value) {
   try {
     localStorage.setItem("bobr_balance", String(normalized));
   } catch (error) {
-    console.warn("�� ������� ��������� ��������� ����� demo-�������:", error);
+    console.warn("Не удалось сохранить локальную копию demo-баланса:", error);
   }
   renderTopProfile();
   renderScannerBetBar();
@@ -4662,7 +4662,7 @@ function subscribeCurrentUserBalance() {
     if (!snapshot.exists) return;
     syncLocalDemoBalance(getUserDemoBalanceFromData(snapshot.data() || {}));
   }, (error) => {
-    console.error("������ �������� �� demo TON-������:", error);
+    console.error("Ошибка подписки на demo TON-баланс:", error);
   });
 }
 
@@ -4928,7 +4928,7 @@ async function loadProfileBestRoundWin() {
       bestWin = Math.max(bestWin, getProfileBestWinCandidate(doc.data() || {}, player.id));
     });
   } catch (error) {
-    console.warn("�� ������� ��������� ���������������� ������� ��� �������:", error);
+    console.warn("Не удалось загрузить пользовательскую историю для профиля:", error);
   }
 
   if (bestWin <= 0) {
@@ -4942,7 +4942,7 @@ async function loadProfileBestRoundWin() {
         bestWin = Math.max(bestWin, getProfileBestWinCandidate(doc.data() || {}, player.id));
       });
     } catch (error) {
-      console.warn("�� ������� ��������� ������� ��������� �������:", error);
+      console.warn("Не удалось загрузить историю выигрышей Сканера:", error);
     }
   }
 
@@ -4965,11 +4965,11 @@ function renderProfileScreen(options = {}) {
   }
 
   if (profileNameEl) {
-    setTextContentIfChanged(profileNameEl, currentPlayer.name || "�����");
+    setTextContentIfChanged(profileNameEl, currentPlayer.name || "Игрок");
   }
 
   if (profileIdEl) {
-    setTextContentIfChanged(profileIdEl, `ID: ${currentPlayer.id || "�"}`);
+    setTextContentIfChanged(profileIdEl, `ID: ${currentPlayer.id || "—"}`);
   }
 
   if (profileBalanceEl) {
@@ -5005,8 +5005,8 @@ function closeProfileScreen() {
 
 function showProfilePlaceholderAction(action) {
   const message = action === "withdraw"
-    ? "����� ����� �������� �����."
-    : "���������� ����� ��������� �����.";
+    ? "Вывод будет добавлен позже."
+    : "Пополнение будет добавлено позже.";
   alert(message);
 }
 
@@ -5047,7 +5047,7 @@ function syncAppBackButton(options = {}) {
       tgApp.BackButton.hide();
     }
   } catch (error) {
-    reportAppError("������ ������ ����� Telegram:", error);
+    reportAppError("Ошибка кнопки назад Telegram:", error);
   }
 }
 
@@ -5065,10 +5065,10 @@ function getPreferredHomeNav() {
 }
 
 function getActiveModeLabel() {
-  if (currentMenuView === "profile") return "�������";
+  if (currentMenuView === "profile") return "Профиль";
   if (currentMenuView === "bobrRun") return "Bobr Run";
-  if (homeScreenContext === "pvp") return "������-�����";
-  return "������� �����";
+  if (homeScreenContext === "pvp") return "Сканер-сетка";
+  return "игровой режим";
 }
 
 function scrollHomeToTop() {
@@ -5330,9 +5330,9 @@ function getHistoryPanelHeaderHtml() {
 }
 
 function formatHistoryDate(value) {
-  if (!value) return "�";
+  if (!value) return "—";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "�";
+  if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleString("ru-RU", {
     day: "2-digit",
     month: "2-digit",
@@ -5349,15 +5349,15 @@ function getHistoryCollectionRef(playerId) {
 function getHistoryResultMeta(item) {
   const winnerValue = String(item?.winner || "").trim().toLowerCase();
 
-  if (winnerValue === "�����") {
-    return { label: "�����", className: "draw" };
+  if (winnerValue === "ничья") {
+    return { label: "Ничья", className: "draw" };
   }
 
   if (item?.youWon) {
-    return { label: "������", className: "win" };
+    return { label: "Победа", className: "win" };
   }
 
-  return { label: "���������", className: "lose" };
+  return { label: "Поражение", className: "lose" };
 }
 
 function toggleHistoryMatchDetails(matchId, event) {
@@ -5413,7 +5413,7 @@ function getHistoryEntryModeKey(item) {
 
 function isScannerHistoryEntry(item) {
   const modeKey = getHistoryEntryModeKey(item);
-  return modeKey.includes("������") || modeKey.includes("scanner");
+  return modeKey.includes("сканер") || modeKey.includes("scanner");
 }
 
 function getScannerHistoryResults(item) {
@@ -5454,7 +5454,7 @@ function getScannerHistoryMyMeta(item) {
   const myResult = getScannerHistoryCurrentUserResult(item) || {};
   return {
     id: String(myResult.playerId || myResult.id || myResult.userId || item?.playerId || currentPlayer.id || ""),
-    name: String(item?.myName || myResult.name || currentPlayer.name || "�����"),
+    name: String(item?.myName || myResult.name || currentPlayer.name || "Игрок"),
     avatar: item?.myAvatar || myResult.avatar || currentPlayer.avatar || null,
     color: item?.myColor || item?.roundColor || item?.playerColor || myResult.roundColor || myResult.playerColor || myResult.color || "hsl(182 88% 58%)",
     stake: getScannerHistoryMoneyValue(item?.myStake, item?.stake, item?.bet, myResult.stake, myResult.bet, myResult.score)
@@ -5465,7 +5465,7 @@ function getScannerHistoryWinnerMeta(item) {
   const winnerResult = getScannerHistoryWinnerResult(item) || {};
   return {
     id: String(item?.winnerPlayerId || item?.winnerId || winnerResult.playerId || winnerResult.id || ""),
-    name: String(item?.winnerName || item?.winner || winnerResult.name || "����������"),
+    name: String(item?.winnerName || item?.winner || winnerResult.name || "Победитель"),
     avatar: item?.winnerAvatar || winnerResult.avatar || null,
     color: item?.winnerColor || winnerResult.roundColor || winnerResult.playerColor || winnerResult.color || "hsl(145 74% 58%)",
     stake: getScannerHistoryMoneyValue(item?.winnerStake, winnerResult.stake, winnerResult.bet, winnerResult.score),
@@ -5559,7 +5559,7 @@ function renderHistoryEntries(entries) {
   const header = getHistoryPanelHeaderHtml();
 
   if (!Array.isArray(entries) || entries.length === 0) {
-    panel.innerHTML = `${header}<div class="history-scroll-area"><div class="history-panel-empty">���� ��� ��������� ������.</div></div>`;
+    panel.innerHTML = `${header}<div class="history-scroll-area"><div class="history-panel-empty">Пока нет сыгранных матчей.</div></div>`;
     return;
   }
 
@@ -5584,7 +5584,7 @@ function renderHistoryEntries(entries) {
             .map((row) => `
               <tr>
                 <td>${Number(row.place || 0)}</td>
-                <td>${row.name || "�����"}</td>
+                <td>${row.name || "Игрок"}</td>
                 <td>${Number(row.score || 0)}</td>
               </tr>
             `)
@@ -5596,9 +5596,9 @@ function renderHistoryEntries(entries) {
           <table class="history-match-table">
             <thead>
               <tr>
-                <th>�����</th>
-                <th>�����</th>
-                <th>����</th>
+                <th>Место</th>
+                <th>Игрок</th>
+                <th>Счёт</th>
               </tr>
             </thead>
             <tbody>${resultsRows}</tbody>
@@ -5608,7 +5608,7 @@ function renderHistoryEntries(entries) {
 
       return `
         <div class="history-match-card" onclick="toggleHistoryMatchDetails('${matchId.replace(/'/g, "&#39;")}', event)">
-          <div class="history-match-mode">�����: ${modeLabel}</div>
+          <div class="history-match-mode">Режим: ${modeLabel}</div>
           <div class="history-match-result ${resultMeta.className}">${resultMeta.label}</div>
           <div class="history-match-date">${playedAtText}</div>
           ${detailsHtml}
@@ -5616,7 +5616,7 @@ function renderHistoryEntries(entries) {
       `;
     }).join("");
 
-  panel.innerHTML = `${header}<div class="history-scroll-area">${items || `<div class="history-panel-empty">���� ��� ��������� ������.</div>`}</div>`;
+  panel.innerHTML = `${header}<div class="history-scroll-area">${items || `<div class="history-panel-empty">Пока нет сыгранных матчей.</div>`}</div>`;
 }
 
 async function loadGameHistory() {
@@ -5627,7 +5627,7 @@ async function loadGameHistory() {
   panel.innerHTML = `
     ${getHistoryPanelHeaderHtml()}
     <div class="history-scroll-area">
-      <div class="history-panel-text">��������...</div>
+      <div class="history-panel-text">Загрузка...</div>
     </div>
   `;
 
@@ -5642,11 +5642,11 @@ async function loadGameHistory() {
     snapshot.forEach((doc) => entries.push(doc.data() || {}));
     renderHistoryEntries(entries);
   } catch (error) {
-    console.error("������ �������� ������� ���:", error);
+    console.error("Ошибка загрузки истории игр:", error);
     panel.innerHTML = `
       ${getHistoryPanelHeaderHtml()}
       <div class="history-scroll-area">
-        <div class="history-panel-text">�� ������� ��������� ������� ���.</div>
+        <div class="history-panel-text">Не удалось загрузить историю игр.</div>
       </div>
     `;
   } finally {
@@ -5664,14 +5664,14 @@ async function openLeaderboard() {
 
   setActiveBottomNav("leaderboard");
   modal.style.display = "flex";
-  contentDiv.innerHTML = "<div class='history-panel-text'>��������...</div>";
+  contentDiv.innerHTML = "<div class='history-panel-text'>Загрузка...</div>";
 
   try {
     const snapshot = await db.collection("leaderboard").orderBy("score", "desc").limit(10).get();
     contentDiv.innerHTML = "";
 
     if (snapshot.empty) {
-      contentDiv.innerHTML = "<div class='history-panel-text'>���� ��� ��������.</div>";
+      contentDiv.innerHTML = "<div class='history-panel-text'>Пока нет рекордов.</div>";
       return;
     }
 
@@ -5683,7 +5683,7 @@ async function openLeaderboard() {
 
       const name = document.createElement("div");
       name.className = "leaderboard-row-name";
-      name.textContent = `${index}. ${p.name || "�����"}`;
+      name.textContent = `${index}. ${p.name || "Игрок"}`;
 
       const score = document.createElement("div");
       score.className = "leaderboard-row-score";
@@ -5695,8 +5695,8 @@ async function openLeaderboard() {
       index += 1;
     });
   } catch (error) {
-    console.error("������ �������� �������:", error);
-    contentDiv.innerHTML = "<div class='history-panel-text'>������ �������� �������.</div>";
+    console.error("Ошибка загрузки таблицы:", error);
+    contentDiv.innerHTML = "<div class='history-panel-text'>Ошибка загрузки таблицы.</div>";
   }
 }
 
@@ -5722,15 +5722,15 @@ function renderBobrRunRooms() {
   if (roomsList) {
     roomsList.innerHTML = `
       <div class="rooms-note compact-note">
-        <strong>������� Bobr Run ���� �� ����������.</strong><br>
-        ���� ������ ����������� ������ ��� �������� Bobr Run. �� �� ������ �� Scanner Grid, �� ���������� pvp_runtime � �� ������ �� ����� PvP-�����, ����, ����������, ������� ��� ������� ������-�����.
+        <strong>Комнаты Bobr Run пока не подключены.</strong><br>
+        Этот раздел подготовлен только для будущего Bobr Run. Он не связан со Scanner Grid, не использует pvp_runtime и не влияет на общий PvP-раунд, банк, участников, статусы или историю Сканер-сетки.
       </div>
     `;
   }
 
   if (createRoomBtn) {
-    createRoomBtn.textContent = "������� ������� Bobr Run";
-    createRoomBtn.title = "�������� ��� �������� ����������� ������ Bobr Run � Firebase";
+    createRoomBtn.textContent = "Создать комнату Bobr Run";
+    createRoomBtn.title = "Заглушка для будущего подключения комнат Bobr Run к Firebase";
   }
 }
 
@@ -5816,17 +5816,17 @@ function hideAppNotice(event) {
 
 function showBobrRunComingSoon(event) {
   if (event) event.stopPropagation();
-  showAppNotice("���� �� ������ ����������", { timeoutMs: 2600, closeModeMenu: true });
+  showAppNotice("Игра на стадии разработке", { timeoutMs: 2600, closeModeMenu: true });
 }
 
 function openSkins(event) {
   if (event) event.stopPropagation();
   closeModePopup();
-  showAppNotice("����� �� ������ ����������", { timeoutMs: 2600 });
+  showAppNotice("Скины на стадии разработке", { timeoutMs: 2600 });
 }
 
 function openWallet() {
-  alert("������");
+  alert("Кошелёк");
 }
 
 const SETTINGS_STORAGE_KEY = "bobr_world_app_settings_v1";
@@ -5920,14 +5920,14 @@ function applyAppLanguage(lang) {
   set(".scanner-game-title", t.scanner);
   set(".scanner-recent-heading-title", t.recentRounds);
   set(".scanner-bet-allin", t.allIn);
-  set("#leaderboardTitle", "?? " + t.leaderboard);
+  set("#leaderboardTitle", "🏆 " + t.leaderboard);
   set(".history-panel-title", t.gameHistory);
   set("#profileKickerLabel", t.playerProfile);
   set("#profileBalanceTitle", t.balance);
   set("#profileTopupBtn", t.deposit);
   set("#profileWithdrawBtn", t.withdraw);
   set("#profileStatLabel", t.bestWin);
-  set(".profile-settings-btn", "?? " + t.settings);
+  set(".profile-settings-btn", "⚙️ " + t.settings);
   set("#settingsLangLabel", t.language);
   set("#settingsQualityLabel", t.graphicsQuality);
   set("#settingsVibLabel", t.vibration);
@@ -5936,8 +5936,8 @@ function applyAppLanguage(lang) {
   set("#settingsQualityHigh", t.high);
   set("#settingsVibOn", t.on);
   set("#settingsVibOff", t.off);
-  set(".mode-hero-card .card-action:first-child", "? " + t.play);
-  set(".mode-hero-card .card-action:last-child", "?? " + t.history);
+  set(".mode-hero-card .card-action:first-child", "▶ " + t.play);
+  set(".mode-hero-card .card-action:last-child", "🕘 " + t.history);
 
   const playersTitle = document.querySelector(".scanner-players-heading-title");
   if (playersTitle) {
@@ -5949,13 +5949,13 @@ function applyAppLanguage(lang) {
   }
 
   document.querySelectorAll(".scanner-round-status-text").forEach(el => {
-    if (el.textContent.includes("��������") || el.textContent.includes("Waiting")) {
+    if (el.textContent.includes("Ожидание") || el.textContent.includes("Waiting")) {
       el.textContent = t.waitingRound;
     }
   });
 
   const walletBtn = document.getElementById("profileWalletBtn");
-  if (walletBtn) walletBtn.innerHTML = "?? " + t.wallet;
+  if (walletBtn) walletBtn.innerHTML = "💎 " + t.wallet;
   set("#scannerStakeSettingsTitle", t.stakeSettings);
   document.querySelectorAll(".scanner-stake-settings-action.reset").forEach(el => { el.textContent = t.reset; });
   document.querySelectorAll(".scanner-stake-settings-action.save").forEach(el => { el.textContent = t.save; });
@@ -6616,7 +6616,7 @@ function buildScannerPlayersFromFirestore(round, participants) {
   const participantsWithColors = assignScannerRoundColors(round, renderParticipants);
   const normalized = participantsWithColors.map(({ participant, color }, index) => ({
     id: String(participant.playerId || participant.id || `player_${index}`),
-    name: participant.name || "�����",
+    name: participant.name || "Игрок",
     avatar: participant.avatar || null,
     stake: normalizeStakeValue(participant.stake),
     joinedAt: tsToMs(participant.joinedAt || participant.createdAt || participant.updatedAt || Date.now()),
@@ -6906,7 +6906,7 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     ? lerpScannerAngle(targetAngles.travelAngle, motionAngleFromStep, stepAngleInfluence)
     : targetAngles.travelAngle;
   const renderAngleOffset = getScannerAngleDelta(targetAngles.travelAngle, targetAngles.renderAngle);
-  // smoothedTravelAngle first � desiredRenderAngle is based on it so the render
+  // smoothedTravelAngle first — desiredRenderAngle is based on it so the render
   // target changes gradually instead of snapping to the new direction instantly.
   // This prevents lerpScannerAngle from picking a "shortest path" that reverses
   // an in-progress rotation when a second bounce arrives mid-turn.
@@ -7260,7 +7260,7 @@ function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 // --- Reticle (point) simulator -----------------------------------------------
-// �������� �� �������� �����: ��������, ����������� � ������ ������� �� ����.
+// Отвечает за движение точки: скорость, направление и физику отскока от стен.
 function simulateScannerReticleSamples(options = {}) {
   const durationMs = Math.max(0, Number(options.durationMs) || 0);
   const safePad = clampScannerNumber(options.pad ?? SCANNER_ACTIVE_BEAM_EDGE_PADDING, 0, 0.24);
@@ -7414,9 +7414,9 @@ function simulateScannerReticleSamples(options = {}) {
 }
 
 // --- Laser beam rotation applier ---------------------------------------------
-// �������� �� �������� ����������� ��������� ���� ����� ������� �� �����.
-// options.turnCarry � ���� ����������� ����, ������� ��� ������������� �� ����
-// ������� ���� (0..1). ������ = ���������. �� ��������� SCANNER_BEAM_LASER_TURN_CARRY.
+// Навешивает на траекторию направление угла луча лазера путём ротации на угол.
+// options.turnCarry — угол накопленного поворота, который ещё не был применён до этого
+// текущего угла (0..1). Ноль = нейтрально. По умолчанию SCANNER_BEAM_LASER_TURN_CARRY.
 function applyScannerBeamLaserAngles(samples, bounceLog, initialBeamAngle, options = {}) {
   const turnCarry = Math.max(0.001, Math.min(1, Number(options.turnCarry) || SCANNER_BEAM_LASER_TURN_CARRY));
   const turnEaseEnd = Math.max(0.1, Math.min(1, Number(options.turnEaseEnd) || SCANNER_BEAM_LASER_TURN_EASE_END));
@@ -7444,8 +7444,8 @@ function applyScannerBeamLaserAngles(samples, bounceLog, initialBeamAngle, optio
   }
 }
 
-// --- Combined simulator (���������� ��������� API) ---------------------------
-// �������� simulateScannerReticleSamples + applyScannerBeamLaserAngles.
+// --- Combined simulator (упрощённый внешний API) ---------------------------
+// Вызывает simulateScannerReticleSamples + applyScannerBeamLaserAngles.
 function simulateScannerBeamBounceSamples(options = {}) {
   const { samples, bounceLog, initialBeamAngle, finalDirection, finalPosition } =
     simulateScannerReticleSamples(options);
@@ -7578,7 +7578,7 @@ function buildScannerLatchSamples(startSample, durationMs, steps, remainingMs = 
     : getScannerBeamMotionAngle(startSample);
 
   // Wall-aligned angle: beam lies parallel to the wall surface.
-  // Left/right wall (vertical) > �?/2; top/bottom wall (horizontal) > 0 or �?.
+  // Left/right wall (vertical) > π/2; top/bottom wall (horizontal) > 0 or π.
   // Pick the direction that aligns with the tangential component of travel.
   let wallAlignedAngle;
   if (meta.side === "left" || meta.side === "right") {
@@ -7756,11 +7756,11 @@ function getScannerActiveLaunchState(round, latchSample) {
 function getScannerActiveSpeedFactor(progress) {
   const t = clampScannerNumber(progress, 0, 1);
   if (t >= 0.999) return 0;
-  // ������� �����: �������� � 20% ��������, ����������� �� ������ 12%
+  // Мягкий старт: начинаем с 20% скорости, разгоняемся до полной 12%
   const softStart = 0.2 + 0.8 * smoothstep(0, 0.12, t);
-  // ������� ���������� �� ���������� ����� ������
+  // Плавное замедление до нулевой скорости ближе к концу
   const decel = Math.pow(Math.max(0, 1 - t), 0.65);
-  // ������ �������� � ����� (��������� 12%)
+  // Плавное затухание к концу (последние 12%)
   const endFade = 1 - smoothstep(0.88, 0.999, t);
   return Math.max(0, softStart * decel * endFade);
 }
@@ -7935,12 +7935,12 @@ function getScannerPreparingBeamSample(round, players, timestampMs = getNetworkT
   const finalSample = activeCache?.finalSample;
   const progress = getScannerPreparingProgress(round);
 
-  // ���� ����� preparing_next_round ������� (Firestore ��������) � ����� � �����
+  // Если этап preparing_next_round начался (Firestore подтвердил) — тянем к лобби
   if (!finalSample || progress >= 0.999) {
     return getScannerSharedLobbyBeamSample(timestampMs);
   }
 
-  // ������ 20% � ����� �� ����� ����������, ����� ������ ������ � �����
+  // Первые 20% к концу не берём финальную позицию, чтобы переход прошёл плавно
   const t = smoothstep(0.2, 1.0, progress);
   const idleSample = getScannerSharedLobbyBeamSample(timestampMs);
 
@@ -8136,7 +8136,7 @@ function ensureScannerVisualLoop() {
 function startScannerHeartbeat() {
   stopScannerHeartbeat();
   scannerRealtime.heartbeatTimer = setInterval(() => {
-    updateScannerHeartbeat().catch((error) => console.warn("Heartbeat scanner �� �������:", error));
+    updateScannerHeartbeat().catch((error) => console.warn("Heartbeat scanner не обновлён:", error));
   }, SCANNER_HEARTBEAT_MS);
 }
 
@@ -8260,7 +8260,7 @@ function hasScannerRoundVisibleState(round) {
 
 function syncScannerDerivedState() {
   const currentPlayer = getCurrentPlayer();
-  const now = getNetworkTime(); // <-- �������� ��� ������� ����������
+  const now = getNetworkTime(); // <-- Изменено для точного интерфейса
   scannerGridState.myPlayerId = currentPlayer.id;
 
   const round = scannerRealtime.roundData || null; 
@@ -8401,12 +8401,12 @@ function syncScannerDerivedState() {
 
   if (scannerGridState.status === "finished" && round?.payoutProcessed !== true) {
     processScannerRoundPayoutOnce(round.id).catch((error) => {
-      console.warn("�� ������� ���������� ������� ����������:", error);
+      console.warn("Не удалось обработать выплату победителю:", error);
     });
   }
 
   ensureScannerRoundHistoryPersisted().catch((error) => {
-    console.warn("�� ������� ��������� ������� ������ ������������:", error);
+    console.warn("Не удалось сохранить историю раунда пользователю:", error);
   });
 }
 
@@ -8425,7 +8425,7 @@ function computeDeterministicRoundResult(round, participants) {
   return {
     winningCellIndex,
     winnerPlayerId: winnerPlayer?.id || null,
-    winnerName: winnerPlayer?.name || "�����",
+    winnerName: winnerPlayer?.name || "Игрок",
     winnerStake: Number(winnerPlayer?.stake || 0),
     players: finalized.players
   };
@@ -8434,7 +8434,7 @@ function computeDeterministicRoundResult(round, participants) {
 async function joinOrCreateScannerRound() {
   if (scannerRealtime.isJoinBusy) return;
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("������ ������������� �� ��������� �������� ������.", {
+    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", {
       type: "info",
       timeoutMs: 5000
     });
@@ -8452,11 +8452,11 @@ async function joinOrCreateScannerRound() {
     const desiredMaxPlayers = Number(scannerGridState.selectedPopulation || 2);
 
     if (!Number.isFinite(stakeToAdd) || stakeToAdd <= 0) {
-      throw new Error("������ ���������� ������ ����� ������ � �����.");
+      throw new Error("Выбери корректную ставку перед входом в раунд.");
     }
 
     if (!_socket?.connected) {
-      throw new Error("��� ���������� � ��������. �������� �����.");
+      throw new Error("Нет соединения с сервером. Попробуй позже.");
     }
 
     await new Promise((resolve, reject) => {
@@ -8472,20 +8472,20 @@ async function joinOrCreateScannerRound() {
         if (response?.ok) {
           resolve(response);
         } else {
-          reject(new Error(response?.error || '�� ������� ����� � �����.'));
+          reject(new Error(response?.error || 'Не удалось войти в матч.'));
         }
       });
     });
 
-    setScannerTransientMessage("�� ��������� � ������ PvP-������.", { type: "success", timeoutMs: 4000, render: false });
+    setScannerTransientMessage("Вы добавлены в очередь PvP-матча.", { type: "success", timeoutMs: 4000, render: false })
     enterScannerGridMode();
     renderScannerRound();
   } catch (error) {
-    reportAppError("�� ������� ����� � ����� �����:", error);
+    reportAppError("Не удалось войти в общий раунд:", error);
     if (isInsufficientBalanceError(error)) {
       showInsufficientBalanceModal();
     } else {
-      setScannerTransientMessage(error?.message || "�� ������� ����� � ����� �����.", {
+      setScannerTransientMessage(error?.message || "Не удалось войти в общий раунд.", {
         type: "error",
         timeoutMs: 6000
       });
@@ -8701,7 +8701,7 @@ async function ensureScannerRoundHistoryPersisted() {
     playedAt: new Date(tsToMs(round.finishedAt) || Date.now()).toISOString(),
     finishedAt: new Date(tsToMs(round.finishedAt) || Date.now()).toISOString(),
     savedAt: Date.now(),
-    mode: "������-�����",
+    mode: "Сканер-сетка",
     status: round.status,
     winner: winnerPlayer.name,
     winnerName: winnerPlayer.name,
@@ -8740,7 +8740,7 @@ async function ensureScannerRoundHistoryPersisted() {
     getHistoryCollectionRef(currentPlayer.id).doc(round.id).set(summary, { merge: true }),
     scannerHistoryCollection().doc(round.id).set({
       roundId: round.id,
-      mode: "������-�����",
+      mode: "Сканер-сетка",
       status: round.status,
       finishedAt: round.finishedAt || createTimestampFromNow(0),
       totalPot: Number(scannerGridState.totalPot || 0),
@@ -8787,9 +8787,9 @@ function sanitizeScannerStakeInput(value) {
 }
 
 function formatScannerStakeButtonValue(value) {
-  if (value === "" || value === null || value === undefined) return "�";
+  if (value === "" || value === null || value === undefined) return "—";
   const number = normalizeStakeValue(value);
-  if (!number) return "�";
+  if (!number) return "—";
   return String(number).replace(".", ",");
 }
 
@@ -8807,7 +8807,7 @@ function loadScannerQuickStakeValues() {
 
     return values;
   } catch (error) {
-    console.warn("�� ������� ��������� ������� ������:", error);
+    console.warn("Не удалось загрузить быстрые ставки:", error);
     return SCANNER_DEFAULT_QUICK_STAKES.slice();
   }
 }
@@ -8816,7 +8816,7 @@ function persistScannerQuickStakeValues(values) {
   try {
     localStorage.setItem(SCANNER_QUICK_STAKES_STORAGE_KEY, JSON.stringify(values));
   } catch (error) {
-    console.warn("�� ������� ��������� ������� ������:", error);
+    console.warn("Не удалось сохранить быстрые ставки:", error);
   }
 }
 
@@ -8978,7 +8978,7 @@ function saveScannerStakeSettings(event) {
       input.value = scannerStakeSettingsState.draftValues[invalidIndex] || "";
       input.focus({ preventScroll: true });
     }
-    setScannerStakeSettingsError("������ ������� ������ ������ ���� ������ ������ 0.");
+    setScannerStakeSettingsError("Каждая быстрая ставка должна быть числом больше 0.");
     return;
   }
 
@@ -9004,12 +9004,12 @@ async function setScannerQuickStake(value, event) {
   if (event) event.stopPropagation();
   const nextStake = normalizeStakeValue(value);
   if (!nextStake || nextStake <= 0) {
-    setScannerTransientMessage("������������ ������.", { type: "error", timeoutMs: 5000 });
+    setScannerTransientMessage("Некорректная ставка.", { type: "error", timeoutMs: 5000 });
     return;
   }
 
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("������ ������������� �� ��������� �������� ������.", { type: "info", timeoutMs: 5000 });
+    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", { type: "info", timeoutMs: 5000 });
     renderScannerBetBar();
     return;
   }
@@ -9028,7 +9028,7 @@ async function setScannerAllInStake(event) {
   }
 
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("������ ������������� �� ��������� �������� ������.", { type: "info", timeoutMs: 5000 });
+    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", { type: "info", timeoutMs: 5000 });
     renderScannerBetBar();
     return;
   }
@@ -9055,7 +9055,7 @@ async function startOrJoinScannerRound(event) {
   const currentParticipant = getScannerParticipantById(currentPlayer.id);
 
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("������ ������������� �� ��������� �������� ������.", {
+    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", {
       type: "info",
       timeoutMs: 5000
     });
@@ -9064,7 +9064,7 @@ async function startOrJoinScannerRound(event) {
   }
 
   if (status === "shuffling" || status === "finished" || status === "preparing_next_round") {
-    setScannerTransientMessage("������ ��� ���������� �������� ������ ������. ��������� lobby ��������� �������������.", {
+    setScannerTransientMessage("Сейчас идёт завершение текущего общего раунда. Следующая lobby откроется автоматически.", {
       type: "info",
       timeoutMs: 5000
     });
@@ -9089,7 +9089,7 @@ async function resetScannerRound(event) {
     try {
       await leaveScannerRound({ reason: "reset" });
     } catch (error) {
-      console.warn("�� ������� ����� �� lobby ��� ������:", error);
+      console.warn("Не удалось выйти из lobby при сбросе:", error);
     }
   }
 }
@@ -9239,7 +9239,7 @@ function renderScannerParticipants() {
   if (toggleButton) {
     toggleButton.classList.toggle("is-open", expanded);
     toggleButton.setAttribute("aria-expanded", String(expanded));
-    toggleButton.setAttribute("aria-label", expanded ? "������ �������" : "�������� �������");
+    toggleButton.setAttribute("aria-label", expanded ? "Скрыть игроков" : "Показать игроков");
   }
 
   list.className = `scanner-player-list ${expanded ? "is-expanded" : "is-collapsed"}`;
@@ -9257,7 +9257,7 @@ function renderScannerParticipants() {
 
   if (!scannerGridState.players.length) {
     if (scannerGridState.roundData && hasScannerRoundVisibleState(scannerGridState.roundData)) {
-      setInnerHtmlIfChanged(list, `<div class="scanner-empty">���������� ������� ��������� ������� ����� ������...</div>`);
+      setInnerHtmlIfChanged(list, `<div class="scanner-empty">Подгружаем текущее состояние игроков этого раунда...</div>`);
     } else {
       setInnerHtmlIfChanged(list, "");
     }
@@ -9322,12 +9322,12 @@ function renderScannerRecentList() {
     toggleButton.disabled = !canExpand;
     toggleButton.classList.toggle("is-open", expanded && canExpand);
     toggleButton.setAttribute("aria-expanded", String(expanded && canExpand));
-    toggleButton.setAttribute("aria-label", expanded && canExpand ? "������ ��������� ������" : "�������� ��������� ������");
+    toggleButton.setAttribute("aria-label", expanded && canExpand ? "Скрыть последние раунды" : "Показать последние раунды");
     toggleButton.style.opacity = canExpand ? "1" : "0.45";
   }
 
   if (!items.length) {
-    setInnerHtmlIfChanged(container, `<div class="scanner-empty">���������� ������� ������� ���� �����.</div>`);
+    setInnerHtmlIfChanged(container, `<div class="scanner-empty">Глобальная история раундов пока пуста.</div>`);
     return;
   }
 
@@ -9347,14 +9347,14 @@ function renderScannerRecentList() {
       (Array.isArray(item.results)
         ? (item.results.find((row) => String(row.playerId || row.id || row.userId || "") === String(item.winnerPlayerId || ""))?.name || "")
         : "")
-    ).trim() || "����������";
+    ).trim() || "Победитель";
 
     return `
       <div class="scanner-recent-card">
         <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
         <div class="scanner-recent-copy">
           <div class="scanner-recent-title">${_rt.winner}: ${escapeHtml(winnerNickname)}</div>
-          <div class="scanner-recent-meta">${_rt.dateTime}: ${finishedAtText} � ${_rt.playersCount}: ${playersCountText} � ${_rt.stake}: ${formatTon(winnerStake)} � ${multiplierText}</div>
+          <div class="scanner-recent-meta">${_rt.dateTime}: ${finishedAtText} · ${_rt.playersCount}: ${playersCountText}
         </div>
         <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
       </div>
@@ -9399,7 +9399,7 @@ function renderScannerBetBar() {
     button.classList.toggle("active", Number(selectedStake) === Number(normalizedValue) && !bettingLocked);
     button.classList.toggle("is-locked", bettingLocked);
     button.disabled = shouldDisable;
-    button.setAttribute("aria-label", bettingLocked ? "������ ������������� �� ��������� ������" : `��������� ${formatTon(normalizedValue)}`);
+    button.setAttribute("aria-label", bettingLocked ? "Ставки заблокированы до окончания раунда" : `Поставить ${formatTon(normalizedValue)}`);
   });
 
   if (allInButton) {
@@ -9549,11 +9549,11 @@ function renderScannerButtons() {
   if (scannerGridState.status === "waiting") {
     text = hasMe
       ? `${_bt.addStake} ${formatTon(scannerGridState.selectedStake)}`
-      : `${_bt.joinRound} � ${formatTon(scannerGridState.selectedStake)}`;
+      : `${_bt.joinRound} · ${formatTon(scannerGridState.selectedStake)}`;
   } else if (scannerGridState.status === "countdown") {
     text = hasMe
       ? `${_bt.addStake} ${formatTon(scannerGridState.selectedStake)}`
-      : `${_bt.joinBeforeStart} � ${formatTon(scannerGridState.selectedStake)}`;
+      : `${_bt.joinBeforeStart} · ${formatTon(scannerGridState.selectedStake)}`;
     if (!hasMe && scannerGridState.totalPlayers >= scannerGridState.maxPlayers) {
       text = _bt.lobbyFull;
       disabled = true;
@@ -9593,39 +9593,39 @@ function isScannerResultRevealReady() {
 
 function getScannerRoundOverlayLeft() {
   if (scannerGridState.status === "idle" || scannerGridState.totalPlayers <= 0) {
-    return "�����: �������� �������";
+    return "Арена: ожидание игроков";
   }
-  return `������: ${formatCompactNumber(scannerGridState.totalPlayers)} / ${formatCompactNumber(scannerGridState.maxPlayers || 0)}`;
+  return `Игроки: ${formatCompactNumber(scannerGridState.totalPlayers)} / ${formatCompactNumber(scannerGridState.maxPlayers || 0)}`;
 }
 
 function getScannerRoundOverlayRight() {
   if (scannerGridState.totalPlayers <= 0) {
-    return "����� � ��������";
+    return "Лазер в ожидании";
   }
 
   switch (scannerGridState.status) {
     case "waiting":
-      return "����� ������";
+      return "Арена готова";
     case "countdown":
-      return scannerGridState.totalPlayers === 1 ? "�������� 2-�� ������" : "����� ��� � �������";
+      return scannerGridState.totalPlayers === 1 ? "Ожидание 2-го игрока" : "Лазер идёт к границе";
     case "shuffling":
-      return "������ ��������������";
+      return "Игроки перемешиваются";
     case "active":
-      return "����� ���";
+      return "Раунд идёт";
     case "finished":
       return isScannerResultRevealReady()
-        ? `����������: ${scannerGridState.winningPlayer?.name || "�"}`
-        : "����� ��������";
+        ? `Победитель: ${scannerGridState.winningPlayer?.name || "—"}`
+        : "Ждём раскрытия";
     case "preparing_next_round":
-      return "����� ������";
+      return "Арена готова";
     default:
-      return "����� � ��������";
+      return "Лазер в ожидании";
   }
 }
 
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
-  if (status === "active" || status === "finished" || status === "preparing_next_round") return "�����";
+  if (status === "active" || status === "finished" || status === "preparing_next_round") return "Старт";
   if (["countdown", "shuffling"].includes(status)) {
     return formatCountdownMs(scannerGridState.countdownMs || 0);
   }
@@ -9703,22 +9703,22 @@ function renderScannerRound(options = {}) {
       const winnerColor = escapeHtml(winnerPlayer.color || getScannerColorById(winnerPlayer.id, scannerGridState.roundId || scannerGridState.renderSeed || "winner"));
       resultBanner.style.display = "block";
       resultBanner.classList.add("open");
-      setTextContentIfChanged(resultTitle, "����������");
+      setTextContentIfChanged(resultTitle, "Победитель");
       setInnerHtmlIfChanged(resultText, `
         <div class="scanner-result-item">
-          <span class="scanner-result-label">����</span>
-          <div class="scanner-result-value"><span class="scanner-result-color-swatch" style="background:${winnerColor};"></span><span>���� �����</span></div>
+          <span class="scanner-result-label">Цвет</span>
+          <div class="scanner-result-value"><span class="scanner-result-color-swatch" style="background:${winnerColor};"></span><span>Цвет арены</span></div>
         </div>
         <div class="scanner-result-item">
-          <span class="scanner-result-label">���</span>
+          <span class="scanner-result-label">Ник</span>
           <div class="scanner-result-value"><span>${escapeHtml(winnerPlayer.name)}</span></div>
         </div>
         <div class="scanner-result-item">
-          <span class="scanner-result-label">�������</span>
+          <span class="scanner-result-label">Выигрыш</span>
           <div class="scanner-result-value"><span>${formatTon(payout)}</span></div>
         </div>
         <div class="scanner-result-item">
-          <span class="scanner-result-label">���������</span>
+          <span class="scanner-result-label">Множитель</span>
           <div class="scanner-result-value"><span>${multiplier}</span></div>
         </div>
       `);
@@ -10647,8 +10647,8 @@ function renderScannerCanvas() {
   const { ctx, size, cellSize } = metrics;
   const roundStatus = scannerGridState.status;
   const hasGrid = scannerGridState.players.length > 0;
-  const now = performance.now(); // ��� ��������� ��� ��������� (fps)
-  const nowMs = getNetworkTime(); // <-- �������� ��� ������ ������!
+  const now = performance.now(); // Это оставляем для плавности (fps)
+  const nowMs = getNetworkTime(); // <-- Изменено для точной физики!
   ctx.clearRect(0, 0, size, size);
 
   const roundData = scannerGridState.roundData || null;
@@ -11036,7 +11036,7 @@ function subscribeScannerHistory() {
       scannerGridState.recentRounds = items;
       renderScannerRecentList();
     }, (error) => {
-      console.error("������ �������� �� ���������� ������� �������:", error);
+      console.error("Ошибка подписки на глобальную историю раундов:", error);
     });
 }
 
@@ -11063,7 +11063,7 @@ function initializeScannerGridFeature() {
   startScannerLifecycleTimer();
   subscribeScannerRuntime();
   bootstrapScannerRoundFromRecentState({ force: true }).catch((error) => {
-    console.warn("�� ������� ��������� ��������� �������������� ������ ������:", error);
+    console.warn("Не удалось выполнить стартовое восстановление общего раунда:", error);
   });
   subscribeScannerHistory();
   syncScannerDerivedState();
@@ -11184,7 +11184,7 @@ const _unsubAppAuth = firebase.auth().onAuthStateChanged((user) => {
   _unsubAppAuth();
   ensureDemoBalanceForCurrentUser()
     .then(() => subscribeCurrentUserBalance())
-    .catch((error) => console.error("�� ������� ����������� demo TON-������:", error));
+    .catch((error) => console.error("Не удалось инициализировать demo TON-баланс:", error));
   initializeScannerGridFeature();
 });
 
@@ -11231,7 +11231,6 @@ document.querySelectorAll(".bottom-btn").forEach(btn => btn.classList.remove("is
 </script>
 </body>
 </html>
-
 
 
 
