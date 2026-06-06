@@ -8080,8 +8080,7 @@ function getScannerBeamRenderKey(roundStatus, roundData, variant = "grid") {
   const roundId = roundData?.id || "none";
 
   if (!roundData) {
-    const idleMotion = getScannerRuntimeIdleBeamState(scannerRealtime.runtimeData);
-    return `${safeStatus}::${safeVariant}::idle::${getScannerBeamMotionSignature(idleMotion)}`;
+    return `${safeStatus}::${safeVariant}::idle::fixed`;
   }
 
   if (safeStatus === "countdown") {
