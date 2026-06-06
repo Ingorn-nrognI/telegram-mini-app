@@ -10726,8 +10726,7 @@ function renderScannerCanvas() {
         else { _gwx = _lobbyBx; _gwy = size - _bw * 0.5; }
         addBorderGlowPoint(size, _gwx, _gwy);
       }
-      if (!_curWall) renderScannerCanvas._lastWall = null;
-      else renderScannerCanvas._lastWall = _curWall;
+      renderScannerCanvas._lastWall = _curWall;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
