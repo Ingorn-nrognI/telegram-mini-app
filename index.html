@@ -7280,12 +7280,9 @@ function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
     const _vx = _serverBeamPos.vx || 0;
     const _vy = _serverBeamPos.vy || 0;
     const _pad = 0.031;
-    let _px = Math.max(_pad, Math.min(1 - _pad, _serverBeamPos.x + _vx * _dt));
-    let _py = Math.max(_pad, Math.min(1 - _pad, _serverBeamPos.y + _vy * _dt));
-    if (!getScannerSharedLobbyBeamSample._sx) { getScannerSharedLobbyBeamSample._sx = _px; getScannerSharedLobbyBeamSample._sy = _py; }
-    getScannerSharedLobbyBeamSample._sx += (_px - getScannerSharedLobbyBeamSample._sx) * 0.15;
-    getScannerSharedLobbyBeamSample._sy += (_py - getScannerSharedLobbyBeamSample._sy) * 0.15;
-    return { x: getScannerSharedLobbyBeamSample._sx, y: getScannerSharedLobbyBeamSample._sy, vx: _vx, vy: _vy, angle: _serverBeamPos.angle || 0, travelAngle: _serverBeamPos.angle || 0, renderAngle: _serverBeamPos.angle || 0 };
+    const _px = Math.max(_pad, Math.min(1 - _pad, _serverBeamPos.x + _vx * _dt));
+    const _py = Math.max(_pad, Math.min(1 - _pad, _serverBeamPos.y + _vy * _dt));
+    return { x: _px, y: _py, vx: _vx, vy: _vy, angle: _serverBeamPos.angle || 0, travelAngle: _serverBeamPos.angle || 0, renderAngle: _serverBeamPos.angle || 0 };
   }
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", null);
 }
