@@ -10712,7 +10712,9 @@ function renderScannerCanvas() {
         now,
         { positionTauMs: 1 }
       );
-      const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
+      const _rawLobbyForGlow = _serverBeamPos && _serverBeamPos.x !== undefined && !_serverBeamPos.roundId
+        ? _serverBeamPos
+        : getScannerSharedLobbyBeamSample(nowMs);
       const _lobbyBx = _rawLobbyForGlow.x * size;
       const _lobbyBy = _rawLobbyForGlow.y * size;
       const _lobbyPad = Math.max(11, size * 0.031) + 1;
