@@ -6898,10 +6898,8 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const sharpTurnFactor = smoothstep(Math.PI * 0.12, Math.PI * 0.88, hardAngle);
   const adaptiveAngleTauMs = baseAngleTauMs * (1 + sharpTurnFactor * (SCANNER_BEAM_SHARP_TURN_TAU_MULTIPLIER - 1));
   const renderAngleTauMs = Math.max(adaptiveAngleTauMs, Number(target.renderTurnTauMs) || 0);
-  const PAD = 0.045;
-  const nearBorder = target.x < PAD * 1.5 || target.x > 1 - PAD * 1.5 || target.y < PAD * 1.5 || target.y > 1 - PAD * 1.5;
-  const effectivePositionTauMs = nearBorder ? 1 : positionTauMs;
-  const effectiveAngleTauMs = nearBorder ? 1 : adaptiveAngleTauMs;
+  const effectivePositionTauMs = positionTauMs;
+  const effectiveAngleTauMs = adaptiveAngleTauMs;
   const positionBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / effectivePositionTauMs);
   const angleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / effectiveAngleTauMs);
   const renderAngleBlend = deltaMs <= 0 ? 1 : 1 - Math.exp(-deltaMs / renderAngleTauMs);
