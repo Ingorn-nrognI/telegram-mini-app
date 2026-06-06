@@ -10704,7 +10704,7 @@ function renderScannerCanvas() {
         getScannerBeamTargetSample(_rawLobbySample, roundStatus, beamRenderKey, nowMs),
         beamRenderKey,
         now,
-        { positionTauMs: 80 }
+        { positionTauMs: 1 }
       );
       const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
       const _lobbyBx = _rawLobbyForGlow.x * size;
