@@ -3500,23 +3500,23 @@ button {
 
   <div class="top-bar">
     <div class="top-bar-left">
-      <div id="modeBackButton" class="mode-back-btn" onclick="event.stopPropagation(); handleTelegramAppBack()" aria-label="�����"><</div>
+      <div id="modeBackButton" class="mode-back-btn" onclick="event.stopPropagation(); handleTelegramAppBack()" aria-label="Назад">←</div>
 
-      <button type="button" class="profile-card" onclick="openProfileScreen(event)" aria-label="������� �������">
-        <div id="profileAvatar" class="profile-avatar">�</div>
-        <span id="nickname" class="visually-hidden">�����</span>
+      <button type="button" class="profile-card" onclick="openProfileScreen(event)" aria-label="Открыть профиль">
+        <div id="profileAvatar" class="profile-avatar">И</div>
+        <span id="nickname" class="visually-hidden">Игрок</span>
       </button>
     </div>
 
     <div class="balance-card">
-      <div class="balance-label">������</div>
+      <div class="balance-label">Баланс</div>
       <div id="balanceValue" class="balance-value">0.00 TON</div>
     </div>
 
     <div class="top-bar-right">
-      <button type="button" class="wallet-btn" onclick="openWallet()" aria-label="������">
-        <span class="wallet-icon">??</span>
-        <span class="wallet-text">������</span>
+      <button type="button" class="wallet-btn" onclick="openWallet()" aria-label="Кошелёк">
+        <span class="wallet-icon">💼</span>
+        <span class="wallet-text">Кошелёк</span>
       </button>
     </div>
   </div>
@@ -3525,28 +3525,78 @@ button {
     <div class="screen-inner">
 
       
-      <div id="bobrMascotBlock" class="home-top-spacer" aria-label="������ ���� ���������">
+      <div id="bobrMascotBlock" class="home-top-spacer" aria-label="Пустое окно персонажа">
         <div class="empty-window-shell">
           <div class="empty-window-box"></div>
         </div>
       </div>
 
       <section id="scannerHomeBlock" class="section-card scanner-arena-card scanner-unified-card scanner-home-main-block">
+        <div class="scanner-game-title">Сканер</div>
+
+        <div class="scanner-panel-top">
+          <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
+          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
+          <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
+        </div>
+
         <div class="scanner-canvas-shell">
           <canvas id="scannerGridCanvas"></canvas>
+          <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
+            <span class="scanner-connecting-text">Подключение...</span>
+          </div>
         </div>
-        <div class="scanner-preview-bottom-row">
-          <div id="scannerPreviewTimer" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
-          <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">����� � ������</button>
-          <div id="scannerPreviewBank" class="scanner-panel-chip scanner-pool-chip">����: 0.00 TON</div>
+
+        <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
+          <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
+          <div id="scannerResultText" class="scanner-result-text"></div>
         </div>
+
+        <div class="scanner-control-divider"></div>
+
+        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-players-heading-row">
+          <div class="scanner-inline-section-title scanner-players-heading-title">
+            Игроки <span id="scannerPlayersCount" class="scanner-players-count">0</span>
+          </div>
+          <button
+            type="button"
+            id="scannerParticipantsToggle"
+            class="scanner-recent-toggle scanner-participants-toggle"
+            onclick="toggleScannerParticipants(event)"
+            aria-label="Показать игроков"
+            aria-expanded="false"
+          >
+            <span class="scanner-recent-toggle-icon">▾</span>
+          </button>
+        </div>
+
+        <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
+        <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
+
+        <div class="scanner-control-divider"></div>
+
+        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-recent-heading-row">
+          <div class="scanner-inline-section-title scanner-recent-heading-title">Последние раунды</div>
+          <button
+            type="button"
+            id="scannerRecentToggle"
+            class="scanner-recent-toggle"
+            onclick="toggleScannerRecentRounds(event)"
+            aria-label="Показать последние раунды"
+            aria-expanded="false"
+          >
+            <span id="scannerRecentToggleIcon" class="scanner-recent-toggle-icon">▾</span>
+          </button>
+        </div>
+
+        <div id="scannerRecentRounds" class="scanner-recent-list"></div>
       </section>
 
       <section class="hero-card scanner-home-hub">
-        <div class="hero-topline">?? ������� ���</div>
+        <div class="hero-topline">🌐 Главный хаб</div>
         <h1 class="hero-title">Bobr World</h1>
         <p class="hero-text">
-          ������� ����� Bobr World ��������, � ������� PvP-���� ������ ������� ����� ����: ������, ���������, ��������� ������, �������, ������� ������� � ��������� ��������� ���������� �������� � ����� ��������.
+          Главный экран Bobr World сохранён, а игровой PvP-блок теперь встроен прямо сюда: ставки, плотность, последние раунды, история, таблица лидеров и остальная навигация продолжают работать в общей оболочке.
         </p>
 
         <div class="hero-actions">
@@ -3557,7 +3607,7 @@ button {
             data-games-trigger="true"
             onclick="toggleModePopup(event)"
           >
-            ? ������
+            ▶ Играть
           </button>
 
           <button
@@ -3566,7 +3616,7 @@ button {
             data-history-trigger="true"
             onclick="toggleHistoryPanel(event)"
           >
-            ?? �������
+            🕘 История
           </button>
         </div>
       </section>
@@ -3574,10 +3624,10 @@ button {
       <div id="modePopup" class="mode-popup" onclick="event.stopPropagation()">
         <div class="mode-popup-inner">
           <button type="button" class="mode-popup-btn primary" onclick="enterScannerGridMode(event)">
-            ?? ������
+            🧬 Сканер
           </button>
           <button type="button" class="mode-popup-btn" onclick="showBobrRunComingSoon(event)">
-            ?? Bobr Run
+            ⚔️ Bobr Run
           </button>
         </div>
       </div>
@@ -3585,75 +3635,11 @@ button {
 
     <div id="historyPanel" class="history-panel" onclick="event.stopPropagation()">
       <div class="history-panel-header">
-        <div class="history-panel-title">������� ���</div>
-        <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">?</button>
+        <div class="history-panel-title">История игр</div>
+        <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">✕</button>
       </div>
       <div class="history-scroll-area">
-        <div class="history-panel-empty">������� �����.</div>
-      </div>
-    </div>
-  </div>
-
-  <div id="scannerScreen" class="menu-screen">
-    <div class="screen-inner">
-      <div id="scannerScreenContent">
-
-        <div class="scanner-panel-top">
-          <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">����: 0.00 TON</div>
-          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
-          <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">��� �����: 0%</div>
-        </div>
-
-        <div class="scanner-canvas-shell">
-          <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
-            <span class="scanner-connecting-text">�����������...</span>
-          </div>
-        </div>
-
-        <div id="scannerResultBanner" class="scanner-result-banner">
-          <div id="scannerResultTitle" class="scanner-result-title">����� ��������</div>
-          <div id="scannerResultText" class="scanner-result-text"></div>
-        </div>
-
-        <div class="scanner-control-divider"></div>
-
-        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-players-heading-row">
-          <div class="scanner-inline-section-title scanner-players-heading-title">
-            ������ <span id="scannerPlayersCount" class="scanner-players-count">0</span>
-          </div>
-          <button
-            type="button"
-            id="scannerParticipantsToggle"
-            class="scanner-recent-toggle scanner-participants-toggle"
-            onclick="toggleScannerParticipants(event)"
-            aria-label="�������� �������"
-            aria-expanded="false"
-          >
-            <span class="scanner-recent-toggle-icon">?</span>
-          </button>
-        </div>
-
-        <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
-        <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
-
-        <div class="scanner-control-divider"></div>
-
-        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-recent-heading-row">
-          <div class="scanner-inline-section-title scanner-recent-heading-title">��������� ������</div>
-          <button
-            type="button"
-            id="scannerRecentToggle"
-            class="scanner-recent-toggle"
-            onclick="toggleScannerRecentRounds(event)"
-            aria-label="�������� ��������� ������"
-            aria-expanded="false"
-          >
-            <span id="scannerRecentToggleIcon" class="scanner-recent-toggle-icon">?</span>
-          </button>
-        </div>
-
-        <div id="scannerRecentRounds" class="scanner-recent-list"></div>
-
+        <div class="history-panel-empty">История пуста.</div>
       </div>
     </div>
   </div>
@@ -3661,38 +3647,38 @@ button {
   <div id="bobrRunScreen" class="menu-screen">
     <div class="screen-inner">
       <section class="mode-hero-card">
-        <div class="mode-kicker">?? PvP �����</div>
+        <div class="mode-kicker">⚔️ PvP режим</div>
         <h1 class="mode-title">Bobr Run</h1>
         <p class="mode-subtitle">
-          ������� ������� ����� �� ���� ������ �����. �������� ����, �������, ������� �������, ������� � ��� ������� ��������� ����������.
+          Игровой рантайм убран из этой версии файла. Остались меню, история, таблица лидеров, комнаты и вся базовая навигация приложения.
         </p>
 
         <div class="mode-actions">
-          <button type="button" class="primary-action" onclick="openBobrRunRooms()">������� Bobr Run</button>
-          <button type="button" class="secondary-action" onclick="openLeaderboard()">�������</button>
+          <button type="button" class="primary-action" onclick="openBobrRunRooms()">Комнаты Bobr Run</button>
+          <button type="button" class="secondary-action" onclick="openLeaderboard()">Таблица</button>
         </div>
       </section>
 
       <section class="section-card">
         <div class="section-heading">
           <div>
-            <div class="section-kicker">����������</div>
-            <h2 class="section-title">��� ��� ������</h2>
+            <div class="section-kicker">Интеграция</div>
+            <h2 class="section-title">Что уже готово</h2>
           </div>
         </div>
 
         <div class="cards-stack">
           <div class="info-card">
-            <h3>?? ����� ����������� ���������</h3>
+            <h3>🔌 Точки подключения сохранены</h3>
             <p>
-              ����� ������, ������ �����, ��������, ������� ������, �������, ������� � ��������� ���������� �������� ��� ����� ����������.
+              Экран режима, кнопка назад, переходы, история матчей, таблица, модалки и навигация продолжают работать как часть приложения.
             </p>
           </div>
 
           <div class="info-card">
-            <h3>?? ������� ������ ����� ������� �����</h3>
+            <h3>🎮 Игровой модуль можно вернуть позже</h3>
             <p>
-              ����� �� ����� ���������� ��������� runtime Bobr Run, ��� ����� ����� �������� ������� ��� ������� ������������� ��������.
+              Когда ты снова подключишь отдельный runtime Bobr Run, его можно будет встроить обратно без полного переделывания оболочки.
             </p>
           </div>
         </div>
@@ -3703,11 +3689,11 @@ button {
   <div id="profileScreen" class="menu-screen profile-screen">
     <div class="screen-inner profile-screen-inner">
       <section class="profile-hero-card">
-        <div id="profileScreenAvatar" class="profile-avatar profile-screen-avatar">�</div>
+        <div id="profileScreenAvatar" class="profile-avatar profile-screen-avatar">И</div>
         <div class="profile-screen-copy">
-          <div id="profileKickerLabel" class="profile-screen-kicker">������� ������</div>
-          <h1 id="profileScreenName" class="profile-screen-name">�����</h1>
-          <div id="profileScreenId" class="profile-screen-id">ID: �</div>
+          <div class="profile-screen-kicker">Профиль игрока</div>
+          <h1 id="profileScreenName" class="profile-screen-name">Игрок</h1>
+          <div id="profileScreenId" class="profile-screen-id">ID: —</div>
         </div>
       </section>
 
@@ -3715,35 +3701,35 @@ button {
         <div class="profile-card-heading">
           <div>
             <div class="profile-card-kicker">Demo TON</div>
-            <h2 id="profileBalanceTitle" class="profile-card-title">������</h2>
+            <h2 class="profile-card-title">Баланс</h2>
           </div>
           <div id="profileScreenBalanceValue" class="profile-balance-value">0.00 TON</div>
         </div>
 
         <div class="profile-action-grid">
-          <button id="profileWalletBtn" type="button" class="profile-action-btn primary" onclick="openWallet()">?? ������</button>
-          <button id="profileTopupBtn" type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('topup')">���������</button>
-          <button id="profileWithdrawBtn" type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('withdraw')">�������</button>
+          <button type="button" class="profile-action-btn primary" onclick="openWallet()">💼 Кошелёк</button>
+          <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('topup')">Пополнить</button>
+          <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('withdraw')">Вывести</button>
         </div>
       </section>
 
       <section class="profile-stat-card">
-        <div id="profileStatLabel" class="profile-stat-label">������ ������� � ������</div>
+        <div class="profile-stat-label">Лучший выигрыш в раунде</div>
         <div id="profileBestWinValue" class="profile-stat-value">0.00 TON</div>
       </section>
 
       <section class="profile-settings-card">
-        <button type="button" class="profile-settings-btn" onclick="openSettings()">?? ���������</button>
+        <button type="button" class="profile-settings-btn" onclick="openSettings()">⚙️ Настройки</button>
       </section>
     </div>
   </div>
 
-  <div id="scannerBetBar" class="scanner-bet-bar" onclick="event.stopPropagation()" aria-label="��� ������ �������">
-    <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="��������� ������� ������">??</button>
+  <div id="scannerBetBar" class="scanner-bet-bar" onclick="event.stopPropagation()" aria-label="Бар ставок Сканера">
+    <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="Настроить быстрые ставки">✏️</button>
     <button type="button" id="scannerBetBarQuick0" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(0, event)">1</button>
     <button type="button" id="scannerBetBarQuick1" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(1, event)">10</button>
     <button type="button" id="scannerBetBarQuick2" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(2, event)">25</button>
-    <button type="button" id="scannerBetBarAllIn" class="scanner-bet-btn scanner-bet-allin" onclick="setScannerAllInStake(event)">��-����</button>
+    <button type="button" id="scannerBetBarAllIn" class="scanner-bet-btn scanner-bet-allin" onclick="setScannerAllInStake(event)">ва-банк</button>
   </div>
 
   <div
@@ -3761,8 +3747,8 @@ button {
     >
       <div class="scanner-stake-settings-handle"></div>
       <div class="scanner-stake-settings-title-row">
-        <div id="scannerStakeSettingsTitle" class="scanner-stake-settings-title">��������� ������</div>
-        <button type="button" class="scanner-stake-settings-close" onclick="closeScannerStakeSettings(event)" aria-label="�������">?</button>
+        <div id="scannerStakeSettingsTitle" class="scanner-stake-settings-title">Настройка ставок</div>
+        <button type="button" class="scanner-stake-settings-close" onclick="closeScannerStakeSettings(event)" aria-label="Закрыть">✕</button>
       </div>
 
       <div class="scanner-stake-settings-quick-row">
@@ -3780,18 +3766,18 @@ button {
           pattern="[0-9]*[.,]?[0-9]*"
           autocomplete="off"
           enterkeyhint="done"
-          aria-label="����� ������ � TON"
+          aria-label="Сумма ставки в TON"
           oninput="handleScannerStakeSettingsInput(event)"
         >
         <span class="scanner-stake-settings-ton">TON</span>
-        <button type="button" class="scanner-stake-settings-clear" onclick="clearScannerStakeSettingsValue(event)" aria-label="������� ������">?</button>
+        <button type="button" class="scanner-stake-settings-clear" onclick="clearScannerStakeSettingsValue(event)" aria-label="Стереть ставку">×</button>
       </div>
 
       <div id="scannerStakeSettingsError" class="scanner-stake-settings-error"></div>
 
       <div class="scanner-stake-settings-actions">
-        <button type="button" class="scanner-stake-settings-action reset" onclick="resetScannerStakeSettings(event)">��������</button>
-        <button type="button" class="scanner-stake-settings-action save" onclick="saveScannerStakeSettings(event)">���������</button>
+        <button type="button" class="scanner-stake-settings-action reset" onclick="resetScannerStakeSettings(event)">Сбросить</button>
+        <button type="button" class="scanner-stake-settings-action save" onclick="saveScannerStakeSettings(event)">Сохранить</button>
       </div>
     </div>
   </div>
@@ -3803,9 +3789,9 @@ button {
     aria-hidden="true"
   >
     <div class="insufficient-balance-card" onclick="event.stopPropagation()" role="dialog" aria-modal="true">
-      <div class="insufficient-balance-icon">??</div>
-      <div class="insufficient-balance-text">��� ������ �� ������� �������. ��������� ���� ������ � ��������� �������.</div>
-      <button type="button" class="insufficient-balance-close" onclick="hideInsufficientBalanceModal(event)">�������</button>
+      <div class="insufficient-balance-icon">💎</div>
+      <div class="insufficient-balance-text">Для ставки не хватает баланса. Пополните свой баланс и повторите попытку.</div>
+      <button type="button" class="insufficient-balance-close" onclick="hideInsufficientBalanceModal(event)">Понятно</button>
     </div>
   </div>
 
@@ -3821,8 +3807,8 @@ button {
       data-nav="leaderboard"
       onclick="handleBottomNav('leaderboard', event)"
     >
-      <span class="nav-icon">??</span>
-      <span class="nav-label">�������</span>
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">Таблица</span>
     </button>
 
     <button
@@ -3833,8 +3819,8 @@ button {
       data-games-trigger="true"
       onclick="handleBottomNav('games', event)"
     >
-      <span class="nav-icon">??</span>
-      <span class="nav-label">����</span>
+      <span class="nav-icon">🎮</span>
+      <span class="nav-label">Игры</span>
     </button>
 
     <button
@@ -3844,7 +3830,7 @@ button {
       data-nav="pvp"
       onclick="handleBottomNav('pvp', event)"
     >
-      <span class="nav-icon">??</span>
+      <span class="nav-icon">⚔️</span>
       <span class="nav-label">PvP</span>
     </button>
 
@@ -3855,8 +3841,8 @@ button {
       data-nav="skins"
       onclick="handleBottomNav('skins', event)"
     >
-      <span class="nav-icon">??</span>
-      <span class="nav-label">�����</span>
+      <span class="nav-icon">🎨</span>
+      <span class="nav-label">Скины</span>
     </button>
 
     <button
@@ -3867,8 +3853,8 @@ button {
       data-history-trigger="true"
       onclick="handleBottomNav('history', event)"
     >
-      <span class="nav-icon">??</span>
-      <span class="nav-label">�������</span>
+      <span class="nav-icon">🕘</span>
+      <span class="nav-label">История</span>
     </button>
   </div>
 
@@ -3881,56 +3867,45 @@ button {
     <div class="app-settings-sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="appSettingsTitle">
       <div class="app-settings-handle"></div>
       <div class="app-settings-header">
-        <span class="app-settings-title" id="appSettingsTitle">���������</span>
-        <button class="app-settings-close" onclick="closeSettings()" aria-label="�������">?</button>
+        <span class="app-settings-title" id="appSettingsTitle">Настройки</span>
+        <button class="app-settings-close" onclick="closeSettings()" aria-label="Закрыть">✕</button>
       </div>
 
       <div class="app-settings-section">
-        <div id="settingsLangLabel" class="app-settings-section-title">����</div>
+        <div class="app-settings-section-title">Язык</div>
         <div class="app-settings-chips">
-          <button id="settingsLangRu" class="app-settings-chip" onclick="setAppLanguage('ru')">???? �������</button>
-          <button id="settingsLangEn" class="app-settings-chip" onclick="setAppLanguage('en')">???? English</button>
+          <button id="settingsLangRu" class="app-settings-chip" onclick="setAppLanguage('ru')">🇷🇺 Русский</button>
+          <button id="settingsLangEn" class="app-settings-chip" onclick="setAppLanguage('en')">🇬🇧 English</button>
         </div>
       </div>
 
       <div class="app-settings-section">
-        <div id="settingsQualityLabel" class="app-settings-section-title">�������� �������</div>
+        <div class="app-settings-section-title">Качество графики</div>
         <div class="app-settings-chips">
-          <button id="settingsQualityAuto" class="app-settings-chip" onclick="setAppQuality('auto')">����</button>
-          <button id="settingsQualityLow" class="app-settings-chip" onclick="setAppQuality('low')">������</button>
-          <button id="settingsQualityMid" class="app-settings-chip" onclick="setAppQuality('mid')">�������</button>
-          <button id="settingsQualityHigh" class="app-settings-chip" onclick="setAppQuality('high')">�������</button>
+          <button id="settingsQualityLow" class="app-settings-chip" onclick="setAppQuality('low')">Низкое</button>
+          <button id="settingsQualityMid" class="app-settings-chip" onclick="setAppQuality('mid')">Среднее</button>
+          <button id="settingsQualityHigh" class="app-settings-chip" onclick="setAppQuality('high')">Высокое</button>
         </div>
       </div>
 
       <div class="app-settings-section">
-        <div id="settingsFpsLabel" class="app-settings-section-title">������� ������</div>
+        <div class="app-settings-section-title">Вибрация</div>
         <div class="app-settings-chips">
-          <button id="settingsFpsAuto" class="app-settings-chip" onclick="setAppFps('auto')">����</button>
-          <button id="settingsFps30" class="app-settings-chip" onclick="setAppFps('30')">30 FPS</button>
-          <button id="settingsFps45" class="app-settings-chip" onclick="setAppFps('45')">45 FPS</button>
-          <button id="settingsFpsNative" class="app-settings-chip" onclick="setAppFps('native')">60-120 FPS</button>
-        </div>
-      </div>
-
-      <div class="app-settings-section">
-        <div id="settingsVibLabel" class="app-settings-section-title">��������</div>
-        <div class="app-settings-chips">
-          <button id="settingsVibOn" class="app-settings-chip" onclick="setAppVibration(true)">���</button>
-          <button id="settingsVibOff" class="app-settings-chip" onclick="setAppVibration(false)">����</button>
+          <button id="settingsVibOn" class="app-settings-chip" onclick="setAppVibration(true)">Вкл</button>
+          <button id="settingsVibOff" class="app-settings-chip" onclick="setAppVibration(false)">Выкл</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<div id="navProfileFloat" onclick="openProfileScreen(event)" aria-label="�������"></div>
+<div id="navProfileFloat" onclick="openProfileScreen(event)" aria-label="Профиль"></div>
 
 <div id="leaderboardModal" class="app-modal" onclick="handleModalBackdropClick('leaderboardModal', event)">
   <div class="app-modal-card" onclick="event.stopPropagation()">
     <div class="leaderboardHeader">
-      <h2 id="leaderboardTitle">?? ������� �������</h2>
-      <span class="closeBtn" onclick="closeLeaderboard()">?</span>
+      <h2>🏆 Таблица лидеров</h2>
+      <span class="closeBtn" onclick="closeLeaderboard()">✕</span>
     </div>
     <div id="leaderboardContent"></div>
   </div>
@@ -3939,11 +3914,11 @@ button {
 <div id="roomsModal" class="app-modal" onclick="handleModalBackdropClick('roomsModal', event)">
   <div class="app-modal-card" onclick="event.stopPropagation()">
     <div class="roomsHeader">
-      <h2>?? ������� Bobr Run</h2>
-      <span class="closeBtn" onclick="closeBobrRunRooms()">?</span>
+      <h2>🎮 Комнаты Bobr Run</h2>
+      <span class="closeBtn" onclick="closeBobrRunRooms()">✕</span>
     </div>
     <div id="roomsList"></div>
-    <div id="createRoomBtn" class="createRoomBtn" onclick="createBobrRunRoom()">������� ������� Bobr Run</div>
+    <div id="createRoomBtn" class="createRoomBtn" onclick="createBobrRunRoom()">Создать комнату Bobr Run</div>
   </div>
 </div>
 
