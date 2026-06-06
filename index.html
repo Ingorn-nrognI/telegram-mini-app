@@ -3487,6 +3487,58 @@ button {
   }
 }
 
+
+/* === Scanner Home Preview === */
+.scanner-home-main-block .scanner-canvas-shell {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #050816;
+  position: relative;
+}
+.scanner-home-main-block canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+.scanner-preview-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+.scanner-preview-enter-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #1a6ef7, #0f4fd6);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: opacity 0.15s;
+}
+.scanner-preview-enter-btn:active { opacity: 0.8; }
+
+/* === Scanner Full Screen === */
+.scanner-screen-compact { }
+.scanner-screen-compact .scanner-canvas-shell {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #050816;
+  position: relative;
+}
+.scanner-screen-compact canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
 </style>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
@@ -3532,64 +3584,18 @@ button {
       </div>
 
       <section id="scannerHomeBlock" class="section-card scanner-arena-card scanner-unified-card scanner-home-main-block">
-        <div class="scanner-game-title">Сканер</div>
-
-        <div class="scanner-panel-top">
-          <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
-          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
-          <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
-        </div>
-
-        <div class="scanner-canvas-shell">
+        <div class="scanner-canvas-shell" id="scannerHomeCanvasShell">
           <canvas id="scannerGridCanvas"></canvas>
           <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
             <span class="scanner-connecting-text">Подключение...</span>
           </div>
         </div>
 
-        <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
-          <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
-          <div id="scannerResultText" class="scanner-result-text"></div>
+        <div class="scanner-preview-bottom-row">
+          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
+          <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">Зайти в Сканер</button>
+          <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">0.00 TON</div>
         </div>
-
-        <div class="scanner-control-divider"></div>
-
-        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-players-heading-row">
-          <div class="scanner-inline-section-title scanner-players-heading-title">
-            Игроки <span id="scannerPlayersCount" class="scanner-players-count">0</span>
-          </div>
-          <button
-            type="button"
-            id="scannerParticipantsToggle"
-            class="scanner-recent-toggle scanner-participants-toggle"
-            onclick="toggleScannerParticipants(event)"
-            aria-label="Показать игроков"
-            aria-expanded="false"
-          >
-            <span class="scanner-recent-toggle-icon">▾</span>
-          </button>
-        </div>
-
-        <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
-        <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
-
-        <div class="scanner-control-divider"></div>
-
-        <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-recent-heading-row">
-          <div class="scanner-inline-section-title scanner-recent-heading-title">Последние раунды</div>
-          <button
-            type="button"
-            id="scannerRecentToggle"
-            class="scanner-recent-toggle"
-            onclick="toggleScannerRecentRounds(event)"
-            aria-label="Показать последние раунды"
-            aria-expanded="false"
-          >
-            <span id="scannerRecentToggleIcon" class="scanner-recent-toggle-icon">▾</span>
-          </button>
-        </div>
-
-        <div id="scannerRecentRounds" class="scanner-recent-list"></div>
       </section>
 
       <section class="hero-card scanner-home-hub">
@@ -3641,6 +3647,71 @@ button {
       <div class="history-scroll-area">
         <div class="history-panel-empty">История пуста.</div>
       </div>
+    </div>
+  </div>
+
+
+  <div id="scannerScreen" class="menu-screen scanner-screen-compact">
+    <div class="screen-inner" id="scannerScreenContent">
+
+      <div class="scanner-game-title">Сканер</div>
+
+      <div class="scanner-panel-top">
+        <div class="scanner-panel-chip scanner-pool-chip" id="scannerScreenPoolChip">Банк: 0.00 TON</div>
+        <div class="scanner-panel-chip scanner-countdown-chip" id="scannerScreenCountdownChip">00:30</div>
+        <div class="scanner-panel-chip scanner-chance-chip" id="scannerChanceChip">Мои шансы: 0%</div>
+      </div>
+
+      <section class="section-card scanner-arena-card">
+        <div class="scanner-canvas-shell" id="scannerScreenCanvasShell">
+          <!-- canvas перемещается сюда из JS при входе -->
+        </div>
+      </section>
+
+      <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
+        <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
+        <div id="scannerResultText" class="scanner-result-text"></div>
+      </div>
+
+      <div class="scanner-control-divider"></div>
+
+      <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-players-heading-row">
+        <div class="scanner-inline-section-title scanner-players-heading-title">
+          Игроки <span id="scannerPlayersCount" class="scanner-players-count">0</span>
+        </div>
+        <button
+          type="button"
+          id="scannerParticipantsToggle"
+          class="scanner-recent-toggle scanner-participants-toggle"
+          onclick="toggleScannerParticipants(event)"
+          aria-label="Показать игроков"
+          aria-expanded="false"
+        >
+          <span class="scanner-recent-toggle-icon">▾</span>
+        </button>
+      </div>
+
+      <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
+      <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
+
+      <div class="scanner-control-divider"></div>
+
+      <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-recent-heading-row">
+        <div class="scanner-inline-section-title scanner-recent-heading-title">Последние раунды</div>
+        <button
+          type="button"
+          id="scannerRecentToggle"
+          class="scanner-recent-toggle"
+          onclick="toggleScannerRecentRounds(event)"
+          aria-label="Показать последние раунды"
+          aria-expanded="false"
+        >
+          <span id="scannerRecentToggleIcon" class="scanner-recent-toggle-icon">▾</span>
+        </button>
+      </div>
+
+      <div id="scannerRecentRounds" class="scanner-recent-list"></div>
+
     </div>
   </div>
 
@@ -5179,7 +5250,7 @@ function setMenuView(view, options = {}) {
   if (homeScreen) homeScreen.classList.toggle("active", view === "home");
   if (view === "home") {
     const _canvas = document.getElementById("scannerGridCanvas");
-    const _homeShell = document.querySelector("#scannerHomeBlock .scanner-canvas-shell");
+    const _homeShell = document.getElementById("scannerHomeCanvasShell");
     if (_canvas && _homeShell && !_homeShell.contains(_canvas)) {
       _homeShell.insertBefore(_canvas, _homeShell.firstChild);
     }
@@ -7414,9 +7485,9 @@ function simulateScannerReticleSamples(options = {}) {
 }
 
 // --- Laser beam rotation applier ---------------------------------------------
-// Навешивает на траекторию направление угла луча лазера путём ротации на угол.
-// options.turnCarry — угол накопленного поворота, который ещё не был применён до этого
-// текущего угла (0..1). Ноль = нейтрально. По умолчанию SCANNER_BEAM_LASER_TURN_CARRY.
+// Отвечает за скорость визуального разворота луча после отскока от стены.
+// options.turnCarry — угол накопленного поворота, который ещё не применялся до этого момента
+// отрезок пути (0..1). Меньше = медленнее. По умолчанию SCANNER_BEAM_LASER_TURN_CARRY.
 function applyScannerBeamLaserAngles(samples, bounceLog, initialBeamAngle, options = {}) {
   const turnCarry = Math.max(0.001, Math.min(1, Number(options.turnCarry) || SCANNER_BEAM_LASER_TURN_CARRY));
   const turnEaseEnd = Math.max(0.1, Math.min(1, Number(options.turnEaseEnd) || SCANNER_BEAM_LASER_TURN_EASE_END));
@@ -7444,7 +7515,7 @@ function applyScannerBeamLaserAngles(samples, bounceLog, initialBeamAngle, optio
   }
 }
 
-// --- Combined simulator (упрощённый внешний API) ---------------------------
+// --- Combined simulator (упрощённый внешний API) -----------------------------------------------
 // Вызывает simulateScannerReticleSamples + applyScannerBeamLaserAngles.
 function simulateScannerBeamBounceSamples(options = {}) {
   const { samples, bounceLog, initialBeamAngle, finalDirection, finalPosition } =
@@ -7756,9 +7827,9 @@ function getScannerActiveLaunchState(round, latchSample) {
 function getScannerActiveSpeedFactor(progress) {
   const t = clampScannerNumber(progress, 0, 1);
   if (t >= 0.999) return 0;
-  // Мягкий старт: начинаем с 20% скорости, разгоняемся до полной 12%
+  // Мягкий старт: начинаем с 20% скорости, разгоняемся до полной за 12%
   const softStart = 0.2 + 0.8 * smoothstep(0, 0.12, t);
-  // Плавное замедление до нулевой скорости ближе к концу
+  // Плавное замедление до нулевой скорости к концу
   const decel = Math.pow(Math.max(0, 1 - t), 0.65);
   // Плавное затухание к концу (последние 12%)
   const endFade = 1 - smoothstep(0.88, 0.999, t);
@@ -9615,7 +9686,7 @@ function getScannerRoundOverlayRight() {
     case "finished":
       return isScannerResultRevealReady()
         ? `Победитель: ${scannerGridState.winningPlayer?.name || "—"}`
-        : "Ждём раскрытия";
+        : "Раунд завершён";
     case "preparing_next_round":
       return "Арена готова";
     default:
@@ -9658,9 +9729,13 @@ function renderScannerRound(options = {}) {
 
   const isArenaResetPhase = false;
   const myPlayer = isArenaResetPhase ? null : getScannerMyPlayer();
-  const countdown = document.getElementById("scannerCountdownChip");
-  const poolChip = document.getElementById("scannerPoolChip");
+  const countdown = document.getElementById("scannerCountdownChip") || document.getElementById("scannerScreenCountdownChip");
+  const poolChip = document.getElementById("scannerPoolChip") || document.getElementById("scannerScreenPoolChip");
   const chanceChip = document.getElementById("scannerChanceChip");
+
+  // Синхронизируем чипы на обоих экранах
+  const _allCountdown = document.querySelectorAll("#scannerCountdownChip, #scannerScreenCountdownChip");
+  const _allPool = document.querySelectorAll("#scannerPoolChip, #scannerScreenPoolChip");
   const selectedStake = document.getElementById("scannerSelectedStakeValue");
   const selectedPopulation = document.getElementById("scannerSelectedPopulationValue");
   const cellsValue = document.getElementById("scannerCellsValue");
@@ -11094,7 +11169,7 @@ function initializeScannerGridFeature() {
 function enterScannerGridMode(event) {
   if (event) event.stopPropagation();
   const _canvas = document.getElementById("scannerGridCanvas");
-  const _targetShell = document.querySelector("#scannerScreenContent .scanner-canvas-shell");
+  const _targetShell = document.getElementById("scannerScreenCanvasShell");
   if (_canvas && _targetShell && !_targetShell.contains(_canvas)) {
     _targetShell.insertBefore(_canvas, _targetShell.firstChild);
   }
@@ -11231,7 +11306,6 @@ document.querySelectorAll(".bottom-btn").forEach(btn => btn.classList.remove("is
 </script>
 </body>
 </html>
-
 
 
 
