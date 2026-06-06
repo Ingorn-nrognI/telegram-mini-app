@@ -7070,11 +7070,7 @@ function getScannerLobbyBeamSampleCore(state, timestampMs, options = {}) {
   const safePad = clampScannerNumber(options.pad ?? SCANNER_LOBBY_BEAM_EDGE_PADDING, 0, 0.24);
   const min = safePad;
   const max = 1 - safePad;
-  const _rawElapsed = Math.max(0, (safeTimestamp - state.anchorAt) / 1000);
-  const _periodX = Math.abs(state.vx) > 0.0001 ? (1 - safePad * 2) * 2 / Math.abs(state.vx) : 9999;
-  const _periodY = Math.abs(state.vy) > 0.0001 ? (1 - safePad * 2) * 2 / Math.abs(state.vy) : 9999;
-  const _lcmPeriod = _periodX * _periodY / Math.max(0.0001, Math.abs(_periodX - _periodY) < 0.0001 ? _periodX : (_periodX + _periodY));
-  const elapsedSeconds = _rawElapsed % Math.max(1, Math.min(3600, _lcmPeriod * 4));
+  const elapsedSeconds = Math.max(0, (safeTimestamp - state.anchorAt) / 1000);
   const seedValue = String(options.seedValue || "scanner_shared_lobby_motion_v2");
 
   const xState = getScannerReflectedAxisState(state.x, state.vx, elapsedSeconds, min, max);
