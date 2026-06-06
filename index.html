@@ -7283,7 +7283,7 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   if (_serverBeamPos && _serverBeamPos.x !== undefined && !_serverBeamPos.roundId) {
-    const _dt = Math.min(0.5, Math.max(0, (Date.now() - _serverBeamPosLastUpdate) / 1000));
+    const _dt = Math.min(0.1, Math.max(0, (Date.now() - _serverBeamPosLastUpdate) / 1000));
     const _vx = _serverBeamPos.vx || 0;
     const _vy = _serverBeamPos.vy || 0;
     const _pad = 0.031;
@@ -10742,7 +10742,8 @@ function renderScannerCanvas() {
         else { _gwx = _lobbyBx; _gwy = size - _bw * 0.5; }
         addBorderGlowPoint(size, _gwx, _gwy);
       }
-      renderScannerCanvas._lastWall = _curWall;
+      if (!_curWall) renderScannerCanvas._lastWall = null;
+      else renderScannerCanvas._lastWall = _curWall;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
