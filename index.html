@@ -1408,8 +1408,7 @@ button {
   font-weight: 700;
 }
 
-.scanner-player-list,
-.scanner-recent-list {
+.scanner-player-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1420,7 +1419,7 @@ button {
   flex-direction: column;
   gap: 8px;
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .scanner-players-heading-row {
@@ -1553,6 +1552,7 @@ button {
   border: 1px solid rgba(255,255,255,0.06);
   width: 100%;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .scanner-player-swatch {
