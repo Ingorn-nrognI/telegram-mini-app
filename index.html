@@ -7178,8 +7178,7 @@ function normalizeScannerBeamMotionState(rawState, fallbackSeed = "scanner_share
 }
 
 function getScannerRuntimeIdleBeamState(runtimeData = scannerRealtime.runtimeData) {
-  const rawMotion = runtimeData?.idleBeamMotion || runtimeData?.idleBeamState || null;
-  return normalizeScannerBeamMotionState(rawMotion, "scanner_shared_lobby_motion_v2");
+  return getScannerDefaultIdleBeamMotion("scanner_shared_lobby_motion_v2");
 }
 
 function getScannerRoundCountdownBeamState(round) {
