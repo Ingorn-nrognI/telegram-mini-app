@@ -11312,11 +11312,9 @@ function enterScannerGridMode(event) {
   ensureScannerVisualLoop();
   setupScannerCanvasMetricsTracking();
   invalidateScannerCanvasMetrics();
-  homeScreenContext = "pvp";
-  setMenuView("home", { preserveNav: true });
+  setMenuView("scannerScreen", { preserveNav: true });
   setActiveBottomNav("pvp");
   requestAnimationFrame(() => {
-    scrollHomeToSection("scannerHomeBlock");
     renderScannerRound();
     forceScannerBetBarVisibilityRefresh();
   });
