@@ -5560,9 +5560,27 @@ const APP_TRANSLATIONS = {
     tabGames: "Игры", tabPvp: "PvP", tabSkins: "Скины", tabHistory: "История",
     settingsTitle: "Настройки", connecting: "Подключение...",
     waitingRound: "Ожидание раунда...", players: "Игроки",
-    recentRounds: "Последние раунды", scanner: "Сканер"
+    recentRounds: "Последние раунды", scanner: "Сканер",
+    bank: "Банк", myChance: "Мои шансы", allIn: "Ва-банк",
+    play: "Играть", history: "История", leaderboard: "Таблица лидеров",
+    gameHistory: "История игр", modeScanner: "Режим: Сканер",
+    won: "Выиграл", lost: "Проиграл", yourColor: "Твой цвет в арене этого раунда",
+    playersInRound: "Игроки в раунде", myStake: "Моя ставка",
+    totalBank: "Общий банк", myResult: "Мой результат",
+    playerProfile: "ПРОФИЛЬ ИГРОКА", deposit: "Пополнить", withdraw: "Вывести",
+    totalWins: "ВСЕГО ПОБЕД", settings: "Настройки",
+    language: "ЯЗЫК", graphicsQuality: "КАЧЕСТВО ГРАФИКИ",
+    vibration: "ВИБРАЦИЯ", low: "Низкое", medium: "Среднее", high: "Высокое",
+    on: "Вкл", off: "Выкл", winner: "Победитель",
+    dateTime: "Дата и время", playersCount: "Игроков", stake: "Ставка",
+    waitingPlayers: "Ожидание игроков...", bestWin: "Лучший выигрыш в раунде",
+    joinRound: "Войти в раунд", lobbyFull: "Раунд заполнен", shuffling: "Перемешивание",
+    roundActive: "Раунд идёт", roundFinished: "Показ результата", preparing: "Подготовка",
+    addStake: "Добавить", joinBeforeStart: "Войти до старта",
+    stakeSettings: "Настройка ставок", reset: "Сбросить", save: "Сохранить",
+    qualityAuto: "Авто", fpsLabel: "ЧАСТОТА КАДРОВ", fpsAuto: "Авто"
   },
-  en: {
+    en: {
     balance: "Balance", wallet: "Wallet", tabLeaderboard: "Leaderboard",
     tabGames: "Games", tabPvp: "PvP", tabSkins: "Skins", tabHistory: "History",
     settingsTitle: "Settings", connecting: "Connecting...",
@@ -10203,14 +10221,7 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.translate(x, y);
   ctx.globalAlpha = alpha;
 
-  ctx.fillStyle = "rgba(45, 225, 255, 0.06)";
-  ctx.beginPath();
-  ctx.arc(0, 0, safeRadius * 1.72, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "rgba(45, 225, 255, 0.12)";
-  ctx.beginPath();
-  ctx.arc(0, 0, safeRadius * 1.18, 0, Math.PI * 2);
-  ctx.fill();
+
   ctx.fillStyle = "rgba(255,255,255,0.86)";
   ctx.beginPath();
   ctx.arc(0, 0, safeRadius * 0.24, 0, Math.PI * 2);
