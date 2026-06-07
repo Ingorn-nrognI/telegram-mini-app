@@ -10848,7 +10848,7 @@ function renderScannerCanvas() {
   const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
   const _lobbyBx = _rawLobbyForGlow.x * size;
   const _lobbyBy = _rawLobbyForGlow.y * size;
-  const _lobbySafePad = size * 0.031 + size * 0.012;
+  const _lobbySafePad = size * 0.031 + size * 0.025;
   const _bwG = Math.max(11, size * 0.031) + 1;
   const _dL = _lobbyBx, _dR = size - _lobbyBx, _dT = _lobbyBy, _dB = size - _lobbyBy;
   const _mD = Math.min(_dL, _dR, _dT, _dB);
