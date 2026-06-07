@@ -10112,18 +10112,26 @@ function drawScannerArenaBorder(ctx, size) {
     const age = now - pt.t;
     if (age > 800) { _borderGlowPoints.splice(i, 1); continue; }
     const alpha = Math.max(0, 1 - age / 800) * 0.85;
-    const radius = bw * 2.8 * (1 + age / 800);
-    const grd = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, radius);
-    grd.addColorStop(0, `rgba(80,180,255,${alpha})`);
-    grd.addColorStop(1, 'rgba(80,180,255,0)');
+    const radius = bw * 2.8;
+    const dL = pt.x, dR = size - pt.x, dT = pt.y, dB = size - pt.y;
+    const dMin = Math.min(dL, dR, dT, dB);
+    const gx = dMin === dL ? bw * 0.5 : dMin === dR ? size - bw * 0.5 : pt.x;
+    const gy = dMin === dT ? bw * 0.5 : dMin === dB ? size - bw * 0.5 : pt.y;
+    const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, radius);
+    grad.addColorStop(0, `rgba(45, 225, 255, ${alpha})`);
+    grad.addColorStop(0.45, `rgba(45, 225, 255, ${alpha * 0.5})`);
+    grad.addColorStop(1, 'rgba(45, 225, 255, 0)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = grd;
-    ctx.fill();
+    ctx.rect(0, 0, size, size);
+    ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
+    ctx.fill('evenodd');
+    ctx.restore();
   }
   ctx.restore();
 }
-
 function buildScannerGridLinesCache(size, cellSize) {
   const cacheCanvas = document.createElement("canvas");
   cacheCanvas.width = size;
@@ -10639,16 +10647,18 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   });
   ctx.restore();
 
-  const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
-  const nearLeft = safeSample.x < PAD * 2.5;
-  const nearRight = safeSample.x > 1 - PAD * 2.5;
-  const nearTop = safeSample.y < PAD * 2.5;
-  const nearBottom = safeSample.y > 1 - PAD * 2.5;
-  if (nearLeft || nearRight || nearTop || nearBottom) {
-    const bpx = nearLeft ? 0 : nearRight ? size : cx;
-    const bpy = nearTop ? 0 : nearBottom ? size : cy;
-    addBorderGlowPoint(size, bpx, bpy);
+  const _lobbySafePad = SCANNER_LOBBY_BEAM_EDGE_PADDING * size;
+  const _dL = cx, _dR = size - cx, _dT = cy, _dB = size - cy;
+  const _mD = Math.min(_dL, _dR, _dT, _dB);
+  const _gwx = _mD === _dL ? 0 : _mD === _dR ? size : cx;
+  const _gwy = _mD === _dT ? 0 : _mD === _dB ? size : cy;
+  const _curWall = _mD <= _lobbySafePad
+    ? (_mD === _dL ? 'L' : _mD === _dR ? 'R' : _mD === _dT ? 'T' : 'B')
+    : null;
+  if (_curWall && _curWall !== drawScannerEmptyArenaState._lastWall) {
+    addBorderGlowPoint(size, _gwx, _gwy);
   }
+  drawScannerEmptyArenaState._lastWall = _curWall;
 
   drawScannerArenaBorder(ctx, size);
 
