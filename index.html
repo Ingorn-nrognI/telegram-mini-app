@@ -10108,11 +10108,7 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.roundRect(PAD - bw/2, PAD - bw/2, size - (PAD*2 - bw), size - (PAD*2 - bw), r);
   ctx.stroke();
 
-  ctx.lineWidth = Math.max(1.5, bw * 0.12);
-  ctx.strokeStyle = 'rgba(60, 120, 255, 0.35)';
-  ctx.beginPath();
-  ctx.roundRect(PAD, PAD, size - PAD*2, size - PAD*2, r * 0.85);
-  ctx.stroke();
+
 
   const now = performance.now();
   for (let i = _borderGlowPoints.length - 1; i >= 0; i--) {
@@ -10605,11 +10601,14 @@ function drawScannerArenaBase(ctx, size) {
   const gradient = ctx.createLinearGradient(0, 0, 0, size);
   gradient.addColorStop(0, "#040a1a");
   gradient.addColorStop(1, "#060d20");
-  ctx.fillStyle = gradient;
-  const r = Math.max(16, size * 0.055);
+  const rb = Math.max(16, size * 0.055);
+  ctx.save();
   ctx.beginPath();
-  ctx.roundRect(0, 0, size, size, r);
-  ctx.fill();
+  ctx.roundRect(0, 0, size, size, rb);
+  ctx.clip();
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  ctx.restore();
 }
 
 function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
