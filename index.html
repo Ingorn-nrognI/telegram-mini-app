@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -1397,12 +1397,7 @@ button {
   font-weight: 700;
 }
 
-.scanner-player-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
+.scanner-player-list,
 .scanner-recent-list {
   display: flex;
   flex-direction: column;
@@ -3396,40 +3391,20 @@ button {
 }
 
 
-/* === Scanner Home Preview === */
+/* === Scanner Preview Home === */
 .scanner-home-main-block .scanner-canvas-shell {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #050816;
-  position: relative;
+  width: 100%; aspect-ratio: 1/1; border-radius: 12px;
+  overflow: hidden; background: #050816; position: relative;
 }
-.scanner-home-main-block canvas {
-  width: 100% !important;
-  height: 100% !important;
-  display: block;
-}
+.scanner-home-main-block canvas { width: 100% !important; height: 100% !important; display: block; }
 .scanner-preview-bottom-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px;
 }
 .scanner-preview-enter-btn {
-  flex: 1;
-  background: linear-gradient(135deg, #1a6ef7, #0f4fd6);
-  color: #fff;
-  border: none;
-  border-radius: 24px;
-  padding: 10px 18px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.15s;
+  flex: 1; background: linear-gradient(135deg, #1a6ef7, #0f4fd6);
+  color: #fff; border: none; border-radius: 24px; padding: 10px 18px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
 }
-.scanner-preview-enter-btn:active { opacity: 0.8; }
 </style>
 </head>
 <body>
@@ -3547,8 +3522,7 @@ button {
         <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
       </div>
       <section class="section-card scanner-arena-card">
-        <div class="scanner-canvas-shell" id="scannerScreenCanvasShell">
-        </div>
+        <div class="scanner-canvas-shell" id="scannerScreenCanvasShell"></div>
       </section>
       <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
         <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
@@ -4913,6 +4887,7 @@ function setMenuView(view, options = {}) {
 
   if (homeScreen) homeScreen.classList.toggle("active", view === "home");
   if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "bobrRun");
+  const scannerScreen = document.getElementById("scannerScreen");
   if (scannerScreen) scannerScreen.classList.toggle("active", view === "scannerScreen");
   if (profileScreen) profileScreen.classList.toggle("active", view === "profile");
   if (modePopup) modePopup.classList.remove("open");
