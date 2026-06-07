@@ -6860,10 +6860,18 @@ function getScannerBeamSampleFromMotionState(motionState, timestampMs = getNetwo
 }
 
 function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedValue = "scanner_shared_lobby_motion_v2", runtimeData = scannerRealtime.runtimeData) {
+  if (_serverBeamPos && _serverBeamPos.x !== undefined && (Date.now() - _serverBeamPosLastUpdate) < 10000) {
+    const dt = Math.max(0, Math.min((timestampMs - (_serverBeamPos.timestamp || timestampMs)) / 1000, 0.2));
+    const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
+    let px = _serverBeamPos.x + (_serverBeamPos.vx || 0) * dt;
+    let py = _serverBeamPos.y + (_serverBeamPos.vy || 0) * dt;
+    px = Math.max(PAD, Math.min(1 - PAD, px));
+    py = Math.max(PAD, Math.min(1 - PAD, py));
+    return { x: px, y: py, vx: _serverBeamPos.vx || 0, vy: _serverBeamPos.vy || 0, angle: _serverBeamPos.angle || 0 };
+  }
   const motionState = runtimeData?.idleBeamMotion || runtimeData?.idleBeamState
     ? getScannerRuntimeIdleBeamState(runtimeData)
     : getScannerDefaultIdleBeamMotion(seedValue);
-
   return getScannerBeamSampleFromMotionState(motionState, timestampMs, {
     pad: SCANNER_LOBBY_BEAM_EDGE_PADDING,
     seedValue
