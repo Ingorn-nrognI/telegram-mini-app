@@ -10647,9 +10647,9 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   });
   ctx.restore();
 
-  const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
-  const _lobbyBx = _rawLobbyForGlow.x * size;
-  const _lobbyBy = _rawLobbyForGlow.y * size;
+  const _rawLobbyForGlow = safeSample;
+  const _lobbyBx = cx;
+  const _lobbyBy = cy;
   const _lobbySafePad = size * 0.031 + size * 0.012;
   const _dL = _lobbyBx, _dR = size - _lobbyBx;
   const _dT = _lobbyBy, _dB = size - _lobbyBy;
