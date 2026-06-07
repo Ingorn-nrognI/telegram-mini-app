@@ -10620,10 +10620,11 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
   const idleReticleRadius = Math.max(10.5, size * 0.031);
-  const cx = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.x));
-  const cy = Math.max(idleReticleRadius, Math.min(size - idleReticleRadius, size * safeSample.y));
+  const bwInner = Math.max(11, size * 0.031) + 1;
+  const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
+  const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
 
-  scannerLobbyLaserVisual.angle = ((getNetworkTime() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
+  scannerLobbyLaserVisual.angle = ((performance.now() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
   const reticleRotation = Number.isFinite(Number(options.reticleRotation))
     ? Number(options.reticleRotation)
@@ -10643,27 +10644,23 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     coreBlur: 14,
     beamColor: "rgba(45, 225, 255, 0.74)",
     innerColor: "rgba(255,255,255,0.88)",
-    centerGap: idleReticleRadius * 2.7
+    centerGap: idleReticleRadius * 2
   });
   ctx.restore();
 
-  const _rawLobbyForGlow = safeSample;
-  const _lobbyBx = cx;
-  const _lobbyBy = cy;
   const _lobbySafePad = size * 0.031 + size * 0.012;
-  const _dL = _lobbyBx, _dR = size - _lobbyBx;
-  const _dT = _lobbyBy, _dB = size - _lobbyBy;
+  const _dL = cx, _dR = size - cx, _dT = cy, _dB = size - cy;
   const _mD = Math.min(_dL, _dR, _dT, _dB);
   const _curWall = _mD <= _lobbySafePad
     ? (_mD === _dL ? 'L' : _mD === _dR ? 'R' : _mD === _dT ? 'T' : 'B')
     : null;
   if (_curWall && _curWall !== drawScannerEmptyArenaState._lastWall) {
     const _bwG = Math.max(11, size * 0.031) + 1;
-    let _gwx = _lobbyBx, _gwy = _lobbyBy;
-    if (_mD === _dL)      { _gwx = _bwG * 0.5;        _gwy = _lobbyBy; }
-    else if (_mD === _dR) { _gwx = size - _bwG * 0.5; _gwy = _lobbyBy; }
-    else if (_mD === _dT) { _gwx = _lobbyBx;           _gwy = _bwG * 0.5; }
-    else                  { _gwx = _lobbyBx;           _gwy = size - _bwG * 0.5; }
+    let _gwx = cx, _gwy = cy;
+    if (_mD === _dL)      { _gwx = _bwG * 0.5;        _gwy = cy; }
+    else if (_mD === _dR) { _gwx = size - _bwG * 0.5; _gwy = cy; }
+    else if (_mD === _dT) { _gwx = cx;                 _gwy = _bwG * 0.5; }
+    else                  { _gwx = cx;                 _gwy = size - _bwG * 0.5; }
     addBorderGlowPoint(size, _gwx, _gwy);
   }
   drawScannerEmptyArenaState._lastWall = _curWall;
@@ -10672,12 +10669,12 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
 
   ctx.save();
   ctx.translate(cx, cy);
+  ctx.rotate(angle);
   drawScannerReticle(ctx, 0, 0, idleReticleRadius, {
-    alpha: 0.96,
+    rotation: options.reticleRotation || 0,
+    wobble: options.reticleWobble || 0,
     plusScale: 0.72,
-    plusColor: "rgba(6, 10, 16, 0.96)",
-    rotation: reticleRotation,
-    wobble: reticleWobble
+    plusColor: "rgba(7, 11, 18, 0.96)"
   });
   ctx.restore();
 
@@ -10685,14 +10682,13 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     ctx.save();
     ctx.globalAlpha = waitingTextAlpha;
     drawScannerWaitingText(ctx, size, safeSample, {
-      centerGap: idleReticleRadius * 2.7,
+      centerGap: idleReticleRadius * 2,
       beamAngle: scannerLobbyLaserVisual.angle,
       text: options.waitingText
     });
     ctx.restore();
   }
 }
-
 function drawScannerIdleArena(ctx, size, now) {
   drawScannerEmptyArenaState(ctx, size, getScannerSharedLobbyBeamSample(), {
     waitingTextAlpha: 1
