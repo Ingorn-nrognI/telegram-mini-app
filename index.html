@@ -10652,7 +10652,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const _mD = Math.min(_dL, _dR, _dT, _dB);
   const _gwx = _mD === _dL ? _bw * 0.5 : _mD === _dR ? size - _bw * 0.5 : cx;
   const _gwy = _mD === _dT ? _bw * 0.5 : _mD === _dB ? size - _bw * 0.5 : cy;
-  const _curWall = _mD <= _bw * 1.2
+  const _curWall = _mD <= _bw * 3.0
     ? (_mD === _dL ? 'L' : _mD === _dR ? 'R' : _mD === _dT ? 'T' : 'B')
     : null;
   if (_curWall && _curWall !== drawScannerEmptyArenaState._lastWall) {
