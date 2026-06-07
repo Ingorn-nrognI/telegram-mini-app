@@ -10092,9 +10092,7 @@ function addBorderGlowPoint(size, px, py) {
 }
 
 function drawScannerArenaBorder(ctx, size) {
-  const reticleR = Math.max(10.5, size * 0.031);
-  const bw = Math.round(reticleR * 1.5);
-
+  const bw = Math.max(11, size * 0.031) + 1;
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
@@ -10105,7 +10103,6 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.rect(0, 0, size, size);
   ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
   ctx.fill('evenodd');
-
   const now = performance.now();
   for (let i = _borderGlowPoints.length - 1; i >= 0; i--) {
     const pt = _borderGlowPoints[i];
@@ -10623,16 +10620,13 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const bwInner = Math.max(11, size * 0.031) + 1;
   const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
   const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
-
   scannerLobbyLaserVisual.angle = ((performance.now() / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   const angle = scannerLobbyLaserVisual.angle;
   const reticleRotation = Number.isFinite(Number(options.reticleRotation))
     ? Number(options.reticleRotation)
     : performance.now() * SCANNER_RETICLE_IDLE_SPIN_SPEED;
   const reticleWobble = Math.max(0, Number(options.reticleWobble) || SCANNER_RETICLE_IDLE_WOBBLE);
-
   drawScannerArenaBase(ctx, size);
-
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(angle);
@@ -10647,37 +10641,18 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     centerGap: idleReticleRadius * 2
   });
   ctx.restore();
-
-  const _lobbySafePad = size * 0.031 + size * 0.012;
-  const _dL = cx, _dR = size - cx, _dT = cy, _dB = size - cy;
-  const _mD = Math.min(_dL, _dR, _dT, _dB);
-  const _curWall = _mD <= _lobbySafePad
-    ? (_mD === _dL ? 'L' : _mD === _dR ? 'R' : _mD === _dT ? 'T' : 'B')
-    : null;
-  if (_curWall && _curWall !== drawScannerEmptyArenaState._lastWall) {
-    const _bwG = Math.max(11, size * 0.031) + 1;
-    let _gwx = cx, _gwy = cy;
-    if (_mD === _dL)      { _gwx = _bwG * 0.5;        _gwy = cy; }
-    else if (_mD === _dR) { _gwx = size - _bwG * 0.5; _gwy = cy; }
-    else if (_mD === _dT) { _gwx = cx;                 _gwy = _bwG * 0.5; }
-    else                  { _gwx = cx;                 _gwy = size - _bwG * 0.5; }
-    addBorderGlowPoint(size, _gwx, _gwy);
-  }
-  drawScannerEmptyArenaState._lastWall = _curWall;
-
   drawScannerArenaBorder(ctx, size);
-
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(angle);
   drawScannerReticle(ctx, 0, 0, idleReticleRadius, {
     rotation: options.reticleRotation || 0,
     wobble: options.reticleWobble || 0,
-    plusScale: 0.72,
+    centerGap: 0,
+    plusScale: 0.22,
     plusColor: "rgba(7, 11, 18, 0.96)"
   });
   ctx.restore();
-
   if (waitingTextAlpha > 0.01) {
     ctx.save();
     ctx.globalAlpha = waitingTextAlpha;
@@ -10868,6 +10843,27 @@ function renderScannerCanvas() {
   const hasGrid = scannerGridState.players.length > 0;
   const now = performance.now(); // Это оставляем для плавности (fps)
   const nowMs = getNetworkTime(); // <-- Изменено для точной физики!
+
+  // Border glow on bounce
+  const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
+  const _lobbyBx = _rawLobbyForGlow.x * size;
+  const _lobbyBy = _rawLobbyForGlow.y * size;
+  const _lobbySafePad = size * 0.031 + size * 0.012;
+  const _bwG = Math.max(11, size * 0.031) + 1;
+  const _dL = _lobbyBx, _dR = size - _lobbyBx, _dT = _lobbyBy, _dB = size - _lobbyBy;
+  const _mD = Math.min(_dL, _dR, _dT, _dB);
+  const _curWall = _mD <= _lobbySafePad
+    ? (_mD === _dL ? 'L' : _mD === _dR ? 'R' : _mD === _dT ? 'T' : 'B') : null;
+  if (_curWall && _curWall !== renderScannerCanvas._lastWall) {
+    const _bw = Math.max(11, size * 0.031) + 1;
+    let _gwx = _lobbyBx, _gwy = _lobbyBy;
+    if (_mD === _dL)      { _gwx = _bw * 0.5;        _gwy = _lobbyBy; }
+    else if (_mD === _dR) { _gwx = size - _bw * 0.5; _gwy = _lobbyBy; }
+    else if (_mD === _dT) { _gwx = _lobbyBx;         _gwy = _bw * 0.5; }
+    else                  { _gwx = _lobbyBx;         _gwy = size - _bw * 0.5; }
+    addBorderGlowPoint(size, _gwx, _gwy);
+  }
+  renderScannerCanvas._lastWall = _curWall;
   ctx.clearRect(0, 0, size, size);
 
   const roundData = scannerGridState.roundData || null;
