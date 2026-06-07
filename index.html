@@ -9653,35 +9653,31 @@ function renderScannerBetBar() {
 }
 
 function isScannerBetBarContextActive() {
-  const homeScreen = document.getElementById("homeScreen");
-  const bobrRunScreen = document.getElementById("bobrRunScreen");
+  const scannerScreenEl = document.getElementById("scannerScreen");
   const profileScreen = document.getElementById("profileScreen");
   const historyPanel = document.getElementById("historyPanel");
   const modePopup = document.getElementById("modePopup");
   const leaderboardModal = document.getElementById("leaderboardModal");
   const roomsModal = document.getElementById("roomsModal");
   const stakeSettingsOverlay = document.getElementById("scannerStakeSettingsOverlay");
+
+  if (!scannerScreenEl || !scannerScreenEl.classList.contains("active")) return false;
+  if (currentMenuView !== "scannerScreen") return false;
+
+  const profileActive = !!profileScreen?.classList.contains("active");
   const historyOpen = !!historyPanel?.classList.contains("open");
   const modePopupOpen = !!modePopup?.classList.contains("open");
   const leaderboardOpen = leaderboardModal?.style.display === "flex";
   const roomsOpen = roomsModal?.style.display === "flex";
   const stakeSettingsOpen = !!stakeSettingsOverlay?.classList.contains("open");
-  const homeActive = currentMenuView === "home" && !!homeScreen?.classList.contains("active");
-  const scannerScreenEl = document.getElementById("scannerScreen");
-  const scannerScreenActive = currentMenuView === "scannerScreen" && !!scannerScreenEl?.classList.contains("active");
-  const bobrRunActive = !!bobrRunScreen?.classList.contains("active");
-  const profileActive = !!profileScreen?.classList.contains("active");
 
-  return (homeActive || scannerScreenActive) &&
-    !bobrRunActive &&
-    !profileActive &&
+  return !profileActive &&
     !historyOpen &&
     !modePopupOpen &&
     !leaderboardOpen &&
     !roomsOpen &&
     !stakeSettingsOpen;
 }
-
 function getScannerArenaFocusState() {
   const arena = document.getElementById("scannerGridCanvas");
   if (!arena || !isScannerBetBarContextActive()) return false;
@@ -9695,8 +9691,7 @@ function getScannerArenaFocusState() {
   const visiblePart = rect.height > 0 ? visibleHeight / rect.height : 0;
   const navSafeTop = viewportHeight - 128;
 
-  const isArenaInWorkingZone =
-    rect.width > 0 &&
+  return rect.width > 0 &&
     rect.height > 0 &&
     rect.right > 0 &&
     rect.left < viewportWidth &&
@@ -9705,10 +9700,7 @@ function getScannerArenaFocusState() {
     rect.top < navSafeTop &&
     arenaCenter > viewportHeight * 0.10 &&
     arenaCenter < viewportHeight * 0.82;
-
-  return !!isArenaInWorkingZone;
 }
-
 function updateScannerTopUiForArenaFocus(shouldHide = null) {
   const topBar = document.querySelector(".top-bar");
   if (!topBar) return;
