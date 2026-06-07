@@ -3828,6 +3828,7 @@ button {
   </div>
 </div>
 
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -7672,6 +7673,46 @@ function stopScannerVisualAnimation() {
   scannerBeamRenderState.key = "";
 }
 
+const SOCKET_SERVER = 'https://bobrworld.com';
+let _serverBeamPos = null;
+let _beamTransitionEndMs = 0;
+let _serverBeamPosSmoothed = null;
+let _serverBeamPosLastUpdate = 0;
+let _serverTimeOffset = 0;
+let _serverTimeOffsetSmoothed = 0;
+let _socket = null;
+
+function initSocketConnection() {
+  _socket = io(SOCKET_SERVER, { transports: ['websocket'], reconnection: true });
+  _socket.on('connect', () => {
+    _socket.emit('ping_time', { clientTime: Date.now() });
+  });
+  _socket.on('pong_time', (data) => {
+    if (data?.serverTime && _serverTimeOffset === 0) {
+      _serverTimeOffset = data.serverTime - Date.now();
+    }
+  });
+  _socket.on('disconnect', () => {});
+  _socket.on('beam:position', (data) => {
+    _serverBeamPos = data;
+    _serverBeamPosLastUpdate = Date.now();
+    if (!_serverBeamPosSmoothed) _serverBeamPosSmoothed = { ...data };
+    if (data?.timestamp) {
+      const newOffset = data.timestamp - Date.now();
+      if (Math.abs(newOffset - _serverTimeOffsetSmoothed) > 5000) {
+        _serverTimeOffset = newOffset;
+        _serverTimeOffsetSmoothed = newOffset;
+      } else {
+        _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.5;
+        _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+      }
+    }
+  });
+  _socket.on('round:state', (data) => { applySocketRoundState(data); });
+  _socket.on('round:patch', (patch) => { applySocketRoundPatch(patch); });
+  _socket.on('round:result', (data) => { applySocketRoundResult(data); });
+}
+
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
   const tick = (now) => {
@@ -11161,6 +11202,7 @@ const _unsubAppAuth = firebase.auth().onAuthStateChanged((user) => {
   if (!user) return;
   _unsubAppAuth();
   initializeScannerGridFeature();
+  initSocketConnection();
 });
 
 window.toggleModePopup = toggleModePopup;
