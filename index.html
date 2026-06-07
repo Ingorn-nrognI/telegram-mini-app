@@ -804,8 +804,7 @@ button {
 
 .bottom-bar {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  left: max(16px, calc((100vw - min(calc(100vw - 32px), 464px)) / 2));
   bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
   width: min(calc(100vw - 24px), 480px);
   min-height: var(--bottom-nav-height);
