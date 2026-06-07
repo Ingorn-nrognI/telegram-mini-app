@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -4877,13 +4877,25 @@ function scheduleInitialHomeGameScroll() {
 function setMenuView(view, options = {}) {
   const { preserveNav = false, keepHistory = false } = options;
   currentMenuView = view;
-  if (view === "home") ensureScannerVisualLoop();
+  if (view === "home" || view === "scannerScreen") ensureScannerVisualLoop();
 
   const homeScreen = document.getElementById("homeScreen");
   const bobrRunScreen = document.getElementById("bobrRunScreen");
   const profileScreen = document.getElementById("profileScreen");
   const modePopup = document.getElementById("modePopup");
   const historyPanel = document.getElementById("historyPanel");
+
+  // Перемещаем канвас между экранами
+  const _canvas = document.getElementById("scannerGridCanvas");
+  if (_canvas) {
+    if (view === "scannerScreen") {
+      const _shell = document.getElementById("scannerScreenCanvasShell");
+      if (_shell && !_shell.contains(_canvas)) _shell.insertBefore(_canvas, _shell.firstChild);
+    } else if (view === "home") {
+      const _shell = document.getElementById("scannerHomeCanvasShell");
+      if (_shell && !_shell.contains(_canvas)) _shell.insertBefore(_canvas, _shell.firstChild);
+    }
+  }
 
   if (homeScreen) homeScreen.classList.toggle("active", view === "home");
   if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "bobrRun");
