@@ -10095,15 +10095,18 @@ function addBorderGlowPoint(size, px, py) {
 function drawScannerArenaBorder(ctx, size) {
   const reticleR = Math.max(10.5, size * 0.031);
   const bw = Math.round(reticleR * 2.2);
+  const r = Math.max(20, size * 0.07);
+  const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING * size;
+
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
-  const r = Math.max(20, size * 0.07);
   ctx.lineWidth = bw;
   ctx.strokeStyle = 'rgba(30, 50, 120, 0.95)';
   ctx.beginPath();
-  ctx.roundRect(bw/2, bw/2, size - bw, size - bw, r);
+  ctx.roundRect(PAD - bw/2, PAD - bw/2, size - (PAD - bw/2)*2, size - (PAD - bw/2)*2, r);
   ctx.stroke();
+
   const now = performance.now();
   for (let i = _borderGlowPoints.length - 1; i >= 0; i--) {
     const pt = _borderGlowPoints[i];
