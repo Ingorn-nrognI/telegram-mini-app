@@ -5747,7 +5747,7 @@ function handleModalBackdropClick(modalId, event) {
 }
 
 function shouldRenderScannerCanvasLive() {
-  return currentMenuView === "home" && !document.hidden;
+  return (currentMenuView === "home" || currentMenuView === "scannerScreen") && !document.hidden;
 }
 
 function scannerRuntimeRef() {
