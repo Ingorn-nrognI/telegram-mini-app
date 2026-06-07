@@ -10095,16 +10095,23 @@ function addBorderGlowPoint(size, px, py) {
 function drawScannerArenaBorder(ctx, size) {
   const reticleR = Math.max(10.5, size * 0.031);
   const bw = Math.round(reticleR * 2.2);
-  const r = Math.max(20, size * 0.07);
+  const r = Math.max(16, size * 0.055);
   const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING * size;
 
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
+
   ctx.lineWidth = bw;
-  ctx.strokeStyle = 'rgba(30, 50, 120, 0.95)';
+  ctx.strokeStyle = 'rgba(18, 28, 64, 0.98)';
   ctx.beginPath();
-  ctx.roundRect(PAD - bw/2, PAD - bw/2, size - (PAD - bw/2)*2, size - (PAD - bw/2)*2, r);
+  ctx.roundRect(PAD - bw/2, PAD - bw/2, size - (PAD*2 - bw), size - (PAD*2 - bw), r);
+  ctx.stroke();
+
+  ctx.lineWidth = Math.max(1.5, bw * 0.12);
+  ctx.strokeStyle = 'rgba(60, 120, 255, 0.35)';
+  ctx.beginPath();
+  ctx.roundRect(PAD, PAD, size - PAD*2, size - PAD*2, r * 0.85);
   ctx.stroke();
 
   const now = performance.now();
@@ -10618,17 +10625,6 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const reticleWobble = Math.max(0, Number(options.reticleWobble) || SCANNER_RETICLE_IDLE_WOBBLE);
 
   drawScannerArenaBase(ctx, size);
-  drawScannerArenaBorder(ctx, size);
-  const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
-  const nearLeft = safeSample.x < PAD * 2.5;
-  const nearRight = safeSample.x > 1 - PAD * 2.5;
-  const nearTop = safeSample.y < PAD * 2.5;
-  const nearBottom = safeSample.y > 1 - PAD * 2.5;
-  if (nearLeft || nearRight || nearTop || nearBottom) {
-    const bpx = nearLeft ? 0 : nearRight ? size : cx;
-    const bpy = nearTop ? 0 : nearBottom ? size : cy;
-    addBorderGlowPoint(size, bpx, bpy);
-  }
 
   ctx.save();
   ctx.translate(cx, cy);
@@ -10643,6 +10639,23 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     innerColor: "rgba(255,255,255,0.88)",
     centerGap: idleReticleRadius * 2.7
   });
+  ctx.restore();
+
+  const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
+  const nearLeft = safeSample.x < PAD * 2.5;
+  const nearRight = safeSample.x > 1 - PAD * 2.5;
+  const nearTop = safeSample.y < PAD * 2.5;
+  const nearBottom = safeSample.y > 1 - PAD * 2.5;
+  if (nearLeft || nearRight || nearTop || nearBottom) {
+    const bpx = nearLeft ? 0 : nearRight ? size : cx;
+    const bpy = nearTop ? 0 : nearBottom ? size : cy;
+    addBorderGlowPoint(size, bpx, bpy);
+  }
+
+  drawScannerArenaBorder(ctx, size);
+
+  ctx.save();
+  ctx.translate(cx, cy);
   drawScannerReticle(ctx, 0, 0, idleReticleRadius, {
     alpha: 0.96,
     plusScale: 0.72,
