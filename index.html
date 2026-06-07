@@ -10604,6 +10604,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const reticleWobble = Math.max(0, Number(options.reticleWobble) || SCANNER_RETICLE_IDLE_WOBBLE);
 
   drawScannerArenaBase(ctx, size);
+  drawScannerArenaBorder(ctx, size);
   const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
   const nearLeft = safeSample.x < PAD * 2.5;
   const nearRight = safeSample.x > 1 - PAD * 2.5;
@@ -10829,7 +10830,6 @@ function renderScannerCanvas() {
   const now = performance.now(); // Это оставляем для плавности (fps)
   const nowMs = getNetworkTime(); // <-- Изменено для точной физики!
   ctx.clearRect(0, 0, size, size);
-  drawScannerArenaBorder(ctx, size);
 
   const roundData = scannerGridState.roundData || null;
   const beamRenderKey = getScannerBeamRenderKey(roundStatus, roundData, hasGrid ? "grid" : "empty");
