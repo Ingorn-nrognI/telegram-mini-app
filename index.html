@@ -10058,6 +10058,8 @@ function buildScannerCanvasCache(size, owners, players) {
   return cacheCanvas;
 }
 
+const _borderGlowPoints = [];
+
 function drawScannerGridLines(ctx, size, cellSize) {
   ctx.save();
   ctx.strokeStyle = "rgba(255,255,255,0.05)";
@@ -10080,8 +10082,6 @@ function drawScannerGridLines(ctx, size, cellSize) {
   ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
   ctx.restore();
 }
-
-const _borderGlowPoints = [];
 
 function addBorderGlowPoint(size, px, py) {
   const now = performance.now();
