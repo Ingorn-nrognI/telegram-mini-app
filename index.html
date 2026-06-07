@@ -10074,7 +10074,8 @@ function addBorderGlowPoint(size, px, py) {
 }
 
 function drawScannerArenaBorder(ctx, size) {
-  const bw = Math.max(11, size * 0.031) + 1;
+  const reticleR = Math.max(10.5, size * 0.031);
+  const bw = Math.round(reticleR * 1.35);
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
