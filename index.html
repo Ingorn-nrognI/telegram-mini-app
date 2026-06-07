@@ -10647,15 +10647,23 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   });
   ctx.restore();
 
-  const _bw = Math.round(Math.max(10.5, size * 0.031) * 1.5);
-  const _dL = cx, _dR = size - cx, _dT = cy, _dB = size - cy;
+  const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
+  const _lobbyBx = _rawLobbyForGlow.x * size;
+  const _lobbyBy = _rawLobbyForGlow.y * size;
+  const _lobbySafePad = size * 0.031 + size * 0.012;
+  const _dL = _lobbyBx, _dR = size - _lobbyBx;
+  const _dT = _lobbyBy, _dB = size - _lobbyBy;
   const _mD = Math.min(_dL, _dR, _dT, _dB);
-  const _gwx = _mD === _dL ? _bw * 0.5 : _mD === _dR ? size - _bw * 0.5 : cx;
-  const _gwy = _mD === _dT ? _bw * 0.5 : _mD === _dB ? size - _bw * 0.5 : cy;
-  const _curWall = _mD <= _bw * 3.0
+  const _curWall = _mD <= _lobbySafePad
     ? (_mD === _dL ? 'L' : _mD === _dR ? 'R' : _mD === _dT ? 'T' : 'B')
     : null;
   if (_curWall && _curWall !== drawScannerEmptyArenaState._lastWall) {
+    const _bwG = Math.max(11, size * 0.031) + 1;
+    let _gwx = _lobbyBx, _gwy = _lobbyBy;
+    if (_mD === _dL)      { _gwx = _bwG * 0.5;        _gwy = _lobbyBy; }
+    else if (_mD === _dR) { _gwx = size - _bwG * 0.5; _gwy = _lobbyBy; }
+    else if (_mD === _dT) { _gwx = _lobbyBx;           _gwy = _bwG * 0.5; }
+    else                  { _gwx = _lobbyBx;           _gwy = size - _bwG * 0.5; }
     addBorderGlowPoint(size, _gwx, _gwy);
   }
   drawScannerEmptyArenaState._lastWall = _curWall;
