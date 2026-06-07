@@ -7712,6 +7712,10 @@ function initSocketConnection() {
     _serverBeamPos = data;
     _serverBeamPosLastUpdate = Date.now();
     if (!_serverBeamPosSmoothed) _serverBeamPosSmoothed = { ...data };
+    if (data?.idleBeamMotion) {
+      if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
+      scannerRealtime.runtimeData.idleBeamMotion = data.idleBeamMotion;
+    }
     if (data?.timestamp) {
       const newOffset = data.timestamp - Date.now();
       if (Math.abs(newOffset - _serverTimeOffsetSmoothed) > 5000) {
@@ -7750,6 +7754,10 @@ function applySocketRoundPatch(patch) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
     scannerRealtime.roundData.countdownEndsAt = patch.countdownEndsAt;
   }
+  if (patch.idleBeamMotion !== undefined) {
+    if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
+    scannerRealtime.runtimeData.idleBeamMotion = patch.idleBeamMotion;
+  }
   if (patch.roundId !== undefined) {
     scannerRealtime.activeRoundId = patch.roundId || null;
     if (!patch.roundId) {
@@ -7771,6 +7779,7 @@ function applySocketRoundState(data) {
   scannerRealtime.participantsError = false;
   if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
   scannerRealtime.runtimeData.activeRoundId = roundId;
+  if (data.idleBeamMotion) scannerRealtime.runtimeData.idleBeamMotion = data.idleBeamMotion;
   if (!roundId) {
     scannerRealtime.activeRoundId = null;
     scannerRealtime.roundData = null;
