@@ -1112,7 +1112,6 @@ button {
 
 .scanner-feature-card::after,
 .scanner-mode-hero::after,
-.scanner-arena-card::after,
 .scanner-summary-card::after,
 .scanner-fairness-card::after {
   content: "";
@@ -10105,7 +10104,7 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.lineWidth = bw;
   ctx.strokeStyle = 'rgba(22, 38, 90, 1)';
   ctx.beginPath();
-  ctx.roundRect(PAD - bw/2, PAD - bw/2, size - (PAD*2 - bw), size - (PAD*2 - bw), r);
+  ctx.roundRect(bw/2, bw/2, size - bw, size - bw, r);
   ctx.stroke();
 
 
