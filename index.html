@@ -7713,6 +7713,87 @@ function initSocketConnection() {
   _socket.on('round:result', (data) => { applySocketRoundResult(data); });
 }
 
+function applySocketRoundPatch(patch) {
+  if (!patch) return;
+  console.log('[patch] Получен:', JSON.stringify(patch));
+  if (patch.status !== undefined) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.status = patch.status;
+  }
+  if (patch.totalPot !== undefined) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.totalPot = patch.totalPot;
+  }
+  if (patch.participantCount !== undefined) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.participantCount = patch.participantCount;
+  }
+  if (patch.participants !== undefined) {
+    scannerRealtime.participants = Array.isArray(patch.participants) ? patch.participants : [];
+  }
+  if (patch.countdownEndsAt !== undefined) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.countdownEndsAt = patch.countdownEndsAt;
+  }
+  if (patch.roundId !== undefined) {
+    scannerRealtime.activeRoundId = patch.roundId || null;
+    if (!patch.roundId) {
+      scannerRealtime.roundData = null;
+      scannerRealtime.participants = [];
+    }
+  }
+  syncScannerDerivedState();
+  renderScannerRound();
+  ensureScannerVisualLoop();
+}
+
+function applySocketRoundState(data) {
+  if (!data) return;
+  const roundId = data.roundId || null;
+  scannerRealtime.runtimeReady = true;
+  scannerRealtime.roundReady = true;
+  scannerRealtime.participantsReady = true;
+  scannerRealtime.participantsError = false;
+  if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
+  scannerRealtime.runtimeData.activeRoundId = roundId;
+  if (!roundId) {
+    scannerRealtime.activeRoundId = null;
+    scannerRealtime.roundData = null;
+    scannerRealtime.participants = [];
+    scannerRealtime.participantsRoundId = null;
+    syncScannerDerivedState();
+    renderScannerRound();
+    return;
+  }
+  scannerRealtime.activeRoundId = roundId;
+  scannerRealtime.participants = Array.isArray(data.participants) ? data.participants : [];
+  scannerRealtime.participantsRoundId = roundId;
+  scannerRealtime.roundData = {
+    id: roundId,
+    status: data.status || 'waiting',
+    totalPot: data.totalPot || 0,
+    participantCount: data.participantCount || 0,
+    countdownEndsAt: data.countdownEndsAt || null,
+    activeEndsAt: data.activeEndsAt || null,
+    version: data.version || 0
+  };
+  syncScannerDerivedState();
+  renderScannerRound();
+  ensureScannerVisualLoop();
+}
+
+function applySocketRoundResult(data) {
+  if (!data) return;
+  if (data.winnerPlayerId) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.winnerId = data.winnerPlayerId;
+    scannerRealtime.roundData.winnerName = data.winnerName;
+    scannerRealtime.roundData.winnerPayout = data.winnerPayout;
+  }
+  syncScannerDerivedState();
+  renderScannerRound();
+}
+
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
   const tick = (now) => {
