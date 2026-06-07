@@ -107,8 +107,8 @@ button {
   width: 200px;
   height: 200px;
   bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: max(16px, calc((100vw - min(calc(100vw - 32px), 464px)) / 2));
+  transform: none;
   background: rgba(116, 73, 255, 0.22);
 }
 
