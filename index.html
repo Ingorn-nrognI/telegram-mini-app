@@ -10094,7 +10094,7 @@ function addBorderGlowPoint(size, px, py) {
 
 function drawScannerArenaBorder(ctx, size) {
   const reticleR = Math.max(10.5, size * 0.031);
-  const bw = Math.round(reticleR * 2.2);
+  const bw = Math.round(reticleR * 3.8);
   const r = Math.max(16, size * 0.055);
   const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING * size;
 
@@ -10103,7 +10103,7 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.shadowBlur = 0;
 
   ctx.lineWidth = bw;
-  ctx.strokeStyle = 'rgba(18, 28, 64, 0.98)';
+  ctx.strokeStyle = 'rgba(22, 38, 90, 1)';
   ctx.beginPath();
   ctx.roundRect(PAD - bw/2, PAD - bw/2, size - (PAD*2 - bw), size - (PAD*2 - bw), r);
   ctx.stroke();
