@@ -10097,12 +10097,12 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
+  const r = Math.max(20, size * 0.07);
   ctx.lineWidth = bw;
-  ctx.strokeStyle = 'rgb(16, 20, 38)';
-  ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
-  ctx.lineWidth = Math.max(2, bw * 0.18);
-  ctx.strokeStyle = 'rgba(100, 160, 255, 0.22)';
-  ctx.strokeRect(bw * 0.5, bw * 0.5, size - bw, size - bw);
+  ctx.strokeStyle = 'rgba(30, 50, 120, 0.95)';
+  ctx.beginPath();
+  ctx.roundRect(bw/2, bw/2, size - bw, size - bw, r);
+  ctx.stroke();
   const now = performance.now();
   for (let i = _borderGlowPoints.length - 1; i >= 0; i--) {
     const pt = _borderGlowPoints[i];
