@@ -3363,7 +3363,7 @@ button {
 #navProfileFloat {
   position: fixed;
   bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
-  right: max(16px, calc((100vw - min(calc(100vw - 32px), 464px)) / 2));
+  right: 8px;
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -3387,7 +3387,6 @@ button {
   opacity: 0;
   transition: transform 0.22s ease, opacity 0.22s ease;
   pointer-events: none;
-}
 }
 #navProfileFloat.visible {
   transform: scale(1);
