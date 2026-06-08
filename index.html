@@ -3441,7 +3441,7 @@ button {
   width: 55% !important;
   flex-shrink: 0 !important;
   aspect-ratio: 1/1 !important;
-  border-radius: 16px !important;
+  border-radius: 24px !important;
   overflow: hidden !important;
   background: #050816 !important;
   position: relative !important;
@@ -10586,7 +10586,7 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
 
 function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   const text = options.text || "Ожидание раунда...";
-  const fontSize = Math.max(22, Math.min(38, size * 0.074));
+  const fontSize = Math.max(10, Math.min(16, size * 0.035));
   const centerX = size / 2;
   const centerY = size / 2;
   const font = `900 ${fontSize}px Arial`;
