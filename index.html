@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+п»ї<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -3039,7 +3039,7 @@ button {
   display: block;
 }
 
-/* Подробности Сканера без внутренних мини-карточек */
+/* РџРѕРґСЂРѕР±РЅРѕСЃС‚Рё РЎРєР°РЅРµСЂР° Р±РµР· РІРЅСѓС‚СЂРµРЅРЅРёС… РјРёРЅРё-РєР°СЂС‚РѕС‡РµРє */
 .scanner-history-player-card,
 .scanner-history-winner-card {
   display: grid;
@@ -3362,11 +3362,11 @@ button {
 
 #navProfileFloat {
   position: fixed;
-  bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
+  bottom: calc(max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px)) + 12px);
   right: 8px;
-  width: var(--bottom-nav-height);
-  height: var(--bottom-nav-height);
-  border-radius: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   background:
     radial-gradient(circle at 30% 30%, rgba(255,255,255,0.38), transparent 35%),
     linear-gradient(135deg, #4da0ff, #6e65ff 58%, #40d9ff);
@@ -3426,23 +3426,23 @@ button {
 
   <div class="top-bar">
     <div class="top-bar-left">
-      <div id="modeBackButton" class="mode-back-btn" onclick="event.stopPropagation(); handleTelegramAppBack()" aria-label="Назад"><</div>
+      <div id="modeBackButton" class="mode-back-btn" onclick="event.stopPropagation(); handleTelegramAppBack()" aria-label="РќР°Р·Р°Рґ">в†ђ</div>
 
-      <button type="button" class="profile-card" onclick="openProfileScreen(event)" aria-label="Открыть профиль">
-        <div id="profileAvatar" class="profile-avatar">И</div>
-        <span id="nickname" class="visually-hidden">Игрок</span>
+      <button type="button" class="profile-card" onclick="openProfileScreen(event)" aria-label="РћС‚РєСЂС‹С‚СЊ РїСЂРѕС„РёР»СЊ">
+        <div id="profileAvatar" class="profile-avatar">Р</div>
+        <span id="nickname" class="visually-hidden">РРіСЂРѕРє</span>
       </button>
     </div>
 
     <div class="balance-card">
-      <div class="balance-label">Баланс</div>
+      <div class="balance-label">Р‘Р°Р»Р°РЅСЃ</div>
       <div id="balanceValue" class="balance-value">0.00 TON</div>
     </div>
 
     <div class="top-bar-right">
-      <button type="button" class="wallet-btn" onclick="openWallet()" aria-label="Кошелёк">
-        <span class="wallet-icon">??</span>
-        <span class="wallet-text">Кошелёк</span>
+      <button type="button" class="wallet-btn" onclick="openWallet()" aria-label="РљРѕС€РµР»С‘Рє">
+        <span class="wallet-icon">рџ’ј</span>
+        <span class="wallet-text">РљРѕС€РµР»С‘Рє</span>
       </button>
     </div>
   </div>
@@ -3451,7 +3451,7 @@ button {
     <div class="screen-inner">
 
       
-      <div id="bobrMascotBlock" class="home-top-spacer" aria-label="Пустое окно персонажа">
+      <div id="bobrMascotBlock" class="home-top-spacer" aria-label="РџСѓСЃС‚РѕРµ РѕРєРЅРѕ РїРµСЂСЃРѕРЅР°Р¶Р°">
         <div class="empty-window-shell">
           <div class="empty-window-box"></div>
         </div>
@@ -3461,21 +3461,21 @@ button {
         <div class="scanner-canvas-shell" id="scannerHomeCanvasShell">
           <canvas id="scannerGridCanvas"></canvas>
           <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
-            <span class="scanner-connecting-text">Подключение...</span>
+            <span class="scanner-connecting-text">РџРѕРґРєР»СЋС‡РµРЅРёРµ...</span>
           </div>
         </div>
         <div class="scanner-preview-bottom-row">
           <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
-          <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">Зайти в Сканер</button>
+          <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">Р—Р°Р№С‚Рё РІ РЎРєР°РЅРµСЂ</button>
           <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">0.00 TON</div>
         </div>
       </section>
 
       <section class="hero-card scanner-home-hub">
-        <div class="hero-topline">?? Главный хаб</div>
+        <div class="hero-topline">рџЊђ Р“Р»Р°РІРЅС‹Р№ С…Р°Р±</div>
         <h1 class="hero-title">Bobr World</h1>
         <p class="hero-text">
-          Главный экран Bobr World сохранён, а игровой PvP-блок теперь встроен прямо сюда: ставки, плотность, последние раунды, история, таблица лидеров и остальная навигация продолжают работать в общей оболочке.
+          Р“Р»Р°РІРЅС‹Р№ СЌРєСЂР°РЅ Bobr World СЃРѕС…СЂР°РЅС‘РЅ, Р° РёРіСЂРѕРІРѕР№ PvP-Р±Р»РѕРє С‚РµРїРµСЂСЊ РІСЃС‚СЂРѕРµРЅ РїСЂСЏРјРѕ СЃСЋРґР°: СЃС‚Р°РІРєРё, РїР»РѕС‚РЅРѕСЃС‚СЊ, РїРѕСЃР»РµРґРЅРёРµ СЂР°СѓРЅРґС‹, РёСЃС‚РѕСЂРёСЏ, С‚Р°Р±Р»РёС†Р° Р»РёРґРµСЂРѕРІ Рё РѕСЃС‚Р°Р»СЊРЅР°СЏ РЅР°РІРёРіР°С†РёСЏ РїСЂРѕРґРѕР»Р¶Р°СЋС‚ СЂР°Р±РѕС‚Р°С‚СЊ РІ РѕР±С‰РµР№ РѕР±РѕР»РѕС‡РєРµ.
         </p>
 
         <div class="hero-actions">
@@ -3486,7 +3486,7 @@ button {
             data-games-trigger="true"
             onclick="toggleModePopup(event)"
           >
-            ? Играть
+            в–¶ РРіСЂР°С‚СЊ
           </button>
 
           <button
@@ -3495,7 +3495,7 @@ button {
             data-history-trigger="true"
             onclick="toggleHistoryPanel(event)"
           >
-            ?? История
+            рџ• РСЃС‚РѕСЂРёСЏ
           </button>
         </div>
       </section>
@@ -3503,10 +3503,10 @@ button {
       <div id="modePopup" class="mode-popup" onclick="event.stopPropagation()">
         <div class="mode-popup-inner">
           <button type="button" class="mode-popup-btn primary" onclick="enterScannerGridMode(event)">
-            ?? Сканер
+            рџ§¬ РЎРєР°РЅРµСЂ
           </button>
           <button type="button" class="mode-popup-btn" onclick="showBobrRunComingSoon(event)">
-            ?? Bobr Run
+            вљ”пёЏ Bobr Run
           </button>
         </div>
       </div>
@@ -3514,11 +3514,11 @@ button {
 
     <div id="historyPanel" class="history-panel" onclick="event.stopPropagation()">
       <div class="history-panel-header">
-        <div class="history-panel-title">История игр</div>
-        <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">?</button>
+        <div class="history-panel-title">РСЃС‚РѕСЂРёСЏ РёРіСЂ</div>
+        <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">вњ•</button>
       </div>
       <div class="history-scroll-area">
-        <div class="history-panel-empty">История пуста.</div>
+        <div class="history-panel-empty">РСЃС‚РѕСЂРёСЏ РїСѓСЃС‚Р°.</div>
       </div>
     </div>
   </div>
@@ -3526,33 +3526,33 @@ button {
   <div id="scannerScreen" class="menu-screen">
     <div class="screen-inner" id="scannerScreenContent">
       <div class="scanner-panel-top">
-        <div id="scannerScreenPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
+        <div id="scannerScreenPoolChip" class="scanner-panel-chip scanner-pool-chip">Р‘Р°РЅРє: 0.00 TON</div>
         <div id="scannerScreenCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
-        <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
+        <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">РњРѕРё С€Р°РЅСЃС‹: 0%</div>
       </div>
       <section class="section-card scanner-arena-card">
         <div class="scanner-canvas-shell" id="scannerScreenCanvasShell"></div>
       </section>
       <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
-        <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
+        <div id="scannerResultTitle" class="scanner-result-title">Р Р°СѓРЅРґ Р·Р°РІРµСЂС€С‘РЅ</div>
         <div id="scannerResultText" class="scanner-result-text"></div>
       </div>
       <div class="scanner-control-divider"></div>
       <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-players-heading-row">
         <div class="scanner-inline-section-title scanner-players-heading-title">
-          Игроки <span id="scannerPlayersCount" class="scanner-players-count">0</span>
+          РРіСЂРѕРєРё <span id="scannerPlayersCount" class="scanner-players-count">0</span>
         </div>
-        <button type="button" id="scannerParticipantsToggle" class="scanner-recent-toggle scanner-participants-toggle" onclick="toggleScannerParticipants(event)" aria-label="Показать игроков" aria-expanded="false">
-          <span class="scanner-recent-toggle-icon">?</span>
+        <button type="button" id="scannerParticipantsToggle" class="scanner-recent-toggle scanner-participants-toggle" onclick="toggleScannerParticipants(event)" aria-label="РџРѕРєР°Р·Р°С‚СЊ РёРіСЂРѕРєРѕРІ" aria-expanded="false">
+          <span class="scanner-recent-toggle-icon">в–ѕ</span>
         </button>
       </div>
       <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
       <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
       <div class="scanner-control-divider"></div>
       <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-recent-heading-row">
-        <div class="scanner-inline-section-title scanner-recent-heading-title">Последние раунды</div>
-        <button type="button" id="scannerRecentToggle" class="scanner-recent-toggle" onclick="toggleScannerRecentRounds(event)" aria-label="Показать последние раунды" aria-expanded="false">
-          <span id="scannerRecentToggleIcon" class="scanner-recent-toggle-icon">?</span>
+        <div class="scanner-inline-section-title scanner-recent-heading-title">РџРѕСЃР»РµРґРЅРёРµ СЂР°СѓРЅРґС‹</div>
+        <button type="button" id="scannerRecentToggle" class="scanner-recent-toggle" onclick="toggleScannerRecentRounds(event)" aria-label="РџРѕРєР°Р·Р°С‚СЊ РїРѕСЃР»РµРґРЅРёРµ СЂР°СѓРЅРґС‹" aria-expanded="false">
+          <span id="scannerRecentToggleIcon" class="scanner-recent-toggle-icon">в–ѕ</span>
         </button>
       </div>
       <div id="scannerRecentRounds" class="scanner-recent-list"></div>
@@ -3562,38 +3562,38 @@ button {
   <div id="bobrRunScreen" class="menu-screen">
     <div class="screen-inner">
       <section class="mode-hero-card">
-        <div class="mode-kicker">?? PvP режим</div>
+        <div class="mode-kicker">вљ”пёЏ PvP СЂРµР¶РёРј</div>
         <h1 class="mode-title">Bobr Run</h1>
         <p class="mode-subtitle">
-          Игровой рантайм убран из этой версии файла. Остались меню, история, таблица лидеров, комнаты и вся базовая навигация приложения.
+          РРіСЂРѕРІРѕР№ СЂР°РЅС‚Р°Р№Рј СѓР±СЂР°РЅ РёР· СЌС‚РѕР№ РІРµСЂСЃРёРё С„Р°Р№Р»Р°. РћСЃС‚Р°Р»РёСЃСЊ РјРµРЅСЋ, РёСЃС‚РѕСЂРёСЏ, С‚Р°Р±Р»РёС†Р° Р»РёРґРµСЂРѕРІ, РєРѕРјРЅР°С‚С‹ Рё РІСЃСЏ Р±Р°Р·РѕРІР°СЏ РЅР°РІРёРіР°С†РёСЏ РїСЂРёР»РѕР¶РµРЅРёСЏ.
         </p>
 
         <div class="mode-actions">
-          <button type="button" class="primary-action" onclick="openBobrRunRooms()">Комнаты Bobr Run</button>
-          <button type="button" class="secondary-action" onclick="openLeaderboard()">Таблица</button>
+          <button type="button" class="primary-action" onclick="openBobrRunRooms()">РљРѕРјРЅР°С‚С‹ Bobr Run</button>
+          <button type="button" class="secondary-action" onclick="openLeaderboard()">РўР°Р±Р»РёС†Р°</button>
         </div>
       </section>
 
       <section class="section-card">
         <div class="section-heading">
           <div>
-            <div class="section-kicker">Интеграция</div>
-            <h2 class="section-title">Что уже готово</h2>
+            <div class="section-kicker">РРЅС‚РµРіСЂР°С†РёСЏ</div>
+            <h2 class="section-title">Р§С‚Рѕ СѓР¶Рµ РіРѕС‚РѕРІРѕ</h2>
           </div>
         </div>
 
         <div class="cards-stack">
           <div class="info-card">
-            <h3>?? Точки подключения сохранены</h3>
+            <h3>рџ”Њ РўРѕС‡РєРё РїРѕРґРєР»СЋС‡РµРЅРёСЏ СЃРѕС…СЂР°РЅРµРЅС‹</h3>
             <p>
-              Экран режима, кнопка назад, переходы, история матчей, таблица, модалки и навигация продолжают работать как часть приложения.
+              Р­РєСЂР°РЅ СЂРµР¶РёРјР°, РєРЅРѕРїРєР° РЅР°Р·Р°Рґ, РїРµСЂРµС…РѕРґС‹, РёСЃС‚РѕСЂРёСЏ РјР°С‚С‡РµР№, С‚Р°Р±Р»РёС†Р°, РјРѕРґР°Р»РєРё Рё РЅР°РІРёРіР°С†РёСЏ РїСЂРѕРґРѕР»Р¶Р°СЋС‚ СЂР°Р±РѕС‚Р°С‚СЊ РєР°Рє С‡Р°СЃС‚СЊ РїСЂРёР»РѕР¶РµРЅРёСЏ.
             </p>
           </div>
 
           <div class="info-card">
-            <h3>?? Игровой модуль можно вернуть позже</h3>
+            <h3>рџЋ® РРіСЂРѕРІРѕР№ РјРѕРґСѓР»СЊ РјРѕР¶РЅРѕ РІРµСЂРЅСѓС‚СЊ РїРѕР·Р¶Рµ</h3>
             <p>
-              Когда ты снова подключишь отдельный runtime Bobr Run, его можно будет встроить обратно без полного переделывания оболочки.
+              РљРѕРіРґР° С‚С‹ СЃРЅРѕРІР° РїРѕРґРєР»СЋС‡РёС€СЊ РѕС‚РґРµР»СЊРЅС‹Р№ runtime Bobr Run, РµРіРѕ РјРѕР¶РЅРѕ Р±СѓРґРµС‚ РІСЃС‚СЂРѕРёС‚СЊ РѕР±СЂР°С‚РЅРѕ Р±РµР· РїРѕР»РЅРѕРіРѕ РїРµСЂРµРґРµР»С‹РІР°РЅРёСЏ РѕР±РѕР»РѕС‡РєРё.
             </p>
           </div>
         </div>
@@ -3604,11 +3604,11 @@ button {
   <div id="profileScreen" class="menu-screen profile-screen">
     <div class="screen-inner profile-screen-inner">
       <section class="profile-hero-card">
-        <div id="profileScreenAvatar" class="profile-avatar profile-screen-avatar">И</div>
+        <div id="profileScreenAvatar" class="profile-avatar profile-screen-avatar">Р</div>
         <div class="profile-screen-copy">
-          <div class="profile-screen-kicker">Профиль игрока</div>
-          <h1 id="profileScreenName" class="profile-screen-name">Игрок</h1>
-          <div id="profileScreenId" class="profile-screen-id">ID: —</div>
+          <div class="profile-screen-kicker">РџСЂРѕС„РёР»СЊ РёРіСЂРѕРєР°</div>
+          <h1 id="profileScreenName" class="profile-screen-name">РРіСЂРѕРє</h1>
+          <div id="profileScreenId" class="profile-screen-id">ID: вЂ”</div>
         </div>
       </section>
 
@@ -3616,35 +3616,35 @@ button {
         <div class="profile-card-heading">
           <div>
             <div class="profile-card-kicker">Demo TON</div>
-            <h2 class="profile-card-title">Баланс</h2>
+            <h2 class="profile-card-title">Р‘Р°Р»Р°РЅСЃ</h2>
           </div>
           <div id="profileScreenBalanceValue" class="profile-balance-value">0.00 TON</div>
         </div>
 
         <div class="profile-action-grid">
-          <button type="button" class="profile-action-btn primary" onclick="openWallet()">?? Кошелёк</button>
-          <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('topup')">Пополнить</button>
-          <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('withdraw')">Вывести</button>
+          <button type="button" class="profile-action-btn primary" onclick="openWallet()">рџ’ј РљРѕС€РµР»С‘Рє</button>
+          <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('topup')">РџРѕРїРѕР»РЅРёС‚СЊ</button>
+          <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('withdraw')">Р’С‹РІРµСЃС‚Рё</button>
         </div>
       </section>
 
       <section class="profile-stat-card">
-        <div class="profile-stat-label">Лучший выигрыш в раунде</div>
+        <div class="profile-stat-label">Р›СѓС‡С€РёР№ РІС‹РёРіСЂС‹С€ РІ СЂР°СѓРЅРґРµ</div>
         <div id="profileBestWinValue" class="profile-stat-value">0.00 TON</div>
       </section>
 
       <section class="profile-settings-card">
-        <button type="button" class="profile-settings-btn" onclick="openSettings()">?? Настройки</button>
+        <button type="button" class="profile-settings-btn" onclick="openSettings()">вљ™пёЏ РќР°СЃС‚СЂРѕР№РєРё</button>
       </section>
     </div>
   </div>
 
-  <div id="scannerBetBar" class="scanner-bet-bar" onclick="event.stopPropagation()" aria-label="Бар ставок Сканера">
-    <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="Настроить быстрые ставки">??</button>
+  <div id="scannerBetBar" class="scanner-bet-bar" onclick="event.stopPropagation()" aria-label="Р‘Р°СЂ СЃС‚Р°РІРѕРє РЎРєР°РЅРµСЂР°">
+    <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="РќР°СЃС‚СЂРѕРёС‚СЊ Р±С‹СЃС‚СЂС‹Рµ СЃС‚Р°РІРєРё">вњЏпёЏ</button>
     <button type="button" id="scannerBetBarQuick0" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(0, event)">1</button>
     <button type="button" id="scannerBetBarQuick1" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(1, event)">10</button>
     <button type="button" id="scannerBetBarQuick2" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(2, event)">25</button>
-    <button type="button" id="scannerBetBarAllIn" class="scanner-bet-btn scanner-bet-allin" onclick="setScannerAllInStake(event)">ва-банк</button>
+    <button type="button" id="scannerBetBarAllIn" class="scanner-bet-btn scanner-bet-allin" onclick="setScannerAllInStake(event)">РІР°-Р±Р°РЅРє</button>
   </div>
 
   <div
@@ -3662,8 +3662,8 @@ button {
     >
       <div class="scanner-stake-settings-handle"></div>
       <div class="scanner-stake-settings-title-row">
-        <div id="scannerStakeSettingsTitle" class="scanner-stake-settings-title">Настройка ставок</div>
-        <button type="button" class="scanner-stake-settings-close" onclick="closeScannerStakeSettings(event)" aria-label="Закрыть">?</button>
+        <div id="scannerStakeSettingsTitle" class="scanner-stake-settings-title">РќР°СЃС‚СЂРѕР№РєР° СЃС‚Р°РІРѕРє</div>
+        <button type="button" class="scanner-stake-settings-close" onclick="closeScannerStakeSettings(event)" aria-label="Р—Р°РєСЂС‹С‚СЊ">вњ•</button>
       </div>
 
       <div class="scanner-stake-settings-quick-row">
@@ -3681,18 +3681,18 @@ button {
           pattern="[0-9]*[.,]?[0-9]*"
           autocomplete="off"
           enterkeyhint="done"
-          aria-label="Сумма ставки в TON"
+          aria-label="РЎСѓРјРјР° СЃС‚Р°РІРєРё РІ TON"
           oninput="handleScannerStakeSettingsInput(event)"
         >
         <span class="scanner-stake-settings-ton">TON</span>
-        <button type="button" class="scanner-stake-settings-clear" onclick="clearScannerStakeSettingsValue(event)" aria-label="Стереть ставку">?</button>
+        <button type="button" class="scanner-stake-settings-clear" onclick="clearScannerStakeSettingsValue(event)" aria-label="РЎС‚РµСЂРµС‚СЊ СЃС‚Р°РІРєСѓ">Г—</button>
       </div>
 
       <div id="scannerStakeSettingsError" class="scanner-stake-settings-error"></div>
 
       <div class="scanner-stake-settings-actions">
-        <button type="button" class="scanner-stake-settings-action reset" onclick="resetScannerStakeSettings(event)">Сбросить</button>
-        <button type="button" class="scanner-stake-settings-action save" onclick="saveScannerStakeSettings(event)">Сохранить</button>
+        <button type="button" class="scanner-stake-settings-action reset" onclick="resetScannerStakeSettings(event)">РЎР±СЂРѕСЃРёС‚СЊ</button>
+        <button type="button" class="scanner-stake-settings-action save" onclick="saveScannerStakeSettings(event)">РЎРѕС…СЂР°РЅРёС‚СЊ</button>
       </div>
     </div>
   </div>
@@ -3704,9 +3704,9 @@ button {
     aria-hidden="true"
   >
     <div class="insufficient-balance-card" onclick="event.stopPropagation()" role="dialog" aria-modal="true">
-      <div class="insufficient-balance-icon">??</div>
-      <div class="insufficient-balance-text">Для ставки не хватает баланса. Пополните свой баланс и повторите попытку.</div>
-      <button type="button" class="insufficient-balance-close" onclick="hideInsufficientBalanceModal(event)">Понятно</button>
+      <div class="insufficient-balance-icon">рџ’Ћ</div>
+      <div class="insufficient-balance-text">Р”Р»СЏ СЃС‚Р°РІРєРё РЅРµ С…РІР°С‚Р°РµС‚ Р±Р°Р»Р°РЅСЃР°. РџРѕРїРѕР»РЅРёС‚Рµ СЃРІРѕР№ Р±Р°Р»Р°РЅСЃ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РїРѕРїС‹С‚РєСѓ.</div>
+      <button type="button" class="insufficient-balance-close" onclick="hideInsufficientBalanceModal(event)">РџРѕРЅСЏС‚РЅРѕ</button>
     </div>
   </div>
 
@@ -3722,8 +3722,8 @@ button {
       data-nav="leaderboard"
       onclick="handleBottomNav('leaderboard', event)"
     >
-      <span class="nav-icon">??</span>
-      <span class="nav-label">Таблица</span>
+      <span class="nav-icon">рџЏ†</span>
+      <span class="nav-label">РўР°Р±Р»РёС†Р°</span>
     </button>
 
     <button
@@ -3734,8 +3734,8 @@ button {
       data-games-trigger="true"
       onclick="handleBottomNav('games', event)"
     >
-      <span class="nav-icon">??</span>
-      <span class="nav-label">Игры</span>
+      <span class="nav-icon">рџЋ®</span>
+      <span class="nav-label">РРіСЂС‹</span>
     </button>
 
     <button
@@ -3745,7 +3745,7 @@ button {
       data-nav="pvp"
       onclick="handleBottomNav('pvp', event)"
     >
-      <span class="nav-icon">??</span>
+      <span class="nav-icon">вљ”пёЏ</span>
       <span class="nav-label">PvP</span>
     </button>
 
@@ -3756,8 +3756,8 @@ button {
       data-nav="skins"
       onclick="handleBottomNav('skins', event)"
     >
-      <span class="nav-icon">??</span>
-      <span class="nav-label">Скины</span>
+      <span class="nav-icon">рџЋЁ</span>
+      <span class="nav-label">РЎРєРёРЅС‹</span>
     </button>
 
     <button
@@ -3768,8 +3768,8 @@ button {
       data-history-trigger="true"
       onclick="handleBottomNav('history', event)"
     >
-      <span class="nav-icon">??</span>
-      <span class="nav-label">История</span>
+      <span class="nav-icon">рџ•</span>
+      <span class="nav-label">РСЃС‚РѕСЂРёСЏ</span>
     </button>
   </div>
 
@@ -3782,45 +3782,45 @@ button {
     <div class="app-settings-sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="appSettingsTitle">
       <div class="app-settings-handle"></div>
       <div class="app-settings-header">
-        <span class="app-settings-title" id="appSettingsTitle">Настройки</span>
-        <button class="app-settings-close" onclick="closeSettings()" aria-label="Закрыть">?</button>
+        <span class="app-settings-title" id="appSettingsTitle">РќР°СЃС‚СЂРѕР№РєРё</span>
+        <button class="app-settings-close" onclick="closeSettings()" aria-label="Р—Р°РєСЂС‹С‚СЊ">вњ•</button>
       </div>
 
       <div class="app-settings-section">
-        <div class="app-settings-section-title">Язык</div>
+        <div class="app-settings-section-title">РЇР·С‹Рє</div>
         <div class="app-settings-chips">
-          <button id="settingsLangRu" class="app-settings-chip" onclick="setAppLanguage('ru')">???? Русский</button>
-          <button id="settingsLangEn" class="app-settings-chip" onclick="setAppLanguage('en')">???? English</button>
+          <button id="settingsLangRu" class="app-settings-chip" onclick="setAppLanguage('ru')">рџ‡·рџ‡є Р СѓСЃСЃРєРёР№</button>
+          <button id="settingsLangEn" class="app-settings-chip" onclick="setAppLanguage('en')">рџ‡¬рџ‡§ English</button>
         </div>
       </div>
 
       <div class="app-settings-section">
-        <div class="app-settings-section-title">Качество графики</div>
+        <div class="app-settings-section-title">РљР°С‡РµСЃС‚РІРѕ РіСЂР°С„РёРєРё</div>
         <div class="app-settings-chips">
-          <button id="settingsQualityLow" class="app-settings-chip" onclick="setAppQuality('low')">Низкое</button>
-          <button id="settingsQualityMid" class="app-settings-chip" onclick="setAppQuality('mid')">Среднее</button>
-          <button id="settingsQualityHigh" class="app-settings-chip" onclick="setAppQuality('high')">Высокое</button>
+          <button id="settingsQualityLow" class="app-settings-chip" onclick="setAppQuality('low')">РќРёР·РєРѕРµ</button>
+          <button id="settingsQualityMid" class="app-settings-chip" onclick="setAppQuality('mid')">РЎСЂРµРґРЅРµРµ</button>
+          <button id="settingsQualityHigh" class="app-settings-chip" onclick="setAppQuality('high')">Р’С‹СЃРѕРєРѕРµ</button>
         </div>
       </div>
 
       <div class="app-settings-section">
-        <div class="app-settings-section-title">Вибрация</div>
+        <div class="app-settings-section-title">Р’РёР±СЂР°С†РёСЏ</div>
         <div class="app-settings-chips">
-          <button id="settingsVibOn" class="app-settings-chip" onclick="setAppVibration(true)">Вкл</button>
-          <button id="settingsVibOff" class="app-settings-chip" onclick="setAppVibration(false)">Выкл</button>
+          <button id="settingsVibOn" class="app-settings-chip" onclick="setAppVibration(true)">Р’РєР»</button>
+          <button id="settingsVibOff" class="app-settings-chip" onclick="setAppVibration(false)">Р’С‹РєР»</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<div id="navProfileFloat" onclick="openProfileScreen(event)" aria-label="Профиль"></div>
+<div id="navProfileFloat" onclick="openProfileScreen(event)" aria-label="РџСЂРѕС„РёР»СЊ"></div>
 
 <div id="leaderboardModal" class="app-modal" onclick="handleModalBackdropClick('leaderboardModal', event)">
   <div class="app-modal-card" onclick="event.stopPropagation()">
     <div class="leaderboardHeader">
-      <h2>?? Таблица лидеров</h2>
-      <span class="closeBtn" onclick="closeLeaderboard()">?</span>
+      <h2>рџЏ† РўР°Р±Р»РёС†Р° Р»РёРґРµСЂРѕРІ</h2>
+      <span class="closeBtn" onclick="closeLeaderboard()">вњ•</span>
     </div>
     <div id="leaderboardContent"></div>
   </div>
@@ -3829,11 +3829,11 @@ button {
 <div id="roomsModal" class="app-modal" onclick="handleModalBackdropClick('roomsModal', event)">
   <div class="app-modal-card" onclick="event.stopPropagation()">
     <div class="roomsHeader">
-      <h2>?? Комнаты Bobr Run</h2>
-      <span class="closeBtn" onclick="closeBobrRunRooms()">?</span>
+      <h2>рџЋ® РљРѕРјРЅР°С‚С‹ Bobr Run</h2>
+      <span class="closeBtn" onclick="closeBobrRunRooms()">вњ•</span>
     </div>
     <div id="roomsList"></div>
-    <div id="createRoomBtn" class="createRoomBtn" onclick="createBobrRunRoom()">Создать комнату Bobr Run</div>
+    <div id="createRoomBtn" class="createRoomBtn" onclick="createBobrRunRoom()">РЎРѕР·РґР°С‚СЊ РєРѕРјРЅР°С‚Сѓ Bobr Run</div>
   </div>
 </div>
 
@@ -3858,14 +3858,14 @@ if (!firebase.apps.length) {
 }
 const db = firebase.firestore();
 firebase.auth().signInAnonymously().catch((err) => {
-  console.error("Анонимная авторизация не удалась:", err);
+  console.error("РђРЅРѕРЅРёРјРЅР°СЏ Р°РІС‚РѕСЂРёР·Р°С†РёСЏ РЅРµ СѓРґР°Р»Р°СЃСЊ:", err);
 });
 const DEMO_TON_START_BALANCE = 1000;
 const DEMO_TON_RESET_MIGRATION_COLLECTION = "system";
 const DEMO_TON_RESET_MIGRATION_DOC = "demo_ton_balance_reset_to_1000_v1";
 const DEMO_TON_RESET_MIGRATION_TARGET = 1000;
 const DEMO_TON_RESET_MIGRATION_BATCH_SIZE = 450;
-const INSUFFICIENT_BALANCE_MESSAGE = "Для ставки не хватает баланса. Пополните свой баланс и повторите попытку.";
+const INSUFFICIENT_BALANCE_MESSAGE = "Р”Р»СЏ СЃС‚Р°РІРєРё РЅРµ С…РІР°С‚Р°РµС‚ Р±Р°Р»Р°РЅСЃР°. РџРѕРїРѕР»РЅРёС‚Рµ СЃРІРѕР№ Р±Р°Р»Р°РЅСЃ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РїРѕРїС‹С‚РєСѓ.";
 let currentDemoTonBalance = 0;
 let currentDemoTonBalanceLoaded = false;
 let currentUserBalanceUnsub = null;
@@ -3962,11 +3962,11 @@ function syncServerTime() {
     const offsetRef = firebase.database().ref(".info/serverTimeOffset");
     offsetRef.on("value", (snap) => {
       serverTimestampOffset = snap.val() || 0;
-      console.log("System: Смещение времени сервера обновлено:", serverTimestampOffset);
+      console.log("System: РЎРјРµС‰РµРЅРёРµ РІСЂРµРјРµРЅРё СЃРµСЂРІРµСЂР° РѕР±РЅРѕРІР»РµРЅРѕ:", serverTimestampOffset);
     });
   }
 }
-// Запускаем синхронизацию
+// Р—Р°РїСѓСЃРєР°РµРј СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ
 syncServerTime();
 
 let scannerQuickStakeValues = SCANNER_DEFAULT_QUICK_STAKES.slice();
@@ -4084,7 +4084,7 @@ const scannerBeamRenderState = {
   lastFrameAt: 0
 };
 
-// Independent visual angle for the lobby laser — updated at a fixed angular
+// Independent visual angle for the lobby laser вЂ” updated at a fixed angular
 // speed so it never snaps or reverses when a new bounce changes direction.
 const scannerLobbyLaserVisual = { angle: null, lastAt: 0 };
 
@@ -4154,7 +4154,7 @@ function shouldIgnoreExternalConsoleError(message) {
 }
 
 function reportAppError(prefix, error) {
-  const message = error?.message || error?.reason?.message || error?.reason || error || "Неизвестная ошибка";
+  const message = error?.message || error?.reason?.message || error?.reason || error || "РќРµРёР·РІРµСЃС‚РЅР°СЏ РѕС€РёР±РєР°";
   if (shouldIgnoreExternalConsoleError(message)) {
     console.warn(prefix, message);
     return;
@@ -4166,7 +4166,7 @@ window.addEventListener("error", (event) => {
   const message = event?.message || "";
   if (shouldIgnoreExternalConsoleError(message)) {
     event.preventDefault();
-    console.warn("Стороннее сообщение браузера/Telegram:", message);
+    console.warn("РЎС‚РѕСЂРѕРЅРЅРµРµ СЃРѕРѕР±С‰РµРЅРёРµ Р±СЂР°СѓР·РµСЂР°/Telegram:", message);
   }
 });
 
@@ -4175,10 +4175,10 @@ window.addEventListener("unhandledrejection", (event) => {
   const message = reason?.message || String(reason || "");
   if (shouldIgnoreExternalConsoleError(message)) {
     event.preventDefault();
-    console.warn("Поймано внешнее promise-сообщение:", message);
+    console.warn("РџРѕР№РјР°РЅРѕ РІРЅРµС€РЅРµРµ promise-СЃРѕРѕР±С‰РµРЅРёРµ:", message);
     return;
   }
-  console.error("Необработанная ошибка Promise:", reason);
+  console.error("РќРµРѕР±СЂР°Р±РѕС‚Р°РЅРЅР°СЏ РѕС€РёР±РєР° Promise:", reason);
   event.preventDefault();
 });
 
@@ -4189,7 +4189,7 @@ try {
   tgApp?.setBackgroundColor?.("#050816");
   tgApp?.setHeaderColor?.("#050816");
 } catch (error) {
-  reportAppError("Ошибка инициализации Telegram WebApp:", error);
+  reportAppError("РћС€РёР±РєР° РёРЅРёС†РёР°Р»РёР·Р°С†РёРё Telegram WebApp:", error);
   tgUser = null;
 }
 
@@ -4212,7 +4212,7 @@ function getStableGuestPlayerId() {
 
 function getCurrentPlayer() {
   const nicknameEl = document.getElementById("nickname");
-  const fallbackName = nicknameEl?.innerText?.trim() || "Игрок";
+  const fallbackName = nicknameEl?.innerText?.trim() || "РРіСЂРѕРє";
   const id = tgUser?.id ? String(tgUser.id) : getStableGuestPlayerId();
   const name = tgUser?.username || tgUser?.first_name || fallbackName;
   return {
@@ -4223,8 +4223,8 @@ function getCurrentPlayer() {
 }
 
 function getPlayerInitial(name) {
-  const value = String(name || "И").trim();
-  if (!value) return "И";
+  const value = String(name || "Р").trim();
+  if (!value) return "Р";
   return value.charAt(0).toUpperCase();
 }
 
@@ -4287,7 +4287,7 @@ function syncLocalDemoBalance(value) {
   try {
     localStorage.setItem("bobr_balance", String(normalized));
   } catch (error) {
-    console.warn("Не удалось сохранить локальную копию demo-баланса:", error);
+    console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ Р»РѕРєР°Р»СЊРЅСѓСЋ РєРѕРїРёСЋ demo-Р±Р°Р»Р°РЅСЃР°:", error);
   }
   renderTopProfile();
   renderScannerBetBar();
@@ -4387,7 +4387,7 @@ function subscribeCurrentUserBalance() {
     if (!snapshot.exists) return;
     syncLocalDemoBalance(getUserDemoBalanceFromData(snapshot.data() || {}));
   }, (error) => {
-    console.error("Ошибка подписки на demo TON-баланс:", error);
+    console.error("РћС€РёР±РєР° РїРѕРґРїРёСЃРєРё РЅР° demo TON-Р±Р°Р»Р°РЅСЃ:", error);
   });
 }
 
@@ -4653,7 +4653,7 @@ async function loadProfileBestRoundWin() {
       bestWin = Math.max(bestWin, getProfileBestWinCandidate(doc.data() || {}, player.id));
     });
   } catch (error) {
-    console.warn("Не удалось загрузить пользовательскую историю для профиля:", error);
+    console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєСѓСЋ РёСЃС‚РѕСЂРёСЋ РґР»СЏ РїСЂРѕС„РёР»СЏ:", error);
   }
 
   if (bestWin <= 0) {
@@ -4667,7 +4667,7 @@ async function loadProfileBestRoundWin() {
         bestWin = Math.max(bestWin, getProfileBestWinCandidate(doc.data() || {}, player.id));
       });
     } catch (error) {
-      console.warn("Не удалось загрузить историю выигрышей Сканера:", error);
+      console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РёСЃС‚РѕСЂРёСЋ РІС‹РёРіСЂС‹С€РµР№ РЎРєР°РЅРµСЂР°:", error);
     }
   }
 
@@ -4690,11 +4690,11 @@ function renderProfileScreen(options = {}) {
   }
 
   if (profileNameEl) {
-    setTextContentIfChanged(profileNameEl, currentPlayer.name || "Игрок");
+    setTextContentIfChanged(profileNameEl, currentPlayer.name || "РРіСЂРѕРє");
   }
 
   if (profileIdEl) {
-    setTextContentIfChanged(profileIdEl, `ID: ${currentPlayer.id || "—"}`);
+    setTextContentIfChanged(profileIdEl, `ID: ${currentPlayer.id || "вЂ”"}`);
   }
 
   if (profileBalanceEl) {
@@ -4726,8 +4726,8 @@ function closeProfileScreen() {
 
 function showProfilePlaceholderAction(action) {
   const message = action === "withdraw"
-    ? "Вывод будет добавлен позже."
-    : "Пополнение будет добавлено позже.";
+    ? "Р’С‹РІРѕРґ Р±СѓРґРµС‚ РґРѕР±Р°РІР»РµРЅ РїРѕР·Р¶Рµ."
+    : "РџРѕРїРѕР»РЅРµРЅРёРµ Р±СѓРґРµС‚ РґРѕР±Р°РІР»РµРЅРѕ РїРѕР·Р¶Рµ.";
   alert(message);
 }
 
@@ -4768,7 +4768,7 @@ function syncAppBackButton(options = {}) {
       tgApp.BackButton.hide();
     }
   } catch (error) {
-    reportAppError("Ошибка кнопки назад Telegram:", error);
+    reportAppError("РћС€РёР±РєР° РєРЅРѕРїРєРё РЅР°Р·Р°Рґ Telegram:", error);
   }
 }
 
@@ -4786,10 +4786,10 @@ function getPreferredHomeNav() {
 }
 
 function getActiveModeLabel() {
-  if (currentMenuView === "profile") return "Профиль";
+  if (currentMenuView === "profile") return "РџСЂРѕС„РёР»СЊ";
   if (currentMenuView === "bobrRun") return "Bobr Run";
-  if (homeScreenContext === "pvp") return "Сканер-сетка";
-  return "игровой режим";
+  if (homeScreenContext === "pvp") return "РЎРєР°РЅРµСЂ-СЃРµС‚РєР°";
+  return "РёРіСЂРѕРІРѕР№ СЂРµР¶РёРј";
 }
 
 function scrollHomeToTop() {
@@ -4895,7 +4895,7 @@ function setMenuView(view, options = {}) {
   const modePopup = document.getElementById("modePopup");
   const historyPanel = document.getElementById("historyPanel");
 
-  // Перемещаем канвас между экранами
+  // РџРµСЂРµРјРµС‰Р°РµРј РєР°РЅРІР°СЃ РјРµР¶РґСѓ СЌРєСЂР°РЅР°РјРё
   const _canvas = document.getElementById("scannerGridCanvas");
   if (_canvas) {
     if (view === "scannerScreen") {
@@ -5042,16 +5042,16 @@ function closeHistoryPanel(options = {}) {
 function getHistoryPanelHeaderHtml() {
   return `
     <div class="history-panel-header">
-      <div class="history-panel-title">История игр</div>
-      <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">?</button>
+      <div class="history-panel-title">РСЃС‚РѕСЂРёСЏ РёРіСЂ</div>
+      <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">вњ•</button>
     </div>
   `;
 }
 
 function formatHistoryDate(value) {
-  if (!value) return "—";
+  if (!value) return "вЂ”";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "вЂ”";
   return date.toLocaleString("ru-RU", {
     day: "2-digit",
     month: "2-digit",
@@ -5068,15 +5068,15 @@ function getHistoryCollectionRef(playerId) {
 function getHistoryResultMeta(item) {
   const winnerValue = String(item?.winner || "").trim().toLowerCase();
 
-  if (winnerValue === "ничья") {
-    return { label: "Ничья", className: "draw" };
+  if (winnerValue === "РЅРёС‡СЊСЏ") {
+    return { label: "РќРёС‡СЊСЏ", className: "draw" };
   }
 
   if (item?.youWon) {
-    return { label: "Победа", className: "win" };
+    return { label: "РџРѕР±РµРґР°", className: "win" };
   }
 
-  return { label: "Поражение", className: "lose" };
+  return { label: "РџРѕСЂР°Р¶РµРЅРёРµ", className: "lose" };
 }
 
 function toggleHistoryMatchDetails(matchId, event) {
@@ -5132,7 +5132,7 @@ function getHistoryEntryModeKey(item) {
 
 function isScannerHistoryEntry(item) {
   const modeKey = getHistoryEntryModeKey(item);
-  return modeKey.includes("сканер") || modeKey.includes("scanner");
+  return modeKey.includes("СЃРєР°РЅРµСЂ") || modeKey.includes("scanner");
 }
 
 function getScannerHistoryResults(item) {
@@ -5173,7 +5173,7 @@ function getScannerHistoryMyMeta(item) {
   const myResult = getScannerHistoryCurrentUserResult(item) || {};
   return {
     id: String(myResult.playerId || myResult.id || myResult.userId || item?.playerId || currentPlayer.id || ""),
-    name: String(item?.myName || myResult.name || currentPlayer.name || "Игрок"),
+    name: String(item?.myName || myResult.name || currentPlayer.name || "РРіСЂРѕРє"),
     avatar: item?.myAvatar || myResult.avatar || currentPlayer.avatar || null,
     color: item?.myColor || item?.roundColor || item?.playerColor || myResult.roundColor || myResult.playerColor || myResult.color || "hsl(182 88% 58%)",
     stake: getScannerHistoryMoneyValue(item?.myStake, item?.stake, item?.bet, myResult.stake, myResult.bet, myResult.score)
@@ -5184,7 +5184,7 @@ function getScannerHistoryWinnerMeta(item) {
   const winnerResult = getScannerHistoryWinnerResult(item) || {};
   return {
     id: String(item?.winnerPlayerId || item?.winnerId || winnerResult.playerId || winnerResult.id || ""),
-    name: String(item?.winnerName || item?.winner || winnerResult.name || "Победитель"),
+    name: String(item?.winnerName || item?.winner || winnerResult.name || "РџРѕР±РµРґРёС‚РµР»СЊ"),
     avatar: item?.winnerAvatar || winnerResult.avatar || null,
     color: item?.winnerColor || winnerResult.roundColor || winnerResult.playerColor || winnerResult.color || "hsl(145 74% 58%)",
     stake: getScannerHistoryMoneyValue(item?.winnerStake, winnerResult.stake, winnerResult.bet, winnerResult.score),
@@ -5204,7 +5204,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
   const winnerMeta = getScannerHistoryWinnerMeta(item);
   const youWon = item?.youWon === true || (winnerMeta.id && winnerMeta.id === String(currentPlayer.id));
   const resultClass = youWon ? "win" : "lose";
-  const resultWord = youWon ? "Выиграл" : "Проиграл";
+  const resultWord = youWon ? "Р’С‹РёРіСЂР°Р»" : "РџСЂРѕРёРіСЂР°Р»";
   const wonAmount = getScannerHistoryMoneyValue(item?.winnerPayout, item?.payout, item?.winPayout, item?.reward, item?.prize);
   const amountText = youWon ? `+${formatTon(wonAmount)}` : `- ${formatTon(myMeta.stake)}`;
   const playedAtText = formatHistoryDate(item?.playedAt || item?.finishedAt || item?.createdAt);
@@ -5220,7 +5220,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
       ${getScannerHistoryAvatarHtml(winnerMeta.name, winnerMeta.avatar)}
       <div class="scanner-player-copy">
         <div class="scanner-history-player-name">${escapeHtml(winnerMeta.name)}</div>
-        <div class="scanner-history-player-meta">Победитель раунда</div>
+        <div class="scanner-history-player-meta">РџРѕР±РµРґРёС‚РµР»СЊ СЂР°СѓРЅРґР°</div>
       </div>
       <div class="scanner-history-winner-payout">+${formatTon(winnerMeta.payout)}</div>
     </div>
@@ -5228,7 +5228,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
 
   return `
     <div class="history-match-card scanner-history-card${expandedClass}" onclick="toggleScannerHistoryDetails('${safeClickId}', event)">
-      <div class="scanner-history-topline">Режим: Сканер</div>
+      <div class="scanner-history-topline">Р РµР¶РёРј: РЎРєР°РЅРµСЂ</div>
       <div class="scanner-history-result-line">
         <div class="scanner-history-result-word ${resultClass}">${resultWord}</div>
         <div class="scanner-history-amount ${resultClass}">${amountText}</div>
@@ -5241,25 +5241,25 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
           ${getScannerHistoryAvatarHtml(myMeta.name, myMeta.avatar)}
           <div class="scanner-player-copy">
             <div class="scanner-history-player-name">${escapeHtml(myMeta.name)}</div>
-            <div class="scanner-history-player-meta">Твой цвет в арене этого раунда</div>
+            <div class="scanner-history-player-meta">РўРІРѕР№ С†РІРµС‚ РІ Р°СЂРµРЅРµ СЌС‚РѕРіРѕ СЂР°СѓРЅРґР°</div>
           </div>
         </div>
 
         <div class="scanner-history-detail-grid">
           <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Игроки в раунде</div>
+            <div class="scanner-history-detail-label">РРіСЂРѕРєРё РІ СЂР°СѓРЅРґРµ</div>
             <div class="scanner-history-detail-value">${formatCompactNumber(participantCount)}</div>
           </div>
           <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Моя ставка</div>
+            <div class="scanner-history-detail-label">РњРѕСЏ СЃС‚Р°РІРєР°</div>
             <div class="scanner-history-detail-value">${formatTon(myMeta.stake)}</div>
           </div>
           <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Общий банк</div>
+            <div class="scanner-history-detail-label">РћР±С‰РёР№ Р±Р°РЅРє</div>
             <div class="scanner-history-detail-value">${formatTon(totalPot)}</div>
           </div>
           <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Мой результат</div>
+            <div class="scanner-history-detail-label">РњРѕР№ СЂРµР·СѓР»СЊС‚Р°С‚</div>
             <div class="scanner-history-detail-value ${resultClass}">${resultWord}</div>
           </div>
         </div>
@@ -5277,7 +5277,7 @@ function renderHistoryEntries(entries) {
   const header = getHistoryPanelHeaderHtml();
 
   if (!Array.isArray(entries) || entries.length === 0) {
-    panel.innerHTML = `${header}<div class="history-scroll-area"><div class="history-panel-empty">Пока нет сыгранных матчей.</div></div>`;
+    panel.innerHTML = `${header}<div class="history-scroll-area"><div class="history-panel-empty">РџРѕРєР° РЅРµС‚ СЃС‹РіСЂР°РЅРЅС‹С… РјР°С‚С‡РµР№.</div></div>`;
     return;
   }
 
@@ -5302,7 +5302,7 @@ function renderHistoryEntries(entries) {
             .map((row) => `
               <tr>
                 <td>${Number(row.place || 0)}</td>
-                <td>${row.name || "Игрок"}</td>
+                <td>${row.name || "РРіСЂРѕРє"}</td>
                 <td>${Number(row.score || 0)}</td>
               </tr>
             `)
@@ -5314,9 +5314,9 @@ function renderHistoryEntries(entries) {
           <table class="history-match-table">
             <thead>
               <tr>
-                <th>Место</th>
-                <th>Игрок</th>
-                <th>Счёт</th>
+                <th>РњРµСЃС‚Рѕ</th>
+                <th>РРіСЂРѕРє</th>
+                <th>РЎС‡С‘С‚</th>
               </tr>
             </thead>
             <tbody>${resultsRows}</tbody>
@@ -5326,7 +5326,7 @@ function renderHistoryEntries(entries) {
 
       return `
         <div class="history-match-card" onclick="toggleHistoryMatchDetails('${matchId.replace(/'/g, "&#39;")}', event)">
-          <div class="history-match-mode">Режим: ${modeLabel}</div>
+          <div class="history-match-mode">Р РµР¶РёРј: ${modeLabel}</div>
           <div class="history-match-result ${resultMeta.className}">${resultMeta.label}</div>
           <div class="history-match-date">${playedAtText}</div>
           ${detailsHtml}
@@ -5334,7 +5334,7 @@ function renderHistoryEntries(entries) {
       `;
     }).join("");
 
-  panel.innerHTML = `${header}<div class="history-scroll-area">${items || `<div class="history-panel-empty">Пока нет сыгранных матчей.</div>`}</div>`;
+  panel.innerHTML = `${header}<div class="history-scroll-area">${items || `<div class="history-panel-empty">РџРѕРєР° РЅРµС‚ СЃС‹РіСЂР°РЅРЅС‹С… РјР°С‚С‡РµР№.</div>`}</div>`;
 }
 
 async function loadGameHistory() {
@@ -5345,7 +5345,7 @@ async function loadGameHistory() {
   panel.innerHTML = `
     ${getHistoryPanelHeaderHtml()}
     <div class="history-scroll-area">
-      <div class="history-panel-text">Загрузка...</div>
+      <div class="history-panel-text">Р—Р°РіСЂСѓР·РєР°...</div>
     </div>
   `;
 
@@ -5360,11 +5360,11 @@ async function loadGameHistory() {
     snapshot.forEach((doc) => entries.push(doc.data() || {}));
     renderHistoryEntries(entries);
   } catch (error) {
-    console.error("Ошибка загрузки истории игр:", error);
+    console.error("РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РёСЃС‚РѕСЂРёРё РёРіСЂ:", error);
     panel.innerHTML = `
       ${getHistoryPanelHeaderHtml()}
       <div class="history-scroll-area">
-        <div class="history-panel-text">Не удалось загрузить историю игр.</div>
+        <div class="history-panel-text">РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РёСЃС‚РѕСЂРёСЋ РёРіСЂ.</div>
       </div>
     `;
   } finally {
@@ -5382,14 +5382,14 @@ async function openLeaderboard() {
 
   setActiveBottomNav("leaderboard");
   modal.style.display = "flex";
-  contentDiv.innerHTML = "<div class='history-panel-text'>Загрузка...</div>";
+  contentDiv.innerHTML = "<div class='history-panel-text'>Р—Р°РіСЂСѓР·РєР°...</div>";
 
   try {
     const snapshot = await db.collection("leaderboard").orderBy("score", "desc").limit(10).get();
     contentDiv.innerHTML = "";
 
     if (snapshot.empty) {
-      contentDiv.innerHTML = "<div class='history-panel-text'>Пока нет рекордов.</div>";
+      contentDiv.innerHTML = "<div class='history-panel-text'>РџРѕРєР° РЅРµС‚ СЂРµРєРѕСЂРґРѕРІ.</div>";
       return;
     }
 
@@ -5401,7 +5401,7 @@ async function openLeaderboard() {
 
       const name = document.createElement("div");
       name.className = "leaderboard-row-name";
-      name.textContent = `${index}. ${p.name || "Игрок"}`;
+      name.textContent = `${index}. ${p.name || "РРіСЂРѕРє"}`;
 
       const score = document.createElement("div");
       score.className = "leaderboard-row-score";
@@ -5413,8 +5413,8 @@ async function openLeaderboard() {
       index += 1;
     });
   } catch (error) {
-    console.error("Ошибка загрузки таблицы:", error);
-    contentDiv.innerHTML = "<div class='history-panel-text'>Ошибка загрузки таблицы.</div>";
+    console.error("РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё С‚Р°Р±Р»РёС†С‹:", error);
+    contentDiv.innerHTML = "<div class='history-panel-text'>РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё С‚Р°Р±Р»РёС†С‹.</div>";
   }
 }
 
@@ -5440,15 +5440,15 @@ function renderBobrRunRooms() {
   if (roomsList) {
     roomsList.innerHTML = `
       <div class="rooms-note compact-note">
-        <strong>Комнаты Bobr Run пока не подключены.</strong><br>
-        Этот раздел подготовлен только для будущего Bobr Run. Он не связан со Scanner Grid, не использует pvp_runtime и не влияет на общий PvP-раунд, банк, участников, статусы или историю Сканер-сетки.
+        <strong>РљРѕРјРЅР°С‚С‹ Bobr Run РїРѕРєР° РЅРµ РїРѕРґРєР»СЋС‡РµРЅС‹.</strong><br>
+        Р­С‚РѕС‚ СЂР°Р·РґРµР» РїРѕРґРіРѕС‚РѕРІР»РµРЅ С‚РѕР»СЊРєРѕ РґР»СЏ Р±СѓРґСѓС‰РµРіРѕ Bobr Run. РћРЅ РЅРµ СЃРІСЏР·Р°РЅ СЃРѕ Scanner Grid, РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚ pvp_runtime Рё РЅРµ РІР»РёСЏРµС‚ РЅР° РѕР±С‰РёР№ PvP-СЂР°СѓРЅРґ, Р±Р°РЅРє, СѓС‡Р°СЃС‚РЅРёРєРѕРІ, СЃС‚Р°С‚СѓСЃС‹ РёР»Рё РёСЃС‚РѕСЂРёСЋ РЎРєР°РЅРµСЂ-СЃРµС‚РєРё.
       </div>
     `;
   }
 
   if (createRoomBtn) {
-    createRoomBtn.textContent = "Создать комнату Bobr Run";
-    createRoomBtn.title = "Заглушка для будущего подключения комнат Bobr Run к Firebase";
+    createRoomBtn.textContent = "РЎРѕР·РґР°С‚СЊ РєРѕРјРЅР°С‚Сѓ Bobr Run";
+    createRoomBtn.title = "Р—Р°РіР»СѓС€РєР° РґР»СЏ Р±СѓРґСѓС‰РµРіРѕ РїРѕРґРєР»СЋС‡РµРЅРёСЏ РєРѕРјРЅР°С‚ Bobr Run Рє Firebase";
   }
 }
 
@@ -5534,17 +5534,17 @@ function hideAppNotice(event) {
 
 function showBobrRunComingSoon(event) {
   if (event) event.stopPropagation();
-  showAppNotice("Игра на стадии разработке", { timeoutMs: 2600, closeModeMenu: true });
+  showAppNotice("РРіСЂР° РЅР° СЃС‚Р°РґРёРё СЂР°Р·СЂР°Р±РѕС‚РєРµ", { timeoutMs: 2600, closeModeMenu: true });
 }
 
 function openSkins(event) {
   if (event) event.stopPropagation();
   closeModePopup();
-  showAppNotice("Скины на стадии разработке", { timeoutMs: 2600 });
+  showAppNotice("РЎРєРёРЅС‹ РЅР° СЃС‚Р°РґРёРё СЂР°Р·СЂР°Р±РѕС‚РєРµ", { timeoutMs: 2600 });
 }
 
 function openWallet() {
-  alert("Кошелёк");
+  alert("РљРѕС€РµР»С‘Рє");
 }
 
 const SETTINGS_STORAGE_KEY = "bobr_world_app_settings_v1";
@@ -5567,29 +5567,29 @@ delete window._savedAppSettings;
 
 const APP_TRANSLATIONS = {
   ru: {
-    balance: "Баланс", wallet: "Кошелёк", tabLeaderboard: "Таблица",
-    tabGames: "Игры", tabPvp: "PvP", tabSkins: "Скины", tabHistory: "История",
-    settingsTitle: "Настройки", connecting: "Подключение...",
-    waitingRound: "Ожидание раунда...", players: "Игроки",
-    recentRounds: "Последние раунды", scanner: "Сканер",
-    bank: "Банк", myChance: "Мои шансы", allIn: "Ва-банк",
-    play: "Играть", history: "История", leaderboard: "Таблица лидеров",
-    gameHistory: "История игр", modeScanner: "Режим: Сканер",
-    won: "Выиграл", lost: "Проиграл", yourColor: "Твой цвет в арене этого раунда",
-    playersInRound: "Игроки в раунде", myStake: "Моя ставка",
-    totalBank: "Общий банк", myResult: "Мой результат",
-    playerProfile: "ПРОФИЛЬ ИГРОКА", deposit: "Пополнить", withdraw: "Вывести",
-    totalWins: "ВСЕГО ПОБЕД", settings: "Настройки",
-    language: "ЯЗЫК", graphicsQuality: "КАЧЕСТВО ГРАФИКИ",
-    vibration: "ВИБРАЦИЯ", low: "Низкое", medium: "Среднее", high: "Высокое",
-    on: "Вкл", off: "Выкл", winner: "Победитель",
-    dateTime: "Дата и время", playersCount: "Игроков", stake: "Ставка",
-    waitingPlayers: "Ожидание игроков...", bestWin: "Лучший выигрыш в раунде",
-    joinRound: "Войти в раунд", lobbyFull: "Раунд заполнен", shuffling: "Перемешивание",
-    roundActive: "Раунд идёт", roundFinished: "Показ результата", preparing: "Подготовка",
-    addStake: "Добавить", joinBeforeStart: "Войти до старта",
-    stakeSettings: "Настройка ставок", reset: "Сбросить", save: "Сохранить",
-    qualityAuto: "Авто", fpsLabel: "ЧАСТОТА КАДРОВ", fpsAuto: "Авто"
+    balance: "Р‘Р°Р»Р°РЅСЃ", wallet: "РљРѕС€РµР»С‘Рє", tabLeaderboard: "РўР°Р±Р»РёС†Р°",
+    tabGames: "РРіСЂС‹", tabPvp: "PvP", tabSkins: "РЎРєРёРЅС‹", tabHistory: "РСЃС‚РѕСЂРёСЏ",
+    settingsTitle: "РќР°СЃС‚СЂРѕР№РєРё", connecting: "РџРѕРґРєР»СЋС‡РµРЅРёРµ...",
+    waitingRound: "РћР¶РёРґР°РЅРёРµ СЂР°СѓРЅРґР°...", players: "РРіСЂРѕРєРё",
+    recentRounds: "РџРѕСЃР»РµРґРЅРёРµ СЂР°СѓРЅРґС‹", scanner: "РЎРєР°РЅРµСЂ",
+    bank: "Р‘Р°РЅРє", myChance: "РњРѕРё С€Р°РЅСЃС‹", allIn: "Р’Р°-Р±Р°РЅРє",
+    play: "РРіСЂР°С‚СЊ", history: "РСЃС‚РѕСЂРёСЏ", leaderboard: "РўР°Р±Р»РёС†Р° Р»РёРґРµСЂРѕРІ",
+    gameHistory: "РСЃС‚РѕСЂРёСЏ РёРіСЂ", modeScanner: "Р РµР¶РёРј: РЎРєР°РЅРµСЂ",
+    won: "Р’С‹РёРіСЂР°Р»", lost: "РџСЂРѕРёРіСЂР°Р»", yourColor: "РўРІРѕР№ С†РІРµС‚ РІ Р°СЂРµРЅРµ СЌС‚РѕРіРѕ СЂР°СѓРЅРґР°",
+    playersInRound: "РРіСЂРѕРєРё РІ СЂР°СѓРЅРґРµ", myStake: "РњРѕСЏ СЃС‚Р°РІРєР°",
+    totalBank: "РћР±С‰РёР№ Р±Р°РЅРє", myResult: "РњРѕР№ СЂРµР·СѓР»СЊС‚Р°С‚",
+    playerProfile: "РџР РћР¤РР›Р¬ РР“Р РћРљРђ", deposit: "РџРѕРїРѕР»РЅРёС‚СЊ", withdraw: "Р’С‹РІРµСЃС‚Рё",
+    totalWins: "Р’РЎР•Р“Рћ РџРћР‘Р•Р”", settings: "РќР°СЃС‚СЂРѕР№РєРё",
+    language: "РЇР—Р«Рљ", graphicsQuality: "РљРђР§Р•РЎРўР’Рћ Р“Р РђР¤РРљР",
+    vibration: "Р’РР‘Р РђР¦РРЇ", low: "РќРёР·РєРѕРµ", medium: "РЎСЂРµРґРЅРµРµ", high: "Р’С‹СЃРѕРєРѕРµ",
+    on: "Р’РєР»", off: "Р’С‹РєР»", winner: "РџРѕР±РµРґРёС‚РµР»СЊ",
+    dateTime: "Р”Р°С‚Р° Рё РІСЂРµРјСЏ", playersCount: "РРіСЂРѕРєРѕРІ", stake: "РЎС‚Р°РІРєР°",
+    waitingPlayers: "РћР¶РёРґР°РЅРёРµ РёРіСЂРѕРєРѕРІ...", bestWin: "Р›СѓС‡С€РёР№ РІС‹РёРіСЂС‹С€ РІ СЂР°СѓРЅРґРµ",
+    joinRound: "Р’РѕР№С‚Рё РІ СЂР°СѓРЅРґ", lobbyFull: "Р Р°СѓРЅРґ Р·Р°РїРѕР»РЅРµРЅ", shuffling: "РџРµСЂРµРјРµС€РёРІР°РЅРёРµ",
+    roundActive: "Р Р°СѓРЅРґ РёРґС‘С‚", roundFinished: "РџРѕРєР°Р· СЂРµР·СѓР»СЊС‚Р°С‚Р°", preparing: "РџРѕРґРіРѕС‚РѕРІРєР°",
+    addStake: "Р”РѕР±Р°РІРёС‚СЊ", joinBeforeStart: "Р’РѕР№С‚Рё РґРѕ СЃС‚Р°СЂС‚Р°",
+    stakeSettings: "РќР°СЃС‚СЂРѕР№РєР° СЃС‚Р°РІРѕРє", reset: "РЎР±СЂРѕСЃРёС‚СЊ", save: "РЎРѕС…СЂР°РЅРёС‚СЊ",
+    qualityAuto: "РђРІС‚Рѕ", fpsLabel: "Р§РђРЎРўРћРўРђ РљРђР”Р РћР’", fpsAuto: "РђРІС‚Рѕ"
   },
     en: {
     balance: "Balance", wallet: "Wallet", tabLeaderboard: "Leaderboard",
@@ -6257,7 +6257,7 @@ function buildScannerPlayersFromFirestore(round, participants) {
   const participantsWithColors = assignScannerRoundColors(round, renderParticipants);
   const normalized = participantsWithColors.map(({ participant, color }, index) => ({
     id: String(participant.playerId || participant.id || `player_${index}`),
-    name: participant.name || "Игрок",
+    name: participant.name || "РРіСЂРѕРє",
     avatar: participant.avatar || null,
     stake: normalizeStakeValue(participant.stake),
     joinedAt: tsToMs(participant.joinedAt || participant.createdAt || participant.updatedAt || Date.now()),
@@ -6544,7 +6544,7 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     ? lerpScannerAngle(targetAngles.travelAngle, motionAngleFromStep, stepAngleInfluence)
     : targetAngles.travelAngle;
   const renderAngleOffset = getScannerAngleDelta(targetAngles.travelAngle, targetAngles.renderAngle);
-  // smoothedTravelAngle first — desiredRenderAngle is based on it so the render
+  // smoothedTravelAngle first вЂ” desiredRenderAngle is based on it so the render
   // target changes gradually instead of snapping to the new direction instantly.
   // This prevents lerpScannerAngle from picking a "shortest path" that reverses
   // an in-progress rotation when a second bounce arrives mid-turn.
@@ -6908,8 +6908,8 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
 function getScannerSharedLobbyBeamSample(timestampMs = getNetworkTime()) {
   return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
-// --- Reticle (point) simulator -----------------------------------------------
-// Отвечает за движение точки: скорость, направление и физику отскока от стен.
+// в”Ђв”Ђв”Ђ Reticle (point) simulator в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// РћС‚РІРµС‡Р°РµС‚ Р·Р° РґРІРёР¶РµРЅРёРµ С‚РѕС‡РєРё: СЃРєРѕСЂРѕСЃС‚СЊ, РЅР°РїСЂР°РІР»РµРЅРёРµ Рё С„РёР·РёРєСѓ РѕС‚СЃРєРѕРєР° РѕС‚ СЃС‚РµРЅ.
 function simulateScannerReticleSamples(options = {}) {
   const durationMs = Math.max(0, Number(options.durationMs) || 0);
   const safePad = clampScannerNumber(options.pad ?? SCANNER_ACTIVE_BEAM_EDGE_PADDING, 0, 0.24);
@@ -7059,10 +7059,10 @@ function simulateScannerReticleSamples(options = {}) {
   return { samples, bounceLog, initialBeamAngle, finalDirection: direction, finalPosition: position };
 }
 
-// --- Laser beam rotation applier ---------------------------------------------
-// Отвечает за скорость визуального разворота луча после отскока от стены.
-// options.turnCarry — доля оставшегося угла, которую луч проворачивает за один
-// отрезок пути (0..1). Меньше = медленнее. По умолчанию SCANNER_BEAM_LASER_TURN_CARRY.
+// в”Ђв”Ђв”Ђ Laser beam rotation applier в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// РћС‚РІРµС‡Р°РµС‚ Р·Р° СЃРєРѕСЂРѕСЃС‚СЊ РІРёР·СѓР°Р»СЊРЅРѕРіРѕ СЂР°Р·РІРѕСЂРѕС‚Р° Р»СѓС‡Р° РїРѕСЃР»Рµ РѕС‚СЃРєРѕРєР° РѕС‚ СЃС‚РµРЅС‹.
+// options.turnCarry вЂ” РґРѕР»СЏ РѕСЃС‚Р°РІС€РµРіРѕСЃСЏ СѓРіР»Р°, РєРѕС‚РѕСЂСѓСЋ Р»СѓС‡ РїСЂРѕРІРѕСЂР°С‡РёРІР°РµС‚ Р·Р° РѕРґРёРЅ
+// РѕС‚СЂРµР·РѕРє РїСѓС‚Рё (0..1). РњРµРЅСЊС€Рµ = РјРµРґР»РµРЅРЅРµРµ. РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ SCANNER_BEAM_LASER_TURN_CARRY.
 function applyScannerBeamLaserAngles(samples, bounceLog, initialBeamAngle, options = {}) {
   const turnCarry = Math.max(0.001, Math.min(1, Number(options.turnCarry) || SCANNER_BEAM_LASER_TURN_CARRY));
   const turnEaseEnd = Math.max(0.1, Math.min(1, Number(options.turnEaseEnd) || SCANNER_BEAM_LASER_TURN_EASE_END));
@@ -7090,8 +7090,8 @@ function applyScannerBeamLaserAngles(samples, bounceLog, initialBeamAngle, optio
   }
 }
 
-// --- Combined simulator (неизменный публичный API) ---------------------------
-// Вызывает simulateScannerReticleSamples + applyScannerBeamLaserAngles.
+// в”Ђв”Ђв”Ђ Combined simulator (РЅРµРёР·РјРµРЅРЅС‹Р№ РїСѓР±Р»РёС‡РЅС‹Р№ API) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Р’С‹Р·С‹РІР°РµС‚ simulateScannerReticleSamples + applyScannerBeamLaserAngles.
 function simulateScannerBeamBounceSamples(options = {}) {
   const { samples, bounceLog, initialBeamAngle, finalDirection, finalPosition } =
     simulateScannerReticleSamples(options);
@@ -7769,7 +7769,7 @@ function initSocketConnection() {
 
 function applySocketRoundPatch(patch) {
   if (!patch) return;
-  console.log('[patch] Получен:', JSON.stringify(patch));
+  console.log('[patch] РџРѕР»СѓС‡РµРЅ:', JSON.stringify(patch));
   if (patch.status !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
     scannerRealtime.roundData.status = patch.status;
@@ -7877,7 +7877,7 @@ function ensureScannerVisualLoop() {
 function startScannerHeartbeat() {
   stopScannerHeartbeat();
   scannerRealtime.heartbeatTimer = setInterval(() => {
-    updateScannerHeartbeat().catch((error) => console.warn("Heartbeat scanner не обновлён:", error));
+    updateScannerHeartbeat().catch((error) => console.warn("Heartbeat scanner РЅРµ РѕР±РЅРѕРІР»С‘РЅ:", error));
   }, SCANNER_HEARTBEAT_MS);
 }
 
@@ -7893,7 +7893,7 @@ function startScannerLifecycleTimer() {
   scannerRealtime.lifecycleTimer = setInterval(() => {
     syncScannerDerivedState();
     renderScannerRound();
-    ensureScannerRoundLifecycle().catch((error) => console.warn("Не удалось продвинуть фазу раунда:", error));
+    ensureScannerRoundLifecycle().catch((error) => console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕРґРІРёРЅСѓС‚СЊ С„Р°Р·Сѓ СЂР°СѓРЅРґР°:", error));
   }, 500);
 }
 
@@ -8001,7 +8001,7 @@ function hasScannerRoundVisibleState(round) {
 
 function syncScannerDerivedState() {
   const currentPlayer = getCurrentPlayer();
-  const now = getNetworkTime(); // <-- Изменено для точного интерфейса
+  const now = getNetworkTime(); // <-- РР·РјРµРЅРµРЅРѕ РґР»СЏ С‚РѕС‡РЅРѕРіРѕ РёРЅС‚РµСЂС„РµР№СЃР°
   scannerGridState.myPlayerId = currentPlayer.id;
 
   const round = scannerRealtime.roundData || null; 
@@ -8142,12 +8142,12 @@ function syncScannerDerivedState() {
 
   if (scannerGridState.status === "finished" && round?.payoutProcessed !== true) {
     processScannerRoundPayoutOnce(round.id).catch((error) => {
-      console.warn("Не удалось обработать выплату победителю:", error);
+      console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±СЂР°Р±РѕС‚Р°С‚СЊ РІС‹РїР»Р°С‚Сѓ РїРѕР±РµРґРёС‚РµР»СЋ:", error);
     });
   }
 
   ensureScannerRoundHistoryPersisted().catch((error) => {
-    console.warn("Не удалось сохранить историю раунда пользователю:", error);
+    console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РёСЃС‚РѕСЂРёСЋ СЂР°СѓРЅРґР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ:", error);
   });
 }
 
@@ -8166,7 +8166,7 @@ function computeDeterministicRoundResult(round, participants) {
   return {
     winningCellIndex,
     winnerPlayerId: winnerPlayer?.id || null,
-    winnerName: winnerPlayer?.name || "Игрок",
+    winnerName: winnerPlayer?.name || "РРіСЂРѕРє",
     winnerStake: Number(winnerPlayer?.stake || 0),
     players: finalized.players
   };
@@ -8175,7 +8175,7 @@ function computeDeterministicRoundResult(round, participants) {
 async function joinOrCreateScannerRound() {
   if (scannerRealtime.isJoinBusy) return;
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", {
+    setScannerTransientMessage("РЎС‚Р°РІРєРё Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅС‹ РґРѕ РѕРєРѕРЅС‡Р°РЅРёСЏ С‚РµРєСѓС‰РµРіРѕ СЂР°СѓРЅРґР°.", {
       type: "info",
       timeoutMs: 5000
     });
@@ -8198,7 +8198,7 @@ async function joinOrCreateScannerRound() {
     let nextBalanceAfterStake = null;
 
     if (!Number.isFinite(stakeToAdd) || stakeToAdd <= 0) {
-      throw new Error("Выбери корректную ставку перед входом в раунд.");
+      throw new Error("Р’С‹Р±РµСЂРё РєРѕСЂСЂРµРєС‚РЅСѓСЋ СЃС‚Р°РІРєСѓ РїРµСЂРµРґ РІС…РѕРґРѕРј РІ СЂР°СѓРЅРґ.");
     }
 
     await db.runTransaction(async (tx) => {
@@ -8247,9 +8247,9 @@ async function joinOrCreateScannerRound() {
       if (!hasReusableLobby) {
         if (targetRoundRef && targetRoundData && ["shuffling", "active", "finished", "preparing_next_round"].includes(currentStatus)) {
           if (currentStatus === "active") {
-            throw new Error("Общий раунд уже идёт. Дождись следующего общего входа.");
+            throw new Error("РћР±С‰РёР№ СЂР°СѓРЅРґ СѓР¶Рµ РёРґС‘С‚. Р”РѕР¶РґРёСЃСЊ СЃР»РµРґСѓСЋС‰РµРіРѕ РѕР±С‰РµРіРѕ РІС…РѕРґР°.");
           }
-          throw new Error("Текущий раунд ещё завершается. Новая lobby откроется автоматически.");
+          throw new Error("РўРµРєСѓС‰РёР№ СЂР°СѓРЅРґ РµС‰С‘ Р·Р°РІРµСЂС€Р°РµС‚СЃСЏ. РќРѕРІР°СЏ lobby РѕС‚РєСЂРѕРµС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.");
         }
         createNewRound = true;
         const nowMs = Date.now();
@@ -8299,7 +8299,7 @@ async function joinOrCreateScannerRound() {
 
       const targetStatus = String(targetRoundData?.status || "waiting");
       if (["shuffling", "active", "finished", "preparing_next_round"].includes(targetStatus)) {
-        throw new Error("Текущий общий раунд уже закрыт для входа.");
+        throw new Error("РўРµРєСѓС‰РёР№ РѕР±С‰РёР№ СЂР°СѓРЅРґ СѓР¶Рµ Р·Р°РєСЂС‹С‚ РґР»СЏ РІС…РѕРґР°.");
       }
 
       const currentParticipantCount = Number(targetRoundData?.participantCount || 0);
@@ -8308,7 +8308,7 @@ async function joinOrCreateScannerRound() {
       const isRoundFullForNewJoin = !participantAlreadyInside && currentParticipantCount >= maxPlayers;
 
       if (isRoundFullForNewJoin) {
-        throw new Error("Текущая общая lobby уже заполнена. Дождись следующего раунда.");
+        throw new Error("РўРµРєСѓС‰Р°СЏ РѕР±С‰Р°СЏ lobby СѓР¶Рµ Р·Р°РїРѕР»РЅРµРЅР°. Р”РѕР¶РґРёСЃСЊ СЃР»РµРґСѓСЋС‰РµРіРѕ СЂР°СѓРЅРґР°.");
       }
 
       const previousStake = participantAlreadyInside
@@ -8410,16 +8410,16 @@ async function joinOrCreateScannerRound() {
       if (nextBalanceAfterStake !== null) {
         syncLocalDemoBalance(nextBalanceAfterStake);
       }
-      setScannerTransientMessage("Ты подключён к общему PvP-раунду.", { type: "success", timeoutMs: 4000, render: false });
+      setScannerTransientMessage("РўС‹ РїРѕРґРєР»СЋС‡С‘РЅ Рє РѕР±С‰РµРјСѓ PvP-СЂР°СѓРЅРґСѓ.", { type: "success", timeoutMs: 4000, render: false });
       enterScannerGridMode();
       renderScannerRound();
     }
   } catch (error) {
-    reportAppError("Не удалось войти в общий раунд:", error);
+    reportAppError("РќРµ СѓРґР°Р»РѕСЃСЊ РІРѕР№С‚Рё РІ РѕР±С‰РёР№ СЂР°СѓРЅРґ:", error);
     if (isInsufficientBalanceError(error)) {
       showInsufficientBalanceModal();
     } else {
-      setScannerTransientMessage(error?.message || "Не удалось войти в общий раунд.", {
+      setScannerTransientMessage(error?.message || "РќРµ СѓРґР°Р»РѕСЃСЊ РІРѕР№С‚Рё РІ РѕР±С‰РёР№ СЂР°СѓРЅРґ.", {
         type: "error",
         timeoutMs: 6000
       });
@@ -8762,7 +8762,7 @@ async function ensureScannerRoundLifecycle() {
           });
 
           if (String(renderParticipants[0].playerId || "") === String(getCurrentPlayer().id)) {
-            setScannerTransientMessage("Второй игрок не зашёл. Ставка возвращена, арена сброшена.", {
+            setScannerTransientMessage("Р’С‚РѕСЂРѕР№ РёРіСЂРѕРє РЅРµ Р·Р°С€С‘Р». РЎС‚Р°РІРєР° РІРѕР·РІСЂР°С‰РµРЅР°, Р°СЂРµРЅР° СЃР±СЂРѕС€РµРЅР°.", {
               type: "info",
               timeoutMs: 5000
             });
@@ -8955,7 +8955,7 @@ async function ensureScannerRoundHistoryPersisted() {
     playedAt: new Date(tsToMs(round.finishedAt) || Date.now()).toISOString(),
     finishedAt: new Date(tsToMs(round.finishedAt) || Date.now()).toISOString(),
     savedAt: Date.now(),
-    mode: "Сканер-сетка",
+    mode: "РЎРєР°РЅРµСЂ-СЃРµС‚РєР°",
     status: round.status,
     winner: winnerPlayer.name,
     winnerName: winnerPlayer.name,
@@ -8994,7 +8994,7 @@ async function ensureScannerRoundHistoryPersisted() {
     getHistoryCollectionRef(currentPlayer.id).doc(round.id).set(summary, { merge: true }),
     scannerHistoryCollection().doc(round.id).set({
       roundId: round.id,
-      mode: "Сканер-сетка",
+      mode: "РЎРєР°РЅРµСЂ-СЃРµС‚РєР°",
       status: round.status,
       finishedAt: round.finishedAt || createTimestampFromNow(0),
       totalPot: Number(scannerGridState.totalPot || 0),
@@ -9041,9 +9041,9 @@ function sanitizeScannerStakeInput(value) {
 }
 
 function formatScannerStakeButtonValue(value) {
-  if (value === "" || value === null || value === undefined) return "—";
+  if (value === "" || value === null || value === undefined) return "вЂ”";
   const number = normalizeStakeValue(value);
-  if (!number) return "—";
+  if (!number) return "вЂ”";
   return String(number).replace(".", ",");
 }
 
@@ -9061,7 +9061,7 @@ function loadScannerQuickStakeValues() {
 
     return values;
   } catch (error) {
-    console.warn("Не удалось загрузить быстрые ставки:", error);
+    console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ Р±С‹СЃС‚СЂС‹Рµ СЃС‚Р°РІРєРё:", error);
     return SCANNER_DEFAULT_QUICK_STAKES.slice();
   }
 }
@@ -9070,7 +9070,7 @@ function persistScannerQuickStakeValues(values) {
   try {
     localStorage.setItem(SCANNER_QUICK_STAKES_STORAGE_KEY, JSON.stringify(values));
   } catch (error) {
-    console.warn("Не удалось сохранить быстрые ставки:", error);
+    console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ Р±С‹СЃС‚СЂС‹Рµ СЃС‚Р°РІРєРё:", error);
   }
 }
 
@@ -9232,7 +9232,7 @@ function saveScannerStakeSettings(event) {
       input.value = scannerStakeSettingsState.draftValues[invalidIndex] || "";
       input.focus({ preventScroll: true });
     }
-    setScannerStakeSettingsError("Каждая быстрая ставка должна быть числом больше 0.");
+    setScannerStakeSettingsError("РљР°Р¶РґР°СЏ Р±С‹СЃС‚СЂР°СЏ СЃС‚Р°РІРєР° РґРѕР»Р¶РЅР° Р±С‹С‚СЊ С‡РёСЃР»РѕРј Р±РѕР»СЊС€Рµ 0.");
     return;
   }
 
@@ -9258,12 +9258,12 @@ async function setScannerQuickStake(value, event) {
   if (event) event.stopPropagation();
   const nextStake = normalizeStakeValue(value);
   if (!nextStake || nextStake <= 0) {
-    setScannerTransientMessage("Некорректная ставка.", { type: "error", timeoutMs: 5000 });
+    setScannerTransientMessage("РќРµРєРѕСЂСЂРµРєС‚РЅР°СЏ СЃС‚Р°РІРєР°.", { type: "error", timeoutMs: 5000 });
     return;
   }
 
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", { type: "info", timeoutMs: 5000 });
+    setScannerTransientMessage("РЎС‚Р°РІРєРё Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅС‹ РґРѕ РѕРєРѕРЅС‡Р°РЅРёСЏ С‚РµРєСѓС‰РµРіРѕ СЂР°СѓРЅРґР°.", { type: "info", timeoutMs: 5000 });
     renderScannerBetBar();
     return;
   }
@@ -9282,7 +9282,7 @@ async function setScannerAllInStake(event) {
   }
 
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", { type: "info", timeoutMs: 5000 });
+    setScannerTransientMessage("РЎС‚Р°РІРєРё Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅС‹ РґРѕ РѕРєРѕРЅС‡Р°РЅРёСЏ С‚РµРєСѓС‰РµРіРѕ СЂР°СѓРЅРґР°.", { type: "info", timeoutMs: 5000 });
     renderScannerBetBar();
     return;
   }
@@ -9309,7 +9309,7 @@ async function startOrJoinScannerRound(event) {
   const currentParticipant = getScannerParticipantById(currentPlayer.id);
 
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", {
+    setScannerTransientMessage("РЎС‚Р°РІРєРё Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅС‹ РґРѕ РѕРєРѕРЅС‡Р°РЅРёСЏ С‚РµРєСѓС‰РµРіРѕ СЂР°СѓРЅРґР°.", {
       type: "info",
       timeoutMs: 5000
     });
@@ -9318,7 +9318,7 @@ async function startOrJoinScannerRound(event) {
   }
 
   if (status === "shuffling" || status === "finished" || status === "preparing_next_round") {
-    setScannerTransientMessage("Сейчас идёт завершение текущего общего раунда. Следующая lobby откроется автоматически.", {
+    setScannerTransientMessage("РЎРµР№С‡Р°СЃ РёРґС‘С‚ Р·Р°РІРµСЂС€РµРЅРёРµ С‚РµРєСѓС‰РµРіРѕ РѕР±С‰РµРіРѕ СЂР°СѓРЅРґР°. РЎР»РµРґСѓСЋС‰Р°СЏ lobby РѕС‚РєСЂРѕРµС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.", {
       type: "info",
       timeoutMs: 5000
     });
@@ -9343,7 +9343,7 @@ async function resetScannerRound(event) {
     try {
       await leaveScannerRound({ reason: "reset" });
     } catch (error) {
-      console.warn("Не удалось выйти из lobby при сбросе:", error);
+      console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹Р№С‚Рё РёР· lobby РїСЂРё СЃР±СЂРѕСЃРµ:", error);
     }
   }
 }
@@ -9493,7 +9493,7 @@ function renderScannerParticipants() {
   if (toggleButton) {
     toggleButton.classList.toggle("is-open", expanded);
     toggleButton.setAttribute("aria-expanded", String(expanded));
-    toggleButton.setAttribute("aria-label", expanded ? "Скрыть игроков" : "Показать игроков");
+    toggleButton.setAttribute("aria-label", expanded ? "РЎРєСЂС‹С‚СЊ РёРіСЂРѕРєРѕРІ" : "РџРѕРєР°Р·Р°С‚СЊ РёРіСЂРѕРєРѕРІ");
   }
 
   list.className = `scanner-player-list ${expanded ? "is-expanded" : "is-collapsed"}`;
@@ -9511,7 +9511,7 @@ function renderScannerParticipants() {
 
   if (!scannerGridState.players.length) {
     if (scannerGridState.roundData && hasScannerRoundVisibleState(scannerGridState.roundData)) {
-      setInnerHtmlIfChanged(list, `<div class="scanner-empty">Подгружаем текущее состояние игроков этого раунда...</div>`);
+      setInnerHtmlIfChanged(list, `<div class="scanner-empty">РџРѕРґРіСЂСѓР¶Р°РµРј С‚РµРєСѓС‰РµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ РёРіСЂРѕРєРѕРІ СЌС‚РѕРіРѕ СЂР°СѓРЅРґР°...</div>`);
     } else {
       setInnerHtmlIfChanged(list, "");
     }
@@ -9575,12 +9575,12 @@ function renderScannerRecentList() {
     toggleButton.disabled = !canExpand;
     toggleButton.classList.toggle("is-open", expanded && canExpand);
     toggleButton.setAttribute("aria-expanded", String(expanded && canExpand));
-    toggleButton.setAttribute("aria-label", expanded && canExpand ? "Скрыть последние раунды" : "Показать последние раунды");
+    toggleButton.setAttribute("aria-label", expanded && canExpand ? "РЎРєСЂС‹С‚СЊ РїРѕСЃР»РµРґРЅРёРµ СЂР°СѓРЅРґС‹" : "РџРѕРєР°Р·Р°С‚СЊ РїРѕСЃР»РµРґРЅРёРµ СЂР°СѓРЅРґС‹");
     toggleButton.style.opacity = canExpand ? "1" : "0.45";
   }
 
   if (!items.length) {
-    setInnerHtmlIfChanged(container, `<div class="scanner-empty">Глобальная история раундов пока пуста.</div>`);
+    setInnerHtmlIfChanged(container, `<div class="scanner-empty">Р“Р»РѕР±Р°Р»СЊРЅР°СЏ РёСЃС‚РѕСЂРёСЏ СЂР°СѓРЅРґРѕРІ РїРѕРєР° РїСѓСЃС‚Р°.</div>`);
     return;
   }
 
@@ -9600,14 +9600,14 @@ function renderScannerRecentList() {
       (Array.isArray(item.results)
         ? (item.results.find((row) => String(row.playerId || row.id || row.userId || "") === String(item.winnerPlayerId || ""))?.name || "")
         : "")
-    ).trim() || "Победитель";
+    ).trim() || "РџРѕР±РµРґРёС‚РµР»СЊ";
 
     return `
       <div class="scanner-recent-card">
         <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
         <div class="scanner-recent-copy">
-          <div class="scanner-recent-title">Победитель: ${escapeHtml(winnerNickname)}</div>
-          <div class="scanner-recent-meta">Дата и время: ${finishedAtText} · Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText}</div>
+          <div class="scanner-recent-title">РџРѕР±РµРґРёС‚РµР»СЊ: ${escapeHtml(winnerNickname)}</div>
+          <div class="scanner-recent-meta">Р”Р°С‚Р° Рё РІСЂРµРјСЏ: ${finishedAtText} В· РРіСЂРѕРєРѕРІ: ${playersCountText} В· РЎС‚Р°РІРєР°: ${formatTon(winnerStake)} В· ${multiplierText}</div>
         </div>
         <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
       </div>
@@ -9652,7 +9652,7 @@ function renderScannerBetBar() {
     button.classList.toggle("active", Number(selectedStake) === Number(normalizedValue) && !bettingLocked);
     button.classList.toggle("is-locked", bettingLocked);
     button.disabled = shouldDisable;
-    button.setAttribute("aria-label", bettingLocked ? "Ставки заблокированы до окончания раунда" : `Поставить ${formatTon(normalizedValue)}`);
+    button.setAttribute("aria-label", bettingLocked ? "РЎС‚Р°РІРєРё Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅС‹ РґРѕ РѕРєРѕРЅС‡Р°РЅРёСЏ СЂР°СѓРЅРґР°" : `РџРѕСЃС‚Р°РІРёС‚СЊ ${formatTon(normalizedValue)}`);
   });
 
   if (allInButton) {
@@ -9733,7 +9733,7 @@ function updateScannerBetBarVisibility() {
     if (shouldShow) {
       const avatarEl = document.getElementById("profileAvatar");
       floatBtn.style.backgroundImage = avatarEl?.style.backgroundImage || "";
-      const initial = document.getElementById("profileAvatar")?.textContent || "И";
+      const initial = document.getElementById("profileAvatar")?.textContent || "Р";
       if (!floatBtn.style.backgroundImage) floatBtn.textContent = initial;
     }
   }
@@ -9784,37 +9784,37 @@ function renderScannerButtons() {
 
   const currentPlayer = getCurrentPlayer();
   const hasMe = !!getScannerParticipantById(currentPlayer.id);
-  let text = "Войти в раунд";
+  let text = "Р’РѕР№С‚Рё РІ СЂР°СѓРЅРґ";
   let disabled = false;
 
   if (scannerGridState.status === "waiting") {
     text = hasMe
-      ? `Добавить ${formatTon(scannerGridState.selectedStake)}`
-      : `Войти — ${formatTon(scannerGridState.selectedStake)}`;
+      ? `Р”РѕР±Р°РІРёС‚СЊ ${formatTon(scannerGridState.selectedStake)}`
+      : `Р’РѕР№С‚Рё вЂ” ${formatTon(scannerGridState.selectedStake)}`;
   } else if (scannerGridState.status === "countdown") {
     text = hasMe
-      ? `Добавить ${formatTon(scannerGridState.selectedStake)}`
-      : `Войти до старта — ${formatTon(scannerGridState.selectedStake)}`;
+      ? `Р”РѕР±Р°РІРёС‚СЊ ${formatTon(scannerGridState.selectedStake)}`
+      : `Р’РѕР№С‚Рё РґРѕ СЃС‚Р°СЂС‚Р° вЂ” ${formatTon(scannerGridState.selectedStake)}`;
     if (!hasMe && scannerGridState.totalPlayers >= scannerGridState.maxPlayers) {
-      text = "Раунд заполнен";
+      text = "Р Р°СѓРЅРґ Р·Р°РїРѕР»РЅРµРЅ";
       disabled = true;
     }
   } else if (scannerGridState.status === "shuffling") {
-    text = "Перемешивание";
+    text = "РџРµСЂРµРјРµС€РёРІР°РЅРёРµ";
     disabled = true;
   } else if (scannerGridState.status === "active") {
-    text = "Раунд идёт";
+    text = "Р Р°СѓРЅРґ РёРґС‘С‚";
     disabled = true;
   } else if (scannerGridState.status === "finished") {
-    text = "Показ результата";
+    text = "РџРѕРєР°Р· СЂРµР·СѓР»СЊС‚Р°С‚Р°";
     disabled = true;
   } else if (scannerGridState.status === "preparing_next_round") {
-    text = "Подготовка";
+    text = "РџРѕРґРіРѕС‚РѕРІРєР°";
     disabled = true;
   }
 
   if (scannerRealtime.isJoinBusy) {
-    text = "Подключение...";
+    text = "РџРѕРґРєР»СЋС‡РµРЅРёРµ...";
     disabled = true;
   }
 
@@ -9834,33 +9834,33 @@ function isScannerResultRevealReady() {
 
 function getScannerRoundOverlayLeft() {
   if (scannerGridState.status === "idle" || scannerGridState.totalPlayers <= 0) {
-    return "Арена: ожидание игроков";
+    return "РђСЂРµРЅР°: РѕР¶РёРґР°РЅРёРµ РёРіСЂРѕРєРѕРІ";
   }
-  return `Игроки: ${formatCompactNumber(scannerGridState.totalPlayers)} / ${formatCompactNumber(scannerGridState.maxPlayers || 0)}`;
+  return `РРіСЂРѕРєРё: ${formatCompactNumber(scannerGridState.totalPlayers)} / ${formatCompactNumber(scannerGridState.maxPlayers || 0)}`;
 }
 
 function getScannerRoundOverlayRight() {
   if (scannerGridState.totalPlayers <= 0) {
-    return "Лазер в ожидании";
+    return "Р›Р°Р·РµСЂ РІ РѕР¶РёРґР°РЅРёРё";
   }
 
   switch (scannerGridState.status) {
     case "waiting":
-      return "Арена готова";
+      return "РђСЂРµРЅР° РіРѕС‚РѕРІР°";
     case "countdown":
-      return scannerGridState.totalPlayers === 1 ? "Ожидание 2-го игрока" : "Лазер идёт к границе";
+      return scannerGridState.totalPlayers === 1 ? "РћР¶РёРґР°РЅРёРµ 2-РіРѕ РёРіСЂРѕРєР°" : "Р›Р°Р·РµСЂ РёРґС‘С‚ Рє РіСЂР°РЅРёС†Рµ";
     case "shuffling":
-      return "Игроки перемешиваются";
+      return "РРіСЂРѕРєРё РїРµСЂРµРјРµС€РёРІР°СЋС‚СЃСЏ";
     case "active":
-      return "Раунд идёт";
+      return "Р Р°СѓРЅРґ РёРґС‘С‚";
     case "finished":
       return isScannerResultRevealReady()
-        ? `Победитель: ${scannerGridState.winningPlayer?.name || "—"}`
-        : "Раунд завершён";
+        ? `РџРѕР±РµРґРёС‚РµР»СЊ: ${scannerGridState.winningPlayer?.name || "вЂ”"}`
+        : "Р Р°СѓРЅРґ Р·Р°РІРµСЂС€С‘РЅ";
     case "preparing_next_round":
-      return "Арена готова";
+      return "РђСЂРµРЅР° РіРѕС‚РѕРІР°";
     default:
-      return "Лазер в ожидании";
+      return "Р›Р°Р·РµСЂ РІ РѕР¶РёРґР°РЅРёРё";
   }
 }
 
@@ -9916,8 +9916,8 @@ function renderScannerRound(options = {}) {
     setTextContentIfChanged(countdown, getScannerCountdownChipText());
     countdown.classList.toggle("is-round-active", scannerGridState.status === "active");
   }
-  if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(isArenaResetPhase ? 0 : (scannerGridState.totalPot || 0))}`);
-  if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${isArenaResetPhase ? "0%" : myChanceValue}`);
+  if (poolChip) setTextContentIfChanged(poolChip, `Р‘Р°РЅРє: ${formatTon(isArenaResetPhase ? 0 : (scannerGridState.totalPot || 0))}`);
+  if (chanceChip) setTextContentIfChanged(chanceChip, `РњРѕРё С€Р°РЅСЃС‹: ${isArenaResetPhase ? "0%" : myChanceValue}`);
   if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
   if (selectedPopulation) setTextContentIfChanged(selectedPopulation, scannerGridState.roundData ? formatCompactNumber(scannerGridState.maxPlayers || 0) : formatCompactNumber(scannerGridState.selectedPopulation));
   if (cellsValue) setTextContentIfChanged(cellsValue, formatCompactNumber(SCANNER_GRID_TOTAL_CELLS));
@@ -9938,22 +9938,22 @@ function renderScannerRound(options = {}) {
       const winnerColor = escapeHtml(winnerPlayer.color || getScannerColorById(winnerPlayer.id, scannerGridState.roundId || scannerGridState.renderSeed || "winner"));
       resultBanner.style.display = "block";
       resultBanner.classList.add("open");
-      setTextContentIfChanged(resultTitle, "Победитель");
+      setTextContentIfChanged(resultTitle, "РџРѕР±РµРґРёС‚РµР»СЊ");
       setInnerHtmlIfChanged(resultText, `
         <div class="scanner-result-item">
-          <span class="scanner-result-label">Цвет</span>
-          <div class="scanner-result-value"><span class="scanner-result-color-swatch" style="background:${winnerColor};"></span><span>Цвет арены</span></div>
+          <span class="scanner-result-label">Р¦РІРµС‚</span>
+          <div class="scanner-result-value"><span class="scanner-result-color-swatch" style="background:${winnerColor};"></span><span>Р¦РІРµС‚ Р°СЂРµРЅС‹</span></div>
         </div>
         <div class="scanner-result-item">
-          <span class="scanner-result-label">Ник</span>
+          <span class="scanner-result-label">РќРёРє</span>
           <div class="scanner-result-value"><span>${escapeHtml(winnerPlayer.name)}</span></div>
         </div>
         <div class="scanner-result-item">
-          <span class="scanner-result-label">Выигрыш</span>
+          <span class="scanner-result-label">Р’С‹РёРіСЂС‹С€</span>
           <div class="scanner-result-value"><span>${formatTon(payout)}</span></div>
         </div>
         <div class="scanner-result-item">
-          <span class="scanner-result-label">Множитель</span>
+          <span class="scanner-result-label">РњРЅРѕР¶РёС‚РµР»СЊ</span>
           <div class="scanner-result-value"><span>${multiplier}</span></div>
         </div>
       `);
@@ -10531,7 +10531,7 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
 }
 
 function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
-  const text = options.text || "Ожидание раунда...";
+  const text = options.text || "РћР¶РёРґР°РЅРёРµ СЂР°СѓРЅРґР°...";
   const fontSize = Math.max(22, Math.min(38, size * 0.074));
   const centerX = size / 2;
   const centerY = size / 2;
@@ -10573,7 +10573,7 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // Слой 1: мягкое голубое свечение вокруг текста
+  // РЎР»РѕР№ 1: РјСЏРіРєРѕРµ РіРѕР»СѓР±РѕРµ СЃРІРµС‡РµРЅРёРµ РІРѕРєСЂСѓРі С‚РµРєСЃС‚Р°
   if (getEffectiveQualityTier() !== "low") {
     ctx.shadowBlur = Math.max(8, fontSize * 0.42);
     ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.glowShadowColor;
@@ -10582,7 +10582,7 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
     ctx.fillText(text, centerX, centerY);
   }
 
-  // Слой 2: основной текст с небольшой тенью
+  // РЎР»РѕР№ 2: РѕСЃРЅРѕРІРЅРѕР№ С‚РµРєСЃС‚ СЃ РЅРµР±РѕР»СЊС€РѕР№ С‚РµРЅСЊСЋ
   if (getEffectiveQualityTier() !== "low") {
     ctx.shadowBlur = Math.max(3, fontSize * SCANNER_WAITING_TEXT_VISUALS.baseShadowBlurFactor);
     ctx.shadowColor = SCANNER_WAITING_TEXT_VISUALS.baseShadowColor;
@@ -10593,7 +10593,7 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   ctx.fillStyle = SCANNER_WAITING_TEXT_VISUALS.fillStyle;
   ctx.fillText(text, centerX, centerY);
 
-  // Слой 3: накопленное свечение от луча, клипированное по форме букв
+  // РЎР»РѕР№ 3: РЅР°РєРѕРїР»РµРЅРЅРѕРµ СЃРІРµС‡РµРЅРёРµ РѕС‚ Р»СѓС‡Р°, РєР»РёРїРёСЂРѕРІР°РЅРЅРѕРµ РїРѕ С„РѕСЂРјРµ Р±СѓРєРІ
   if (getEffectiveQualityTier() !== "low" && cache.glowCanvas) {
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 0.94;
@@ -10846,8 +10846,8 @@ function renderScannerCanvas() {
   const { ctx, size, cellSize } = metrics;
   const roundStatus = scannerGridState.status;
   const hasGrid = scannerGridState.players.length > 0;
-  const now = performance.now(); // Это оставляем для плавности (fps)
-  const nowMs = getNetworkTime(); // <-- Изменено для точной физики!
+  const now = performance.now(); // Р­С‚Рѕ РѕСЃС‚Р°РІР»СЏРµРј РґР»СЏ РїР»Р°РІРЅРѕСЃС‚Рё (fps)
+  const nowMs = getNetworkTime(); // <-- РР·РјРµРЅРµРЅРѕ РґР»СЏ С‚РѕС‡РЅРѕР№ С„РёР·РёРєРё!
 
   // Border glow on bounce
   const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
@@ -11068,7 +11068,7 @@ function subscribeScannerParticipants(roundId) {
       syncScannerDerivedState();
       renderScannerRound();
     }, (error) => {
-      console.error("Ошибка подписки на участников раунда:", error);
+      console.error("РћС€РёР±РєР° РїРѕРґРїРёСЃРєРё РЅР° СѓС‡Р°СЃС‚РЅРёРєРѕРІ СЂР°СѓРЅРґР°:", error);
       scannerRealtime.participantsReady = false;
       scannerRealtime.participantsError = true;
       syncScannerDerivedState();
@@ -11115,9 +11115,9 @@ function subscribeScannerRound(roundId) {
 
     syncScannerDerivedState();
     renderScannerRound();
-    ensureScannerRoundLifecycle().catch((error) => console.warn("Не удалось синхронизировать фазу раунда:", error));
+    ensureScannerRoundLifecycle().catch((error) => console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°С‚СЊ С„Р°Р·Сѓ СЂР°СѓРЅРґР°:", error));
   }, (error) => {
-    console.error("Ошибка подписки на общий раунд:", error);
+    console.error("РћС€РёР±РєР° РїРѕРґРїРёСЃРєРё РЅР° РѕР±С‰РёР№ СЂР°СѓРЅРґ:", error);
     scannerRealtime.roundReady = true;
     scannerRealtime.roundData = null;
     subscribeScannerParticipants(null);
@@ -11143,7 +11143,7 @@ function subscribeScannerRuntime() {
     } else {
       if (!activeRoundId) {
         bootstrapScannerRoundFromRecentState().catch((error) => {
-          console.warn("Не удалось восстановить текущее состояние общего раунда:", error);
+          console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РІРѕСЃСЃС‚Р°РЅРѕРІРёС‚СЊ С‚РµРєСѓС‰РµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ РѕР±С‰РµРіРѕ СЂР°СѓРЅРґР°:", error);
           scannerRealtime.roundData = null;
           scannerRealtime.roundReady = true;
           scannerRealtime.participants = [];
@@ -11157,7 +11157,7 @@ function subscribeScannerRuntime() {
       renderScannerRound();
     }
   }, (error) => {
-    console.error("Ошибка подписки на runtime общего раунда:", error);
+    console.error("РћС€РёР±РєР° РїРѕРґРїРёСЃРєРё РЅР° runtime РѕР±С‰РµРіРѕ СЂР°СѓРЅРґР°:", error);
     scannerRealtime.runtimeReady = true;
     renderScannerRound();
   });
@@ -11259,7 +11259,7 @@ function subscribeScannerHistory() {
       scannerGridState.recentRounds = items;
       renderScannerRecentList();
     }, (error) => {
-      console.error("Ошибка подписки на глобальную историю раундов:", error);
+      console.error("РћС€РёР±РєР° РїРѕРґРїРёСЃРєРё РЅР° РіР»РѕР±Р°Р»СЊРЅСѓСЋ РёСЃС‚РѕСЂРёСЋ СЂР°СѓРЅРґРѕРІ:", error);
     });
 }
 
@@ -11281,7 +11281,7 @@ function initializeScannerGridFeature() {
   startScannerLifecycleTimer();
   subscribeScannerRuntime();
   bootstrapScannerRoundFromRecentState({ force: true }).catch((error) => {
-    console.warn("Не удалось выполнить стартовое восстановление общего раунда:", error);
+    console.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ СЃС‚Р°СЂС‚РѕРІРѕРµ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РѕР±С‰РµРіРѕ СЂР°СѓРЅРґР°:", error);
   });
   subscribeScannerHistory();
   syncScannerDerivedState();
@@ -11378,11 +11378,11 @@ applyAppLanguage(appSettings.language);
 renderTopProfile();
 resetAllDemoTonBalancesTo1000Once()
   .catch((error) => {
-    console.error("Не удалось выполнить миграцию demo TON-балансов до 1000:", error);
+    console.error("РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ РјРёРіСЂР°С†РёСЋ demo TON-Р±Р°Р»Р°РЅСЃРѕРІ РґРѕ 1000:", error);
   })
   .then(() => ensureDemoBalanceForCurrentUser())
   .then(() => subscribeCurrentUserBalance())
-  .catch((error) => console.error("Не удалось подготовить demo TON-баланс:", error));
+  .catch((error) => console.error("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРіРѕС‚РѕРІРёС‚СЊ demo TON-Р±Р°Р»Р°РЅСЃ:", error));
 homeScreenContext = "games";
 setMenuView("home");
 currentBottomNav = "";
