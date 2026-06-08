@@ -3354,12 +3354,16 @@ button {
   .top-bar .balance-card {
     justify-self: center;
   }
+
+  #navProfileFloat {
+    right: 16px;
+  }
 }
 
 #navProfileFloat {
   position: fixed;
-  bottom: calc(max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px)) + 18px);
-  right: 60px;
+  bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
+  right: max(16px, calc((100vw - min(calc(100vw - 32px), 464px)) / 2));
   width: 44px;
   height: 44px;
   border-radius: 50%;
