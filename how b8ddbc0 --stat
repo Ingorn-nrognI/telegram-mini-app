@@ -1,0 +1,10 @@
+[33m27f4e70[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: full rebuild - encoding, scanner screens, recent rounds
+[33mbb6935c[m fix: encoding, arena-card overflow, recent rounds flex
+[33m3c536cf[m fix: encoding, arena-card overflow, recent rounds flex
+[33m0c35788[m fix: scanner-arena-card overflow visible
+[33mb8ddbc0[m fix: recent rounds layout
+[33m23f385d[m fix: recent rounds visible column
+[33m9a11a9b[m fix: recent rounds card flex layout
+[33mf58ed52[m fix: recent rounds card layout
+[33m5a4e517[m fix: history panel global overlay
+[33m5ec37dc[m fix: recent rounds column layout
