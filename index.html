@@ -10587,7 +10587,10 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
 
 function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   const text = options.text || "Ожидание раунда...";
-  const fontSize = Math.max(22, Math.min(38, size * 0.074));
+  const isHomePreview = document.getElementById('scannerGridCanvas')?.closest('#scannerHomeCanvasShell') !== null;
+  const fontSize = isHomePreview
+    ? Math.max(10, Math.min(18, size * 0.048))
+    : Math.max(22, Math.min(38, size * 0.074));
   const centerX = size / 2;
   const centerY = size / 2;
   const font = `900 ${fontSize}px Arial`;
