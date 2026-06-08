@@ -806,7 +806,7 @@ button {
   position: absolute;
   left: max(16px, calc((100vw - min(calc(100vw - 32px), 464px)) / 2));
   bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
-  width: min(calc(100vw - 24px), 480px);
+  width: min(calc(100vw - 32px), 464px);
   min-height: var(--bottom-nav-height);
   padding: 12px 8px 10px;
   display: grid;
@@ -820,7 +820,7 @@ button {
   box-shadow: 0 20px 38px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(18px);
   z-index: 80;
-  transition: width 0.22s ease;
+  transition: width 0.22s ease, left 0.22s ease;
 }
 
 .bottom-btn {
@@ -3382,7 +3382,7 @@ button {
   pointer-events: auto;
 }
 .bottom-bar.profile-float-active {
-  width: calc(min(calc(100vw - 32px), 464px) - 80px);
+  width: calc(min(calc(100vw - 32px), 464px) - 88px);
   left: max(16px, calc((100vw - min(calc(100vw - 32px), 464px)) / 2));
   transform: none;
 }
