@@ -2108,7 +2108,7 @@ button {
   z-index: 2;
   margin: 0 0 10px;
   text-align: center;
-  font-size: 22px;
+  font-size: 13px;
   line-height: 1.1;
   font-weight: 900;
   letter-spacing: -0.03em;
@@ -3450,23 +3450,23 @@ button {
 .scanner-preview-bottom-row {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   flex: 1;
   min-width: 0;
 }
 
 .scanner-preview-enter-btn {
-  flex: 1;
   background: linear-gradient(135deg, #1a6ef7, #0f4fd6);
   color: #fff;
   border: none;
-  border-radius: 16px;
+  border-radius: 14px;
   padding: 10px 14px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   text-align: center;
+  width: 100%;
 }
 </style>
 </head>
@@ -3520,8 +3520,8 @@ button {
         </div>
         <div class="scanner-preview-bottom-row">
           <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
-          <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">Зайти в Сканер</button>
           <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">0.00 TON</div>
+          <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">Зайти в Сканер</button>
         </div>
       </section>
 
