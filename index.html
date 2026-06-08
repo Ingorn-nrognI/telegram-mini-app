@@ -3361,11 +3361,11 @@ button {
 }
 
 #navProfileFloat {
-  position: absolute;
+  position: fixed;
   bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
   right: max(16px, calc((100vw - min(calc(100vw - 32px), 464px)) / 2));
-  width: var(--bottom-nav-height);
-  height: var(--bottom-nav-height);
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 30% 30%, rgba(255,255,255,0.38), transparent 35%),
@@ -3387,6 +3387,7 @@ button {
   opacity: 0;
   transition: transform 0.22s ease, opacity 0.22s ease;
   pointer-events: none;
+}
 }
 #navProfileFloat.visible {
   transform: scale(1);
