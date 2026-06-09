@@ -3896,9 +3896,20 @@ button {
       <div class="app-settings-section">
         <div class="app-settings-section-title">Качество графики</div>
         <div class="app-settings-chips">
+          <button id="settingsQualityAuto" class="app-settings-chip" onclick="setAppQuality('auto')">Авто</button>
           <button id="settingsQualityLow" class="app-settings-chip" onclick="setAppQuality('low')">Низкое</button>
           <button id="settingsQualityMid" class="app-settings-chip" onclick="setAppQuality('mid')">Среднее</button>
           <button id="settingsQualityHigh" class="app-settings-chip" onclick="setAppQuality('high')">Высокое</button>
+        </div>
+      </div>
+      <div class="app-settings-section">
+        <div class="app-settings-section-title">Частота кадров</div>
+        <div class="app-settings-chips">
+          <button id="settingsFpsAuto" class="app-settings-chip" onclick="setAppFps('auto')">Авто</button>
+          <button id="settingsFpsLow" class="app-settings-chip" onclick="setAppFps('low')">30 FPS</button>
+          <button id="settingsFpsMid" class="app-settings-chip" onclick="setAppFps('mid')">45 FPS</button>
+          <button id="settingsFpsHigh" class="app-settings-chip" onclick="setAppFps('high')">60 FPS</button>
+          <button id="settingsFpsUltra" class="app-settings-chip" onclick="setAppFps('ultra')">120 FPS</button>
         </div>
       </div>
 
@@ -4018,11 +4029,11 @@ const SCANNER_RETICLE_IDLE_SPIN_SPEED = 0.0017;
 const SCANNER_RETICLE_ACTIVE_SPIN_SPEED = 0.0034;
 const SCANNER_RETICLE_IDLE_WOBBLE = 0.08;
 const SCANNER_RETICLE_ACTIVE_WOBBLE = 0.16;
-const SCANNER_BEAM_SMOOTH_TAU_MS = 20;
+const SCANNER_BEAM_SMOOTH_TAU_MS = 12;
 const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 60;
 const SCANNER_BEAM_LOBBY_RENDER_TURN_TAU_MS = 900;
 const SCANNER_LOBBY_LASER_TURN_SPEED = 0.65;
-const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 52;
+const SCANNER_BEAM_MAX_FRAME_DELTA_MS = 34;
 const SCANNER_BEAM_SNAP_DELTA_MS = 900;
 const SCANNER_BEAM_HARD_RESET_DISTANCE = 0.96;
 const SCANNER_BEAM_HARD_RESET_ANGLE = Math.PI * 0.985;
@@ -4200,7 +4211,7 @@ let scannerDeviceTier = getDeviceTier();
 
 function getEffectiveQualityTier() {
   if (typeof appSettings !== "undefined" && appSettings.quality) {
-    return appSettings.quality;
+    return getEffectiveQuality();
   }
   return scannerDeviceTier;
 }
@@ -5661,8 +5672,9 @@ const SETTINGS_STORAGE_KEY = "bobr_world_app_settings_v1";
 
 const appSettings = {
   language: window._savedAppSettings?.language || "ru",
-  quality: window._savedAppSettings?.quality || (scannerDeviceTier || "mid"),
+  quality: window._savedAppSettings?.quality || "auto",
   vibration: window._savedAppSettings?.vibration !== undefined ? window._savedAppSettings.vibration : true,
+  fps: window._savedAppSettings?.fps || "auto",
 };
 delete window._savedAppSettings;
 
@@ -5735,9 +5747,15 @@ function renderAppSettings() {
   const chipMap = {
     settingsLangRu: appSettings.language === "ru",
     settingsLangEn: appSettings.language === "en",
+    settingsQualityAuto: appSettings.quality === "auto",
     settingsQualityLow: appSettings.quality === "low",
     settingsQualityMid: appSettings.quality === "mid",
     settingsQualityHigh: appSettings.quality === "high",
+    settingsFpsAuto: appSettings.fps === "auto",
+    settingsFpsLow: appSettings.fps === "low",
+    settingsFpsMid: appSettings.fps === "mid",
+    settingsFpsHigh: appSettings.fps === "high",
+    settingsFpsUltra: appSettings.fps === "ultra",
     settingsVibOn: appSettings.vibration === true,
     settingsVibOff: appSettings.vibration === false,
   };
@@ -5779,7 +5797,7 @@ function setAppLanguage(lang) {
 
 function setAppQuality(level) {
   appSettings.quality = level;
-  scannerDeviceTier = level;
+  scannerDeviceTier = getEffectiveQuality();
   saveAppSettings();
   renderAppSettings();
   scannerGridCache = null;
@@ -5795,6 +5813,45 @@ function setAppVibration(enabled) {
   appSettings.vibration = enabled;
   saveAppSettings();
   renderAppSettings();
+}
+
+function detectOptimalQuality() {
+  const cores = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory || 4;
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isHighEndMobile = isMobile && cores >= 6;
+  if (cores <= 2 || mem <= 2) return "low";
+  if (isMobile && !isHighEndMobile) return "mid";
+  if (isHighEndMobile || cores <= 4) return "mid";
+  return "high";
+}
+
+function detectOptimalFps() {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const cores = navigator.hardwareConcurrency || 4;
+  const supportsHighRefresh = window.screen?.refreshRate > 60 || false;
+  if (supportsHighRefresh) return "ultra";
+  if (!isMobile) return "high";
+  if (cores >= 6) return "high";
+  return "mid";
+}
+
+function getEffectiveQuality() {
+  if (appSettings.quality === "auto") return detectOptimalQuality();
+  return appSettings.quality;
+}
+
+function getEffectiveFps() {
+  if (appSettings.fps === "auto") return detectOptimalFps();
+  return appSettings.fps;
+}
+
+function setAppFps(level) {
+  appSettings.fps = level;
+  saveAppSettings();
+  renderAppSettings();
+  stopScannerVisualAnimation();
+  ensureScannerVisualLoop();
 }
 
 function handleBottomNav(action, event) {
@@ -6597,7 +6654,9 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   }
 
   const rawDeltaMs = Math.max(0, safeFrameTime - (scannerBeamRenderState.lastFrameAt || safeFrameTime));
-  const deltaMs = Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, rawDeltaMs);
+  const isMobileSmooth = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const clampedRawDelta = isMobileSmooth ? Math.min(rawDeltaMs, 20) : rawDeltaMs;
+  const deltaMs = Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, clampedRawDelta);
 
   if (
     rawDeltaMs >= SCANNER_BEAM_SNAP_DELTA_MS ||
@@ -7956,9 +8015,10 @@ function ensureScannerVisualLoop() {
       return;
     }
     scannerGridVisualFrame = requestAnimationFrame(tick);
-    const tier = getEffectiveQualityTier();
-    if (tier === "low" && now - (ensureScannerVisualLoop._lastFrame || 0) < 20) return;
-    if (tier === "low") ensureScannerVisualLoop._lastFrame = now;
+    const effectiveFps = (typeof getEffectiveFps === "function") ? getEffectiveFps() : "high";
+    const fpsInterval = effectiveFps === "low" ? 1000/30 : effectiveFps === "mid" ? 1000/45 : effectiveFps === "ultra" ? 1000/120 : 0;
+    if (fpsInterval > 0 && now - (ensureScannerVisualLoop._lastFrame || 0) < fpsInterval) return;
+    if (fpsInterval > 0) ensureScannerVisualLoop._lastFrame = now;
     try {
       renderScannerCanvas();
     } catch (err) {
@@ -10108,7 +10168,8 @@ function getScannerCanvasMetrics() {
     scannerCanvasMetricsState.dirty = true;
   }
 
-  const dprCap = getEffectiveQualityTier() === "low" ? 1 : getEffectiveQualityTier() === "mid" ? 1.5 : window.devicePixelRatio > 2 ? 1.5 : 2;
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const dprCap = getEffectiveQualityTier() === "low" ? 1 : (getEffectiveQualityTier() === "mid" || isMobile) ? 1.5 : window.devicePixelRatio > 2 ? 1.5 : 2;
   const dpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1));
   let size = scannerCanvasMetricsState.size;
   if (scannerCanvasMetricsState.dirty || !size) {
@@ -11662,6 +11723,9 @@ window.handleAppSettingsBackdrop = handleAppSettingsBackdrop;
 window.setAppLanguage = setAppLanguage;
 window.setAppQuality = setAppQuality;
 window.setAppVibration = setAppVibration;
+window.setAppFps = setAppFps;
+window.getEffectiveFps = getEffectiveFps;
+window.getEffectiveQuality = getEffectiveQuality;
 window.applyAppLanguage = applyAppLanguage;
 window.openWallet = openWallet;
 window.toggleHistoryPanel = toggleHistoryPanel;
