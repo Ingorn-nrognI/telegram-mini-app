@@ -296,7 +296,7 @@ button {
 }
 
 .screen-inner {
-  width: min(calc(100vw - 24px), 480px);
+  width: calc(100vw - 24px);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -804,9 +804,10 @@ button {
 
 .bottom-bar {
   position: absolute;
-  left: max(16px, calc((100vw - min(calc(100vw - 32px), 464px)) / 2));
+  left: 16px;
+  right: 16px;
   bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
-  width: min(calc(100vw - 32px), 464px);
+  width: auto;
   min-height: var(--bottom-nav-height);
   padding: 12px 8px 10px;
   display: grid;
@@ -2157,7 +2158,7 @@ button {
   position: fixed;
   left: 50%;
   bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + var(--bottom-nav-offset) + var(--bottom-stack-gap));
-  width: min(calc(100vw - 24px), 480px);
+  width: calc(100vw - 24px);
   min-height: 54px;
   padding: 9px;
   display: grid;
