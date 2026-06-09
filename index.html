@@ -11427,7 +11427,6 @@ function renderScannerCanvas() {
 
     let beamRenderAngle;
     if (!isHotBeam) {
-      scannerLobbyLaserVisual.angle = ((now / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
       beamRenderAngle = scannerLobbyLaserVisual.angle;
     } else {
       beamRenderAngle = Number.isFinite(Number(visualBeamSample.renderAngle))
