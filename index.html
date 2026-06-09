@@ -2004,6 +2004,47 @@ button {
   bottom: 12px;
 }
 
+@media (max-width: 600px) {
+  .bottom-bar {
+    left: 12px;
+    width: calc(100vw - 24px);
+  }
+
+  .top-bar {
+    left: 12px;
+    width: calc(100vw - 24px);
+  }
+
+  .scanner-home-main-block {
+    width: calc(100vw - 24px);
+  }
+
+  .scanner-bet-bar {
+    width: calc(100vw - 24px);
+    left: 50%;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  .scanner-arena-card {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
+
+  #scannerHomeBlock.scanner-arena-card {
+    width: calc(100vw - 24px) !important;
+  }
+
+  .screen-inner {
+    width: calc(100vw - 24px);
+    margin: 0 12px;
+  }
+
+  .mode-popup,
+  .history-panel {
+    width: calc(100vw - 24px);
+  }
+}
+
 @media (max-width: 420px) {
   #scannerGridCanvas {
     aspect-ratio: 1 / 1;
