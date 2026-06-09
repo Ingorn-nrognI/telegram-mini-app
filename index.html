@@ -290,70 +290,6 @@ button {
   display: block;
 }
 
-#scannerScreen {
-  display: none;
-  position: absolute;
-  inset: 0;
-  padding: 0;
-  overflow: hidden;
-  z-index: 10;
-  flex-direction: column;
-}
-
-#scannerScreen.active {
-  display: flex;
-}
-
-#scannerScreen .screen-inner {
-  width: 100%;
-  max-width: 100%;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 0;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-}
-
-#scannerScreen .scanner-arena-card {
-  border-radius: 0;
-  border: none;
-  background: none;
-  box-shadow: none;
-  padding: 0;
-  flex-shrink: 0;
-}
-
-#scannerScreen .scanner-canvas-shell {
-  border-radius: 0;
-  border: none;
-  box-shadow: none;
-  background: #050816;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  max-height: calc(100vh - var(--safe-top) - var(--safe-bottom) - var(--bottom-nav-height) - 52px);
-}
-
-#scannerScreen .scanner-panel-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px 6px;
-  flex-shrink: 0;
-  padding-top: calc(var(--safe-top) + 8px);
-}
-
-#scannerScreen #scannerGridCanvas {
-  width: 100%;
-  height: 100%;
-  aspect-ratio: unset;
-  border-radius: 0;
-}
-
 .menu-screen::-webkit-scrollbar {
   width: 0;
   height: 0;
@@ -868,21 +804,16 @@ button {
 
 .bottom-bar {
   position: absolute;
-  left: 0;
-  right: 0;
-  width: 100%;
-  margin: 0;
-  border-radius: 0;
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
+  left: max(16px, calc((100vw - min(calc(100vw - 32px), 464px)) / 2));
   bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
+  width: min(calc(100vw - 32px), 464px);
   min-height: var(--bottom-nav-height);
   padding: 12px 8px 10px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
   align-items: end;
+  border-radius: 28px;
   background:
     linear-gradient(180deg, rgba(13, 18, 40, 0.94), rgba(7, 10, 21, 0.95));
   border: 1px solid rgba(255,255,255,0.08);
