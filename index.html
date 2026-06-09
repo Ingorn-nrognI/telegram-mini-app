@@ -7252,8 +7252,9 @@ function getScannerBeamSampleFromMotionState(motionState, timestampMs = getNetwo
 
 function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedValue = "scanner_shared_lobby_motion_v2", runtimeData = scannerRealtime.runtimeData) {
   if (_serverBeamPos && _serverBeamPos.x !== undefined && (Date.now() - _serverBeamPosLastUpdate) < 10000) {
-    const dt = Math.max(0, Math.min((timestampMs - (_serverBeamPos.timestamp || timestampMs)) / 1000, 0.2));
     const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
+    const receiveTime = _serverBeamPos._receiveTime || _serverBeamPosLastUpdate;
+    const dt = Math.max(0, Math.min((performance.now() - receiveTime) / 1000, 0.5));
     let px = _serverBeamPos.x + (_serverBeamPos.vx || 0) * dt;
     let py = _serverBeamPos.y + (_serverBeamPos.vy || 0) * dt;
     px = Math.max(PAD, Math.min(1 - PAD, px));
@@ -8108,7 +8109,7 @@ function initSocketConnection() {
   });
   _socket.on('disconnect', () => {});
   _socket.on('beam:position', (data) => {
-    _serverBeamPos = data;
+    _serverBeamPos = { ...data, _receiveTime: performance.now() };
     _serverBeamPosLastUpdate = Date.now();
     if (!_serverBeamPosSmoothed) _serverBeamPosSmoothed = { ...data };
     if (data?.idleBeamMotion) {
