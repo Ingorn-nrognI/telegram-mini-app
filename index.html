@@ -5713,7 +5713,25 @@ const APP_TRANSLATIONS = {
     tabGames: "Games", tabPvp: "PvP", tabSkins: "Skins", tabHistory: "History",
     settingsTitle: "Settings", connecting: "Connecting...",
     waitingRound: "Waiting for round...", players: "Players",
-    recentRounds: "Recent rounds", scanner: "Scanner"
+    recentRounds: "Recent rounds", scanner: "Scanner",
+    bank: "Bank", myChance: "My chance", allIn: "All-in",
+    play: "Play", history: "History", leaderboard: "Leaderboard",
+    gameHistory: "Game history", modeScanner: "Mode: Scanner",
+    won: "Won", lost: "Lost", yourColor: "Your color in this round's arena",
+    playersInRound: "Players in round", myStake: "My stake",
+    totalBank: "Total bank", myResult: "My result",
+    playerProfile: "PLAYER PROFILE", deposit: "Deposit", withdraw: "Withdraw",
+    totalWins: "TOTAL WINS", settings: "Settings",
+    language: "LANGUAGE", graphicsQuality: "GRAPHICS QUALITY",
+    vibration: "VIBRATION", low: "Low", medium: "Medium", high: "High",
+    on: "On", off: "Off", winner: "Winner",
+    dateTime: "Date & time", playersCount: "Players", stake: "Stake",
+    waitingPlayers: "Waiting for players...", bestWin: "Best round win",
+    joinRound: "Join round", lobbyFull: "Round is full", shuffling: "Shuffling",
+    roundActive: "Round in progress", roundFinished: "Showing result", preparing: "Preparing",
+    addStake: "Add", joinBeforeStart: "Join before start",
+    stakeSettings: "Stake settings", reset: "Reset", save: "Save",
+    qualityAuto: "Auto", fpsLabel: "FRAME RATE", fpsAuto: "Auto"
   }
 };
 
@@ -5722,17 +5740,64 @@ function applyAppLanguage(lang) {
   const set = (sel, text) => {
     document.querySelectorAll(sel).forEach(el => { el.textContent = text; });
   };
+  const setAttr = (sel, attr, text) => {
+    document.querySelectorAll(sel).forEach(el => { el.setAttribute(attr, text); });
+  };
+
+  // Top bar
   set(".balance-label", t.balance);
   set(".wallet-text", t.wallet);
+
+  // Bottom nav
   set("#navLeaderboard .nav-label", t.tabLeaderboard);
   set("#navGames .nav-label", t.tabGames);
   set("#navPvp .nav-label", t.tabPvp);
   set("#navSkins .nav-label", t.tabSkins);
   set("#navHistory .nav-label", t.tabHistory);
+
+  // Settings overlay
   set("#appSettingsTitle", t.settingsTitle);
+  const settingsSections = document.querySelectorAll(".app-settings-section-title");
+  const sectionKeys = [t.language, t.graphicsQuality, t.fpsLabel, t.vibration];
+  settingsSections.forEach((el, i) => { if (sectionKeys[i]) el.textContent = sectionKeys[i]; });
+
+  // Settings chips labels
+  set("#settingsQualityAuto", t.qualityAuto);
+  set("#settingsQualityLow", t.low);
+  set("#settingsQualityMid", t.medium);
+  set("#settingsQualityHigh", t.high);
+  set("#settingsFpsAuto", t.fpsAuto);
+  set("#settingsVibOn", t.on);
+  set("#settingsVibOff", t.off);
+
+  // Scanner arena
   set(".scanner-connecting-text", t.connecting);
   set(".scanner-game-title", t.scanner);
   set(".scanner-recent-heading-title", t.recentRounds);
+
+  // Scanner bet bar
+  set("#scannerBetBarAllIn", t.allIn);
+
+  // Scanner pool chip
+  const poolChip = document.getElementById("scannerPoolChip");
+  if (poolChip) {
+    const potVal = poolChip.textContent.replace(/[^0-9.]/g, "");
+    poolChip.textContent = `${t.bank}: ${potVal} TON`;
+  }
+  const screenPoolChip = document.getElementById("scannerScreenPoolChip");
+  if (screenPoolChip) {
+    const potVal = screenPoolChip.textContent.replace(/[^0-9.]/g, "");
+    screenPoolChip.textContent = `${t.bank}: ${potVal} TON`;
+  }
+
+  // Scanner chance chip
+  const chanceChip = document.getElementById("scannerChanceChip");
+  if (chanceChip) {
+    const chanceVal = chanceChip.textContent.replace(/[^0-9.%]/g, "");
+    chanceChip.textContent = `${t.myChance}: ${chanceVal}`;
+  }
+
+  // Players heading
   const playersTitle = document.querySelector(".scanner-players-heading-title");
   if (playersTitle) {
     const countSpan = playersTitle.querySelector(".scanner-players-count");
@@ -5740,6 +5805,60 @@ function applyAppLanguage(lang) {
       if (node.nodeType === Node.TEXT_NODE) node.textContent = t.players + " ";
     });
     if (countSpan && !playersTitle.contains(countSpan)) playersTitle.appendChild(countSpan);
+  }
+
+  // Profile screen
+  set(".profile-screen-kicker", t.playerProfile);
+  set(".profile-card-kicker", "DEMO TON");
+  set(".profile-card-title", t.balance);
+  const profileBestWinLabel = document.querySelector(".profile-stat-label");
+  if (profileBestWinLabel) profileBestWinLabel.textContent = t.bestWin;
+
+  // Profile action buttons
+  const profileActions = document.querySelectorAll(".profile-action-btn");
+  if (profileActions[0]) profileActions[0].innerHTML = "💼 " + t.wallet;
+  if (profileActions[1]) profileActions[1].textContent = t.deposit;
+  if (profileActions[2]) profileActions[2].textContent = t.withdraw;
+
+  // Settings button in profile
+  const profileSettingsBtn = document.querySelector(".profile-settings-btn");
+  if (profileSettingsBtn) profileSettingsBtn.innerHTML = "⚙️ " + t.settings;
+
+  // Stake settings sheet
+  set(".scanner-stake-settings-title", t.stakeSettings);
+  const stakeActions = document.querySelectorAll(".scanner-stake-settings-action");
+  stakeActions.forEach(btn => {
+    if (btn.classList.contains("reset")) btn.textContent = t.reset;
+    if (btn.classList.contains("save")) btn.textContent = t.save;
+  });
+
+  // Home screen play/history buttons
+  const mainPlayBtn = document.getElementById("mainPlayButton");
+  if (mainPlayBtn) mainPlayBtn.innerHTML = "▶ " + t.play;
+  document.querySelectorAll(".secondary-action[data-history-trigger='true']").forEach(btn => {
+    btn.innerHTML = "🕘 " + t.history;
+  });
+
+  // Home scanner preview enter button
+  set(".scanner-preview-enter-btn", t.scanner);
+
+  // Leaderboard modal title
+  const lbHeader = document.querySelector(".leaderboardHeader h2");
+  if (lbHeader) lbHeader.innerHTML = "🏆 " + t.leaderboard;
+
+  // History panel title
+  set(".history-panel-title", t.gameHistory);
+
+  // Scanner result title (only if not showing winner)
+  const resultTitle = document.getElementById("scannerResultTitle");
+  if (resultTitle && resultTitle.textContent.trim() === "Раунд завершён") {
+    resultTitle.textContent = "Round finished";
+  }
+
+  // Waiting text on canvas (invalidate cache so it redraws)
+  scannerWaitingTextGlowState.cacheKey = "";
+  if (typeof renderScannerCanvas === "function" && typeof getScannerCanvasMetrics === "function" && getScannerCanvasMetrics()) {
+    renderScannerCanvas();
   }
 }
 
