@@ -1601,12 +1601,30 @@ button {
   font-family: "Courier New", monospace;
 }
 
-.scanner-result-banner {
+.scanner-result-overlay {
   position: fixed;
-  left: 50%;
-  bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 16px);
-  width: min(calc(100vw - 24px), 480px);
-  padding: 15px 16px;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+
+.scanner-result-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.scanner-result-banner {
+  position: relative;
+  width: min(calc(100vw - 48px), 280px);
+  padding: 18px 16px 16px;
   border-radius: 22px;
   background:
     linear-gradient(135deg, rgba(18, 35, 84, 0.98), rgba(7, 12, 28, 0.96)),
@@ -1615,69 +1633,95 @@ button {
   box-shadow:
     0 22px 42px rgba(0, 0, 0, 0.42),
     0 0 28px rgba(45, 225, 255, 0.12);
-  backdrop-filter: blur(16px);
-  z-index: 110;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 18px) scale(0.98);
-  transition: opacity 0.28s ease, transform 0.28s ease;
+  transform: scale(0.95);
+  transition: transform 0.28s ease;
 }
 
-.scanner-result-banner.open {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translate(-50%, 0) scale(1);
+.scanner-result-overlay.open .scanner-result-banner {
+  transform: scale(1);
+}
+
+.scanner-result-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.scanner-result-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.scanner-result-timer-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .scanner-result-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 900;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: #dff9ff;
   margin-bottom: 10px;
+  padding-right: 28px;
 }
 
 .scanner-result-text {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .scanner-result-item {
   min-width: 0;
-  padding: 10px 11px;
-  border-radius: 16px;
+  padding: 8px 10px;
+  border-radius: 14px;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.08);
 }
 
 .scanner-result-label {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.2;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-dim);
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .scanner-result-value {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  font-size: 14px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.3;
   font-weight: 800;
   color: #f6fbff;
 }
 
 .scanner-result-color-swatch {
-  width: 14px;
-  height: 14px;
-  min-width: 14px;
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
 }
@@ -1689,19 +1733,6 @@ button {
   white-space: nowrap;
 }
 
-@media (max-width: 420px) {
-  .scanner-result-banner {
-    width: calc(100vw - 16px);
-    bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 14px);
-    padding: 14px;
-    border-radius: 20px;
-  }
-
-  .scanner-result-text {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-}
 
 .scanner-home-hub {
   background:
@@ -3588,9 +3619,23 @@ button {
       <section class="section-card scanner-arena-card">
         <div class="scanner-canvas-shell" id="scannerScreenCanvasShell"></div>
       </section>
-      <div id="scannerResultBanner" class="scanner-result-banner" style="display:none;">
-        <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
-        <div id="scannerResultText" class="scanner-result-text"></div>
+      <div id="scannerResultOverlay" class="scanner-result-overlay" onclick="handleScannerResultOverlayClick(event)">
+        <div class="scanner-result-banner" onclick="event.stopPropagation()">
+          <button class="scanner-result-close-btn" onclick="closeScannerResultOverlay()" aria-label="Закрыть">
+            <svg id="scannerResultTimerRing" class="scanner-result-timer-ring" viewBox="0 0 28 28">
+              <circle cx="14" cy="14" r="12" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+              <circle id="scannerResultTimerArc" cx="14" cy="14" r="12" fill="none" stroke="#ff4d5a" stroke-width="2"
+                stroke-dasharray="75.4" stroke-dashoffset="75.4" stroke-linecap="round"
+                transform="rotate(-90 14 14)"/>
+            </svg>
+            <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="2" y1="2" x2="12" y2="12" stroke="rgba(255,255,255,0.8)" stroke-width="2" stroke-linecap="round"/>
+              <line x1="12" y1="2" x2="2" y2="12" stroke="rgba(255,255,255,0.8)" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <div id="scannerResultTitle" class="scanner-result-title">Раунд завершён</div>
+          <div id="scannerResultText" class="scanner-result-text"></div>
+        </div>
       </div>
       <div class="scanner-control-divider"></div>
       <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-players-heading-row">
@@ -4045,6 +4090,8 @@ const scannerGridPathOrder = (() => {
   }
   return indices;
 })();
+
+let scannerLastBeamSample = { x: 0.5, y: 0.5 };
 
 const scannerGridState = {
   mode: "scanner-grid",
@@ -9955,7 +10002,7 @@ function renderScannerRound(options = {}) {
   const metaLeft = document.getElementById("scannerGridMetaLeft");
   const metaRight = document.getElementById("scannerGridMetaRight");
   const footnote = document.getElementById("scannerGridFootnote");
-  const resultBanner = document.getElementById("scannerResultBanner");
+  const resultOverlay = document.getElementById("scannerResultOverlay");
   const resultTitle = document.getElementById("scannerResultTitle");
   const resultText = document.getElementById("scannerResultText");
 
@@ -9976,7 +10023,7 @@ function renderScannerRound(options = {}) {
     footnote.style.display = "none";
   }
 
-  if (resultBanner && resultTitle && resultText) {
+  if (resultOverlay && resultTitle && resultText) {
     const isResultPhase = scannerGridState.status === "finished";
     if (isResultPhase && scannerGridState.winningPlayer) {
       const winnerPlayer = scannerGridState.winningPlayer;
@@ -9984,8 +10031,10 @@ function renderScannerRound(options = {}) {
       const winnerStake = Number(winnerPlayer.stake || scannerGridState.roundData?.winnerStake || 0);
       const multiplier = formatScannerMultiplier(payout, winnerStake);
       const winnerColor = escapeHtml(winnerPlayer.color || getScannerColorById(winnerPlayer.id, scannerGridState.roundId || scannerGridState.renderSeed || "winner"));
-      resultBanner.style.display = "block";
-      resultBanner.classList.add("open");
+      if (resultOverlay && !resultOverlay.classList.contains("open")) {
+        resultOverlay.classList.add("open");
+        startScannerResultTimer();
+      }
       setTextContentIfChanged(resultTitle, "Победитель");
       setInnerHtmlIfChanged(resultText, `
         <div class="scanner-result-item">
@@ -10006,8 +10055,10 @@ function renderScannerRound(options = {}) {
         </div>
       `);
     } else {
-      resultBanner.classList.remove("open");
-      resultBanner.style.display = "none";
+      if (resultOverlay) {
+        resultOverlay.classList.remove("open");
+        stopScannerResultTimer();
+      }
       setTextContentIfChanged(resultTitle, "");
       setInnerHtmlIfChanged(resultText, "");
     }
@@ -10920,9 +10971,32 @@ function renderScannerCanvas() {
     addBorderGlowPoint(size, _gwx, _gwy);
   }
   renderScannerCanvas._lastWall = _curWall;
-  ctx.clearRect(0, 0, size, size);
 
   const roundData = scannerGridState.roundData || null;
+  const activeEndsAt = tsToMs(roundData?.activeEndsAt);
+  const timeLeftMs = (roundStatus === "active" || roundStatus === "finished")
+    ? Math.max(0, activeEndsAt - nowMs)
+    : Infinity;
+  const ZOOM_START_MS = 5000;
+  const ZOOM_DURATION_MS = 2500;
+  const MAX_ZOOM = 3.2;
+  let scannerEndZoom = 1;
+  if (timeLeftMs <= ZOOM_START_MS && timeLeftMs !== Infinity) {
+    const zoomProgress = Math.min(1, (ZOOM_START_MS - timeLeftMs) / ZOOM_DURATION_MS);
+    const easedZoom = zoomProgress * zoomProgress * (3 - 2 * zoomProgress);
+    scannerEndZoom = 1 + (MAX_ZOOM - 1) * easedZoom;
+  }
+
+  ctx.clearRect(0, 0, size, size);
+  if (scannerEndZoom > 1) {
+    const focusX = scannerLastBeamSample.x * size;
+    const focusY = scannerLastBeamSample.y * size;
+    ctx.save();
+    ctx.translate(focusX, focusY);
+    ctx.scale(scannerEndZoom, scannerEndZoom);
+    ctx.translate(-focusX, -focusY);
+  }
+
   const beamRenderKey = getScannerBeamRenderKey(roundStatus, roundData, hasGrid ? "grid" : "empty");
 
   if (!hasGrid) {
@@ -11036,6 +11110,7 @@ function renderScannerCanvas() {
   );
 
   const visualBeamSample = beamSample || null;
+  if (visualBeamSample) scannerLastBeamSample = visualBeamSample;
 
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
@@ -11109,6 +11184,38 @@ function renderScannerCanvas() {
 
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
+  }
+  if (scannerEndZoom > 1) {
+    ctx.restore();
+  }
+  if (scannerEndZoom > 1 && visualBeamSample && scannerGridState.players?.length > 0) {
+    const beamCellIndex = getScannerCellIndexFromNormalized(visualBeamSample.x, visualBeamSample.y);
+    const ownerIndex = scannerGridState.finalized?.cellOwners?.[beamCellIndex] ?? -1;
+    const ownerPlayer = ownerIndex >= 0 ? scannerGridState.players[ownerIndex] : null;
+    if (ownerPlayer) {
+      const px = Math.max(0, Math.min(size - 1, visualBeamSample.x * size));
+      const py = Math.max(0, Math.min(size - 1, visualBeamSample.y * size));
+      const fontSize = Math.max(11, size * 0.038);
+      const label = ownerPlayer.name || "Игрок";
+      const paddingX = fontSize * 0.7;
+      const paddingY = fontSize * 0.38;
+      ctx.font = `700 ${fontSize}px Arial, sans-serif`;
+      const textWidth = ctx.measureText(label).width;
+      const boxW = textWidth + paddingX * 2;
+      const boxH = fontSize + paddingY * 2;
+      const boxX = Math.max(4, Math.min(size - boxW - 4, px - boxW / 2));
+      const boxY = Math.max(4, py - boxH - Math.max(10, size * 0.031) * 2.2);
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.62)";
+      ctx.beginPath();
+      ctx.roundRect(boxX, boxY, boxW, boxH, fontSize * 0.38);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.97)";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, boxX + paddingX, boxY + boxH / 2);
+      ctx.restore();
+    }
   }
 }
 
@@ -11417,6 +11524,49 @@ function handleBeforeUnload() {
   }
 }
 
+let _scannerResultTimerRaf = null;
+let _scannerResultTimerStart = null;
+const SCANNER_RESULT_AUTO_CLOSE_MS = 30000;
+
+function startScannerResultTimer() {
+  stopScannerResultTimer();
+  _scannerResultTimerStart = performance.now();
+  function tick() {
+    const arc = document.getElementById("scannerResultTimerArc");
+    if (!arc) return;
+    const elapsed = performance.now() - _scannerResultTimerStart;
+    const progress = Math.min(1, elapsed / SCANNER_RESULT_AUTO_CLOSE_MS);
+    const circumference = 75.4;
+    arc.setAttribute("stroke-dashoffset", circumference * (1 - progress));
+    if (progress >= 1) {
+      closeScannerResultOverlay();
+      return;
+    }
+    _scannerResultTimerRaf = requestAnimationFrame(tick);
+  }
+  _scannerResultTimerRaf = requestAnimationFrame(tick);
+}
+
+function stopScannerResultTimer() {
+  if (_scannerResultTimerRaf) {
+    cancelAnimationFrame(_scannerResultTimerRaf);
+    _scannerResultTimerRaf = null;
+  }
+  _scannerResultTimerStart = null;
+}
+
+function closeScannerResultOverlay() {
+  const overlay = document.getElementById("scannerResultOverlay");
+  if (overlay) overlay.classList.remove("open");
+  stopScannerResultTimer();
+}
+
+function handleScannerResultOverlayClick(event) {
+  if (event.target === event.currentTarget) {
+    closeScannerResultOverlay();
+  }
+}
+
 document.addEventListener("visibilitychange", handleVisibilityChange);
 window.addEventListener("beforeunload", handleBeforeUnload);
 
@@ -11521,6 +11671,8 @@ window.toggleScannerHistoryDetails = toggleScannerHistoryDetails;
 window.handleBottomNav = handleBottomNav;
 window.handleMenuBackgroundClick = handleMenuBackgroundClick;
 window.handleModalBackdropClick = handleModalBackdropClick;
+window.closeScannerResultOverlay = closeScannerResultOverlay;
+window.handleScannerResultOverlayClick = handleScannerResultOverlayClick;
 
 document.querySelectorAll(".bottom-btn").forEach(btn => btn.classList.remove("is-active"));
 </script>
