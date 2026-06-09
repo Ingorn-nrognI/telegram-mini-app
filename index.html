@@ -297,7 +297,7 @@ button {
 
 .screen-inner {
   width: calc(100vw - 24px);
-  margin: 0 auto;
+  margin: 0 12px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1772,8 +1772,7 @@ button {
 }
 
 .scanner-home-main-block {
-  width: min(calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px), 540px);
-  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px);
+  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 12px);
   margin-left: auto;
   margin-right: auto;
   left: 50%;
@@ -1954,7 +1953,7 @@ button {
   padding: 10px !important;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.42) !important;
   overflow: hidden !important;
-  width: min(calc(100vw - 24px), 464px) !important;
+  width: calc(100vw - 24px) !important;
   margin: 0 auto !important;
   left: 0 !important;
   transform: none !important;
