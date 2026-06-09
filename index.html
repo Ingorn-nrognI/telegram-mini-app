@@ -805,9 +805,8 @@ button {
 .bottom-bar {
   position: absolute;
   left: 16px;
-  right: 16px;
   bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
-  width: auto;
+  width: calc(100vw - 32px);
   min-height: var(--bottom-nav-height);
   padding: 12px 8px 10px;
   display: grid;
@@ -821,7 +820,7 @@ button {
   box-shadow: 0 20px 38px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(18px);
   z-index: 80;
-  transition: width 0.22s ease, left 0.22s ease;
+  transition: none;
 }
 
 .bottom-btn {
