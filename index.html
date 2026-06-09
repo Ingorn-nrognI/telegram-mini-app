@@ -11035,7 +11035,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     : 0;
   const reticleRotation = Number.isFinite(Number(options.reticleRotation))
     ? Number(options.reticleRotation)
-    : (scannerLobbyLaserVisual.lastAt || 0) * SCANNER_RETICLE_IDLE_SPIN_SPEED;
+    : (options.nowMs || 0) * SCANNER_RETICLE_IDLE_SPIN_SPEED;
   const reticleWobble = Math.max(0, Number(options.reticleWobble) || SCANNER_RETICLE_IDLE_WOBBLE);
   drawScannerArenaBase(ctx, size);
   ctx.save();
@@ -11321,7 +11321,8 @@ function renderScannerCanvas() {
       drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
         waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
-        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
+        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE,
+        nowMs: now
       });
     } else {
       const idleBeamSample = getSmoothedScannerBeamSample(
@@ -11338,7 +11339,8 @@ function renderScannerCanvas() {
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
-        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
+        reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE,
+        nowMs: now
       });
     }
     return;
@@ -11382,7 +11384,8 @@ function renderScannerCanvas() {
     drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
       waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
       reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
-      reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE
+      reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE,
+      nowMs: now
     });
     return;
   } else if (scannerGridCache?.canvas) {
@@ -11818,7 +11821,6 @@ function enterScannerGridMode(event) {
 function handleVisibilityChange() {
   updateScannerHeartbeat().catch(() => {});
   if (document.visibilityState === "visible") {
-    scannerLobbyLaserVisual.lastAt = performance.now();
     bootstrapScannerRoundFromRecentState({ force: true }).catch(() => {});
   }
 }
