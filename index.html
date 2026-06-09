@@ -11077,6 +11077,33 @@ function renderScannerCanvas() {
       rotation: reticleRotation,
       wobble: isHotBeam ? SCANNER_RETICLE_ACTIVE_WOBBLE : SCANNER_RETICLE_IDLE_WOBBLE
     });
+    if (roundStatus === "shuffling") {
+      const shuffleProgress = getScannerShuffleTransitionProgress(roundData);
+      const easedProgress = shuffleProgress * shuffleProgress;
+      const triangleAngle = (performance.now() / 1000) * ((1 - easedProgress) * 6 + 0.2);
+      const orbitR = reticleRadius * 2.8;
+      const tx = Math.cos(triangleAngle) * orbitR;
+      const ty = Math.sin(triangleAngle) * orbitR;
+      const triAlpha = Math.min(1, shuffleProgress * 8) * (1 - Math.max(0, (shuffleProgress - 0.85) / 0.15));
+      if (triAlpha > 0.01) {
+        const triBase = reticleRadius * 0.7;
+        const triHeight = reticleRadius * 1.1;
+        ctx.save();
+        ctx.globalAlpha = triAlpha;
+        ctx.shadowColor = "rgba(45, 225, 255, 0.4)";
+        ctx.shadowBlur = reticleRadius * 1.5;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+        ctx.beginPath();
+        ctx.translate(tx, ty);
+        ctx.rotate(triangleAngle);
+        ctx.moveTo(0, -triHeight * 0.65);
+        ctx.lineTo(-triBase / 2, triHeight * 0.35);
+        ctx.lineTo(triBase / 2, triHeight * 0.35);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    }
     ctx.restore();
   }
 
