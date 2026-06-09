@@ -3347,6 +3347,10 @@ button {
 .app-settings-chip:active {
   transform: scale(0.98);
 }
+.app-settings-chip.auto-hint {
+  border-color: rgba(45, 225, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(45, 225, 255, 0.28);
+}
 
 /* Smooth Scanner updates, waiting text focus and top UI focus behavior */
 .top-bar,
@@ -5762,6 +5766,36 @@ function renderAppSettings() {
   for (const [id, active] of Object.entries(chipMap)) {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("active", active);
+  }
+
+  const qualityAutoHintMap = { low: "settingsQualityLow", mid: "settingsQualityMid", high: "settingsQualityHigh" };
+  const fpsAutoHintMap = { low: "settingsFpsLow", mid: "settingsFpsMid", high: "settingsFpsHigh", ultra: "settingsFpsUltra" };
+
+  ["settingsQualityLow", "settingsQualityMid", "settingsQualityHigh"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("auto-hint");
+  });
+  ["settingsFpsLow", "settingsFpsMid", "settingsFpsHigh", "settingsFpsUltra"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("auto-hint");
+  });
+
+  if (appSettings.quality === "auto") {
+    const detectedQuality = detectOptimalQuality();
+    const hintId = qualityAutoHintMap[detectedQuality];
+    if (hintId) {
+      const el = document.getElementById(hintId);
+      if (el) el.classList.add("auto-hint");
+    }
+  }
+
+  if (appSettings.fps === "auto") {
+    const detectedFps = detectOptimalFps();
+    const hintId = fpsAutoHintMap[detectedFps];
+    if (hintId) {
+      const el = document.getElementById(hintId);
+      if (el) el.classList.add("auto-hint");
+    }
   }
 }
 
