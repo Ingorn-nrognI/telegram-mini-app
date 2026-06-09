@@ -6149,54 +6149,47 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed) {
     return owners;
   }
 
-  const seed = hashString(`preview_${versionSeed}`);
+  const seed = hashString(`diag_${versionSeed}`);
   const rnd = mulberry32(seed);
-  const layoutMode = seed % 2 === 0 ? "vertical" : "horizontal";
-  const axisCount = layoutMode === "vertical" ? SCANNER_GRID_ROWS : SCANNER_GRID_COLS;
-  const spanCount = layoutMode === "vertical" ? SCANNER_GRID_COLS : SCANNER_GRID_ROWS;
+  const angle = rnd() * Math.PI;
+  const cosA = Math.cos(angle);
+  const sinA = Math.sin(angle);
+
+  // Compute cumulative share thresholds based on each player's cellCount
   const shares = players.map((player) => {
-    const rawShare = Number(player.cellCount || 0) / Math.max(1, totalCells);
-    return rawShare > 0 ? rawShare : 1 / Math.max(1, players.length);
+    const raw = Number(player.cellCount || 0) / Math.max(1, totalCells);
+    return raw > 0 ? raw : 1 / Math.max(1, players.length);
   });
+  const totalShare = shares.reduce((s, v) => s + v, 0) || 1;
+  const cumulative = [];
+  let acc = 0;
+  for (let i = 0; i < shares.length; i += 1) {
+    acc += shares[i] / totalShare;
+    cumulative.push(acc);
+  }
 
-  const phaseA = shares.map(() => rnd() * Math.PI * 2);
-  const phaseB = shares.map(() => rnd() * Math.PI * 2);
-  const freqA = shares.map(() => 0.72 + rnd() * 1.18);
-  const freqB = shares.map(() => 1.4 + rnd() * 2.35);
-  const drift = shares.map(() => (rnd() - 0.5) * 0.22);
-
-  for (let axis = 0; axis < axisCount; axis += 1) {
-    const t = axisCount > 1 ? axis / (axisCount - 1) : 0;
-    const widths = shares.map((share, index) => {
-      const primaryWave = Math.sin((t + drift[index]) * Math.PI * 2 * freqA[index] + phaseA[index]);
-      const secondaryWave = Math.sin((t * 1.18 - drift[index]) * Math.PI * 2 * freqB[index] + phaseB[index]);
-      const waveStrength = Math.min(0.2, 0.08 + Math.max(0, 0.16 - share * 0.22));
-      const raw = share * (1 + primaryWave * waveStrength + secondaryWave * 0.055);
-      return Math.max(share * 0.45, raw);
-    });
-
-    const totalWidth = widths.reduce((sum, value) => sum + value, 0) || 1;
-    const cumulative = [];
-    let cursor = 0;
-
-    widths.forEach((value) => {
-      cursor += value;
-      cumulative.push(cursor);
-    });
-
-    let ownerCursor = 0;
-    for (let span = 0; span < spanCount; span += 1) {
-      const position = ((span + 0.5) / spanCount) * totalWidth;
-      while (ownerCursor < cumulative.length - 1 && position > cumulative[ownerCursor]) {
-        ownerCursor += 1;
-      }
-
-      const cellIndex = layoutMode === "vertical"
-        ? (axis * SCANNER_GRID_COLS) + span
-        : (span * SCANNER_GRID_COLS) + axis;
-
-      owners[cellIndex] = ownerCursor;
+  // Find min/max projection over all cell centres to normalise into [0, 1]
+  let minProj = Infinity;
+  let maxProj = -Infinity;
+  for (let row = 0; row < SCANNER_GRID_ROWS; row += 1) {
+    for (let col = 0; col < SCANNER_GRID_COLS; col += 1) {
+      const proj = (col / SCANNER_GRID_COLS) * cosA + (row / SCANNER_GRID_ROWS) * sinA;
+      if (proj < minProj) minProj = proj;
+      if (proj > maxProj) maxProj = proj;
     }
+  }
+  const projRange = maxProj - minProj || 1;
+
+  for (let cellIndex = 0; cellIndex < totalCells; cellIndex += 1) {
+    const col = cellIndex % SCANNER_GRID_COLS;
+    const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
+    const proj = (col / SCANNER_GRID_COLS) * cosA + (row / SCANNER_GRID_ROWS) * sinA;
+    const t = (proj - minProj) / projRange;
+    let owner = cumulative.length - 1;
+    for (let i = 0; i < cumulative.length - 1; i += 1) {
+      if (t <= cumulative[i]) { owner = i; break; }
+    }
+    owners[cellIndex] = owner;
   }
 
   return owners;
