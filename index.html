@@ -6831,7 +6831,7 @@ function resetScannerBeamRenderState(sample = null, key = "") {
     vx: Number(nextSample.vx) || 0,
     vy: Number(nextSample.vy) || 0
   };
-  scannerBeamRenderState.lastFrameAt = performance.now();
+  scannerBeamRenderState.lastFrameAt = 0;
   return scannerBeamRenderState.sample;
 }
 
@@ -6861,7 +6861,9 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     scannerBeamRenderState.key = safeKey;
   }
 
-  const rawDeltaMs = Math.max(0, safeFrameTime - (scannerBeamRenderState.lastFrameAt || safeFrameTime));
+  const rawDeltaMs = scannerBeamRenderState.lastFrameAt > 0
+    ? Math.max(0, safeFrameTime - scannerBeamRenderState.lastFrameAt)
+    : 0;
   const isMobileSmooth = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const maxDeltaForDevice = isMobileSmooth ? 16 : SCANNER_BEAM_MAX_FRAME_DELTA_MS;
   const clampedRawDelta = Math.min(rawDeltaMs, maxDeltaForDevice);
