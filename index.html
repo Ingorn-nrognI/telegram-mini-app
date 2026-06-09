@@ -5852,22 +5852,77 @@ function setAppVibration(enabled) {
 function detectOptimalQuality() {
   const cores = navigator.hardwareConcurrency || 4;
   const mem = navigator.deviceMemory || 4;
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const isHighEndMobile = isMobile && cores >= 6;
-  if (cores <= 2 || mem <= 2) return "low";
-  if (isMobile && !isHighEndMobile) return "mid";
-  if (isHighEndMobile || cores <= 4) return "mid";
+  const ua = navigator.userAgent;
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
+
+  if (!isMobile) {
+    if (cores <= 2 || mem <= 2) return "low";
+    if (cores <= 4) return "mid";
+    return "high";
+  }
+
+  // iOS detection
+  const iosMatch = ua.match(/iPhone OS (\d+)/);
+  const iosVersion = iosMatch ? parseInt(iosMatch[1]) : 0;
+  const isIphone = /iPhone/.test(ua);
+
+  if (isIphone) {
+    // iPhone 6/7/8 (A9/A11) — слабые
+    if (iosVersion > 0 && iosVersion <= 14 && cores <= 4) return "low";
+    // iPhone X/XS/11 (A12/A13) — средние
+    if (cores <= 6 && iosVersion <= 15) return "mid";
+    // iPhone 12/13/14/15/16 (A14+) — высокие
+    if (cores >= 6) return "high";
+    return "mid";
+  }
+
+  // Android
+  if (mem <= 2 || cores <= 2) return "low";
+  if (mem <= 4 || cores <= 4) return "mid";
   return "high";
 }
 
 function detectOptimalFps() {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const cores = navigator.hardwareConcurrency || 4;
-  const supportsHighRefresh = window.screen?.refreshRate > 60 || false;
-  if (supportsHighRefresh) return "ultra";
-  if (!isMobile) return "high";
+  const measured = window._detectedRefreshRate || 0;
+  if (measured >= 90) return "ultra";
+  if (measured >= 50) return "high";
+  if (!isMobile) return measured >= 25 ? "high" : "mid";
   if (cores >= 6) return "high";
   return "mid";
+}
+
+function measureRefreshRate() {
+  if (window._refreshRateMeasured) return;
+  window._refreshRateMeasured = true;
+  const samples = [];
+  let last = null;
+  let count = 0;
+  function tick(now) {
+    if (last !== null) {
+      const delta = now - last;
+      if (delta > 4 && delta < 100) samples.push(1000 / delta);
+    }
+    last = now;
+    count += 1;
+    if (count < 90) {
+      requestAnimationFrame(tick);
+    } else {
+      if (samples.length > 10) {
+        samples.sort((a, b) => a - b);
+        const mid = samples.slice(Math.floor(samples.length * 0.2), Math.floor(samples.length * 0.8));
+        const avg = mid.reduce((s, v) => s + v, 0) / mid.length;
+        window._detectedRefreshRate = Math.round(avg);
+        if (appSettings.fps === "auto") {
+          renderAppSettings();
+          stopScannerVisualAnimation();
+          ensureScannerVisualLoop();
+        }
+      }
+    }
+  }
+  requestAnimationFrame(tick);
 }
 
 function getEffectiveQuality() {
@@ -10203,7 +10258,8 @@ function getScannerCanvasMetrics() {
   }
 
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const dprCap = getEffectiveQualityTier() === "low" ? 1 : (getEffectiveQualityTier() === "mid" || isMobile) ? 1.5 : window.devicePixelRatio > 2 ? 1.5 : 2;
+  const tier = getEffectiveQualityTier();
+  const dprCap = tier === "low" ? 1 : tier === "mid" ? (isMobile ? 1 : 1.5) : (window.devicePixelRatio > 2 ? 1.5 : 2);
   const dpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1));
   let size = scannerCanvasMetricsState.size;
   if (scannerCanvasMetricsState.dirty || !size) {
@@ -10227,7 +10283,13 @@ function getScannerCanvasMetrics() {
 
   let ctx = scannerCanvasMetricsState.ctx;
   if (!ctx) {
-    ctx = canvas.getContext("2d", { alpha: true, desynchronized: true });
+    const isMobileCtx = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    ctx = canvas.getContext("2d", {
+      alpha: true,
+      desynchronized: true,
+      willReadFrequently: false,
+      powerPreference: isMobileCtx ? "low-power" : "high-performance"
+    });
     scannerCanvasMetricsState.ctx = ctx;
   }
 
@@ -10259,24 +10321,27 @@ function buildScannerCanvasCache(size, owners, players) {
 const _borderGlowPoints = [];
 
 function drawScannerGridLines(ctx, size, cellSize) {
+  const gridQuality = getEffectiveQualityTier();
+  const gridStep = gridQuality === "low" ? 20 : gridQuality === "mid" ? 10 : 10;
+  const gridAlpha = gridQuality === "low" ? 0.03 : 0.05;
   ctx.save();
-  ctx.strokeStyle = "rgba(255,255,255,0.05)";
+  ctx.strokeStyle = `rgba(255,255,255,${gridAlpha})`;
   ctx.lineWidth = 1;
-  for (let row = 0; row <= SCANNER_GRID_ROWS; row += 10) {
+  for (let row = 0; row <= SCANNER_GRID_ROWS; row += gridStep) {
     const y = row * cellSize;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(size, y);
     ctx.stroke();
   }
-  for (let col = 0; col <= SCANNER_GRID_COLS; col += 10) {
+  for (let col = 0; col <= SCANNER_GRID_COLS; col += gridStep) {
     const x = col * cellSize;
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, size);
     ctx.stroke();
   }
-  ctx.strokeStyle = "rgba(255,255,255,0.05)";
+  ctx.strokeStyle = `rgba(255,255,255,${gridAlpha})`;
   ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
   ctx.restore();
 }
@@ -10291,6 +10356,7 @@ function addBorderGlowPoint(size, px, py) {
 
 function drawScannerArenaBorder(ctx, size) {
   const bw = Math.max(11, size * 0.031) + 1;
+  const borderQuality = getEffectiveQualityTier();
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
@@ -10302,28 +10368,30 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
   ctx.fill('evenodd');
   const now = performance.now();
-  for (let i = _borderGlowPoints.length - 1; i >= 0; i--) {
-    const pt = _borderGlowPoints[i];
-    const age = now - pt.t;
-    if (age > 800) { _borderGlowPoints.splice(i, 1); continue; }
-    const alpha = Math.max(0, 1 - age / 800) * 0.85;
-    const radius = bw * 2.8;
-    const dL = pt.x, dR = size - pt.x, dT = pt.y, dB = size - pt.y;
-    const dMin = Math.min(dL, dR, dT, dB);
-    const gx = dMin === dL ? bw * 0.5 : dMin === dR ? size - bw * 0.5 : pt.x;
-    const gy = dMin === dT ? bw * 0.5 : dMin === dB ? size - bw * 0.5 : pt.y;
-    const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, radius);
-    grad.addColorStop(0, `rgba(45, 225, 255, ${alpha})`);
-    grad.addColorStop(0.45, `rgba(45, 225, 255, ${alpha * 0.5})`);
-    grad.addColorStop(1, 'rgba(45, 225, 255, 0)');
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.rect(0, 0, size, size);
-    ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
-    ctx.fill('evenodd');
-    ctx.restore();
+  if (borderQuality !== "low") {
+    for (let i = _borderGlowPoints.length - 1; i >= 0; i--) {
+      const pt = _borderGlowPoints[i];
+      const age = now - pt.t;
+      if (age > 800) { _borderGlowPoints.splice(i, 1); continue; }
+      const alpha = Math.max(0, 1 - age / 800) * 0.85;
+      const radius = bw * 2.8;
+      const dL = pt.x, dR = size - pt.x, dT = pt.y, dB = size - pt.y;
+      const dMin = Math.min(dL, dR, dT, dB);
+      const gx = dMin === dL ? bw * 0.5 : dMin === dR ? size - bw * 0.5 : pt.x;
+      const gy = dMin === dT ? bw * 0.5 : dMin === dB ? size - bw * 0.5 : pt.y;
+      const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, radius);
+      grad.addColorStop(0, `rgba(45, 225, 255, ${alpha})`);
+      grad.addColorStop(0.45, `rgba(45, 225, 255, ${alpha * 0.5})`);
+      grad.addColorStop(1, 'rgba(45, 225, 255, 0)');
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.rect(0, 0, size, size);
+      ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
+      ctx.fill('evenodd');
+      ctx.restore();
+    }
   }
   ctx.restore();
 }
@@ -10339,6 +10407,7 @@ function buildScannerGridLinesCache(size, cellSize) {
 function drawScannerBeam(ctx, length, options = {}) {
   const safeLength = Math.max(0, Number(length) || 0);
   if (!safeLength) return;
+  const qualityTier = getEffectiveQualityTier();
 
   const beamColor = options.beamColor || "rgba(45, 225, 255, 0.78)";
   const innerColor = options.innerColor || "rgba(255,255,255,0.92)";
@@ -10358,48 +10427,64 @@ function drawScannerBeam(ctx, length, options = {}) {
       ]
     : [{ from: -halfLength, to: halfLength }];
 
-  ctx.save();
-  const halo = ctx.createLinearGradient(-halfLength, 0, halfLength, 0);
-  halo.addColorStop(0, "rgba(45, 225, 255, 0)");
-  halo.addColorStop(0.18, "rgba(45, 225, 255, 0.12)");
-  halo.addColorStop(0.5, "rgba(45, 225, 255, 0.22)");
-  halo.addColorStop(0.82, "rgba(45, 225, 255, 0.12)");
-  halo.addColorStop(1, "rgba(45, 225, 255, 0)");
-  ctx.fillStyle = halo;
+  if (qualityTier !== "low") {
+    ctx.save();
+    const halo = ctx.createLinearGradient(-halfLength, 0, halfLength, 0);
+    halo.addColorStop(0, "rgba(45, 225, 255, 0)");
+    halo.addColorStop(0.18, "rgba(45, 225, 255, 0.12)");
+    halo.addColorStop(0.5, "rgba(45, 225, 255, 0.22)");
+    halo.addColorStop(0.82, "rgba(45, 225, 255, 0.12)");
+    halo.addColorStop(1, "rgba(45, 225, 255, 0)");
+    ctx.fillStyle = halo;
 
-  if (gapHalf > 0) {
-    ctx.fillRect(-halfLength, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
-    ctx.fillRect(gapHalf, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
-  } else {
-    ctx.fillRect(-halfLength, -glowWidth * 0.55, safeLength, glowWidth * 1.1);
+    if (gapHalf > 0) {
+      ctx.fillRect(-halfLength, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
+      ctx.fillRect(gapHalf, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
+    } else {
+      ctx.fillRect(-halfLength, -glowWidth * 0.55, safeLength, glowWidth * 1.1);
+    }
+    ctx.restore();
   }
-  ctx.restore();
 
   const validSegments = segments.filter((s) => Math.abs(s.to - s.from) >= 0.5);
   if (!validSegments.length) return;
 
-  const layers = [
-    { width: glowWidth, color: beamColor, blur: glowBlur, alpha: 0.38 },
-    { width: coreWidth, color: beamColor, blur: coreBlur, alpha: 0.96 },
-    { width: innerWidth, color: innerColor, blur: 0, alpha: 0.98 }
-  ];
+  const layers = qualityTier === "low"
+    ? [
+        { width: coreWidth, color: beamColor, blur: 0, alpha: 0.92 },
+        { width: innerWidth, color: innerColor, blur: 0, alpha: 0.98 }
+      ]
+    : qualityTier === "mid"
+    ? [
+        { width: glowWidth, color: beamColor, blur: glowBlur * 0.5, alpha: 0.28 },
+        { width: coreWidth, color: beamColor, blur: coreBlur * 0.5, alpha: 0.96 },
+        { width: innerWidth, color: innerColor, blur: 0, alpha: 0.98 }
+      ]
+    : [
+        { width: glowWidth, color: beamColor, blur: glowBlur, alpha: 0.38 },
+        { width: coreWidth, color: beamColor, blur: coreBlur, alpha: 0.96 },
+        { width: innerWidth, color: innerColor, blur: 0, alpha: 0.98 }
+      ];
 
   layers.forEach(({ width, color, blur, alpha }) => {
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = color;
-    if (blur > 0) {
-      ctx.lineWidth = width * 1.6;
-      ctx.globalAlpha = alpha / 4;
-      ctx.beginPath();
-      validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
-      ctx.stroke();
-      ctx.lineWidth = width * 1.25;
-      ctx.globalAlpha = alpha / 7;
-      ctx.beginPath();
-      validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
-      ctx.stroke();
+    if (blur > 0 && qualityTier !== "low") {
+      const blurPasses = qualityTier === "mid" ? 1 : 3;
+      if (blurPasses >= 3) {
+        ctx.lineWidth = width * 1.6;
+        ctx.globalAlpha = alpha / 4;
+        ctx.beginPath();
+        validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
+        ctx.stroke();
+        ctx.lineWidth = width * 1.25;
+        ctx.globalAlpha = alpha / 7;
+        ctx.beginPath();
+        validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
+        ctx.stroke();
+      }
       ctx.lineWidth = width * 1.08;
       ctx.globalAlpha = alpha / 12;
       ctx.beginPath();
@@ -10422,6 +10507,7 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   const plusColor = options.plusColor || "rgba(7, 11, 18, 0.96)";
   const rotation = Number.isFinite(Number(options.rotation)) ? Number(options.rotation) : 0;
   const wobble = Math.max(0, Number(options.wobble) || 0);
+  const reticleQuality = getEffectiveQualityTier();
 
   ctx.save();
   ctx.translate(x, y);
@@ -10464,16 +10550,18 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.stroke();
   ctx.restore();
 
-  ctx.save();
-  ctx.fillStyle = "rgba(45,225,255,0.18)";
-  ctx.beginPath();
-  ctx.arc(orbitX, orbitY, orbitDotRadius * 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.beginPath();
-  ctx.arc(orbitX, orbitY, orbitDotRadius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  if (reticleQuality !== "low") {
+    ctx.save();
+    ctx.fillStyle = "rgba(45,225,255,0.18)";
+    ctx.beginPath();
+    ctx.arc(orbitX, orbitY, orbitDotRadius * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.beginPath();
+    ctx.arc(orbitX, orbitY, orbitDotRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   ctx.restore();
 }
@@ -10734,7 +10822,8 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   const font = `900 ${fontSize}px Arial`;
   const centerGap = Number(options.centerGap) || 0;
 
-  if (scannerDeviceTier === "low") {
+  const isMobileLow = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && getEffectiveQualityTier() !== "high";
+  if (scannerDeviceTier === "low" || isMobileLow) {
     ctx.save();
     ctx.font = font;
     ctx.textAlign = "center";
@@ -11696,6 +11785,7 @@ window.enterScannerGridMode = enterScannerGridMode;
 scannerQuickStakeValues = loadScannerQuickStakeValues();
 scannerStakeSettingsState.draftValues = scannerQuickStakeValues.map((value) => String(value));
 
+measureRefreshRate();
 applyAppLanguage(appSettings.language);
 renderTopProfile();
 resetAllDemoTonBalancesTo1000Once()
