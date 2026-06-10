@@ -8164,9 +8164,27 @@ function initSocketConnection() {
   });
   _socket.on('disconnect', () => {});
   _socket.on('beam:position', (data) => {
-    _serverBeamPos = { ...data, _receiveTime: performance.now() };
+    const now = performance.now();
+    if (_serverBeamPos && _serverBeamPos._receiveTime) {
+      const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
+      const elapsed = Math.max(0, (now - _serverBeamPos._receiveTime) / 1000);
+      const xr = _clientReflectedAxis(_serverBeamPos.x, _serverBeamPos.vx || 0, elapsed, PAD, 1 - PAD);
+      const yr = _clientReflectedAxis(_serverBeamPos.y, _serverBeamPos.vy || 0, elapsed, PAD, 1 - PAD);
+      _serverBeamPos = {
+        x: xr.position,
+        y: yr.position,
+        vx: data.vx || xr.velocity,
+        vy: data.vy || yr.velocity,
+        angle: data.angle || Math.atan2(yr.velocity, xr.velocity),
+        roundId: data.roundId,
+        idleBeamMotion: data.idleBeamMotion,
+        timestamp: data.timestamp,
+        _receiveTime: now
+      };
+    } else {
+      _serverBeamPos = { ...data, _receiveTime: now };
+    }
     _serverBeamPosLastUpdate = Date.now();
-    if (!_serverBeamPosSmoothed) _serverBeamPosSmoothed = { ...data };
     if (data?.idleBeamMotion) {
       if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
       scannerRealtime.runtimeData.idleBeamMotion = data.idleBeamMotion;
