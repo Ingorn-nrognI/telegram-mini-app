@@ -10508,7 +10508,7 @@ function buildScannerCanvasCache(size, owners, players) {
     const col = cellIndex % SCANNER_GRID_COLS;
     const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
     ctx.fillStyle = players[ownerIndex].color;
-    ctx.fillRect(col * cellSize, row * cellSize, Math.max(1, cellSize - 0.6), Math.max(1, cellSize - 0.6));
+    ctx.fillRect(col * cellSize, row * cellSize, Math.ceil(cellSize), Math.ceil(cellSize));
   }
 
   return cacheCanvas;
@@ -11288,13 +11288,13 @@ function renderScannerActiveTransition(ctx, size, cellSize, progress) {
     ctx.save();
     ctx.globalAlpha = localBlend;
     ctx.fillStyle = players[finalOwnerIndex].color;
-    ctx.fillRect(x, y, Math.max(1, cellSize - 0.6), Math.max(1, cellSize - 0.6));
+    ctx.fillRect(x, y, Math.ceil(cellSize), Math.ceil(cellSize));
 
     if (previewOwnerIndex !== finalOwnerIndex && localBlend > 0.58) {
       const glowAlpha = (localBlend - 0.58) / 0.42;
       ctx.globalAlpha = glowAlpha * 0.45;
       ctx.fillStyle = "rgba(255,255,255,0.95)";
-      ctx.fillRect(x, y, Math.max(1, cellSize - 0.6), Math.max(1, cellSize - 0.6));
+      ctx.fillRect(x, y, Math.ceil(cellSize), Math.ceil(cellSize));
     }
     ctx.restore();
   }
