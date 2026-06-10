@@ -7264,6 +7264,20 @@ function getScannerReflectedAxisState(start, velocityPerSecond, elapsedSeconds, 
   };
 }
 
+function _clientReflectedAxis(start, velocity, elapsedSeconds, min, max) {
+  if (Math.abs(velocity) <= 0.0000001) return { position: start, velocity: 0 };
+  const range = max - min;
+  const period = range * 2;
+  const offset = (start - min) + velocity * elapsedSeconds;
+  const wrapped = ((offset % period) + period) % period;
+  const forward = wrapped <= range;
+  const position = forward ? min + wrapped : max - (wrapped - range);
+  return {
+    position: Math.min(max, Math.max(min, position)),
+    velocity: Math.abs(velocity) * ((forward ? 1 : -1) * Math.sign(velocity || 1))
+  };
+}
+
 function getScannerBeamSampleFromMotionState(motionState, timestampMs = getNetworkTime(), options = {}) {
   const seedValue = String(options.seedValue || "scanner_shared_lobby_motion_v2");
   const state = normalizeScannerBeamMotionState(motionState, seedValue);
@@ -7291,17 +7305,16 @@ function getScannerBeamSampleFromMotionState(motionState, timestampMs = getNetwo
 function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedValue = "scanner_shared_lobby_motion_v2", runtimeData = scannerRealtime.runtimeData) {
   if (_serverBeamPos && _serverBeamPos.x !== undefined && (Date.now() - _serverBeamPosLastUpdate) < 10000) {
     const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
-    const receiveTime = _serverBeamPos._receiveTime || _serverBeamPosLastUpdate;
-    const dt = Math.max(0, Math.min((performance.now() - receiveTime) / 1000, 0.12));
-    let vx = _serverBeamPos.vx || 0;
-    let vy = _serverBeamPos.vy || 0;
-    let px = _serverBeamPos.x + vx * dt;
-    let py = _serverBeamPos.y + vy * dt;
-    if (px < PAD) { px = PAD; vx = Math.abs(vx); }
-    else if (px > 1 - PAD) { px = 1 - PAD; vx = -Math.abs(vx); }
-    if (py < PAD) { py = PAD; vy = Math.abs(vy); }
-    else if (py > 1 - PAD) { py = 1 - PAD; vy = -Math.abs(vy); }
-    return { x: px, y: py, vx, vy, angle: _serverBeamPos.angle || 0 };
+    const anchorAt = _serverBeamPos._receiveTime || performance.now();
+    const elapsed = Math.max(0, (performance.now() - anchorAt) / 1000);
+    const startX = _serverBeamPos.x;
+    const startY = _serverBeamPos.y;
+    const vx = _serverBeamPos.vx || 0;
+    const vy = _serverBeamPos.vy || 0;
+    const xr = _clientReflectedAxis(startX, vx, elapsed, PAD, 1 - PAD);
+    const yr = _clientReflectedAxis(startY, vy, elapsed, PAD, 1 - PAD);
+    const angle = Math.atan2(yr.velocity, xr.velocity);
+    return { x: xr.position, y: yr.position, vx: xr.velocity, vy: yr.velocity, angle };
   }
   const motionState = runtimeData?.idleBeamMotion || runtimeData?.idleBeamState
     ? getScannerRuntimeIdleBeamState(runtimeData)
