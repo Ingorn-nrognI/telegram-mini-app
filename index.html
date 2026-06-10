@@ -10544,8 +10544,6 @@ function drawScannerGridLines(ctx, size, cellSize) {
 
 function addBorderGlowPoint(size, px, py) {
   const now = performance.now();
-  const last = _borderGlowPoints[_borderGlowPoints.length - 1];
-  if (last && now - last.t < 50) return;
   _borderGlowPoints.push({ x: px, y: py, t: now });
   if (_borderGlowPoints.length > 12) _borderGlowPoints.shift();
 }
@@ -11344,18 +11342,21 @@ function renderScannerCanvas() {
   const _mD = Math.min(_dL, _dR, _dT, _dB);
   const _curWall = _mD <= _lobbySafePad
     ? (_dL === _mD ? 'L' : _dR === _mD ? 'R' : _dT === _mD ? 'T' : 'B') : null;
-  if (_curWall !== renderScannerCanvas._lastWall) {
-    if (_curWall) {
-      // Точка касания: фиксируем координату на стене, скользящую берём текущую
+  if (_curWall) {
+    const _prevWall = renderScannerCanvas._lastWall;
+    const _lastGlowT = renderScannerCanvas._lastGlowT || 0;
+    const _nowT = performance.now();
+    if (_prevWall !== _curWall || _nowT - _lastGlowT > 300) {
       let _gwx, _gwy;
       if (_curWall === 'L')      { _gwx = _bw * 0.5;        _gwy = _lobbyBy; }
       else if (_curWall === 'R') { _gwx = size - _bw * 0.5; _gwy = _lobbyBy; }
       else if (_curWall === 'T') { _gwx = _lobbyBx;         _gwy = _bw * 0.5; }
       else                       { _gwx = _lobbyBx;         _gwy = size - _bw * 0.5; }
       addBorderGlowPoint(size, _gwx, _gwy);
+      renderScannerCanvas._lastGlowT = _nowT;
     }
-    renderScannerCanvas._lastWall = _curWall;
   }
+  renderScannerCanvas._lastWall = _curWall;
 
   const roundData = scannerGridState.roundData || null;
   const activeEndsAt = tsToMs(roundData?.activeEndsAt);
