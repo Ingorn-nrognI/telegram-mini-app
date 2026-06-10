@@ -4074,7 +4074,7 @@ const SCANNER_RETICLE_IDLE_SPIN_SPEED = 0.0017;
 const SCANNER_RETICLE_ACTIVE_SPIN_SPEED = 0.0034;
 const SCANNER_RETICLE_IDLE_WOBBLE = 0.08;
 const SCANNER_RETICLE_ACTIVE_WOBBLE = 0.16;
-const SCANNER_BEAM_SMOOTH_TAU_MS = 12;
+const SCANNER_BEAM_SMOOTH_TAU_MS = 4;
 const SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS = 60;
 const SCANNER_BEAM_LOBBY_RENDER_TURN_TAU_MS = 900;
 const SCANNER_LOBBY_LASER_TURN_SPEED = 0.65;
@@ -7292,7 +7292,7 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
   if (_serverBeamPos && _serverBeamPos.x !== undefined && (Date.now() - _serverBeamPosLastUpdate) < 10000) {
     const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
     const receiveTime = _serverBeamPos._receiveTime || _serverBeamPosLastUpdate;
-    const dt = Math.max(0, Math.min((performance.now() - receiveTime) / 1000, 0.5));
+    const dt = Math.max(0, Math.min((performance.now() - receiveTime) / 1000, 0.12));
     let vx = _serverBeamPos.vx || 0;
     let vy = _serverBeamPos.vy || 0;
     let px = _serverBeamPos.x + vx * dt;
@@ -11371,17 +11371,21 @@ function renderScannerCanvas() {
         nowMs: now
       });
     } else {
-      const idleBeamSample = getSmoothedScannerBeamSample(
-        getScannerBeamTargetSample(
-          _frameLobbyBeamSample,
-          roundStatus,
-          beamRenderKey,
-          nowMs
-        ),
+      const _idleTarget = getScannerBeamTargetSample(
+        _frameLobbyBeamSample,
+        roundStatus,
         beamRenderKey,
-        now
+        nowMs
       );
-      const idleVisualBeamSample = idleBeamSample;
+      const idleVisualBeamSample = {
+        x: _frameLobbyBeamSample.x,
+        y: _frameLobbyBeamSample.y,
+        angle: _idleTarget.angle,
+        renderAngle: _idleTarget.renderAngle,
+        travelAngle: _idleTarget.travelAngle,
+        vx: _frameLobbyBeamSample.vx,
+        vy: _frameLobbyBeamSample.vy,
+      };
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
