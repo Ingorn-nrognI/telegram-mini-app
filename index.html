@@ -11476,11 +11476,6 @@ function renderScannerCanvas() {
     ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
   }
 
-  if (scannerGridLinesCache?.canvas) {
-    ctx.drawImage(scannerGridLinesCache.canvas, 0, 0, size, size);
-  } else {
-    drawScannerGridLines(ctx, size, cellSize);
-  }
 
   if (previewBadgeAlpha > 0.02) {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
