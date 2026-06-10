@@ -11299,10 +11299,11 @@ function renderScannerCanvas() {
   const now = performance.now(); // Это оставляем для плавности (fps)
   scannerLobbyLaserVisual.angle = ((now / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   scannerLobbyLaserVisual.lastAt = now;
-  const nowMs = getNetworkTime(); // <-- Изменено для точной физики!
+  const nowMs = getNetworkTime();
+  const _frameLobbyBeamSample = getScannerSharedLobbyBeamSample(nowMs);
 
   // Border glow on bounce
-  const _rawLobbyForGlow = getScannerSharedLobbyBeamSample(nowMs);
+  const _rawLobbyForGlow = _frameLobbyBeamSample;
   const _lobbyBx = _rawLobbyForGlow.x * size;
   const _lobbyBy = _rawLobbyForGlow.y * size;
   const _lobbySafePad = size * 0.031 + size * 0.025;
@@ -11371,7 +11372,7 @@ function renderScannerCanvas() {
     } else {
       const idleBeamSample = getSmoothedScannerBeamSample(
         getScannerBeamTargetSample(
-          getScannerSharedLobbyBeamSample(nowMs),
+          _frameLobbyBeamSample,
           roundStatus,
           beamRenderKey,
           nowMs
