@@ -3595,7 +3595,7 @@ button {
           </div>
         </div>
         <div class="scanner-preview-bottom-row">
-          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
+          <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:20</div>
           <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">0.00 TON</div>
           <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">Зайти в Сканер</button>
         </div>
@@ -3657,7 +3657,7 @@ button {
     <div class="screen-inner" id="scannerScreenContent">
       <div class="scanner-panel-top">
         <div id="scannerScreenPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
-        <div id="scannerScreenCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:30</div>
+        <div id="scannerScreenCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:20</div>
         <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
       </div>
       <section class="section-card scanner-arena-card">
@@ -4045,7 +4045,7 @@ const SCANNER_GRID_COLS = 100;
 const SCANNER_GRID_ROWS = 100;
 const SCANNER_STAKE_PRESETS = [2, 5, 10, 25, 50, 100, 250];
 const SCANNER_POPULATION_PRESETS = [2, 12, 48, 150, 400, 1000];
-const SCANNER_COUNTDOWN_MS = 30000;
+const SCANNER_COUNTDOWN_MS = 20000;
 const SCANNER_ACTIVE_MS = 20000;
 const SCANNER_FINISHED_MS = 4200;
 const SCANNER_PREPARING_MS = 2200;
@@ -10305,7 +10305,16 @@ function getScannerRoundOverlayRight() {
 
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
-  if (["countdown", "shuffling", "active", "finished", "preparing_next_round"].includes(status)) {
+  const round = scannerRealtime.roundData;
+  if (status === "countdown" && round?.countdownEndsAt) {
+    const remaining = Math.max(0, tsToMs(round.countdownEndsAt) - getNetworkTime());
+    return formatCountdownMs(remaining);
+  }
+  if (status === "active" && round?.activeEndsAt) {
+    const remaining = Math.max(0, tsToMs(round.activeEndsAt) - getNetworkTime());
+    return formatCountdownMs(remaining);
+  }
+  if (["shuffling", "finished", "preparing_next_round"].includes(status)) {
     return formatCountdownMs(scannerGridState.countdownMs || 0);
   }
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
@@ -10498,7 +10507,7 @@ function buildScannerCanvasCache(size, owners, players) {
   cacheCanvas.width = size;
   cacheCanvas.height = size;
   const ctx = cacheCanvas.getContext("2d");
-  ctx.fillStyle = "#060b17";
+  ctx.fillStyle = players[0]?.color || "#060b17";
   ctx.fillRect(0, 0, size, size);
   const cellSize = size / SCANNER_GRID_COLS;
 
@@ -10508,7 +10517,7 @@ function buildScannerCanvasCache(size, owners, players) {
     const col = cellIndex % SCANNER_GRID_COLS;
     const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
     ctx.fillStyle = players[ownerIndex].color;
-    ctx.fillRect(col * cellSize, row * cellSize, Math.ceil(cellSize), Math.ceil(cellSize));
+    ctx.fillRect(Math.floor(col * cellSize), Math.floor(row * cellSize), Math.ceil(cellSize) + 1, Math.ceil(cellSize) + 1);
   }
 
   return cacheCanvas;
