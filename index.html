@@ -10517,6 +10517,7 @@ function buildScannerCanvasCache(size, owners, players) {
 const _borderGlowPoints = [];
 
 function drawScannerGridLines(ctx, size, cellSize) {
+  return;
   const gridQuality = getEffectiveQualityTier();
   const gridStep = gridQuality === "low" ? 20 : gridQuality === "mid" ? 10 : 10;
   const gridAlpha = gridQuality === "low" ? 0.03 : 0.05;
