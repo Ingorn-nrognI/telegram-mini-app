@@ -10590,12 +10590,7 @@ function drawScannerArenaBorder(ctx, size) {
   ctx.restore();
 }
 function buildScannerGridLinesCache(size, cellSize) {
-  const cacheCanvas = document.createElement("canvas");
-  cacheCanvas.width = size;
-  cacheCanvas.height = size;
-  const cacheCtx = cacheCanvas.getContext("2d");
-  drawScannerGridLines(cacheCtx, size, cellSize);
-  return cacheCanvas;
+  return null;
 }
 
 function drawScannerBeam(ctx, length, options = {}) {
@@ -11235,17 +11230,6 @@ function ensureScannerSurfaceCaches(size) {
   ) {
     const previewCanvas = buildScannerCanvasCache(size, scannerGridState.previewCellOwners || [], scannerGridState.players || []);
     scannerGridPreviewCanvasCache = { version: scannerGridState.previewGridVersion, size, canvas: previewCanvas };
-  }
-
-  if (
-    !scannerGridLinesCache ||
-    !scannerGridLinesCache.canvas ||
-    scannerGridLinesCache.size !== size
-  ) {
-    scannerGridLinesCache = {
-      size,
-      canvas: buildScannerGridLinesCache(size, size / SCANNER_GRID_COLS)
-    };
   }
 
   const transitionVersion = `${scannerGridState.previewGridVersion}_${scannerGridState.gridVersion}`;
