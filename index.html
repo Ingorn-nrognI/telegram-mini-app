@@ -8261,6 +8261,18 @@ function applySocketRoundPatch(patch) {
   if (patch.roundId !== undefined) {
     scannerRealtime.activeRoundId = patch.roundId || null;
     if (!patch.roundId) {
+      // Сохраняем текущую позицию луча как стартовую для лобби
+      if (_serverBeamPos && _serverBeamPos.x !== undefined) {
+        const _nowMs = getNetworkTime();
+        if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
+        scannerRealtime.runtimeData.idleBeamMotion = {
+          anchorAt: _nowMs,
+          x: _serverBeamPos.x,
+          y: _serverBeamPos.y,
+          vx: _serverBeamPos.vx || 0,
+          vy: _serverBeamPos.vy || 0
+        };
+      }
       scannerRealtime.roundData = null;
       scannerRealtime.participants = [];
     }
@@ -11645,7 +11657,7 @@ function renderScannerCanvas() {
       const boxW = textWidth + paddingX * 2;
       const boxH = fontSize + paddingY * 2;
       const boxX = Math.max(4, Math.min(size - boxW - 4, px - boxW / 2));
-      const boxY = Math.max(4, py - boxH - Math.max(10, size * 0.031) * 2.2);
+      const boxY = Math.max(4, py - boxH - Math.max(10, size * 0.031) * 3.5);
       ctx.save();
       ctx.fillStyle = "rgba(0,0,0,0.62)";
       ctx.beginPath();
