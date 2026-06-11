@@ -4117,7 +4117,10 @@ const SCANNER_QUICK_STAKES_STORAGE_KEY = "bobr_world_scanner_quick_stakes_v1";
   let serverTimestampOffset = 0;
 
 function getNetworkTime() {
-  return Date.now() + serverTimestampOffset;
+  const socketOffset = (typeof _serverTimeOffset === 'number' && _serverTimeOffset !== 0)
+    ? _serverTimeOffset
+    : serverTimestampOffset;
+  return Date.now() + socketOffset;
 }
 
 function syncServerTime() {
@@ -10343,15 +10346,16 @@ function getScannerRoundOverlayRight() {
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
   const round = scannerRealtime.roundData;
+  const now = getNetworkTime();
   if (status === "countdown" && round?.countdownEndsAt) {
-    const remaining = Math.max(0, tsToMs(round.countdownEndsAt) - getNetworkTime());
+    const remaining = Math.max(0, tsToMs(round.countdownEndsAt) - now);
     return formatCountdownMs(remaining);
   }
   if (status === "shuffling") {
     return "Раунд";
   }
   if (status === "active" && round?.activeEndsAt) {
-    const remaining = Math.max(0, tsToMs(round.activeEndsAt) - getNetworkTime());
+    const remaining = Math.max(0, tsToMs(round.activeEndsAt) - now);
     return formatCountdownMs(remaining);
   }
   if (status === "finished") {
