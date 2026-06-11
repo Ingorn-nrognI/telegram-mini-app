@@ -6699,7 +6699,6 @@ function getScannerDerivedVisualCacheKey(round, participants) {
   const participantsPart = (participants || []).map((participant, index) => [
     String(participant?.playerId || participant?.id || `participant_${index}`),
     normalizeStakeValue(participant?.stake).toFixed(2),
-    String(tsToMs(participant?.joinedAt || participant?.createdAt || participant?.updatedAt || 0)),
     String(participant?.status || "joined"),
     String(participant?.name || ""),
     String(participant?.avatar || "")
@@ -7321,23 +7320,27 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
       ? 0
       : Math.max(0, (performance.now() - anchorAt) / 1000);
 
-    // Плавное замедление к концу таймера countdown
-    let speedFactor = 1;
+    // Плавное замедление к концу таймера — лазер доезжает до ближайшего бортика и останавливается
+    let vxFinal = _serverBeamPos.vx || 0;
+    let vyFinal = _serverBeamPos.vy || 0;
     const _round = scannerRealtime?.roundData;
     if (_round?.countdownEndsAt && scannerGridState.status === "countdown") {
       const _remaining = Math.max(0, tsToMs(_round.countdownEndsAt) - getNetworkTime());
       const _total = SCANNER_COUNTDOWN_MS;
       const _progress = 1 - Math.min(1, _remaining / _total);
-      if (_progress > 0.7) {
-        speedFactor = Math.max(0.3, 1 - (_progress - 0.7) / 0.3 * 0.7);
+      if (_progress > 0.6) {
+        // Плавный easing — cosine замедление
+        const t = (_progress - 0.6) / 0.4;
+        const eased = t * t * (3 - 2 * t);
+        const speedFactor = Math.max(0, 1 - eased);
+        vxFinal = vxFinal * speedFactor;
+        vyFinal = vyFinal * speedFactor;
       }
     }
 
-    const vxScaled = (_serverBeamPos.vx || 0) * speedFactor;
-    const vyScaled = (_serverBeamPos.vy || 0) * speedFactor;
-    const xr = _clientReflectedAxis(_serverBeamPos.x, vxScaled, elapsed, PAD, 1 - PAD);
-    const yr = _clientReflectedAxis(_serverBeamPos.y, vyScaled, elapsed, PAD, 1 - PAD);
-    const angle = Math.atan2(yr.velocity, xr.velocity);
+    const xr = _clientReflectedAxis(_serverBeamPos.x, vxFinal, elapsed, PAD, 1 - PAD);
+    const yr = _clientReflectedAxis(_serverBeamPos.y, vyFinal, elapsed, PAD, 1 - PAD);
+    const angle = Math.atan2(yr.velocity || 0.0001, xr.velocity || 0.0001);
     return { x: xr.position, y: yr.position, vx: xr.velocity, vy: yr.velocity, angle };
   }
   const motionState = runtimeData?.idleBeamMotion || runtimeData?.idleBeamState
@@ -8261,9 +8264,31 @@ function applySocketRoundPatch(patch) {
   if (patch.participants !== undefined) {
     scannerRealtime.participants = Array.isArray(patch.participants) ? patch.participants : [];
   }
+  if (patch.activeEndsAt !== undefined) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.activeEndsAt = patch.activeEndsAt;
+  }
+  if (patch.activeStartedAt !== undefined) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.activeStartedAt = patch.activeStartedAt;
+  }
+  if (patch.shuffleStartedAt !== undefined) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.shuffleStartedAt = patch.shuffleStartedAt;
+  }
+  if (patch.shuffleEndsAt !== undefined) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.shuffleEndsAt = patch.shuffleEndsAt;
+  }
   if (patch.countdownEndsAt !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
-    scannerRealtime.roundData.countdownEndsAt = patch.countdownEndsAt;
+    // Сохраняем точное серверное время — не даём Firestore перезаписать
+    const _newEnd = Number(patch.countdownEndsAt);
+    const _existing = Number(scannerRealtime.roundData.countdownEndsAt || 0);
+    if (!_existing || Math.abs(_newEnd - _existing) > 500) {
+      scannerRealtime.roundData.countdownEndsAt = patch.countdownEndsAt;
+      scannerRealtime._socketCountdownEndsAt = patch.countdownEndsAt;
+    }
   }
   if (patch.idleBeamMotion !== undefined) {
     if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
@@ -8272,7 +8297,6 @@ function applySocketRoundPatch(patch) {
   if (patch.roundId !== undefined) {
     scannerRealtime.activeRoundId = patch.roundId || null;
     if (!patch.roundId) {
-      // Сохраняем текущую позицию луча как стартовую для лобби
       if (_serverBeamPos && _serverBeamPos.x !== undefined) {
         const _nowMs = getNetworkTime();
         if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
@@ -8286,6 +8310,10 @@ function applySocketRoundPatch(patch) {
       }
       scannerRealtime.roundData = null;
       scannerRealtime.participants = [];
+      scannerRealtime._socketCountdownEndsAt = null;
+      // Принудительно сбрасываем статус чтобы таймер показал 00:20
+      scannerGridState.status = "idle";
+      scannerGridState.roundStatus = "idle";
     }
   }
   syncScannerDerivedState();
@@ -8528,6 +8556,13 @@ function syncScannerDerivedState() {
   scannerGridState.roundData = round;
   scannerGridState.roundId = round?.id || null;
   scannerGridState.roundStatus = roundStatus;
+
+  // Защищаем countdownEndsAt от перезаписи Firestore если сокет уже дал точное значение
+  if (round && scannerRealtime._socketCountdownEndsAt && !round.countdownEndsAt) {
+    round = { ...round, countdownEndsAt: scannerRealtime._socketCountdownEndsAt };
+    scannerGridState.roundData = round;
+  }
+
   scannerGridState.participants = renderParticipants;
   scannerGridState.maxPlayers = Number(round?.maxPlayers || scannerGridState.selectedPopulation || 0);
   scannerGridState.lastResultSource = round?.resultSource || "firestore-shared";
@@ -11406,17 +11441,19 @@ function renderScannerCanvas() {
   const nowMs = getNetworkTime();
   const _frameLobbyBeamSample = getScannerSharedLobbyBeamSample(nowMs);
 
-  // Border glow — только в лобби режиме (нет игроков)
-  if (!hasGrid) {
-    const _bx = _frameLobbyBeamSample.x * size;
-    const _by = _frameLobbyBeamSample.y * size;
-    const _bw = Math.max(11, size * 0.031) + 1;
-    const _dL = _bx, _dR = size - _bx, _dT = _by, _dB = size - _by;
-    const _mD = Math.min(_dL, _dR, _dT, _dB);
-    const _curWall = _mD <= _bw
-      ? (_dL === _mD ? 'L' : _dR === _mD ? 'R' : _dT === _mD ? 'T' : 'B') : null;
-    if (_curWall !== renderScannerCanvas._lastWall) {
-      if (_curWall) {
+  {
+    const _glowSample = hasGrid ? null : _frameLobbyBeamSample;
+    if (_glowSample) {
+      const _bx = _glowSample.x * size;
+      const _by = _glowSample.y * size;
+      const _bw = Math.max(11, size * 0.031) + 1;
+      const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
+      const _dL = _bx - _pad, _dR = (size - _pad) - _bx;
+      const _dT = _by - _pad, _dB = (size - _pad) - _by;
+      const _mD = Math.min(_dL, _dR, _dT, _dB);
+      const _curWall = _mD <= 0
+        ? (_dL <= 0 ? 'L' : _dR <= 0 ? 'R' : _dT <= 0 ? 'T' : 'B') : null;
+      if (_curWall && _curWall !== renderScannerCanvas._lastWall) {
         let _gwx, _gwy;
         if (_curWall === 'L')      { _gwx = _bw * 0.5;        _gwy = _by; }
         else if (_curWall === 'R') { _gwx = size - _bw * 0.5; _gwy = _by; }
@@ -11425,9 +11462,9 @@ function renderScannerCanvas() {
         addBorderGlowPoint(size, _gwx, _gwy);
       }
       renderScannerCanvas._lastWall = _curWall;
+    } else {
+      renderScannerCanvas._lastWall = null;
     }
-  } else {
-    renderScannerCanvas._lastWall = null;
   }
 
   const roundData = scannerGridState.roundData || null;
