@@ -10364,7 +10364,10 @@ function renderScannerRound(options = {}) {
     setTextContentIfChanged(countdown, getScannerCountdownChipText());
     countdown.classList.toggle("is-round-active", scannerGridState.status === "active");
   }
-  if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(isArenaResetPhase ? 0 : (scannerGridState.totalPot || 0))}`);
+  const _displayPot = isArenaResetPhase ? 0 : (scannerRealtime.roundData?.totalPot || scannerGridState.totalPot || 0);
+  if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(_displayPot)}`);
+  const screenPoolChip = document.getElementById("scannerScreenPoolChip");
+  if (screenPoolChip) setTextContentIfChanged(screenPoolChip, `Банк: ${formatTon(_displayPot)}`);
   if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${isArenaResetPhase ? "0%" : myChanceValue}`);
   if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
   if (selectedPopulation) setTextContentIfChanged(selectedPopulation, scannerGridState.roundData ? formatCompactNumber(scannerGridState.maxPlayers || 0) : formatCompactNumber(scannerGridState.selectedPopulation));
@@ -11499,8 +11502,8 @@ function renderScannerCanvas() {
     const reticleRadius = Math.max(10.2, size * 0.031);
     const px = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.x * size));
     const py = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.y * size));
-    const beamLength = size * (isHotBeam ? 4.85 : 4.5);
-    const reticleRotation = now * (isHotBeam ? SCANNER_RETICLE_ACTIVE_SPIN_SPEED : SCANNER_RETICLE_IDLE_SPIN_SPEED);
+    const beamLength = size * 4.6;
+    const reticleRotation = now * SCANNER_RETICLE_IDLE_SPIN_SPEED;
 
     let beamRenderAngle;
     if (!isHotBeam) {
@@ -11515,19 +11518,17 @@ function renderScannerCanvas() {
     ctx.translate(px, py);
     ctx.rotate(beamRenderAngle);
     drawScannerBeam(ctx, beamLength, {
-      glowWidth: isHotBeam ? 12.2 : 11,
-      coreWidth: isHotBeam ? 3.25 : 2.9,
+      glowWidth: 11,
+      coreWidth: 2.9,
       innerWidth: 0.94,
-      glowBlur: 29,
-      coreBlur: 15,
-      beamColor: isHotBeam
-        ? "rgba(45, 225, 255, 0.86)"
-        : "rgba(45, 225, 255, 0.72)",
-      innerColor: "rgba(255,255,255,0.95)",
+      glowBlur: 27,
+      coreBlur: 14,
+      beamColor: "rgba(45, 225, 255, 0.74)",
+      innerColor: "rgba(255,255,255,0.88)",
       centerGap: reticleRadius * 2.72
     });
     drawScannerReticle(ctx, 0, 0, reticleRadius, {
-      alpha: isHotBeam ? 0.98 : 0.86,
+      alpha: 0.86,
       plusScale: 0.74,
       plusColor: "rgba(7, 11, 18, 0.96)",
       rotation: reticleRotation,
