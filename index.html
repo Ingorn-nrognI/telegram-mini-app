@@ -7314,7 +7314,9 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
   if (_serverBeamPos && _serverBeamPos.x !== undefined && (Date.now() - _serverBeamPosLastUpdate) < 10000) {
     const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
     const anchorAt = _serverBeamPos._receiveTime || performance.now();
-    const elapsed = Math.max(0, (performance.now() - anchorAt) / 1000);
+    const elapsed = _serverBeamPos._firstReceive
+      ? 0
+      : Math.max(0, (performance.now() - anchorAt) / 1000);
     const startX = _serverBeamPos.x;
     const startY = _serverBeamPos.y;
     const vx = _serverBeamPos.vx || 0;
@@ -8164,10 +8166,20 @@ function initSocketConnection() {
   _socket = io(SOCKET_SERVER, { transports: ['websocket'], reconnection: true });
   _socket.on('connect', () => {
     _socket.emit('ping_time', { clientTime: Date.now() });
+    setInterval(() => {
+      _socket.emit('ping_time', { clientTime: Date.now() });
+    }, 10000);
   });
   _socket.on('pong_time', (data) => {
-    if (data?.serverTime && _serverTimeOffset === 0) {
-      _serverTimeOffset = data.serverTime - Date.now();
+    if (data?.serverTime) {
+      const newOffset = data.serverTime - Date.now();
+      if (_serverTimeOffset === 0) {
+        _serverTimeOffset = newOffset;
+        _serverTimeOffsetSmoothed = newOffset;
+      } else {
+        _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.3;
+        _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+      }
     }
   });
   _socket.on('disconnect', () => {});
@@ -8190,7 +8202,11 @@ function initSocketConnection() {
         _receiveTime: now
       };
     } else {
-      _serverBeamPos = { ...data, _receiveTime: now };
+      _serverBeamPos = {
+        ...data,
+        _receiveTime: now,
+        _firstReceive: true
+      };
     }
     _serverBeamPosLastUpdate = Date.now();
     if (data?.idleBeamMotion) {
@@ -11460,6 +11476,7 @@ function renderScannerCanvas() {
   let previewBadgeAlpha = 0;
 
   if (roundStatus === "waiting" || roundStatus === "countdown") {
+    drawScannerArenaBase(ctx, size);
     if (scannerGridPreviewCanvasCache?.canvas) {
       ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
     }
