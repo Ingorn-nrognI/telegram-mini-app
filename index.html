@@ -11563,8 +11563,18 @@ function renderScannerCanvas() {
     });
     if (roundStatus === "shuffling") {
       const shuffleProgress = getScannerShuffleTransitionProgress(roundData);
-      const easedProgress = shuffleProgress * shuffleProgress;
-      const triangleAngle = (now / 1000) * ((1 - easedProgress) * 6 + 0.2);
+      const easedProgress = smoothstep(0, 1, shuffleProgress);
+
+      // Финальный угол треугольника — тот же алгоритм что на сервере
+      const shuffleStartMs = tsToMs(roundData?.shuffleStartedAt) || 0;
+      const shuffleEndSec = (shuffleStartMs + SCANNER_SHUFFLING_MS) / 1000;
+      const finalSpinAngle = (shuffleEndSec * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
+
+      // Текущий угол вращения треугольника
+      const currentSec = now / 1000;
+      const spinRate = SCANNER_LOBBY_LASER_TURN_SPEED * (1 + (1 - easedProgress) * 8);
+      const currentSpinAngle = (currentSec * spinRate) % (Math.PI * 2);
+      const triangleAngle = currentSpinAngle * (1 - easedProgress) + finalSpinAngle * easedProgress;
       const orbitR = reticleRadius * 2.8;
       const tx = Math.cos(triangleAngle) * orbitR;
       const ty = Math.sin(triangleAngle) * orbitR;
