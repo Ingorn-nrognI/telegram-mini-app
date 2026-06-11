@@ -8306,6 +8306,16 @@ function ensureScannerVisualLoop() {
     if (fpsInterval > 0) ensureScannerVisualLoop._lastFrame = now;
     try {
       renderScannerCanvas();
+      const _status = scannerGridState.status;
+      if (["countdown", "active", "shuffling", "finished", "preparing_next_round"].includes(_status)) {
+        const _cd = document.getElementById("scannerCountdownChip");
+        const _cdScreen = document.getElementById("scannerScreenCountdownChip");
+        const _text = getScannerCountdownChipText();
+        if (_cd) setTextContentIfChanged(_cd, _text);
+        if (_cdScreen) setTextContentIfChanged(_cdScreen, _text);
+        if (_cd) _cd.classList.toggle("is-round-active", _status === "active");
+        if (_cdScreen) _cdScreen.classList.toggle("is-round-active", _status === "active");
+      }
     } catch (err) {
       console.warn("Scanner canvas render error:", err);
     }
@@ -11518,21 +11528,21 @@ function renderScannerCanvas() {
     ctx.translate(px, py);
     ctx.rotate(beamRenderAngle);
     drawScannerBeam(ctx, beamLength, {
-      glowWidth: 11,
-      coreWidth: 2.9,
-      innerWidth: 0.94,
+      glowWidth: 10.8,
+      coreWidth: 2.85,
+      innerWidth: 0.9,
       glowBlur: 27,
       coreBlur: 14,
       beamColor: "rgba(45, 225, 255, 0.74)",
       innerColor: "rgba(255,255,255,0.88)",
-      centerGap: reticleRadius * 2.72
+      centerGap: reticleRadius * 2
     });
     drawScannerReticle(ctx, 0, 0, reticleRadius, {
       alpha: 0.86,
-      plusScale: 0.74,
+      plusScale: 0.22,
       plusColor: "rgba(7, 11, 18, 0.96)",
       rotation: reticleRotation,
-      wobble: isHotBeam ? SCANNER_RETICLE_ACTIVE_WOBBLE : SCANNER_RETICLE_IDLE_WOBBLE
+      wobble: SCANNER_RETICLE_IDLE_WOBBLE
     });
     if (roundStatus === "shuffling") {
       const shuffleProgress = getScannerShuffleTransitionProgress(roundData);
