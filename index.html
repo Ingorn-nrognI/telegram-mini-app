@@ -10359,21 +10359,28 @@ function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
   const round = scannerRealtime.roundData;
   const now = getNetworkTime();
-  if (status === "countdown" && round?.countdownEndsAt) {
-    const remaining = Math.max(0, tsToMs(round.countdownEndsAt) - now);
-    return formatCountdownMs(remaining);
+
+  if (status === "idle" || status === "waiting") {
+    return formatCountdownMs(SCANNER_COUNTDOWN_MS);
+  }
+  if (status === "countdown") {
+    if (round?.countdownEndsAt) {
+      const remaining = Math.max(0, tsToMs(round.countdownEndsAt) - now);
+      return formatCountdownMs(remaining);
+    }
+    return formatCountdownMs(SCANNER_COUNTDOWN_MS);
   }
   if (status === "shuffling") {
     return "Раунд";
   }
-  if (status === "active" && round?.activeEndsAt) {
-    const remaining = Math.max(0, tsToMs(round.activeEndsAt) - now);
-    return formatCountdownMs(remaining);
+  if (status === "active") {
+    if (round?.activeEndsAt) {
+      const remaining = Math.max(0, tsToMs(round.activeEndsAt) - now);
+      return formatCountdownMs(remaining);
+    }
+    return formatCountdownMs(0);
   }
-  if (status === "finished") {
-    return "Раунд";
-  }
-  if (status === "preparing_next_round") {
+  if (status === "finished" || status === "preparing_next_round") {
     return "Раунд";
   }
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
