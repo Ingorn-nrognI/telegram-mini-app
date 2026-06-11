@@ -11441,30 +11441,7 @@ function renderScannerCanvas() {
   const nowMs = getNetworkTime();
   const _frameLobbyBeamSample = getScannerSharedLobbyBeamSample(nowMs);
 
-  {
-    const _glowSample = _frameLobbyBeamSample;
-    if (_glowSample) {
-      const _bx = _glowSample.x * size;
-      const _by = _glowSample.y * size;
-      const _bw = Math.max(11, size * 0.031) + 1;
-      const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
-      const _zone = size * 0.018;
-      const _dL = _bx - (_pad + _zone), _dR = (size - _pad - _zone) - _bx;
-      const _dT = _by - (_pad + _zone), _dB = (size - _pad - _zone) - _by;
-      const _mD = Math.min(_dL, _dR, _dT, _dB);
-      const _curWall = _mD <= 0
-        ? (_dL <= 0 ? 'L' : _dR <= 0 ? 'R' : _dT <= 0 ? 'T' : 'B') : null;
-      if (_curWall && _curWall !== renderScannerCanvas._lastWall) {
-        let _gwx, _gwy;
-        if (_curWall === 'L')      { _gwx = _bw * 0.5;        _gwy = _by; }
-        else if (_curWall === 'R') { _gwx = size - _bw * 0.5; _gwy = _by; }
-        else if (_curWall === 'T') { _gwx = _bx;              _gwy = _bw * 0.5; }
-        else                       { _gwx = _bx;              _gwy = size - _bw * 0.5; }
-        addBorderGlowPoint(size, _gwx, _gwy);
-      }
-      renderScannerCanvas._lastWall = _curWall;
-    }
-  }
+  // Border glow — удалить отсюда, перенесём после рисования луча где есть реальная позиция
 
   const roundData = scannerGridState.roundData || null;
   const activeEndsAt = tsToMs(roundData?.activeEndsAt);
@@ -11685,6 +11662,37 @@ function renderScannerCanvas() {
       }
     }
     ctx.restore();
+  }
+
+  // Border glow — используем реальную позицию луча
+  {
+    const _gs = visualBeamSample || _frameLobbyBeamSample;
+    if (_gs) {
+      const _bx = _gs.x * size;
+      const _by = _gs.y * size;
+      const _bw = Math.max(11, size * 0.031) + 1;
+      const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
+      const _zone = size * 0.02;
+      const _dL = _bx - (_pad + _zone);
+      const _dR = (size - _pad - _zone) - _bx;
+      const _dT = _by - (_pad + _zone);
+      const _dB = (size - _pad - _zone) - _by;
+      const _mD = Math.min(_dL, _dR, _dT, _dB);
+      const _curWall = _mD <= 0
+        ? (_dL <= 0 ? 'L' : _dR <= 0 ? 'R' : _dT <= 0 ? 'T' : 'B') : null;
+      if (_curWall && _curWall !== renderScannerCanvas._lastWall) {
+        let _gwx, _gwy;
+        if (_curWall === 'L')      { _gwx = _bw * 0.5;        _gwy = _by; }
+        else if (_curWall === 'R') { _gwx = size - _bw * 0.5; _gwy = _by; }
+        else if (_curWall === 'T') { _gwx = _bx;              _gwy = _bw * 0.5; }
+        else                       { _gwx = _bx;              _gwy = size - _bw * 0.5; }
+        addBorderGlowPoint(size, _gwx, _gwy);
+      }
+      renderScannerCanvas._lastWall = _curWall || renderScannerCanvas._lastWall;
+      if (!_curWall && renderScannerCanvas._lastWall) {
+        renderScannerCanvas._lastWall = null;
+      }
+    }
   }
 
   if (isScannerResultRevealReady()) {
