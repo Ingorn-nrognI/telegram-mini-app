@@ -7320,12 +7320,23 @@ function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedV
     const elapsed = _serverBeamPos._firstReceive
       ? 0
       : Math.max(0, (performance.now() - anchorAt) / 1000);
-    const startX = _serverBeamPos.x;
-    const startY = _serverBeamPos.y;
-    const vx = _serverBeamPos.vx || 0;
-    const vy = _serverBeamPos.vy || 0;
-    const xr = _clientReflectedAxis(startX, vx, elapsed, PAD, 1 - PAD);
-    const yr = _clientReflectedAxis(startY, vy, elapsed, PAD, 1 - PAD);
+
+    // Плавное замедление к концу таймера countdown
+    let speedFactor = 1;
+    const _round = scannerRealtime?.roundData;
+    if (_round?.countdownEndsAt && scannerGridState.status === "countdown") {
+      const _remaining = Math.max(0, tsToMs(_round.countdownEndsAt) - getNetworkTime());
+      const _total = SCANNER_COUNTDOWN_MS;
+      const _progress = 1 - Math.min(1, _remaining / _total);
+      if (_progress > 0.7) {
+        speedFactor = Math.max(0.3, 1 - (_progress - 0.7) / 0.3 * 0.7);
+      }
+    }
+
+    const vxScaled = (_serverBeamPos.vx || 0) * speedFactor;
+    const vyScaled = (_serverBeamPos.vy || 0) * speedFactor;
+    const xr = _clientReflectedAxis(_serverBeamPos.x, vxScaled, elapsed, PAD, 1 - PAD);
+    const yr = _clientReflectedAxis(_serverBeamPos.y, vyScaled, elapsed, PAD, 1 - PAD);
     const angle = Math.atan2(yr.velocity, xr.velocity);
     return { x: xr.position, y: yr.position, vx: xr.velocity, vy: yr.velocity, angle };
   }
@@ -10360,7 +10371,7 @@ function getScannerCountdownChipText() {
   const round = scannerRealtime.roundData;
   const now = getNetworkTime();
 
-  if (status === "idle" || status === "waiting") {
+  if (status === "idle" || status === "waiting" || !round) {
     return formatCountdownMs(SCANNER_COUNTDOWN_MS);
   }
   if (status === "countdown") {
@@ -11395,31 +11406,29 @@ function renderScannerCanvas() {
   const nowMs = getNetworkTime();
   const _frameLobbyBeamSample = getScannerSharedLobbyBeamSample(nowMs);
 
-  // Border glow on bounce — используем предыдущую позицию чтобы найти точку касания
-  const _rawLobbyForGlow = _frameLobbyBeamSample;
-  const _lobbyBx = _rawLobbyForGlow.x * size;
-  const _lobbyBy = _rawLobbyForGlow.y * size;
-  const _bw = Math.max(11, size * 0.031) + 1;
-  const _lobbySafePad = _bw;
-  const _dL = _lobbyBx, _dR = size - _lobbyBx, _dT = _lobbyBy, _dB = size - _lobbyBy;
-  const _mD = Math.min(_dL, _dR, _dT, _dB);
-  const _curWall = _mD <= _lobbySafePad
-    ? (_dL === _mD ? 'L' : _dR === _mD ? 'R' : _dT === _mD ? 'T' : 'B') : null;
-  if (_curWall) {
-    const _prevWall = renderScannerCanvas._lastWall;
-    const _lastGlowT = renderScannerCanvas._lastGlowT || 0;
-    const _nowT = performance.now();
-    if (_prevWall !== _curWall || _nowT - _lastGlowT > 300) {
-      let _gwx, _gwy;
-      if (_curWall === 'L')      { _gwx = _bw * 0.5;        _gwy = _lobbyBy; }
-      else if (_curWall === 'R') { _gwx = size - _bw * 0.5; _gwy = _lobbyBy; }
-      else if (_curWall === 'T') { _gwx = _lobbyBx;         _gwy = _bw * 0.5; }
-      else                       { _gwx = _lobbyBx;         _gwy = size - _bw * 0.5; }
-      addBorderGlowPoint(size, _gwx, _gwy);
-      renderScannerCanvas._lastGlowT = _nowT;
+  // Border glow — только в лобби режиме (нет игроков)
+  if (!hasGrid) {
+    const _bx = _frameLobbyBeamSample.x * size;
+    const _by = _frameLobbyBeamSample.y * size;
+    const _bw = Math.max(11, size * 0.031) + 1;
+    const _dL = _bx, _dR = size - _bx, _dT = _by, _dB = size - _by;
+    const _mD = Math.min(_dL, _dR, _dT, _dB);
+    const _curWall = _mD <= _bw
+      ? (_dL === _mD ? 'L' : _dR === _mD ? 'R' : _dT === _mD ? 'T' : 'B') : null;
+    if (_curWall !== renderScannerCanvas._lastWall) {
+      if (_curWall) {
+        let _gwx, _gwy;
+        if (_curWall === 'L')      { _gwx = _bw * 0.5;        _gwy = _by; }
+        else if (_curWall === 'R') { _gwx = size - _bw * 0.5; _gwy = _by; }
+        else if (_curWall === 'T') { _gwx = _bx;              _gwy = _bw * 0.5; }
+        else                       { _gwx = _bx;              _gwy = size - _bw * 0.5; }
+        addBorderGlowPoint(size, _gwx, _gwy);
+      }
+      renderScannerCanvas._lastWall = _curWall;
     }
+  } else {
+    renderScannerCanvas._lastWall = null;
   }
-  renderScannerCanvas._lastWall = _curWall;
 
   const roundData = scannerGridState.roundData || null;
   const activeEndsAt = tsToMs(roundData?.activeEndsAt);
