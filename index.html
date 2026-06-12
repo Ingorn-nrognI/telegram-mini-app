@@ -8409,7 +8409,6 @@ function startScannerLifecycleTimer() {
   scannerRealtime.lifecycleTimer = setInterval(() => {
     syncScannerDerivedState();
     renderScannerRound();
-    ensureScannerRoundLifecycle().catch((error) => console.warn("Не удалось продвинуть фазу раунда:", error));
   }, 500);
 }
 
@@ -11596,7 +11595,6 @@ function subscribeScannerRound(roundId) {
 
     syncScannerDerivedState();
     renderScannerRound();
-    ensureScannerRoundLifecycle().catch((error) => console.warn("Не удалось синхронизировать фазу раунда:", error));
   }, (error) => {
     console.error("Ошибка подписки на общий раунд:", error);
     scannerRealtime.roundReady = true;
