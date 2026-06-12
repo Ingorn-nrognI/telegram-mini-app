@@ -8288,6 +8288,11 @@ function applySocketRoundPatch(patch) {
       scannerGridState.totalPlayers = 0;
       scannerGridState.totalPot = 0;
       scannerGridState.countdownMs = 0;
+      scannerRealtime.roundReady = true;
+      scannerRealtime.participantsReady = true;
+      scannerRealtime.participantsError = false;
+      scannerRealtime.fallbackRoundId = null;
+      scannerRealtime.bootstrappingRound = false;
     }
   }
   // Если сервер явно сбросил раунд в idle — запрещаем bootstrap подхватить старый раунд
@@ -11449,7 +11454,7 @@ function renderScannerCanvas() {
       const _by = _gs.y * size;
       const _bw = Math.max(11, size * 0.031) + 1;
       const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
-      const _zone = size * 0.02;
+      const _zone = size * 0.04;
       const _dL = _bx - (_pad + _zone);
       const _dR = (size - _pad - _zone) - _bx;
       const _dT = _by - (_pad + _zone);
