@@ -8290,6 +8290,13 @@ function applySocketRoundPatch(patch) {
       scannerGridState.countdownMs = 0;
     }
   }
+  // Если сервер явно сбросил раунд в idle — запрещаем bootstrap подхватить старый раунд
+  if (patch.status === 'idle' && !patch.roundId) {
+    scannerRealtime.fallbackRoundId = '__cleared__';
+    scannerRealtime.roundReady = true;
+    scannerRealtime.participantsReady = true;
+    scannerRealtime.participantsError = false;
+  }
   syncScannerDerivedState();
   renderScannerRound();
   ensureScannerVisualLoop();
@@ -11659,6 +11666,7 @@ async function bootstrapScannerRoundFromRecentState(options = {}) {
   const { force = false } = options;
   if (scannerRealtime.bootstrappingRound) return;
   if (!force && scannerRealtime.runtimeData?.activeRoundId) return;
+  if (scannerRealtime.fallbackRoundId === '__cleared__') return;
 
   scannerRealtime.bootstrappingRound = true;
 
