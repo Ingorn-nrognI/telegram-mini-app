@@ -8705,6 +8705,7 @@ async function joinOrCreateScannerRound() {
     return;
   }
 
+  console.log('[join] Пытаемся войти, socket connected:', _socket?.connected, 'status:', scannerGridState.status, 'stake:', scannerGridState.selectedStake, 'balance:', getCurrentBalanceRaw());
   scannerRealtime.isJoinBusy = true;
   renderScannerButtons();
   renderScannerBetBar();
@@ -11453,8 +11454,8 @@ function renderScannerCanvas() {
       const _bx = _gs.x * size;
       const _by = _gs.y * size;
       const _bw = Math.max(11, size * 0.031) + 1;
-      const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
-      const _zone = size * 0.04;
+      const _pad = size * (SCANNER_LOBBY_BEAM_EDGE_PADDING - 0.015);
+      const _zone = size * 0.025;
       const _dL = _bx - (_pad + _zone);
       const _dR = (size - _pad - _zone) - _bx;
       const _dT = _by - (_pad + _zone);
