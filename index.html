@@ -7313,36 +7313,6 @@ function getScannerBeamSampleFromMotionState(motionState, timestampMs = getNetwo
 }
 
 function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedValue = "scanner_shared_lobby_motion_v2", runtimeData = scannerRealtime.runtimeData) {
-  if (_serverBeamPos && _serverBeamPos.x !== undefined && (Date.now() - _serverBeamPosLastUpdate) < 10000) {
-    const PAD = SCANNER_LOBBY_BEAM_EDGE_PADDING;
-    const anchorAt = _serverBeamPos._receiveTime || performance.now();
-    const elapsed = _serverBeamPos._firstReceive
-      ? 0
-      : Math.max(0, (performance.now() - anchorAt) / 1000);
-
-    // Плавное замедление к концу таймера — лазер доезжает до ближайшего бортика и останавливается
-    let vxFinal = _serverBeamPos.vx || 0;
-    let vyFinal = _serverBeamPos.vy || 0;
-    const _round = scannerRealtime?.roundData;
-    if (_round?.countdownEndsAt && scannerGridState.status === "countdown") {
-      const _remaining = Math.max(0, tsToMs(_round.countdownEndsAt) - getNetworkTime());
-      const _total = SCANNER_COUNTDOWN_MS;
-      const _progress = 1 - Math.min(1, _remaining / _total);
-      if (_progress > 0.6) {
-        // Плавный easing — cosine замедление
-        const t = (_progress - 0.6) / 0.4;
-        const eased = t * t * (3 - 2 * t);
-        const speedFactor = Math.max(0, 1 - eased);
-        vxFinal = vxFinal * speedFactor;
-        vyFinal = vyFinal * speedFactor;
-      }
-    }
-
-    const xr = _clientReflectedAxis(_serverBeamPos.x, vxFinal, elapsed, PAD, 1 - PAD);
-    const yr = _clientReflectedAxis(_serverBeamPos.y, vyFinal, elapsed, PAD, 1 - PAD);
-    const angle = Math.atan2(yr.velocity || 0.0001, xr.velocity || 0.0001);
-    return { x: xr.position, y: yr.position, vx: xr.velocity, vy: yr.velocity, angle };
-  }
   const motionState = runtimeData?.idleBeamMotion || runtimeData?.idleBeamState
     ? getScannerRuntimeIdleBeamState(runtimeData)
     : getScannerDefaultIdleBeamMotion(seedValue);
@@ -8282,12 +8252,9 @@ function applySocketRoundPatch(patch) {
   }
   if (patch.countdownEndsAt !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
-    // Сохраняем точное серверное время — не даём Firestore перезаписать
-    const _newEnd = Number(patch.countdownEndsAt);
-    const _existing = Number(scannerRealtime.roundData.countdownEndsAt || 0);
-    if (!_existing || Math.abs(_newEnd - _existing) > 500) {
+    // Не перезаписываем countdownEndsAt если уже установлен — иначе таймер прыгает при входе второго игрока
+    if (!scannerRealtime.roundData.countdownEndsAt) {
       scannerRealtime.roundData.countdownEndsAt = patch.countdownEndsAt;
-      scannerRealtime._socketCountdownEndsAt = patch.countdownEndsAt;
     }
   }
   if (patch.idleBeamMotion !== undefined) {
@@ -10226,31 +10193,11 @@ function getScannerRoundOverlayRight() {
 
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
-  const round = scannerRealtime.roundData;
-  const now = getNetworkTime();
-
-  if (status === "idle" || status === "waiting" || !round) {
-    return formatCountdownMs(SCANNER_COUNTDOWN_MS);
-  }
-  if (status === "countdown") {
-    if (round?.countdownEndsAt) {
-      const remaining = Math.max(0, tsToMs(round.countdownEndsAt) - now);
-      return formatCountdownMs(remaining);
-    }
-    return formatCountdownMs(SCANNER_COUNTDOWN_MS);
-  }
-  if (status === "shuffling") {
-    return "Раунд";
-  }
   if (status === "active") {
-    if (round?.activeEndsAt) {
-      const remaining = Math.max(0, tsToMs(round.activeEndsAt) - now);
-      return formatCountdownMs(remaining);
-    }
-    return formatCountdownMs(0);
+    return "Round";
   }
-  if (status === "finished" || status === "preparing_next_round") {
-    return "Раунд";
+  if (["countdown", "shuffling", "finished", "preparing_next_round"].includes(status)) {
+    return formatCountdownMs(scannerGridState.countdownMs || 0);
   }
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
 }
