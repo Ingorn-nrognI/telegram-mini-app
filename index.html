@@ -4025,7 +4025,7 @@ firebase.auth().signInAnonymously().catch((err) => {
 });
 const DEMO_TON_START_BALANCE = 1000;
 const DEMO_TON_RESET_MIGRATION_COLLECTION = "system";
-const DEMO_TON_RESET_MIGRATION_DOC = "demo_ton_balance_reset_to_1000_v1";
+const DEMO_TON_RESET_MIGRATION_DOC = "demo_ton_balance_reset_to_1000_v2";
 const DEMO_TON_RESET_MIGRATION_TARGET = 1000;
 const DEMO_TON_RESET_MIGRATION_BATCH_SIZE = 450;
 const INSUFFICIENT_BALANCE_MESSAGE = "Для ставки не хватает баланса. Пополните свой баланс и повторите попытку.";
@@ -8724,239 +8724,55 @@ async function joinOrCreateScannerRound() {
   renderScannerBetBar();
 
   try {
-    await ensureDemoBalanceForCurrentUser();
-
     const player = getCurrentPlayer();
     const stakeToAdd = normalizeStakeValue(scannerGridState.selectedStake);
-    const desiredMaxPlayers = Number(scannerGridState.selectedPopulation || 2);
-    const runtimeRef = scannerRuntimeRef();
-    const userRef = getUserRef(player.id);
-    let joinedRoundId = null;
-    let nextBalanceAfterStake = null;
 
     if (!Number.isFinite(stakeToAdd) || stakeToAdd <= 0) {
       throw new Error("Выбери корректную ставку перед входом в раунд.");
     }
 
-    await db.runTransaction(async (tx) => {
-      const runtimeSnap = await tx.get(runtimeRef);
-      const runtimeData = runtimeSnap.exists ? (runtimeSnap.data() || {}) : {};
-      const runtimeRoundId = runtimeData.activeRoundId || null;
+    const balance = normalizeMoneyValue(getCurrentBalanceRaw());
+    if (balance < stakeToAdd) {
+      throw createInsufficientBalanceError();
+    }
 
-      let targetRoundRef = null;
-      let targetRoundData = null;
-      let targetRoundSnap = null;
+    await new Promise((resolve, reject) => {
+      if (!_socket || !_socket.connected) {
+        return reject(new Error("Нет соединения с сервером. Попробуй ещё раз."));
+      }
 
-      if (runtimeRoundId) {
-        targetRoundRef = scannerRoundRef(runtimeRoundId);
-        targetRoundSnap = await tx.get(targetRoundRef);
-        if (targetRoundSnap.exists) {
-          targetRoundData = targetRoundSnap.data() || {};
+      const eventName = scannerRealtime.activeRoundId && getScannerParticipantById(player.id)
+        ? 'round:addStake'
+        : 'round:join';
+
+      const payload = eventName === 'round:join'
+        ? { playerId: player.id, name: player.name, avatar: player.avatar || null, stake: stakeToAdd }
+        : { playerId: player.id, stake: stakeToAdd };
+
+      _socket.emit(eventName, payload, (response) => {
+        if (response?.ok) {
+          // Обновляем локальный баланс сразу
+          const newBalance = normalizeMoneyValue(balance - stakeToAdd);
+          syncLocalDemoBalance(newBalance);
+          resolve();
         } else {
-          targetRoundRef = null;
-          targetRoundData = null;
+          reject(new Error(response?.error || "Не удалось войти в раунд."));
         }
-      }
+      });
 
-      const runtimeRoundKnownEmpty = !!(
-        runtimeRoundId &&
-        targetRoundRef &&
-        targetRoundData &&
-        scannerRealtime.activeRoundId === runtimeRoundId &&
-        scannerRealtime.participantsReady &&
-        !scannerRealtime.participantsError &&
-        getRoundParticipantsForRender({ id: runtimeRoundId, ...targetRoundData }, scannerRealtime.participants).length === 0
-      );
-
-      if (runtimeRoundKnownEmpty) {
-        targetRoundRef = null;
-        targetRoundData = null;
-      }
-
-      const currentStatus = String(targetRoundData?.status || (runtimeRoundKnownEmpty ? "idle" : runtimeData.status) || "idle");
-      const hasReusableLobby = !!(
-        targetRoundRef &&
-        targetRoundData &&
-        ["waiting", "countdown"].includes(currentStatus)
-      );
-
-      let createNewRound = false;
-      if (!hasReusableLobby) {
-        if (targetRoundRef && targetRoundData && ["shuffling", "active", "finished", "preparing_next_round"].includes(currentStatus)) {
-          if (currentStatus === "active") {
-            throw new Error("Общий раунд уже идёт. Дождись следующего общего входа.");
-          }
-          throw new Error("Текущий раунд ещё завершается. Новая lobby откроется автоматически.");
-        }
-        createNewRound = true;
-        const nowMs = Date.now();
-        targetRoundRef = scannerRoundsCollection().doc(`scanner_${nowMs}_${Math.random().toString(36).slice(2, 8)}`);
-        targetRoundData = {
-          mode: "scanner-grid",
-          status: "waiting",
-          totalPot: 0,
-          commissionPercent: 0,
-          commissionAmount: 0,
-          winnerPayout: 0,
-          payoutProcessed: false,
-          payoutProcessedAt: null,
-          participantCount: 0,
-          maxPlayers: desiredMaxPlayers,
-          entropySeed: `${nowMs}_${Math.random().toString(36).slice(2)}_${player.id}`,
-          createdBy: player.id,
-          createdByName: player.name,
-          createdAt: createTimestampFromNow(0),
-          waitingOpenedAt: createTimestampFromNow(0),
-          countdownBeamMotion: null,
-          countdownStartedAt: null,
-          countdownEndsAt: null,
-          shuffleStartedAt: null,
-          shuffleEndsAt: null,
-          activeStartedAt: null,
-          activeEndsAt: null,
-          finishedAt: null,
-          finishedEndsAt: null,
-          preparingStartedAt: null,
-          preparingEndsAt: null,
-          winnerPlayerId: null,
-          winnerName: null,
-          winnerStake: 0,
-          winningCellIndex: null,
-          resultSource: "firestore-deterministic",
-          version: 1,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-      }
-
-      const participantRef = scannerParticipantsCollection(targetRoundRef.id).doc(player.id);
-      const participantSnap = await tx.get(participantRef);
-      const participantData = participantSnap.exists ? (participantSnap.data() || {}) : null;
-      const userSnap = await tx.get(userRef);
-      const userData = userSnap.exists ? (userSnap.data() || {}) : {};
-
-      const targetStatus = String(targetRoundData?.status || "waiting");
-      if (["shuffling", "active", "finished", "preparing_next_round"].includes(targetStatus)) {
-        throw new Error("Текущий общий раунд уже закрыт для входа.");
-      }
-
-      const currentParticipantCount = Number(targetRoundData?.participantCount || 0);
-      const maxPlayers = Math.max(2, Number(targetRoundData?.maxPlayers || desiredMaxPlayers || 2));
-      const participantAlreadyInside = !!(participantData && participantData.status !== "left");
-      const isRoundFullForNewJoin = !participantAlreadyInside && currentParticipantCount >= maxPlayers;
-
-      if (isRoundFullForNewJoin) {
-        throw new Error("Текущая общая lobby уже заполнена. Дождись следующего раунда.");
-      }
-
-      const previousStake = participantAlreadyInside
-        ? normalizeStakeValue(participantData.stake)
-        : 0;
-      const nextStake = normalizeStakeValue(previousStake + stakeToAdd);
-      const stakeDelta = normalizeStakeValue(nextStake - previousStake);
-      const grantAmount = userData.demoBalanceGranted === true ? 0 : DEMO_TON_START_BALANCE;
-      const availableBalance = normalizeMoneyValue(getUserDemoBalanceFromData(userData) + grantAmount);
-
-      if (availableBalance < stakeDelta) {
-        throw createInsufficientBalanceError();
-      }
-
-      const nextBalance = normalizeMoneyValue(availableBalance - stakeDelta);
-      nextBalanceAfterStake = nextBalance;
-      const isRejoinFromLeft = participantData?.status === "left";
-      const isNewParticipant = !participantSnap.exists || isRejoinFromLeft;
-      const nextParticipantCount = Math.max(0, currentParticipantCount + (isNewParticipant ? 1 : 0));
-      const nextTotalPot = normalizeStakeValue(Number(targetRoundData?.totalPot || 0) + stakeDelta);
-
-      if (runtimeRoundKnownEmpty && runtimeRoundId) {
-        const emptyRoundRef = scannerRoundRef(runtimeRoundId);
-        tx.set(emptyRoundRef, {
-          status: "idle",
-          totalPot: 0,
-          participantCount: 0,
-          countdownStartedAt: null,
-          countdownEndsAt: null,
-          activeStartedAt: null,
-          activeEndsAt: null,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          cleanupReason: "empty_participants_snapshot"
-        }, { merge: true });
-      }
-
-      if (createNewRound) {
-        tx.set(targetRoundRef, targetRoundData, { merge: true });
-      }
-
-      tx.set(userRef, {
-        playerId: player.id,
-        name: player.name,
-        avatar: player.avatar || null,
-        demoTonBalance: nextBalance,
-        demoBalanceGranted: true,
-        demoBalanceGrantedAt: userData.demoBalanceGranted === true
-          ? (userData.demoBalanceGrantedAt || firebase.firestore.FieldValue.serverTimestamp())
-          : firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-
-      tx.set(participantRef, {
-        playerId: player.id,
-        name: player.name,
-        avatar: player.avatar || null,
-        stake: nextStake,
-        status: "joined",
-        joinedAt: participantData?.joinedAt || createTimestampFromNow(0),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        source: "telegram-mini-app"
-      }, { merge: true });
-
-      const roundUpdate = {
-        totalPot: nextTotalPot,
-        participantCount: nextParticipantCount,
-        maxPlayers,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        version: Number(targetRoundData?.version || 0) + 1
-      };
-
-      if (nextParticipantCount >= 1 && (createNewRound || targetStatus === "waiting" || !targetStatus)) {
-        const countdownAnchorSample = getScannerCurrentLobbyOrCountdownSample(
-          { id: targetRoundRef.id, ...targetRoundData },
-          runtimeData,
-          Date.now()
-        );
-        roundUpdate.status = "countdown";
-        roundUpdate.countdownBeamMotion = createScannerIdleBeamMotionFromSample(countdownAnchorSample, Date.now());
-        roundUpdate.countdownStartedAt = createTimestampFromNow(0);
-        roundUpdate.countdownEndsAt = createTimestampFromNow(SCANNER_COUNTDOWN_MS);
-        roundUpdate.shuffleStartedAt = null;
-        roundUpdate.shuffleEndsAt = null;
-        roundUpdate.activeStartedAt = null;
-        roundUpdate.activeEndsAt = null;
-      }
-
-      joinedRoundId = targetRoundRef.id;
-      tx.set(targetRoundRef, roundUpdate, { merge: true });
-      tx.set(runtimeRef, {
-        mode: "scanner-grid",
-        activeRoundId: joinedRoundId,
-        status: roundUpdate.status || targetStatus || "waiting",
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      setTimeout(() => reject(new Error("Сервер не ответил. Попробуй ещё раз.")), 8000);
     });
 
-    if (joinedRoundId) {
-      if (nextBalanceAfterStake !== null) {
-        syncLocalDemoBalance(nextBalanceAfterStake);
-      }
-      setScannerTransientMessage("Ты подключён к общему PvP-раунду.", { type: "success", timeoutMs: 4000, render: false });
-      enterScannerGridMode();
-      renderScannerRound();
-    }
+    setScannerTransientMessage("Ты подключён к раунду.", { type: "success", timeoutMs: 3000, render: false });
+    enterScannerGridMode();
+    renderScannerRound();
+
   } catch (error) {
-    reportAppError("Не удалось войти в общий раунд:", error);
+    reportAppError("Не удалось войти в раунд:", error);
     if (isInsufficientBalanceError(error)) {
       showInsufficientBalanceModal();
     } else {
-      setScannerTransientMessage(error?.message || "Не удалось войти в общий раунд.", {
+      setScannerTransientMessage(error?.message || "Не удалось войти в раунд.", {
         type: "error",
         timeoutMs: 6000
       });
