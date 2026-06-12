@@ -8797,15 +8797,9 @@ async function leaveScannerRound(options = {}) {
 }
 
 async function updateScannerHeartbeat() {
-  const roundId = scannerGridState.roundId || scannerRealtime.activeRoundId;
-  if (!roundId) return;
-  const currentPlayer = getCurrentPlayer();
-  const participant = getScannerParticipantById(currentPlayer.id);
-  if (!participant) return;
-  await scannerParticipantsCollection(roundId).doc(currentPlayer.id).set({
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    presence: document.hidden ? "background" : "active"
-  }, { merge: true });
+  // Heartbeat через Firestore отключён — слишком много writes
+  // Присутствие игрока определяется сокет-соединением на сервере
+  return;
 }
 
 async function pruneStaleLobbyParticipants() {
@@ -11285,23 +11279,30 @@ async function bootstrapScannerRoundFromRecentState(options = {}) {
   }
 }
 
+async function loadScannerHistory() {
+  try {
+    const snapshot = await scannerHistoryCollection()
+      .orderBy("finishedAt", "desc")
+      .limit(5)
+      .get();
+    const items = [];
+    snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
+    scannerGridState.recentRounds = items;
+    renderScannerRecentList();
+  } catch(e) {
+    console.warn('История раундов не загружена:', e.message);
+  }
+}
+
 function subscribeScannerHistory() {
   if (scannerRealtime.unsubHistory) {
     scannerRealtime.unsubHistory();
     scannerRealtime.unsubHistory = null;
   }
 
-  scannerRealtime.unsubHistory = scannerHistoryCollection()
-    .orderBy("finishedAt", "desc")
-    .limit(5)
-    .onSnapshot((snapshot) => {
-      const items = [];
-      snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
-      scannerGridState.recentRounds = items;
-      renderScannerRecentList();
-    }, (error) => {
-      console.error("Ошибка подписки на глобальную историю раундов:", error);
-    });
+  loadScannerHistory();
+  const intervalId = setInterval(loadScannerHistory, 120000);
+  scannerRealtime.unsubHistory = () => clearInterval(intervalId);
 }
 
 function initializeScannerGridFeature() {
