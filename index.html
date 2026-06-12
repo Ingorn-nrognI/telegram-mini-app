@@ -4545,18 +4545,23 @@ async function ensureDemoBalanceForCurrentUser() {
 }
 
 function subscribeCurrentUserBalance() {
-  if (currentUserBalanceUnsub) {
-    currentUserBalanceUnsub();
-    currentUserBalanceUnsub = null;
+  async function fetchUserBalance() {
+    try {
+      const snapshot = await getUserRef(getCurrentPlayer().id).get();
+      if (snapshot.exists) {
+        const data = snapshot.data() || {};
+        const balance = getUserDemoBalanceFromData(data);
+        syncLocalDemoBalance(balance);
+        currentDemoTonBalanceLoaded = true;
+      }
+    } catch (e) {
+      console.warn('Не удалось загрузить баланс:', e.message);
+    }
   }
 
-  const player = getCurrentPlayer();
-  currentUserBalanceUnsub = getUserRef(player.id).onSnapshot((snapshot) => {
-    if (!snapshot.exists) return;
-    syncLocalDemoBalance(getUserDemoBalanceFromData(snapshot.data() || {}));
-  }, (error) => {
-    console.error("Ошибка подписки на demo TON-баланс:", error);
-  });
+  fetchUserBalance();
+  if (currentUserBalanceUnsub) { currentUserBalanceUnsub(); currentUserBalanceUnsub = null; }
+  setInterval(fetchUserBalance, 30000);
 }
 
 function createInsufficientBalanceError() {
