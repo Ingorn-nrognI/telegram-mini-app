@@ -8309,11 +8309,18 @@ function applySocketRoundPatch(patch) {
         };
       }
       scannerRealtime.roundData = null;
+      scannerRealtime.activeRoundId = null;
       scannerRealtime.participants = [];
       scannerRealtime._socketCountdownEndsAt = null;
-      // Принудительно сбрасываем статус чтобы таймер показал 00:20
+      scannerRealtime.runtimeData = { ...scannerRealtime.runtimeData, activeRoundId: null, status: "idle" };
       scannerGridState.status = "idle";
       scannerGridState.roundStatus = "idle";
+      scannerGridState.roundId = null;
+      scannerGridState.roundData = null;
+      scannerGridState.players = [];
+      scannerGridState.totalPlayers = 0;
+      scannerGridState.totalPot = 0;
+      scannerGridState.countdownMs = 0;
     }
   }
   syncScannerDerivedState();
