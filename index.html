@@ -4561,7 +4561,7 @@ function subscribeCurrentUserBalance() {
 
   fetchUserBalance();
   if (currentUserBalanceUnsub) { currentUserBalanceUnsub(); currentUserBalanceUnsub = null; }
-  setInterval(fetchUserBalance, 30000);
+  setInterval(fetchUserBalance, 60000);
 }
 
 function createInsufficientBalanceError() {
@@ -8667,11 +8667,11 @@ function syncScannerDerivedState() {
     scannerRealtime.lastAnimatedRoundId = null;
   }
 
-  if (scannerGridState.status === "finished" && round?.payoutProcessed !== true) {
-    processScannerRoundPayoutOnce(round.id).catch((error) => {
-      console.warn("Не удалось обработать выплату победителю:", error);
-    });
-  }
+  // if (scannerGridState.status === "finished" && round?.payoutProcessed !== true) {
+  //   processScannerRoundPayoutOnce(round.id).catch((error) => {
+  //     console.warn("Не удалось обработать выплату победителю:", error);
+  //   });
+  // }
 
   ensureScannerRoundHistoryPersisted().catch((error) => {
     console.warn("Не удалось сохранить историю раунда пользователю:", error);
@@ -8830,7 +8830,8 @@ async function pruneStaleLobbyParticipants() {
 }
 
 async function processScannerRoundPayoutOnce(roundId, resultOverride = null) {
-  // Отключено — выплаты обрабатывает сервер через payoutEngine.js
+  // Выплаты обрабатывает сервер через payoutEngine.js — клиент не должен дублировать это
+  console.log('[payout] Пропущено на клиенте — сервер обрабатывает выплаты');
   return;
 }
 
@@ -11189,16 +11190,8 @@ function subscribeScannerRuntime() {
       subscribeScannerRound(activeRoundId);
     } else {
       if (!activeRoundId) {
-        bootstrapScannerRoundFromRecentState().catch((error) => {
-          console.warn("Не удалось восстановить текущее состояние общего раунда:", error);
-          scannerRealtime.roundData = null;
-          scannerRealtime.roundReady = true;
-          scannerRealtime.participants = [];
-          scannerRealtime.participantsReady = true;
-          scannerRealtime.participantsError = false;
-          syncScannerDerivedState();
-          renderScannerRound();
-        });
+        syncScannerDerivedState();
+        renderScannerRound();
       }
       syncScannerDerivedState();
       renderScannerRound();
