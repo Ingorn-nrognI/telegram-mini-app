@@ -7844,7 +7844,7 @@ function getScannerCountdownBeamCache(round) {
     targetSample: brakeSimulationFinal.finalSample || latchStartSample,
     side: null
   };
-  const samples = mergeScannerSampleSequences(cruiseSimulation.samples, latchSimulation.samples);
+  const samples = mergeScannerSampleSequences(cruiseSimulation.samples, brakeSimulationFinal.samples);
 
   scannerCountdownBeamCache = {
     key,
