@@ -8111,7 +8111,7 @@ function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = getNetwo
   const primaryPhase = ((seed >>> 1) % 360) * (Math.PI / 180);
   const secondaryPhase = ((seed >>> 6) % 360) * (Math.PI / 180);
   const tertiaryPhase = ((seed >>> 11) % 360) * (Math.PI / 180);
-  const time = safeTimestamp / 1000;
+  const time = (safeTimestamp - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000;
 
   return (
     Math.sin(time * config.speed + primaryPhase) * config.sweep +
@@ -10825,7 +10825,7 @@ function renderScannerCanvas() {
   const roundStatus = scannerGridState.status;
   const hasGrid = scannerGridState.players.length > 0;
   const now = performance.now(); // Это оставляем для плавности (fps)
-  scannerLobbyLaserVisual.angle = ((now / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
+  scannerLobbyLaserVisual.angle = (((now - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   scannerLobbyLaserVisual.lastAt = now;
   const nowMs = getNetworkTime();
   const _frameLobbyBeamSample = getScannerSharedLobbyBeamSample(nowMs);
@@ -11019,11 +11019,11 @@ function renderScannerCanvas() {
 
       // Финальный угол треугольника — тот же алгоритм что на сервере
       const shuffleStartMs = tsToMs(roundData?.shuffleStartedAt) || 0;
-      const shuffleEndSec = (shuffleStartMs + SCANNER_SHUFFLING_MS) / 1000;
+      const shuffleEndSec = (shuffleStartMs - SCANNER_LOBBY_BEAM_EPOCH_MS + SCANNER_SHUFFLING_MS) / 1000;
       const finalSpinAngle = (shuffleEndSec * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
 
       // Текущий угол вращения треугольника
-      const currentSec = now / 1000;
+      const currentSec = (now - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000;
       const spinRate = SCANNER_LOBBY_LASER_TURN_SPEED * (1 + (1 - easedProgress) * 8);
       const currentSpinAngle = (currentSec * spinRate) % (Math.PI * 2);
       const triangleAngle = currentSpinAngle * (1 - easedProgress) + finalSpinAngle * easedProgress;
