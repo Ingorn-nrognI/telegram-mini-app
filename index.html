@@ -10606,6 +10606,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     centerGap: idleReticleRadius * 2
   });
   ctx.restore();
+  drawScannerArenaBorderBackground(ctx, size);
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(angle);
@@ -10626,6 +10627,30 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
       text: options.waitingText
     });
     ctx.restore();
+  }
+  // Детекция свечения бортика в lobby режиме
+  {
+    const _bx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
+    const _by = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
+    const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
+    const _zone = size * 0.008;
+    const _dL = _bx - (_pad + _zone);
+    const _dR = (size - _pad - _zone) - _bx;
+    const _dT = _by - (_pad + _zone);
+    const _dB = (size - _pad - _zone) - _by;
+    const _mD = Math.min(_dL, _dR, _dT, _dB);
+    const _bw = Math.max(11, size * 0.031) + 1;
+    const _curWall = _mD <= 0 ? (_dL <= 0 ? 'L' : _dR <= 0 ? 'R' : _dT <= 0 ? 'T' : 'B') : null;
+    if (_curWall && _curWall !== drawScannerEmptyArenaState._lastWall) {
+      let _gwx, _gwy;
+      if (_curWall === 'L')      { _gwx = _bw * 0.5;        _gwy = _by; }
+      else if (_curWall === 'R') { _gwx = size - _bw * 0.5; _gwy = _by; }
+      else if (_curWall === 'T') { _gwx = _bx;              _gwy = _bw * 0.5; }
+      else                       { _gwx = _bx;              _gwy = size - _bw * 0.5; }
+      addBorderGlowPoint(size, _gwx, _gwy);
+    }
+    drawScannerEmptyArenaState._lastWall = _curWall || drawScannerEmptyArenaState._lastWall;
+    if (!_curWall && drawScannerEmptyArenaState._lastWall) drawScannerEmptyArenaState._lastWall = null;
   }
   drawScannerArenaBorder(ctx, size);
 }
