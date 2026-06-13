@@ -7322,9 +7322,9 @@ function getScannerBeamSampleFromMotionState(motionState, timestampMs = getNetwo
 }
 
 function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedValue = "scanner_shared_lobby_motion_v2", runtimeData = scannerRealtime.runtimeData) {
-  const motionState = runtimeData?.idleBeamMotion || runtimeData?.idleBeamState
-    ? getScannerRuntimeIdleBeamState(runtimeData)
-    : getScannerDefaultIdleBeamMotion(seedValue);
+  // Всегда используем детерминированное движение от фиксированной эпохи
+  // Игнорируем idleBeamMotion с сервера — его обновления вызывают телепортацию луча
+  const motionState = getScannerDefaultIdleBeamMotion(seedValue);
   return getScannerBeamSampleFromMotionState(motionState, timestampMs, {
     pad: SCANNER_LOBBY_BEAM_EDGE_PADDING,
     seedValue
