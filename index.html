@@ -10837,9 +10837,9 @@ function renderScannerCanvas() {
   const roundStatus = scannerGridState.status;
   const hasGrid = scannerGridState.players.length > 0;
   const now = performance.now(); // Это оставляем для плавности (fps)
-  scannerLobbyLaserVisual.angle = (((now - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
-  scannerLobbyLaserVisual.lastAt = now;
   const nowMs = getNetworkTime();
+  scannerLobbyLaserVisual.angle = (((nowMs - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
+  scannerLobbyLaserVisual.lastAt = now;
   const _frameLobbyBeamSample = getScannerSharedLobbyBeamSample(nowMs);
 
   // Border glow — удалить отсюда, перенесём после рисования луча где есть реальная позиция
