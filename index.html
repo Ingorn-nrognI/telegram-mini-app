@@ -10591,7 +10591,6 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     centerGap: idleReticleRadius * 2
   });
   ctx.restore();
-  drawScannerArenaBorder(ctx, size);
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(angle);
@@ -10908,7 +10907,6 @@ function renderScannerCanvas() {
   }
 
 
-  drawScannerArenaBorder(ctx, size);
   if (previewBadgeAlpha > 0.02) {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
   }
@@ -11039,6 +11037,8 @@ function renderScannerCanvas() {
       }
     }
   }
+
+  drawScannerArenaBorder(ctx, size);
 
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
