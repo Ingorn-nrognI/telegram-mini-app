@@ -10018,6 +10018,21 @@ function addBorderGlowPoint(size, px, py) {
   if (_borderGlowPoints.length > 12) _borderGlowPoints.shift();
 }
 
+function drawScannerArenaBorderBackground(ctx, size) {
+  const bw = Math.max(11, size * 0.031) + 1;
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgb(16, 20, 38)';
+  ctx.beginPath();
+  ctx.rect(0, 0, size, size);
+  ctx.rect(bw, bw, size - bw * 2, size - bw * 2);
+  ctx.fill('evenodd');
+  ctx.restore();
+}
+
 function drawScannerArenaBorder(ctx, size) {
   const bw = Math.max(11, size * 0.031) + 1;
   const borderQuality = getEffectiveQualityTier();
@@ -10905,7 +10920,7 @@ function renderScannerCanvas() {
   } else if (scannerGridCache?.canvas) {
     ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
   }
-
+  drawScannerArenaBorderBackground(ctx, size);
 
   if (previewBadgeAlpha > 0.02) {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
@@ -11038,14 +11053,14 @@ function renderScannerCanvas() {
     }
   }
 
-  drawScannerArenaBorder(ctx, size);
-
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
   }
   if (scannerEndZoom > 1) {
     ctx.restore();
   }
+  drawScannerArenaBorder(ctx, size);
+
   if (scannerEndZoom > 1 && visualBeamSample && scannerGridState.players?.length > 0) {
     const beamCellIndex = getScannerCellIndexFromPoint(visualBeamSample.x, visualBeamSample.y);
     const ownerIndex = scannerGridState.cellOwners?.[beamCellIndex] ?? -1;
