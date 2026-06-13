@@ -10607,27 +10607,6 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   });
   ctx.restore();
   drawScannerArenaBorderBackground(ctx, size);
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(angle);
-  drawScannerReticle(ctx, 0, 0, idleReticleRadius, {
-    rotation: options.reticleRotation || 0,
-    wobble: options.reticleWobble || 0,
-    centerGap: 0,
-    plusScale: 0.22,
-    plusColor: "rgba(7, 11, 18, 0.96)"
-  });
-  ctx.restore();
-  if (waitingTextAlpha > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = waitingTextAlpha;
-    drawScannerWaitingText(ctx, size, safeSample, {
-      centerGap: idleReticleRadius * 2,
-      beamAngle: scannerLobbyLaserVisual.angle,
-      text: options.waitingText
-    });
-    ctx.restore();
-  }
   // Детекция свечения бортика в lobby режиме
   {
     const _bx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
@@ -10653,6 +10632,27 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     if (!_curWall && drawScannerEmptyArenaState._lastWall) drawScannerEmptyArenaState._lastWall = null;
   }
   drawScannerArenaBorder(ctx, size);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  drawScannerReticle(ctx, 0, 0, idleReticleRadius, {
+    rotation: options.reticleRotation || 0,
+    wobble: options.reticleWobble || 0,
+    centerGap: 0,
+    plusScale: 0.22,
+    plusColor: "rgba(7, 11, 18, 0.96)"
+  });
+  ctx.restore();
+  if (waitingTextAlpha > 0.01) {
+    ctx.save();
+    ctx.globalAlpha = waitingTextAlpha;
+    drawScannerWaitingText(ctx, size, safeSample, {
+      centerGap: idleReticleRadius * 2,
+      beamAngle: scannerLobbyLaserVisual.angle,
+      text: options.waitingText
+    });
+    ctx.restore();
+  }
 }
 function drawScannerIdleArena(ctx, size, now) {
   drawScannerEmptyArenaState(ctx, size, getScannerSharedLobbyBeamSample(), {
