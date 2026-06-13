@@ -6318,10 +6318,19 @@ function getScannerUniqueRoundColor(roundSeed, playerIndex) {
 
 function assignScannerRoundColors(round, participants) {
   const roundSeed = getScannerRoundColorSeed(round);
-  return (participants || []).map((participant, index) => ({
-    participant,
-    color: getScannerUniqueRoundColor(roundSeed, index)
-  }));
+  // Цвет определяется по playerId, а не по индексу — иначе при изменении порядка цвет меняется
+  const allIds = (participants || [])
+    .map(p => String(p.playerId || p.id || ''))
+    .filter(Boolean)
+    .sort();
+  return (participants || []).map((participant) => {
+    const pid = String(participant.playerId || participant.id || '');
+    const colorIndex = allIds.indexOf(pid);
+    return {
+      participant,
+      color: getScannerUniqueRoundColor(roundSeed, colorIndex >= 0 ? colorIndex : 0)
+    };
+  });
 }
 
 function normalizeStakeValue(value) {
@@ -8571,7 +8580,7 @@ function syncScannerDerivedState() {
     resetScannerRoundVisualState({
       status: "idle",
       totalPot: 0,
-      countdownMs: 0
+      countdownMs: SCANNER_COUNTDOWN_MS
     });
     scannerGridState.renderSeed = "idle";
     return;
@@ -8607,7 +8616,7 @@ function syncScannerDerivedState() {
     resetScannerRoundVisualState({
       status: "idle",
       totalPot: 0,
-      countdownMs: 0
+      countdownMs: SCANNER_COUNTDOWN_MS
     });
     return;
   }
@@ -8625,7 +8634,7 @@ function syncScannerDerivedState() {
       resetScannerRoundVisualState({
         status: "idle",
         totalPot: 0,
-        countdownMs: 0
+        countdownMs: SCANNER_COUNTDOWN_MS
       });
       return;
     }
@@ -9776,6 +9785,7 @@ function getScannerCountdownChipText() {
   if (["countdown", "shuffling", "finished", "preparing_next_round"].includes(status)) {
     return formatCountdownMs(scannerGridState.countdownMs || 0);
   }
+  // idle или waiting — всегда показываем 00:20
   return formatCountdownMs(SCANNER_COUNTDOWN_MS);
 }
 
@@ -11360,7 +11370,7 @@ function initializeScannerGridFeature() {
   resetScannerRoundVisualState({
     status: "idle",
     totalPot: 0,
-    countdownMs: 0
+    countdownMs: SCANNER_COUNTDOWN_MS
   });
 
   setupScannerBetBarVisibilityTracking();
