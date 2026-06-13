@@ -7722,33 +7722,128 @@ function getScannerCountdownBeamCache(round) {
       })
     : getScannerSharedLobbyBeamSampleAt(timing.startedAt);
 
-  const latchDurationMs = Math.min(SCANNER_EDGE_LATCH_MS, timing.durationMs);
-  const cruiseDurationMs = Math.max(0, timing.durationMs - latchDurationMs);
-  const cruiseRatio = timing.durationMs > 0 ? cruiseDurationMs / timing.durationMs : 0;
-  const cruiseSteps = cruiseDurationMs > 0
-    ? Math.max(24, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * cruiseRatio))
-    : 2;
+  const pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
+  const wallThreshold = pad + 0.008;
+  const totalMs = timing.durationMs;
 
+  // Шаг 1: просчитываем полную траекторию на все 20 секунд с нормальной скоростью
+  const fullSimulation = simulateScannerBeamBounceSamples({
+    startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
+    startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
+    durationMs: totalMs,
+    steps: SCANNER_COUNTDOWN_BEAM_STEPS,
+    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
+    pad,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::countdown_full`,
+    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
+    curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
+    bounceBendStrength: 0,
+    speedFactorAt: () => 1
+  });
+
+  const fullSamples = fullSimulation.samples || [];
+
+  // Шаг 2: перебираем варианты момента начала торможения
+  // Пробуем начать тормозить с разных моментов: от 50% до 85% времени таймера
+  // Для каждого варианта симулируем траекторию и смотрим насколько близко к стене финал
+  const brakeStartOptions = [0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85];
+  let bestBrakeStart = 0.70;
+  let bestScore = Infinity;
+
+  for (const brakeStartFraction of brakeStartOptions) {
+    const brakeStartMs = totalMs * brakeStartFraction;
+    const brakeSteps = Math.max(24, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * (1 - brakeStartFraction)));
+
+    // Находим позицию лазера в момент начала торможения из полной симуляции
+    const brakeProgress = brakeStartFraction;
+    let brakeStartSampleIdx = 0;
+    for (let i = 0; i < fullSamples.length; i++) {
+      if (fullSamples[i].progress >= brakeProgress) { brakeStartSampleIdx = i; break; }
+      brakeStartSampleIdx = i;
+    }
+    const brakeStartSample = fullSamples[brakeStartSampleIdx] || lobbyStartSample;
+
+    // Симулируем торможение от этого момента до конца таймера
+    const brakeSimulation = simulateScannerBeamBounceSamples({
+      startPosition: { x: brakeStartSample.x, y: brakeStartSample.y },
+      startVelocity: { x: brakeStartSample.vx, y: brakeStartSample.vy },
+      durationMs: totalMs - brakeStartMs,
+      steps: brakeSteps,
+      baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
+      pad,
+      seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::brake_${brakeStartFraction}`,
+      curveStrength: 0,
+      curveSecondaryStrength: 0,
+      bounceBendStrength: 0,
+      speedFactorAt: (p) => {
+        // Плавное торможение через smoothstep
+        return Math.max(0, 1 - smoothstep(0, 1, p));
+      }
+    });
+
+    const finalSample = brakeSimulation.finalSample;
+    if (!finalSample) continue;
+
+    // Считаем насколько близко финальная точка к стене
+    const distToWall = Math.min(
+      finalSample.x - pad,
+      (1 - pad) - finalSample.x,
+      finalSample.y - pad,
+      (1 - pad) - finalSample.y
+    );
+
+    // Чем ближе к стене — тем лучше. Предпочитаем более позднее начало торможения
+    const score = distToWall * 10 - brakeStartFraction * 0.1;
+    if (score < bestScore) {
+      bestScore = score;
+      bestBrakeStart = brakeStartFraction;
+    }
+  }
+
+  // Шаг 3: строим финальную траекторию с найденным моментом торможения
+  const bestBrakeStartMs = totalMs * bestBrakeStart;
+  const bestBrakeStartIdx = Math.max(0, Math.round(bestBrakeStart * (fullSamples.length - 1)));
+  const bestBrakeStartSample = fullSamples[bestBrakeStartIdx] || lobbyStartSample;
+
+  // Круиз: от старта до момента торможения — нормальная скорость
+  const cruiseDurationMs = bestBrakeStartMs;
+  const cruiseSteps = Math.max(24, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * bestBrakeStart));
   const cruiseSimulation = simulateScannerBeamBounceSamples({
     startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
     startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
     durationMs: cruiseDurationMs,
     steps: cruiseSteps,
     baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
-    pad: SCANNER_ACTIVE_BEAM_EDGE_PADDING,
+    pad,
     seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::countdown_cruise`,
     curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
     curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
-    bounceBendStrength: SCANNER_BEAM_BOUNCE_BEND_STRENGTH * 0.7,
-    speedFactorAt: (progress) => {
-      const eased = smoothstep(0, 1, progress);
-      return 1 - (1 - SCANNER_LOBBY_BEAM_COUNTDOWN_MIN_SPEED_FACTOR) * eased;
-    }
+    bounceBendStrength: 0,
+    speedFactorAt: () => 1
   });
 
-  const latchStartSample = cruiseSimulation.finalSample || lobbyStartSample;
-  const latchSteps = Math.max(18, SCANNER_COUNTDOWN_BEAM_STEPS - Math.max(2, cruiseSteps) + 2);
-  const latchSimulation = buildScannerLatchSamples(latchStartSample, latchDurationMs, latchSteps);
+  // Торможение: плавно замедляется, делает отскоки если нужно, останавливается у стены
+  const brakeDurationMs = totalMs - bestBrakeStartMs;
+  const brakeStepsFinal = Math.max(24, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * (1 - bestBrakeStart)));
+  const latchStartSample = cruiseSimulation.finalSample || bestBrakeStartSample;
+  const brakeSimulationFinal = simulateScannerBeamBounceSamples({
+    startPosition: { x: latchStartSample.x, y: latchStartSample.y },
+    startVelocity: { x: latchStartSample.vx, y: latchStartSample.vy },
+    durationMs: brakeDurationMs,
+    steps: brakeStepsFinal,
+    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
+    pad,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::countdown_brake`,
+    curveStrength: 0,
+    curveSecondaryStrength: 0,
+    bounceBendStrength: 0,
+    speedFactorAt: (p) => Math.max(0, 1 - smoothstep(0, 1, p))
+  });
+
+  const latchSimulation = {
+    targetSample: brakeSimulationFinal.finalSample || latchStartSample,
+    side: null
+  };
   const samples = mergeScannerSampleSequences(cruiseSimulation.samples, latchSimulation.samples);
 
   scannerCountdownBeamCache = {
@@ -7759,7 +7854,7 @@ function getScannerCountdownBeamCache(round) {
     startSample: lobbyStartSample,
     latchStartSample,
     latchSample: latchSimulation.targetSample,
-    latchSide: latchSimulation.side
+    latchSide: getScannerWallLatchMeta(latchSimulation.targetSample, pad).side
   };
 
   return scannerCountdownBeamCache;
