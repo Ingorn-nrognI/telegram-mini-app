@@ -8169,7 +8169,7 @@ function initSocketConnection() {
         _serverTimeOffset = newOffset;
         _serverTimeOffsetSmoothed = newOffset;
       } else {
-        _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.3;
+        _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.1;
         _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
       }
     }
@@ -8207,12 +8207,10 @@ function initSocketConnection() {
     }
     if (data?.timestamp) {
       const newOffset = data.timestamp - Date.now();
-      if (Math.abs(newOffset - _serverTimeOffsetSmoothed) > 5000) {
+      // Обновляем смещение только если разница очень большая (>10 сек) — не трогаем плавное смещение от pong_time
+      if (Math.abs(newOffset - _serverTimeOffsetSmoothed) > 10000) {
         _serverTimeOffset = newOffset;
         _serverTimeOffsetSmoothed = newOffset;
-      } else {
-        _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.5;
-        _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
       }
     }
   });
