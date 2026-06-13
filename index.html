@@ -8698,7 +8698,7 @@ function syncScannerDerivedState() {
   } else if (roundStatus === "finished") {
     countdownMs = Math.max(0, finishedEndsAt - now);
   } else if (roundStatus === "preparing_next_round") {
-    countdownMs = Math.max(0, preparingEndsAt - now);
+    countdownMs = SCANNER_COUNTDOWN_MS;
   }
 
   const declaredParticipantCount = getScannerDeclaredParticipantCount(round);
