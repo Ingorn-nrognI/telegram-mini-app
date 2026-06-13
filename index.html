@@ -6297,7 +6297,9 @@ function getScannerColorById(id, scopeKey = "") {
 }
 
 function getScannerRoundColorSeed(round) {
-  return `${round?.entropySeed || round?.id || "round"}::${tsToMs(round?.createdAt || 0)}::${String(round?.createdBy || "")}`;
+  // Используем только id — он стабилен с момента создания раунда
+  // entropySeed и createdAt появляются позже из Firestore и меняют цвет игрока
+  return String(round?.id || "round");
 }
 
 function getScannerUniqueRoundColor(roundSeed, playerIndex) {
