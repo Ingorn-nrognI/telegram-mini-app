@@ -10925,7 +10925,6 @@ function renderScannerCanvas() {
       ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
     }
     previewBadgeAlpha = 1;
-    drawScannerArenaBorder(ctx, size);
   } else if (roundStatus === "shuffling") {
     const shuffleProgress = getScannerShuffleTransitionProgress(roundData);
     if (scannerGridPreviewCanvasCache?.canvas) {
