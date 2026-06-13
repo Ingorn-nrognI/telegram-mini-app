@@ -7252,7 +7252,10 @@ function getScannerBeamMotionSignature(motionState) {
 function getScannerReflectedAxisState(start, velocityPerSecond, elapsedSeconds, min, max) {
   const safeStart = clampScannerNumber(start, min, max);
   const velocity = Number(velocityPerSecond) || 0;
-  const safeElapsed = Number.isFinite(Number(elapsedSeconds)) ? Number(elapsedSeconds) : 0;
+  // Ограничиваем elapsed чтобы избежать потери точности float64 при больших числах
+  const rawElapsed = Number.isFinite(Number(elapsedSeconds)) ? Number(elapsedSeconds) : 0;
+  const period2 = Math.max(0.000001, (Number(max) || 1) - (Number(min) || 0)) * 2;
+  const safeElapsed = velocity !== 0 ? rawElapsed % (period2 / Math.abs(velocity)) : rawElapsed;
   const range = Math.max(0.000001, (Number(max) || 1) - (Number(min) || 0));
 
   if (Math.abs(velocity) <= 0.0000001) {
