@@ -8054,7 +8054,7 @@ function getScannerBeamRenderKey(roundStatus, roundData, variant = "grid") {
 
   if (!roundData) {
     const idleMotion = getScannerRuntimeIdleBeamState(scannerRealtime.runtimeData);
-    return `${safeStatus}::${safeVariant}::idle::${getScannerBeamMotionSignature(idleMotion)}`;
+    return `${safeStatus}::${safeVariant}::idle`;
   }
 
   if (safeStatus === "countdown") {
