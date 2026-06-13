@@ -7725,13 +7725,11 @@ function getScannerCountdownBeamCache(round) {
   const pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
   const totalMs = timing.durationMs;
 
-  // Первые ~25% времени (5 сек из 20) — полная скорость, красивые отскоки
-  // Остальные ~75% (15 сек) — плавное торможение до стены
+  // Фаза 1 — круиз: первые 25% времени (~5 сек) летим с полной скоростью
   const CRUISE_FRACTION = 0.25;
   const cruiseDurationMs = totalMs * CRUISE_FRACTION;
-  const brakeDurationMs = totalMs * (1 - CRUISE_FRACTION);
+  const brakeDurationMs = totalMs - cruiseDurationMs;
 
-  // Фаза 1: круиз с полной скоростью
   const cruiseSim = simulateScannerBeamBounceSamples({
     startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
     startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
@@ -7748,63 +7746,13 @@ function getScannerCountdownBeamCache(round) {
 
   const cruiseEndSample = cruiseSim.finalSample || lobbyStartSample;
 
-  // Фаза 2: перебираем кривые торможения — ищем которая останавливает лазер ближе к стене
-  const brakeShapeOptions = [1.2, 1.6, 2.0, 2.5, 3.0, 3.5];
-  let bestSamples = null;
-  let bestFinalSample = null;
-  let bestScore = Infinity;
+  // Фаза 2 — latch: оставшиеся 75% (~15 сек) плавно едем к ближайшей стене и там останавливаемся
+  // buildScannerLatchSamples считает ближайшую стену и плавно через smoothstep двигает лазер к ней
+  const latchSteps = Math.max(48, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * (1 - CRUISE_FRACTION)));
+  const latchSimulation = buildScannerLatchSamples(cruiseEndSample, brakeDurationMs, latchSteps);
 
-  for (const shape of brakeShapeOptions) {
-    const brakeSim = simulateScannerBeamBounceSamples({
-      startPosition: { x: cruiseEndSample.x, y: cruiseEndSample.y },
-      startVelocity: { x: cruiseEndSample.vx, y: cruiseEndSample.vy },
-      durationMs: brakeDurationMs,
-      steps: Math.max(48, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * (1 - CRUISE_FRACTION))),
-      baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
-      pad,
-      seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::brake_${shape}`,
-      curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.3,
-      curveSecondaryStrength: 0,
-      bounceBendStrength: 0,
-      speedFactorAt: (p) => Math.max(0, 1 - Math.pow(p, shape) * 0.98)
-    });
-
-    const finalSample = brakeSim.finalSample;
-    if (!finalSample) continue;
-
-    const distToWall = Math.min(
-      finalSample.x - pad,
-      (1 - pad) - finalSample.x,
-      finalSample.y - pad,
-      (1 - pad) - finalSample.y
-    );
-
-    if (distToWall < bestScore) {
-      bestScore = distToWall;
-      bestSamples = brakeSim.samples;
-      bestFinalSample = finalSample;
-    }
-  }
-
-  if (!bestSamples) {
-    const fallback = simulateScannerBeamBounceSamples({
-      startPosition: { x: cruiseEndSample.x, y: cruiseEndSample.y },
-      startVelocity: { x: cruiseEndSample.vx, y: cruiseEndSample.vy },
-      durationMs: brakeDurationMs,
-      steps: 48,
-      baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
-      pad,
-      seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::brake_fallback`,
-      curveStrength: 0,
-      bounceBendStrength: 0,
-      speedFactorAt: (p) => Math.max(0, 1 - Math.pow(p, 2) * 0.98)
-    });
-    bestSamples = fallback.samples;
-    bestFinalSample = fallback.finalSample || cruiseEndSample;
-  }
-
-  const latchStartSample = bestFinalSample;
-  const samples = mergeScannerSampleSequences(cruiseSim.samples, bestSamples);
+  const latchStartSample = cruiseEndSample;
+  const samples = mergeScannerSampleSequences(cruiseSim.samples, latchSimulation.samples);
 
   scannerCountdownBeamCache = {
     key,
@@ -7814,7 +7762,7 @@ function getScannerCountdownBeamCache(round) {
     startSample: lobbyStartSample,
     latchStartSample,
     latchSample: bestFinalSample,
-    latchSide: getScannerWallLatchMeta(bestFinalSample, pad).side
+    latchSide: latchSimulation.side
   };
 
   return scannerCountdownBeamCache;
