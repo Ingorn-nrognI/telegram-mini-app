@@ -10609,10 +10609,10 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   drawScannerArenaBorderBackground(ctx, size);
   // Детекция свечения бортика в lobby режиме
   {
-    const _bx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
-    const _by = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
+    const _bx = size * safeSample.x;
+    const _by = size * safeSample.y;
     const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
-    const _zone = size * 0.008;
+    const _zone = size * 0.022;
     const _dL = _bx - (_pad + _zone);
     const _dR = (size - _pad - _zone) - _bx;
     const _dT = _by - (_pad + _zone);
