@@ -7076,7 +7076,8 @@ function reflectScannerValueWithinRange(value, min, max) {
 
 function getScannerLobbyFlowOffsets(timestampMs, motionState, seedValue = "scanner_shared_lobby_motion_v2") {
   const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
-  const timeSeconds = safeTimestamp / 1000;
+  // Используем время относительно эпохи чтобы избежать потери точности float64 у синуса
+  const timeSeconds = (safeTimestamp - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000;
   const seed = hashString(`lobby_flow_${seedValue}_${Math.round(tsToMs(motionState?.anchorAt || 0) / 1000)}`);
   const phaseA = ((seed >>> 1) % 360) * (Math.PI / 180);
   const phaseB = ((seed >>> 5) % 360) * (Math.PI / 180);
