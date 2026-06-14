@@ -7724,97 +7724,86 @@ function getScannerCountdownBeamCache(round) {
 
   const pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
   const totalMs = timing.durationMs;
-  const wallThreshold = pad + 0.007;
 
-  // Step 1: full simulation at normal speed
-  const fullSim = simulateScannerBeamBounceSamples({
+  // Phase constants
+  const CRUISE_FRAC = 0.55;
+  const BRAKE_FRAC  = 0.35;
+  // remaining 0.10 = hold at wall
+
+  const cruiseMs = totalMs * CRUISE_FRAC;
+  const brakeMs  = totalMs * BRAKE_FRAC;
+
+  const cruiseSteps = Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * CRUISE_FRAC);
+  const brakeSteps  = Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * BRAKE_FRAC);
+  const holdSteps   = SCANNER_COUNTDOWN_BEAM_STEPS - cruiseSteps - brakeSteps;
+
+  // Phase 1: cruise at full speed
+  const cruiseSim = simulateScannerBeamBounceSamples({
     startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
     startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
-    durationMs: totalMs,
-    steps: SCANNER_COUNTDOWN_BEAM_STEPS,
+    durationMs: cruiseMs,
+    steps: cruiseSteps,
     baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
     pad,
-    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::full`,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::cruise`,
     curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
     curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
     bounceBendStrength: 0,
     speedFactorAt: () => 1
   });
 
-  // Step 2: scan backwards to find last wall touch index
-  const fullSamples = fullSim.samples || [];
-  let lastWallIdx = fullSamples.length - 1;
-  for (let i = fullSamples.length - 1; i >= 0; i--) {
-    const s = fullSamples[i];
-    const nearWall =
+  // Phase 2: brake — speed decelerates to ~0 as beam approaches a wall
+  const cruiseSamples = cruiseSim.samples || [];
+  const cruiseEnd = cruiseSamples[cruiseSamples.length - 1] || lobbyStartSample;
+
+  const brakeSim = simulateScannerBeamBounceSamples({
+    startPosition: { x: cruiseEnd.x, y: cruiseEnd.y },
+    startVelocity: { x: cruiseEnd.vx, y: cruiseEnd.vy },
+    durationMs: brakeMs,
+    steps: brakeSteps,
+    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
+    pad,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::brake`,
+    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
+    curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
+    bounceBendStrength: 0,
+    speedFactorAt: (t) => Math.pow(1 - t, 2.2)
+  });
+
+  // Trim brake samples to the first wall touch
+  const wallThreshold = pad + 0.007;
+  const brakeRaw = brakeSim.samples || [];
+  let wallHitIdx = brakeRaw.length - 1;
+  for (let i = 0; i < brakeRaw.length; i++) {
+    const s = brakeRaw[i];
+    if (
       s.x <= wallThreshold ||
       s.x >= 1 - wallThreshold ||
       s.y <= wallThreshold ||
-      s.y >= 1 - wallThreshold;
-    if (nearWall) {
-      lastWallIdx = i;
+      s.y >= 1 - wallThreshold
+    ) {
+      wallHitIdx = i;
       break;
     }
   }
+  const brakeSamplesSliced = brakeRaw.slice(0, wallHitIdx + 1);
 
-  // Step 3: slice trajectory up to and including the last wall touch
-  let rawSamples = fullSamples.slice(0, lastWallIdx + 1);
-  if (rawSamples.length < 2) rawSamples = fullSamples.slice(0, 2);
+  // Phase 3: hold at the wall sample
+  const wallSample = brakeSamplesSliced[brakeSamplesSliced.length - 1] || cruiseEnd;
+  const holdSamples = Array.from({ length: holdSteps }, () => ({ ...wallSample }));
 
-  // Создаём финальный массив сэмплов с нужным распределением плотности
-  // interpolateScannerSampleSequence делит массив поровну по ИНДЕКСУ
-  // Значит чтобы лазер замедлялся — нужно больше сэмплов в конце траектории
-  // (медленный участок = много сэмплов на малом отрезке пути)
-  const OUTPUT_STEPS = SCANNER_COUNTDOWN_BEAM_STEPS;
-  const BRAKE_START = 0.30; // с 30% времени начинается замедление
-  const samples = [];
-
-  for (let i = 0; i < OUTPUT_STEPS; i++) {
-    // visualT = равномерное время воспроизведения (0..1)
-    const visualT = i / Math.max(1, OUTPUT_STEPS - 1);
-
-    // Переводим visualT в позицию по траектории rawT
-    // В начале (visualT < BRAKE_START): нормальная скорость — линейно
-    // В конце (visualT >= BRAKE_START): замедление — лазер проходит меньше пути
-    let rawT;
-    if (visualT <= BRAKE_START) {
-      // Линейный участок — нормальная скорость
-      // За первые BRAKE_START времени проходим BRAKE_START * 1.8 пути
-      rawT = Math.min(1, (visualT / BRAKE_START) * BRAKE_START * 1.8);
-    } else {
-      // Замедление: за оставшееся время (1-BRAKE_START) проходим оставшийся путь
-      const tRem = (visualT - BRAKE_START) / (1 - BRAKE_START);
-      // pow < 1 здесь правильно: мало пути за много времени = замедление
-      const easedRem = Math.pow(tRem, 0.35);
-      rawT = Math.min(1, BRAKE_START * 1.8 + easedRem * (1 - BRAKE_START * 1.8));
-    }
-
-    // Берём сэмпл из rawSamples по позиции rawT
-    const rawIdx = rawT * (rawSamples.length - 1);
-    const rawIdxFloor = Math.min(rawSamples.length - 2, Math.floor(rawIdx));
-    const rawIdxCeil = rawIdxFloor + 1;
-    const frac = rawIdx - rawIdxFloor;
-    const sA = rawSamples[rawIdxFloor];
-    const sB = rawSamples[rawIdxCeil] || sA;
-
-    samples.push({
-      x: sA.x + (sB.x - sA.x) * frac,
-      y: sA.y + (sB.y - sA.y) * frac,
-      angle: lerpScannerAngle(sA.angle || 0, sB.angle || 0, frac),
-      travelAngle: lerpScannerAngle(sA.travelAngle || 0, sB.travelAngle || 0, frac),
-      vx: sA.vx + (sB.vx - sA.vx) * frac,
-      vy: sA.vy + (sB.vy - sA.vy) * frac,
-      progress: visualT
-    });
-  }
-
-  // Manual latch simulation object
-  const latchStartSample = samples[samples.length - 1];
+  // Latch references
+  const latchStartSample = wallSample;
   const latchSimulation = {
     side: getScannerWallSideFromPosition(latchStartSample, pad),
     targetSample: latchStartSample,
     samples: [latchStartSample]
   };
+
+  const samples = mergeScannerSampleSequences(
+    mergeScannerSampleSequences(cruiseSim.samples, brakeSamplesSliced),
+    holdSamples
+  );
 
   scannerCountdownBeamCache = {
     key,
