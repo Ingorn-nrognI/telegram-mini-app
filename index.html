@@ -7729,7 +7729,7 @@ function getScannerCountdownBeamCache(round) {
   // Перебираем варианты момента начала торможения
   // от 20% до 60% времени таймера (от 4 до 12 секунд из 20)
   // Ищем вариант где после торможения лазер ближе всего к стене
-  const brakeStartOptions = [0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60];
+  const brakeStartOptions = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50];
   let bestCruiseSamples = null;
   let bestBrakeSamples = null;
   let bestBrakeEndSample = null;
