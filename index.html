@@ -7761,18 +7761,25 @@ function getScannerCountdownBeamCache(round) {
   const finalSample = rawSamples[rawSamples.length - 1];
 
   const OUTPUT_STEPS = SCANNER_COUNTDOWN_BEAM_STEPS;
-  const CRUISE_END_T = 0.45;
+  // CRUISE_END_T — момент начала замедления по времени (0..1)
+  // До этого момента скорость нормальная: за X времени проходим X пути
+  // После — замедление: за оставшееся время проходим меньше пути
+  const CRUISE_END_T = 0.40;
 
   const samples = [];
   for (let i = 0; i < OUTPUT_STEPS; i++) {
     const visualT = i / Math.max(1, OUTPUT_STEPS - 1);
-
     let rawT;
     if (visualT <= CRUISE_END_T) {
-      rawT = (visualT / CRUISE_END_T) * 0.65;
+      // Нормальная скорость — rawT растёт так же как visualT (1:1)
+      // За CRUISE_END_T времени проходим CRUISE_END_T пути
+      rawT = visualT;
     } else {
+      // Замедление — за оставшееся (1-CRUISE_END_T) времени
+      // проходим оставшиеся (1-CRUISE_END_T) пути но медленнее к концу
       const t = (visualT - CRUISE_END_T) / (1 - CRUISE_END_T);
-      rawT = 0.65 + Math.pow(t, 2.2) * 0.35;
+      // pow > 1 = ease-in = медленнее в конце (вариант Б)
+      rawT = CRUISE_END_T + Math.pow(t, 2.5) * (1 - CRUISE_END_T);
     }
 
     rawT = Math.min(1, Math.max(0, rawT));
