@@ -7724,71 +7724,103 @@ function getScannerCountdownBeamCache(round) {
 
   const pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
   const totalMs = timing.durationMs;
-  const wallThreshold = pad + 0.007;
+  const wallThreshold = pad + 0.006;
 
-  const brakeStartOptions = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50];
-  let bestSamples = null;
-  let bestFinalSample = null;
-  let bestDistToWall = Infinity;
+  // Step 1: full simulation at normal speed to find wall touches
+  const fullSim = simulateScannerBeamBounceSamples({
+    startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
+    startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
+    durationMs: totalMs,
+    steps: SCANNER_COUNTDOWN_BEAM_STEPS,
+    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
+    pad,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::full`,
+    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
+    curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
+    bounceBendStrength: 0,
+    speedFactorAt: () => 1
+  });
 
-  for (const brakeStartFraction of brakeStartOptions) {
-    const sim = simulateScannerBeamBounceSamples({
-      startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
-      startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
-      durationMs: totalMs,
-      steps: SCANNER_COUNTDOWN_BEAM_STEPS,
-      baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
-      pad,
-      seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::bs_${brakeStartFraction}`,
-      curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
-      curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
-      bounceBendStrength: 0,
-      speedFactorAt: (p) => {
-        if (p <= brakeStartFraction) return 1.0;
-        const t = (p - brakeStartFraction) / (1 - brakeStartFraction);
-        return Math.max(0, 1.0 - Math.pow(t, 1.8));
+  // Step 2: collect wall touch indices
+  const fullSamples = fullSim.samples || [];
+  const wallTouches = [];
+  for (let i = 0; i < fullSamples.length; i++) {
+    const s = fullSamples[i];
+    const nearWall =
+      s.x <= wallThreshold ||
+      s.x >= 1 - wallThreshold ||
+      s.y <= wallThreshold ||
+      s.y >= 1 - wallThreshold;
+    if (nearWall) {
+      if (wallTouches.length === 0 || i - wallTouches[wallTouches.length - 1] > 10) {
+        wallTouches.push(i);
       }
-    });
-
-    const finalSample = sim.finalSample;
-    if (!finalSample) continue;
-
-    const distToWall = Math.min(
-      finalSample.x - pad,
-      1 - pad - finalSample.x,
-      finalSample.y - pad,
-      1 - pad - finalSample.y
-    );
-
-    if (distToWall < bestDistToWall) {
-      bestDistToWall = distToWall;
-      bestFinalSample = finalSample;
-      bestSamples = sim.samples;
     }
   }
 
-  if (!bestSamples || !bestFinalSample) {
-    const fallbackSim = simulateScannerBeamBounceSamples({
-      startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
-      startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
-      durationMs: totalMs,
-      steps: SCANNER_COUNTDOWN_BEAM_STEPS,
-      baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
-      pad,
-      seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::fallback`,
-      curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
-      curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
-      bounceBendStrength: 0,
-      speedFactorAt: () => 1
-    });
-    bestSamples = fallbackSim.samples || [];
-    bestFinalSample = fallbackSim.finalSample || lobbyStartSample;
+  let secondLastWallIdx = wallTouches.length >= 2 ? wallTouches[wallTouches.length - 2] : null;
+  let lastWallIdx = wallTouches.length >= 1 ? wallTouches[wallTouches.length - 1] : null;
+
+  // Fallback: if not enough wall touches, use 60% and 80% of the simulation
+  if (secondLastWallIdx === null) secondLastWallIdx = Math.floor(fullSamples.length * 0.6);
+  if (lastWallIdx === null) lastWallIdx = Math.floor(fullSamples.length * 0.8);
+
+  const secondLastWallMs = (secondLastWallIdx / SCANNER_COUNTDOWN_BEAM_STEPS) * totalMs;
+  const remainingMs = totalMs - secondLastWallMs;
+
+  // Step 3: cruise sim up to second-to-last wall touch
+  const cruiseSim = simulateScannerBeamBounceSamples({
+    startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
+    startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
+    durationMs: secondLastWallMs,
+    steps: secondLastWallIdx,
+    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
+    pad,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::cruise`,
+    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
+    curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
+    bounceBendStrength: 0,
+    speedFactorAt: () => 1
+  });
+
+  const cruiseEnd = cruiseSim.finalSample || lobbyStartSample;
+
+  // Step 4: final approach sim from cruise end, slowing down
+  const finalSteps = SCANNER_COUNTDOWN_BEAM_STEPS - secondLastWallIdx;
+  const finalSim = simulateScannerBeamBounceSamples({
+    startPosition: { x: cruiseEnd.x, y: cruiseEnd.y },
+    startVelocity: { x: cruiseEnd.vx, y: cruiseEnd.vy },
+    durationMs: remainingMs,
+    steps: finalSteps,
+    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
+    pad,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::final`,
+    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
+    curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
+    bounceBendStrength: 0,
+    speedFactorAt: (p) => Math.max(0.15, 1.0 - Math.pow(p, 1.5) * 0.85)
+  });
+
+  const finalEnd = finalSim.finalSample || cruiseEnd;
+
+  // Step 5: hold samples at final position
+  const holdSamples = [];
+  for (let i = 0; i < 8; i++) {
+    holdSamples.push({ ...finalEnd });
   }
 
-  const latchStartSample = bestFinalSample;
-  const latchSimulation = buildScannerLatchSamples(latchStartSample, 600, 12);
+  // Manual latch simulation object
+  const latchStartSample = finalEnd;
+  const latchSimulation = {
+    side: getScannerWallSideFromPosition(finalEnd, pad),
+    targetSample: finalEnd,
+    samples: holdSamples
+  };
 
-  const samples = mergeScannerSampleSequences(bestSamples, latchSimulation.samples);
+  const samples = mergeScannerSampleSequences(
+    mergeScannerSampleSequences(cruiseSim.samples, finalSim.samples),
+    holdSamples
+  );
 
   scannerCountdownBeamCache = {
     key,
