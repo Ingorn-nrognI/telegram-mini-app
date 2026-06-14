@@ -7833,8 +7833,28 @@ function getScannerCountdownBeamCache(round) {
 function getScannerCountdownBeamSampleAtTime(round, timestampMs = getNetworkTime(), fallbackSample = null) {
   const cache = getScannerCountdownBeamCache(round);
   if (!cache) return fallbackSample || getScannerSharedLobbyBeamSampleAt(timestampMs);
-  const progress = clampScannerNumber((timestampMs - cache.timing.startedAt) / Math.max(1, cache.timing.durationMs), 0, 1);
-  return interpolateScannerSampleSequence(cache.samples, progress);
+
+  // Линейный прогресс по времени (0..1)
+  const linearProgress = clampScannerNumber(
+    (timestampMs - cache.timing.startedAt) / Math.max(1, cache.timing.durationMs), 0, 1
+  );
+
+  // Применяем кривую замедления (вариант Б — сначала почти не заметно, потом резче)
+  // BRAKE_START = 0.30 — первые 30% времени нормальная скорость
+  // После 30% — замедление: лазер проходит меньше пути за то же время
+  const BRAKE_START = 0.30;
+  let easedProgress;
+  if (linearProgress <= BRAKE_START) {
+    // Нормальная скорость — линейно, но проходим 55% пути за 30% времени
+    easedProgress = (linearProgress / BRAKE_START) * 0.55;
+  } else {
+    // Замедление: оставшиеся 45% пути за 70% времени
+    const t = (linearProgress - BRAKE_START) / (1 - BRAKE_START);
+    // pow > 1 = медленно в конце (ease-in)
+    easedProgress = 0.55 + Math.pow(t, 2.5) * 0.45;
+  }
+
+  return interpolateScannerSampleSequence(cache.samples, clampScannerNumber(easedProgress, 0, 1));
 }
 
 function getScannerCurrentLobbyOrCountdownSample(round, runtimeData = scannerRealtime.runtimeData, timestampMs = getNetworkTime()) {
