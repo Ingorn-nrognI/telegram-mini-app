@@ -3480,11 +3480,11 @@ button {
 }
 
 #navProfileFloat {
-  position: fixed;
-  bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
-  right: calc(8px + (88px - 72px) / 2);
-  width: 72px;
-  height: 72px;
+  /* Теперь это НЕ fixed элемент — он внутри bottom-bar */
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 30% 30%, rgba(255,255,255,0.38), transparent 35%),
@@ -3492,20 +3492,20 @@ button {
   background-size: cover;
   background-position: center;
   border: 2px solid rgba(255,255,255,0.14);
-  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   font-weight: 800;
-  font-size: 20px;
+  font-size: 15px;
   color: #ffffff;
-  z-index: 81;
   cursor: pointer;
   transform: scale(0);
   opacity: 0;
   transition: transform 0.22s ease, opacity 0.22s ease;
   pointer-events: none;
+  margin-right: 4px;
+  margin-left: auto;
 }
 #navProfileFloat.visible {
   transform: scale(1);
@@ -3513,9 +3513,21 @@ button {
   pointer-events: auto;
 }
 .bottom-bar.profile-float-active {
-  width: calc(100vw - 32px - 88px);
+  /* Навбар НЕ сужается — остаётся на месте */
+  width: calc(100vw - 32px);
   left: 16px;
   transform: none;
+}
+.bottom-bar.profile-float-active .bottom-btn {
+  /* Кнопки сжимаются чтобы освободить место для круга */
+  flex: 1;
+  min-width: 0;
+}
+.bottom-bar.profile-float-active .bottom-btn .nav-label {
+  display: none;
+}
+.bottom-bar.profile-float-active .bottom-btn .nav-icon {
+  font-size: 20px;
 }
 
 
@@ -3923,6 +3935,10 @@ button {
       <span class="nav-icon">🕘</span>
       <span class="nav-label">История</span>
     </button>
+
+    <div id="navProfileFloat" onclick="handleNavProfileClick(event)" aria-label="Профиль">
+      <span id="navProfileFloatInitials"></span>
+    </div>
   </div>
 
   <div
@@ -3976,8 +3992,6 @@ button {
     </div>
   </div>
 </div>
-
-<div id="navProfileFloat" onclick="openProfileScreen(event)" aria-label="Профиль"></div>
 
 <div id="leaderboardModal" class="app-modal" onclick="handleModalBackdropClick('leaderboardModal', event)">
   <div class="app-modal-card" onclick="event.stopPropagation()">
