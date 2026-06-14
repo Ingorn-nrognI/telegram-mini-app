@@ -7761,19 +7761,32 @@ function getScannerCountdownBeamCache(round) {
   let rawSamples = fullSamples.slice(0, lastWallIdx + 1);
   if (rawSamples.length < 2) rawSamples = fullSamples.slice(0, 2);
 
-  // Step 4: remap progress via brake curve (BRAKE_START=0.25)
-  // First 25% of trajectory → 10% of visual time; remaining 75% → 90% via ease-out
-  const BRAKE_START = 0.25;
+  // Ремаппинг: t = позиция по траектории (0..1), p = визуальное время (0..1)
+  // Лазер должен замедляться — в начале проходит больше пути за единицу времени,
+  // в конце меньше. Значит кривая t(p) должна быть выпуклой (concave down).
+  // Используем: t = 1 - (1-p)^EASE → p = 1 - (1-t)^(1/EASE)
+  // При EASE=3: в начале (p=0.3) лазер прошёл 65% пути → быстро
+  //             в конце (p=0.7-1.0) лазер проходит оставшиеся 35% → медленно
+  const EASE = 2.8;
+  const BRAKE_START_P = 0.30; // первые 30% времени — почти полная скорость
   const samples = rawSamples.map((s, i) => {
-    const t = i / (rawSamples.length - 1);
+    const t = i / Math.max(1, rawSamples.length - 1);
+    // Обратная функция: по позиции траектории t находим визуальное время p
+    // t = sin(p * PI/2) → p = asin(t) * 2/PI  — это даёт замедление в конце
+    // Но сначала делаем нормальную скорость до BRAKE_START_P
+    // Разбиваем: первые BRAKE_START_T доли траектории = BRAKE_START_P доли времени
+    const BRAKE_START_T = BRAKE_START_P; // линейный участок
     let p;
-    if (t <= BRAKE_START) {
-      p = (t / BRAKE_START) * 0.1;
+    if (t <= BRAKE_START_T) {
+      // Линейный участок — нормальная скорость
+      p = (t / BRAKE_START_T) * BRAKE_START_P;
     } else {
-      const tRem = (t - BRAKE_START) / (1 - BRAKE_START);
-      p = 0.1 + Math.pow(tRem, 0.45) * 0.9;
+      // Замедление — вариант Б: сначала почти незаметно, потом резче
+      const tRem = (t - BRAKE_START_T) / (1 - BRAKE_START_T);
+      // pow > 1 = замедление (concave): медленно в начале сбавляет, резче к концу
+      p = BRAKE_START_P + Math.pow(tRem, EASE) * (1 - BRAKE_START_P);
     }
-    return { ...s, progress: p };
+    return { ...s, progress: Math.min(1, Math.max(0, p)) };
   });
 
   // Manual latch simulation object
