@@ -7724,9 +7724,9 @@ function getScannerCountdownBeamCache(round) {
 
   const pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
   const totalMs = timing.durationMs;
-  const wallThreshold = pad + 0.006;
+  const wallThreshold = pad + 0.007;
 
-  // Step 1: full simulation at normal speed to find wall touches
+  // Step 1: full simulation at normal speed
   const fullSim = simulateScannerBeamBounceSamples({
     startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
     startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
@@ -7741,10 +7741,10 @@ function getScannerCountdownBeamCache(round) {
     speedFactorAt: () => 1
   });
 
-  // Step 2: collect wall touch indices
+  // Step 2: scan backwards to find last wall touch index
   const fullSamples = fullSim.samples || [];
-  const wallTouches = [];
-  for (let i = 0; i < fullSamples.length; i++) {
+  let lastWallIdx = fullSamples.length - 1;
+  for (let i = fullSamples.length - 1; i >= 0; i--) {
     const s = fullSamples[i];
     const nearWall =
       s.x <= wallThreshold ||
@@ -7752,75 +7752,37 @@ function getScannerCountdownBeamCache(round) {
       s.y <= wallThreshold ||
       s.y >= 1 - wallThreshold;
     if (nearWall) {
-      if (wallTouches.length === 0 || i - wallTouches[wallTouches.length - 1] > 10) {
-        wallTouches.push(i);
-      }
+      lastWallIdx = i;
+      break;
     }
   }
 
-  let secondLastWallIdx = wallTouches.length >= 2 ? wallTouches[wallTouches.length - 2] : null;
-  let lastWallIdx = wallTouches.length >= 1 ? wallTouches[wallTouches.length - 1] : null;
+  // Step 3: slice trajectory up to and including the last wall touch
+  let rawSamples = fullSamples.slice(0, lastWallIdx + 1);
+  if (rawSamples.length < 2) rawSamples = fullSamples.slice(0, 2);
 
-  // Fallback: if not enough wall touches, use 60% and 80% of the simulation
-  if (secondLastWallIdx === null) secondLastWallIdx = Math.floor(fullSamples.length * 0.6);
-  if (lastWallIdx === null) lastWallIdx = Math.floor(fullSamples.length * 0.8);
-
-  const secondLastWallMs = (secondLastWallIdx / SCANNER_COUNTDOWN_BEAM_STEPS) * totalMs;
-  const remainingMs = totalMs - secondLastWallMs;
-
-  // Step 3: cruise sim up to second-to-last wall touch
-  const cruiseSim = simulateScannerBeamBounceSamples({
-    startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
-    startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
-    durationMs: secondLastWallMs,
-    steps: secondLastWallIdx,
-    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
-    pad,
-    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::cruise`,
-    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
-    curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
-    bounceBendStrength: 0,
-    speedFactorAt: () => 1
+  // Step 4: remap progress via brake curve (BRAKE_START=0.25)
+  // First 25% of trajectory → 10% of visual time; remaining 75% → 90% via ease-out
+  const BRAKE_START = 0.25;
+  const samples = rawSamples.map((s, i) => {
+    const t = i / (rawSamples.length - 1);
+    let p;
+    if (t <= BRAKE_START) {
+      p = (t / BRAKE_START) * 0.1;
+    } else {
+      const tRem = (t - BRAKE_START) / (1 - BRAKE_START);
+      p = 0.1 + Math.pow(tRem, 0.45) * 0.9;
+    }
+    return { ...s, progress: p };
   });
-
-  const cruiseEnd = cruiseSim.finalSample || lobbyStartSample;
-
-  // Step 4: final approach sim from cruise end, slowing down
-  const finalSteps = SCANNER_COUNTDOWN_BEAM_STEPS - secondLastWallIdx;
-  const finalSim = simulateScannerBeamBounceSamples({
-    startPosition: { x: cruiseEnd.x, y: cruiseEnd.y },
-    startVelocity: { x: cruiseEnd.vx, y: cruiseEnd.vy },
-    durationMs: remainingMs,
-    steps: finalSteps,
-    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
-    pad,
-    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::final`,
-    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
-    curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
-    bounceBendStrength: 0,
-    speedFactorAt: (p) => Math.max(0.15, 1.0 - Math.pow(p, 1.5) * 0.85)
-  });
-
-  const finalEnd = finalSim.finalSample || cruiseEnd;
-
-  // Step 5: hold samples at final position
-  const holdSamples = [];
-  for (let i = 0; i < 8; i++) {
-    holdSamples.push({ ...finalEnd });
-  }
 
   // Manual latch simulation object
-  const latchStartSample = finalEnd;
+  const latchStartSample = samples[samples.length - 1];
   const latchSimulation = {
-    side: getScannerWallSideFromPosition(finalEnd, pad),
-    targetSample: finalEnd,
-    samples: holdSamples
+    side: getScannerWallSideFromPosition(latchStartSample, pad),
+    targetSample: latchStartSample,
+    samples: [latchStartSample]
   };
-
-  const samples = mergeScannerSampleSequences(
-    mergeScannerSampleSequences(cruiseSim.samples, finalSim.samples),
-    holdSamples
-  );
 
   scannerCountdownBeamCache = {
     key,
