@@ -7725,10 +7725,13 @@ function getScannerCountdownBeamCache(round) {
   const pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
   const totalMs = timing.durationMs;
 
-  // Фаза 1 — круиз: первые 25% времени (~5 сек) летим с полной скоростью
+  // Фаза 1 — круиз: первые 25% (~5 сек) полная скорость с отскоками
   const CRUISE_FRACTION = 0.25;
+  const BRAKE_FRACTION = 0.70;
+  const LATCH_FRACTION = 0.05;
   const cruiseDurationMs = totalMs * CRUISE_FRACTION;
-  const brakeDurationMs = totalMs - cruiseDurationMs;
+  const brakeDurationMs = totalMs * BRAKE_FRACTION;
+  const latchDurationMs = totalMs * LATCH_FRACTION;
 
   const cruiseSim = simulateScannerBeamBounceSamples({
     startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
@@ -7746,13 +7749,37 @@ function getScannerCountdownBeamCache(round) {
 
   const cruiseEndSample = cruiseSim.finalSample || lobbyStartSample;
 
-  // Фаза 2 — latch: оставшиеся 75% (~15 сек) плавно едем к ближайшей стене и там останавливаемся
-  // buildScannerLatchSamples считает ближайшую стену и плавно через smoothstep двигает лазер к ней
-  const latchSteps = Math.max(48, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * (1 - CRUISE_FRACTION)));
-  const latchSimulation = buildScannerLatchSamples(cruiseEndSample, brakeDurationMs, latchSteps);
+  // Фаза 2 — торможение: 70% (~14 сек) плавно тормозим с отскоками
+  // Скорость падает от 1.0 до 0.08 — лазер продолжает отскакивать но всё медленнее
+  const brakeSim = simulateScannerBeamBounceSamples({
+    startPosition: { x: cruiseEndSample.x, y: cruiseEndSample.y },
+    startVelocity: { x: cruiseEndSample.vx, y: cruiseEndSample.vy },
+    durationMs: brakeDurationMs,
+    steps: Math.max(60, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * BRAKE_FRACTION)),
+    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
+    pad,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::brake`,
+    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.3,
+    curveSecondaryStrength: 0,
+    bounceBendStrength: 0,
+    speedFactorAt: (p) => {
+      // Плавное торможение: от 1.0 до 0.08
+      // Используем кубическую кривую — сначала тормозит медленно, потом быстрее
+      return 1.0 - smoothstep(0, 1, Math.pow(p, 0.7)) * 0.92;
+    }
+  });
 
-  const latchStartSample = cruiseEndSample;
-  const samples = mergeScannerSampleSequences(cruiseSim.samples, latchSimulation.samples);
+  const brakeEndSample = brakeSim.finalSample || cruiseEndSample;
+
+  // Фаза 3 — latch: последние 5% (~1 сек) фиксируемся у ближайшей стены
+  const latchSteps = Math.max(16, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * LATCH_FRACTION));
+  const latchSimulation = buildScannerLatchSamples(brakeEndSample, latchDurationMs, latchSteps);
+
+  const latchStartSample = brakeEndSample;
+  const samples = mergeScannerSampleSequences(
+    mergeScannerSampleSequences(cruiseSim.samples, brakeSim.samples),
+    latchSimulation.samples
+  );
 
   scannerCountdownBeamCache = {
     key,
