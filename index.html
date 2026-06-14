@@ -7724,13 +7724,7 @@ function getScannerCountdownBeamCache(round) {
 
   const pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
   const totalMs = timing.durationMs;
-
-  const brakeStartOptions = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55];
-  let bestCruiseSamples = null;
-  let bestBrakeSamples = null;
-  let bestBrakeEndSample = null;
-  let bestBrakeStartFraction = 0.35;
-  let bestDistToWall = Infinity;
+  const wallThreshold = pad + 0.006;
 
   const fullSim = simulateScannerBeamBounceSamples({
     startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
@@ -7746,55 +7740,67 @@ function getScannerCountdownBeamCache(round) {
     speedFactorAt: () => 1
   });
 
-  const MIN_SPEED = 0.12;
-
-  for (const brakeStartFraction of brakeStartOptions) {
-    const cruiseDurationMs = totalMs * brakeStartFraction;
-    const brakeDurationMs = totalMs - cruiseDurationMs;
-    if (brakeDurationMs <= 0) continue;
-
-    const fullSamples = fullSim.samples || [];
-    const brakeIdx = Math.round(brakeStartFraction * (fullSamples.length - 1));
-    const brakeStartSample = fullSamples[brakeIdx] || lobbyStartSample;
-
-    const brakeSim = simulateScannerBeamBounceSamples({
-      startPosition: { x: brakeStartSample.x, y: brakeStartSample.y },
-      startVelocity: { x: brakeStartSample.vx, y: brakeStartSample.vy },
-      durationMs: brakeDurationMs,
-      steps: Math.max(40, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * (1 - brakeStartFraction))),
-      baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
-      pad,
-      seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::brake_${brakeStartFraction}`,
-      curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.2,
-      curveSecondaryStrength: 0,
-      bounceBendStrength: 0,
-      speedFactorAt: (p) => 1.0 - smoothstep(0, 1, Math.pow(p, 0.5)) * (1.0 - MIN_SPEED)
-    });
-
-    const brakeEnd = brakeSim.finalSample;
-    if (!brakeEnd) continue;
-
-    const distToWall = Math.min(
-      brakeEnd.x - pad,
-      (1 - pad) - brakeEnd.x,
-      brakeEnd.y - pad,
-      (1 - pad) - brakeEnd.y
-    );
-
-    if (distToWall < bestDistToWall) {
-      bestDistToWall = distToWall;
-      bestBrakeStartFraction = brakeStartFraction;
-      bestBrakeSamples = brakeSim.samples;
-      bestBrakeEndSample = brakeEnd;
+  const fullSamples = fullSim.samples || [];
+  let lastWallIdx = -1;
+  for (let i = fullSamples.length - 1; i >= 0; i--) {
+    const s = fullSamples[i];
+    if (s.x <= wallThreshold || s.x >= 1 - wallThreshold || s.y <= wallThreshold || s.y >= 1 - wallThreshold) {
+      lastWallIdx = i;
+      break;
     }
   }
 
-  const bestCruiseDurationMs = totalMs * bestBrakeStartFraction;
-  const bestCruiseSim = simulateScannerBeamBounceSamples({
+  const lastWallProgress = lastWallIdx >= 0 ? lastWallIdx / (fullSamples.length - 1) : 0.8;
+  const lastWallMs = lastWallProgress * totalMs;
+  const lastWallSample = lastWallIdx >= 0 ? fullSamples[lastWallIdx] : fullSamples[fullSamples.length - 1];
+
+  const brakeOptions = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45];
+  let bestBrakeStart = 0.30;
+  let bestDistToTarget = Infinity;
+
+  for (const brakeStartFraction of brakeOptions) {
+    const cruiseDurationMs = totalMs * brakeStartFraction;
+    const brakeDurationMs = lastWallMs - cruiseDurationMs;
+    if (brakeDurationMs <= 0) continue;
+
+    const brakeIdx = Math.round(brakeStartFraction * (fullSamples.length - 1));
+    const brakeStartSample = fullSamples[brakeIdx] || lobbyStartSample;
+
+    const testSim = simulateScannerBeamBounceSamples({
+      startPosition: { x: brakeStartSample.x, y: brakeStartSample.y },
+      startVelocity: { x: brakeStartSample.vx, y: brakeStartSample.vy },
+      durationMs: brakeDurationMs,
+      steps: Math.max(40, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * (lastWallProgress - brakeStartFraction))),
+      baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
+      pad,
+      seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::test_${brakeStartFraction}`,
+      curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.2,
+      curveSecondaryStrength: 0,
+      bounceBendStrength: 0,
+      speedFactorAt: (p) => Math.max(0.08, 1.0 - smoothstep(0, 1, p) * 0.92)
+    });
+
+    const testEnd = testSim.finalSample;
+    if (!testEnd) continue;
+
+    const dx = testEnd.x - lastWallSample.x;
+    const dy = testEnd.y - lastWallSample.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < bestDistToTarget) {
+      bestDistToTarget = dist;
+      bestBrakeStart = brakeStartFraction;
+    }
+  }
+
+  const bestCruiseDurationMs = totalMs * bestBrakeStart;
+  const bestBrakeDurationMs = lastWallMs - bestCruiseDurationMs;
+
+  const cruiseSim = simulateScannerBeamBounceSamples({
     startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
     startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
     durationMs: bestCruiseDurationMs,
-    steps: Math.max(24, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * bestBrakeStartFraction)),
+    steps: Math.max(24, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * bestBrakeStart)),
     baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
     pad,
     seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::cruise`,
@@ -7804,16 +7810,40 @@ function getScannerCountdownBeamCache(round) {
     speedFactorAt: () => 1
   });
 
-  bestCruiseSamples = bestCruiseSim.samples;
-  const cruiseEndSample = bestCruiseSim.finalSample || lobbyStartSample;
-  const brakeEndSample = bestBrakeEndSample || cruiseEndSample;
+  const cruiseEnd = cruiseSim.finalSample || lobbyStartSample;
 
-  const latchSimulation = buildScannerLatchSamples(brakeEndSample, 800, 16);
-  const latchStartSample = brakeEndSample;
+  const brakeSim = simulateScannerBeamBounceSamples({
+    startPosition: { x: cruiseEnd.x, y: cruiseEnd.y },
+    startVelocity: { x: cruiseEnd.vx, y: cruiseEnd.vy },
+    durationMs: Math.max(100, bestBrakeDurationMs),
+    steps: Math.max(40, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * (lastWallProgress - bestBrakeStart))),
+    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
+    pad,
+    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::brake`,
+    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.2,
+    curveSecondaryStrength: 0,
+    bounceBendStrength: 0,
+    speedFactorAt: (p) => Math.max(0.08, 1.0 - smoothstep(0, 1, p) * 0.92)
+  });
+
+  const brakeEnd = brakeSim.finalSample || cruiseEnd;
+  const holdDurationMs = totalMs - lastWallMs;
+  const holdSteps = Math.max(8, Math.round(SCANNER_COUNTDOWN_BEAM_STEPS * (1 - lastWallProgress)));
+  const holdSamples = [];
+  for (let i = 0; i < holdSteps; i++) {
+    holdSamples.push({ x: brakeEnd.x, y: brakeEnd.y, vx: 0, vy: 0, t: lastWallMs + (i / holdSteps) * holdDurationMs });
+  }
+
+  const latchSimulation = {
+    side: getScannerWallSideFromPosition(brakeEnd, pad),
+    targetSample: brakeEnd,
+    samples: holdSamples
+  };
+  const latchStartSample = brakeEnd;
 
   const samples = mergeScannerSampleSequences(
-    mergeScannerSampleSequences(bestCruiseSamples, bestBrakeSamples || []),
-    latchSimulation.samples
+    mergeScannerSampleSequences(cruiseSim.samples, brakeSim.samples),
+    holdSamples
   );
 
   scannerCountdownBeamCache = {
