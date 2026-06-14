@@ -7726,87 +7726,110 @@ function getScannerCountdownBeamCache(round) {
   const totalMs = timing.durationMs;
   const wallThreshold = pad + 0.006;
 
-  const fullSim = simulateScannerBeamBounceSamples({
-    startPosition: { x: lobbyStartSample.x, y: lobbyStartSample.y },
-    startVelocity: { x: lobbyStartSample.vx, y: lobbyStartSample.vy },
-    durationMs: totalMs,
-    steps: SCANNER_COUNTDOWN_BEAM_STEPS * 2,
-    baseSpeed: SCANNER_LOBBY_BEAM_BASE_SPEED,
-    pad,
-    seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::full`,
-    curveStrength: SCANNER_BEAM_CURVE_STRENGTH * 0.72,
-    curveSecondaryStrength: SCANNER_BEAM_CURVE_SECONDARY_STRENGTH * 0.78,
-    bounceBendStrength: 0,
-    speedFactorAt: () => 1
-  });
-  const fullSamples = fullSim.samples || [];
+  // Строим траекторию вручную шаг за шагом
+  // На каждом шаге скорость плавно уменьшается
+  // Перед каждым отскоком проверяем: успеем ли долететь до следующей стены?
+  // Если нет — остаёмся на текущей стене
 
-  const wallBounces = [];
-  let wasOnWall = false;
-  for (let i = 0; i < fullSamples.length; i++) {
-    const s = fullSamples[i];
-    const onWall = s.x <= wallThreshold || s.x >= 1 - wallThreshold ||
-                   s.y <= wallThreshold || s.y >= 1 - wallThreshold;
-    if (onWall && !wasOnWall) wallBounces.push(i);
-    wasOnWall = onWall;
-  }
+  const MANUAL_STEPS = SCANNER_COUNTDOWN_BEAM_STEPS * 3;
+  const dt = totalMs / MANUAL_STEPS; // мс на шаг
+  const dtSec = dt / 1000;
 
-  const finalBounceIdx = wallBounces.length > 0
-    ? wallBounces[wallBounces.length - 1]
-    : fullSamples.length - 1;
+  let x = lobbyStartSample.x;
+  let y = lobbyStartSample.y;
+  let vx = lobbyStartSample.vx || SCANNER_LOBBY_BEAM_BASE_SPEED * 0.8;
+  let vy = lobbyStartSample.vy || SCANNER_LOBBY_BEAM_BASE_SPEED * 0.6;
 
-  const rawSamples = fullSamples.slice(0, finalBounceIdx + 1);
-  if (rawSamples.length < 2) rawSamples.push(...fullSamples.slice(0, 2));
-
-  const finalSample = rawSamples[rawSamples.length - 1];
-
-  const OUTPUT_STEPS = SCANNER_COUNTDOWN_BEAM_STEPS;
-  // CRUISE_END_T — момент начала замедления по времени (0..1)
-  // До этого момента скорость нормальная: за X времени проходим X пути
-  // После — замедление: за оставшееся время проходим меньше пути
-  const CRUISE_END_T = 0.40;
+  // Нормализуем скорость
+  const vLen = Math.sqrt(vx * vx + vy * vy);
+  if (vLen > 0) { vx = vx / vLen; vy = vy / vLen; }
 
   const samples = [];
-  for (let i = 0; i < OUTPUT_STEPS; i++) {
-    const visualT = i / Math.max(1, OUTPUT_STEPS - 1);
-    let rawT;
-    if (visualT <= CRUISE_END_T) {
-      // Нормальная скорость — rawT растёт так же как visualT (1:1)
-      // За CRUISE_END_T времени проходим CRUISE_END_T пути
-      rawT = visualT;
-    } else {
-      // Замедление — за оставшееся (1-CRUISE_END_T) времени
-      // проходим оставшиеся (1-CRUISE_END_T) пути но медленнее к концу
-      const t = (visualT - CRUISE_END_T) / (1 - CRUISE_END_T);
-      // pow > 1 = ease-in = медленнее в конце (вариант Б)
-      rawT = CRUISE_END_T + Math.pow(t, 2.5) * (1 - CRUISE_END_T);
+  let frozenOnWall = false;
+  let frozenSample = null;
+
+  for (let step = 0; step < MANUAL_STEPS; step++) {
+    const visualT = step / Math.max(1, MANUAL_STEPS - 1);
+    const timeLeftMs = totalMs * (1 - visualT);
+
+    // Скорость плавно падает от 1.0 до 0 — вариант Б (сначала почти не заметно, потом резче)
+    const speedFactor = Math.max(0, 1.0 - Math.pow(visualT, 1.8));
+    const currentSpeed = SCANNER_LOBBY_BEAM_BASE_SPEED * speedFactor;
+
+    if (frozenOnWall) {
+      // Лазер заморожен на стене — стоим до конца
+      samples.push({ ...frozenSample, progress: visualT });
+      continue;
     }
 
-    rawT = Math.min(1, Math.max(0, rawT));
+    // Расстояние которое пройдём за этот шаг
+    const dist = currentSpeed * dtSec;
 
-    const rawIdx = rawT * (rawSamples.length - 1);
-    const i0 = Math.min(rawSamples.length - 2, Math.floor(rawIdx));
-    const i1 = i0 + 1;
-    const frac = rawIdx - i0;
-    const sA = rawSamples[i0];
-    const sB = rawSamples[i1] || sA;
+    // Вычисляем следующую позицию с отражением от стен
+    let nx = x + vx * dist;
+    let ny = y + vy * dist;
+    let bounced = false;
 
+    // Отражение по X
+    if (nx < pad) { nx = pad + (pad - nx); vx = Math.abs(vx); bounced = true; }
+    else if (nx > 1 - pad) { nx = (1 - pad) - (nx - (1 - pad)); vx = -Math.abs(vx); bounced = true; }
+
+    // Отражение по Y
+    if (ny < pad) { ny = pad + (pad - ny); vy = Math.abs(vy); bounced = true; }
+    else if (ny > 1 - pad) { ny = (1 - pad) - (ny - (1 - pad)); vy = -Math.abs(vy); bounced = true; }
+
+    if (bounced) {
+      // Только что отскочили от стены
+      // Проверяем: успеем ли долететь до следующей стены за оставшееся время?
+      const nextSpeedFactor = Math.max(0, 1.0 - Math.pow(visualT + 0.001, 1.8));
+      const avgSpeed = SCANNER_LOBBY_BEAM_BASE_SPEED * ((speedFactor + nextSpeedFactor) / 2);
+
+      // Время до следующей стены при текущей скорости и направлении
+      const timeToNextX = vx !== 0
+        ? (vx > 0 ? (1 - pad - nx) : (nx - pad)) / (Math.abs(vx) * avgSpeed)
+        : Infinity;
+      const timeToNextY = vy !== 0
+        ? (vy > 0 ? (1 - pad - ny) : (ny - pad)) / (Math.abs(vy) * avgSpeed)
+        : Infinity;
+      const timeToNextWallSec = Math.min(timeToNextX, timeToNextY);
+      const timeToNextWallMs = timeToNextWallSec * 1000;
+
+      // Но скорость убывает — реальное время до стены больше
+      // Умножаем на поправочный коэффициент
+      const correctedTimeMs = timeToNextWallMs * 1.4;
+
+      if (correctedTimeMs > timeLeftMs) {
+        // Не успеем долететь до следующей стены — замораживаемся здесь
+        frozenOnWall = true;
+        frozenSample = {
+          x: nx, y: ny,
+          vx: 0, vy: 0,
+          angle: Math.atan2(vy, vx),
+          travelAngle: Math.atan2(vy, vx),
+          progress: visualT
+        };
+        samples.push({ ...frozenSample, progress: visualT });
+        continue;
+      }
+    }
+
+    x = nx;
+    y = ny;
+
+    const angle = Math.atan2(vy, vx);
     samples.push({
-      x: sA.x + (sB.x - sA.x) * frac,
-      y: sA.y + (sB.y - sA.y) * frac,
-      angle: lerpScannerAngle(sA.angle || 0, sB.angle || 0, frac),
-      travelAngle: lerpScannerAngle(sA.travelAngle || 0, sB.travelAngle || 0, frac),
-      vx: sA.vx + (sB.vx - sA.vx) * frac,
-      vy: sA.vy + (sB.vy - sA.vy) * frac,
+      x, y, vx, vy,
+      angle,
+      travelAngle: angle,
       progress: visualT
     });
   }
 
-  const latchStartSample = finalSample;
+  const latchStartSample = frozenSample || samples[samples.length - 1] || lobbyStartSample;
   const latchSimulation = {
-    side: getScannerWallSideFromPosition(finalSample, pad),
-    targetSample: finalSample,
-    samples: [finalSample]
+    side: getScannerWallSideFromPosition(latchStartSample, pad),
+    targetSample: latchStartSample,
+    samples: [latchStartSample]
   };
 
   scannerCountdownBeamCache = {
