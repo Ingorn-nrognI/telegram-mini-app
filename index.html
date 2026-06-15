@@ -809,10 +809,10 @@ button {
   width: calc(100vw - 24px);
   min-height: var(--bottom-nav-height);
   padding: 12px 8px 10px;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
+  flex-direction: row;
   gap: 4px;
-  align-items: end;
+  align-items: center;
   border-radius: 28px;
   background:
     linear-gradient(180deg, rgba(13, 18, 40, 0.94), rgba(7, 10, 21, 0.95));
@@ -3513,13 +3513,11 @@ button {
   pointer-events: auto;
 }
 .bottom-bar.profile-float-active {
-  /* Навбар НЕ сужается — остаётся на месте */
-  width: calc(100vw - 32px);
-  left: 16px;
+  width: calc(100vw - 24px);
+  left: 12px;
   transform: none;
 }
-.bottom-bar.profile-float-active .bottom-btn {
-  /* Кнопки сжимаются чтобы освободить место для круга */
+.bottom-bar .bottom-btn {
   flex: 1;
   min-width: 0;
 }
