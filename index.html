@@ -7356,14 +7356,37 @@ function getScannerBeamSampleFromMotionState(motionState, timestampMs = getNetwo
 }
 
 function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedValue = "scanner_shared_lobby_motion_v2", runtimeData = scannerRealtime.runtimeData) {
-  // Если есть idleBeamMotion установленный НАМИ (anchorAt близко к текущему времени) — используем его
-  // Это позволяет лазеру продолжить движение с позиции где закончился предыдущий раунд
   const idleMotion = runtimeData?.idleBeamMotion;
   const now = getNetworkTime();
   const isOurMotion = idleMotion &&
     Number.isFinite(idleMotion.x) &&
     Number.isFinite(idleMotion.vx) &&
-    Math.abs((idleMotion.anchorAt || 0) - now) < 30000; // не старше 30 секунд
+    Math.abs((idleMotion.anchorAt || 0) - now) < 30000;
+
+  // Если наш idleBeamMotion ещё не установлен — используем scannerLastBeamSample
+  // чтобы лазер не телепортировался в дефолтную позицию пока не придёт patch от сервера
+  if (!isOurMotion && scannerLastBeamSample &&
+      Number.isFinite(scannerLastBeamSample.x) &&
+      scannerLastBeamSample.x !== 0.5 &&
+      scannerLastBeamSample.y !== 0.5) {
+    // Создаём временный motionState от последней известной позиции
+    const tempMotion = {
+      anchorAt: now,
+      x: scannerLastBeamSample.x,
+      y: scannerLastBeamSample.y,
+      vx: (scannerLastBeamSample.vx || Math.cos(scannerLastBeamSample.angle || 0)) * SCANNER_LOBBY_BEAM_BASE_SPEED,
+      vy: (scannerLastBeamSample.vy || Math.sin(scannerLastBeamSample.angle || 0)) * SCANNER_LOBBY_BEAM_BASE_SPEED
+    };
+    const vLen = Math.sqrt(tempMotion.vx * tempMotion.vx + tempMotion.vy * tempMotion.vy);
+    if (vLen > 0.001) {
+      tempMotion.vx = (tempMotion.vx / vLen) * SCANNER_LOBBY_BEAM_BASE_SPEED;
+      tempMotion.vy = (tempMotion.vy / vLen) * SCANNER_LOBBY_BEAM_BASE_SPEED;
+    }
+    return getScannerBeamSampleFromMotionState(normalizeScannerBeamMotionState(tempMotion, seedValue), timestampMs, {
+      pad: SCANNER_LOBBY_BEAM_EDGE_PADDING,
+      seedValue
+    });
+  }
 
   const motionState = isOurMotion
     ? normalizeScannerBeamMotionState(idleMotion, seedValue)
