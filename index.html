@@ -1207,7 +1207,7 @@ button {
 }
 
 .scanner-countdown-chip.is-round-phase {
-  color: var(--accent);
+  color: inherit;
   border-color: rgba(117, 245, 156, 0.24);
   box-shadow:
     inset 0 0 0 1px rgba(117, 245, 156, 0.08),
@@ -7356,9 +7356,19 @@ function getScannerBeamSampleFromMotionState(motionState, timestampMs = getNetwo
 }
 
 function getScannerSharedLobbyBeamSampleAt(timestampMs = getNetworkTime(), seedValue = "scanner_shared_lobby_motion_v2", runtimeData = scannerRealtime.runtimeData) {
-  // Всегда используем детерминированное движение от фиксированной эпохи
-  // Игнорируем idleBeamMotion с сервера — его обновления вызывают телепортацию луча
-  const motionState = getScannerDefaultIdleBeamMotion(seedValue);
+  // Если есть idleBeamMotion установленный НАМИ (anchorAt близко к текущему времени) — используем его
+  // Это позволяет лазеру продолжить движение с позиции где закончился предыдущий раунд
+  const idleMotion = runtimeData?.idleBeamMotion;
+  const now = getNetworkTime();
+  const isOurMotion = idleMotion &&
+    Number.isFinite(idleMotion.x) &&
+    Number.isFinite(idleMotion.vx) &&
+    Math.abs((idleMotion.anchorAt || 0) - now) < 30000; // не старше 30 секунд
+
+  const motionState = isOurMotion
+    ? normalizeScannerBeamMotionState(idleMotion, seedValue)
+    : getScannerDefaultIdleBeamMotion(seedValue);
+
   return getScannerBeamSampleFromMotionState(motionState, timestampMs, {
     pad: SCANNER_LOBBY_BEAM_EDGE_PADDING,
     seedValue
