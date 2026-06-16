@@ -4180,6 +4180,7 @@ const scannerGridPathOrder = (() => {
 })();
 
 let scannerLastBeamSample = { x: 0.5, y: 0.5 };
+let scannerRoundFinalBeamSample = null; // позиция лазера в конце раунда — не перезаписывается
 
 const scannerGridState = {
   mode: "scanner-grid",
@@ -8466,6 +8467,23 @@ function applySocketRoundPatch(patch) {
       scannerRealtime.participantsError = false;
       scannerRealtime.fallbackRoundId = null;
       scannerRealtime.bootstrappingRound = false;
+      // Переносим финальную позицию раунда в idleBeamMotion ДО сброса кэша
+      const _finalSample = scannerRoundFinalBeamSample || scannerActiveBeamCache?.finalSample;
+      if (_finalSample && Number.isFinite(_finalSample.x)) {
+        if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
+        const _vLen = Math.sqrt((_finalSample.vx||0)**2 + (_finalSample.vy||0)**2);
+        const _nvx = _vLen > 0.001 ? (_finalSample.vx / _vLen) * SCANNER_LOBBY_BEAM_BASE_SPEED : SCANNER_LOBBY_BEAM_BASE_SPEED * 0.8;
+        const _nvy = _vLen > 0.001 ? (_finalSample.vy / _vLen) * SCANNER_LOBBY_BEAM_BASE_SPEED : SCANNER_LOBBY_BEAM_BASE_SPEED * 0.6;
+        scannerRealtime.runtimeData.idleBeamMotion = {
+          anchorAt: getNetworkTime(),
+          x: _finalSample.x,
+          y: _finalSample.y,
+          vx: _nvx,
+          vy: _nvy
+        };
+        scannerLastBeamSample = { ..._finalSample };
+      }
+      scannerRoundFinalBeamSample = null;
       // Сбрасываем все кэши луча чтобы следующий раунд стартовал чисто
       scannerCountdownBeamCache = null;
       scannerActiveBeamCache = null;
@@ -8473,21 +8491,6 @@ function applySocketRoundPatch(patch) {
       scannerBeamRenderState.key = "";
       scannerLobbyLaserVisual.angle = null;
       scannerLobbyLaserVisual.lastAt = 0;
-      // Сохраняем последнюю позицию лазера из активной фазы
-      // чтобы в idle лазер начинал двигаться оттуда а не из центра
-      const _lastActive = scannerActiveBeamCache?.finalSample;
-      if (_lastActive && Number.isFinite(_lastActive.x) && Number.isFinite(_lastActive.y)) {
-        scannerLastBeamSample = { ..._lastActive };
-        // Обновляем idleBeamMotion чтобы lobby beam стартовал с финальной позиции
-        if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
-        scannerRealtime.runtimeData.idleBeamMotion = {
-          anchorAt: getNetworkTime(),
-          x: _lastActive.x,
-          y: _lastActive.y,
-          vx: Math.cos(_lastActive.angle || 0) * SCANNER_LOBBY_BEAM_BASE_SPEED,
-          vy: Math.sin(_lastActive.angle || 0) * SCANNER_LOBBY_BEAM_BASE_SPEED
-        };
-      }
     }
   }
   // Если сервер явно сбросил раунд в idle — запрещаем bootstrap подхватить старый раунд
@@ -8779,6 +8782,13 @@ function syncScannerDerivedState() {
     countdownMs = Math.max(0, activeEndsAt - now);
   } else if (roundStatus === "finished") {
     countdownMs = Math.max(0, finishedEndsAt - now);
+    // Сохраняем финальную позицию лазера — она не должна перезаписываться
+    if (!scannerRoundFinalBeamSample) {
+      const _activeCache = scannerActiveBeamCache;
+      if (_activeCache?.finalSample && Number.isFinite(_activeCache.finalSample.x)) {
+        scannerRoundFinalBeamSample = { ..._activeCache.finalSample };
+      }
+    }
   } else if (roundStatus === "preparing_next_round") {
     countdownMs = SCANNER_COUNTDOWN_MS;
   }
