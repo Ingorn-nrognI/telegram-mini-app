@@ -11132,9 +11132,9 @@ function renderScannerCanvas() {
       innerColor: "rgba(255,255,255,0.88)",
       centerGap: reticleRadius * 2
     });
-    console.log('[shuffle] status:', roundStatus, 'progress:', getScannerShuffleTransitionProgress(roundData), 'shuffleStartedAt:', roundData?.shuffleStartedAt);
     if (roundStatus === "shuffling") {
-      const shuffleProgress = getScannerShuffleTransitionProgress(roundData);
+      // Полный прогресс shuffling (0..1 за все 3300мс) — для треугольника
+      const shuffleProgress = getScannerShuffleProgress(roundData);
       const easedProgress = smoothstep(0, 1, shuffleProgress);
 
       // Финальный угол треугольника — тот же алгоритм что на сервере
@@ -11150,7 +11150,8 @@ function renderScannerCanvas() {
       const orbitR = reticleRadius * 2.8;
       const tx = Math.cos(triangleAngle) * orbitR;
       const ty = Math.sin(triangleAngle) * orbitR;
-      const triAlpha = Math.min(1, shuffleProgress * 8) * (1 - Math.max(0, (shuffleProgress - 0.85) / 0.15));
+      // Появляется в начале, исчезает в конце shuffling
+      const triAlpha = Math.min(1, shuffleProgress * 6) * (1 - Math.max(0, (shuffleProgress - 0.75) / 0.25));
       if (triAlpha > 0.01) {
         const triBase = reticleRadius * 0.7;
         const triHeight = reticleRadius * 1.1;
