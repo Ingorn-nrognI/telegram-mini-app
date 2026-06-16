@@ -6716,8 +6716,9 @@ function buildScannerPlayersFromFirestore(round, participants) {
     color
   }));
 
-  // Используем только id и version — entropySeed нестабилен (появляется позже из Firestore)
-  return finalizeScannerPlayers(normalized, `${round?.id || "round"}_${round?.status || "idle"}_${round?.version || 0}`);
+  // version намеренно убран из seed — он увеличивается при каждом обновлении Firestore
+  // и менял расположение клеток и цвет игрока при каждом обновлении
+  return finalizeScannerPlayers(normalized, `${round?.id || "round"}_${round?.status || "idle"}`);
 }
 
 function resetScannerDerivedVisualCache() {
@@ -6731,9 +6732,7 @@ function resetScannerDerivedVisualCache() {
 function getScannerDerivedVisualCacheKey(round, participants) {
   const roundPart = [
     String(round?.id || "round"),
-    String(round?.status || "idle"),
-    String(round?.version || 0)
-    // entropySeed намеренно убран — он появляется позже из Firestore и менял цвет игрока
+    String(round?.status || "idle")
   ].join("::");
 
   const participantsPart = (participants || []).map((participant, index) => [
