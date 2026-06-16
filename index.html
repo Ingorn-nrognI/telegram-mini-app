@@ -1207,7 +1207,7 @@ button {
 }
 
 .scanner-countdown-chip.is-round-phase {
-  color: inherit;
+  color: var(--text-secondary, rgba(255,255,255,0.5));
   border-color: rgba(117, 245, 156, 0.24);
   box-shadow:
     inset 0 0 0 1px rgba(117, 245, 156, 0.08),
@@ -8552,7 +8552,8 @@ function ensureScannerVisualLoop() {
         // Всегда обновляем классы — в том числе при idle чтобы сбросить зелёный цвет
         if (_cd) _cd.classList.toggle("is-round-active", _status === "active");
         if (_cdScreen) _cdScreen.classList.toggle("is-round-active", _status === "active");
-        const _isRoundPhase = ["shuffling", "finished", "preparing_next_round"].includes(_status);
+        // is-round-phase только для shuffling — finished и preparing не должны быть зелёными
+        const _isRoundPhase = _status === "shuffling";
         if (_cd) _cd.classList.toggle("is-round-phase", _isRoundPhase);
         if (_cdScreen) _cdScreen.classList.toggle("is-round-phase", _isRoundPhase);
       }
@@ -11416,7 +11417,18 @@ function subscribeScannerRuntime() {
   scannerRealtime.unsubRuntime = scannerRuntimeRef().onSnapshot((snapshot) => {
     scannerRealtime.runtimeReady = true;
     const data = snapshot.exists ? (snapshot.data() || {}) : {};
+    // Сохраняем наш idleBeamMotion если он свежий (установлен нами при сбросе раунда)
+    const prevIdleMotion = scannerRealtime.runtimeData?.idleBeamMotion;
+    const now = getNetworkTime();
+    const ourMotionIsFresh = prevIdleMotion &&
+      Number.isFinite(prevIdleMotion.x) &&
+      Number.isFinite(prevIdleMotion.vx) &&
+      Math.abs((prevIdleMotion.anchorAt || 0) - now) < 30000;
     scannerRealtime.runtimeData = data;
+    // Восстанавливаем наш idleBeamMotion — он точнее чем тот что в Firestore
+    if (ourMotionIsFresh) {
+      scannerRealtime.runtimeData.idleBeamMotion = prevIdleMotion;
+    }
     const activeRoundId = data.activeRoundId || null;
     if (scannerRealtime.activeRoundId !== activeRoundId) {
       subscribeScannerRound(activeRoundId);
