@@ -8422,12 +8422,20 @@ function applySocketRoundPatch(patch) {
       scannerGridState.players = [];
       scannerGridState.totalPlayers = 0;
       scannerGridState.totalPot = 0;
-      scannerGridState.countdownMs = 0;
+      scannerGridState.countdownMs = SCANNER_COUNTDOWN_MS;
       scannerRealtime.roundReady = true;
       scannerRealtime.participantsReady = true;
       scannerRealtime.participantsError = false;
       scannerRealtime.fallbackRoundId = null;
       scannerRealtime.bootstrappingRound = false;
+      // Сбрасываем все кэши луча чтобы следующий раунд стартовал чисто
+      scannerCountdownBeamCache = null;
+      scannerActiveBeamCache = null;
+      scannerBeamRenderState.initialized = false;
+      scannerBeamRenderState.key = "";
+      scannerLobbyLaserVisual.angle = null;
+      scannerLobbyLaserVisual.lastAt = 0;
+      scannerLastBeamSample = { x: 0.5, y: 0.5 };
     }
   }
   // Если сервер явно сбросил раунд в idle — запрещаем bootstrap подхватить старый раунд
