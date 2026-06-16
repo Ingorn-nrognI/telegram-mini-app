@@ -8435,7 +8435,21 @@ function applySocketRoundPatch(patch) {
       scannerBeamRenderState.key = "";
       scannerLobbyLaserVisual.angle = null;
       scannerLobbyLaserVisual.lastAt = 0;
-      scannerLastBeamSample = { x: 0.5, y: 0.5 };
+      // Сохраняем последнюю позицию лазера из активной фазы
+      // чтобы в idle лазер начинал двигаться оттуда а не из центра
+      const _lastActive = scannerActiveBeamCache?.finalSample;
+      if (_lastActive && Number.isFinite(_lastActive.x) && Number.isFinite(_lastActive.y)) {
+        scannerLastBeamSample = { ..._lastActive };
+        // Обновляем idleBeamMotion чтобы lobby beam стартовал с финальной позиции
+        if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
+        scannerRealtime.runtimeData.idleBeamMotion = {
+          anchorAt: getNetworkTime(),
+          x: _lastActive.x,
+          y: _lastActive.y,
+          vx: Math.cos(_lastActive.angle || 0) * SCANNER_LOBBY_BEAM_BASE_SPEED,
+          vy: Math.sin(_lastActive.angle || 0) * SCANNER_LOBBY_BEAM_BASE_SPEED
+        };
+      }
     }
   }
   // Если сервер явно сбросил раунд в idle — запрещаем bootstrap подхватить старый раунд
@@ -8514,12 +8528,13 @@ function ensureScannerVisualLoop() {
     try {
       renderScannerCanvas();
       const _status = scannerGridState.status;
-      if (["countdown", "active", "shuffling", "finished", "preparing_next_round"].includes(_status)) {
+      {
         const _cd = document.getElementById("scannerCountdownChip");
         const _cdScreen = document.getElementById("scannerScreenCountdownChip");
         const _text = getScannerCountdownChipText();
         if (_cd) setTextContentIfChanged(_cd, _text);
         if (_cdScreen) setTextContentIfChanged(_cdScreen, _text);
+        // Всегда обновляем классы — в том числе при idle чтобы сбросить зелёный цвет
         if (_cd) _cd.classList.toggle("is-round-active", _status === "active");
         if (_cdScreen) _cdScreen.classList.toggle("is-round-active", _status === "active");
         const _isRoundPhase = ["shuffling", "finished", "preparing_next_round"].includes(_status);
