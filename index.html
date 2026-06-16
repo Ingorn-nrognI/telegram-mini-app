@@ -6342,16 +6342,12 @@ function getScannerUniqueRoundColor(roundSeed, playerIndex) {
 
 function assignScannerRoundColors(round, participants) {
   const roundSeed = getScannerRoundColorSeed(round);
-  // Сортируем по joinedAt чтобы цвет не зависел от порядка прихода данных
+  // Сортируем ТОЛЬКО по playerId — joinedAt нестабилен (сначала Date.now(), потом Firestore Timestamp)
+  // playerId всегда стабилен с момента создания участника
   const allIds = (participants || [])
-    .slice()
-    .sort((a, b) => {
-      const tA = Number(a.joinedAt || 0);
-      const tB = Number(b.joinedAt || 0);
-      return tA !== tB ? tA - tB : String(a.playerId || '').localeCompare(String(b.playerId || ''));
-    })
     .map(p => String(p.playerId || p.id || ''))
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
   return (participants || []).map((participant) => {
     const pid = String(participant.playerId || participant.id || '');
     const colorIndex = allIds.indexOf(pid);
@@ -11324,7 +11320,21 @@ function subscribeScannerRound(roundId) {
   const roundRef = scannerRoundRef(roundId);
   scannerRealtime.unsubRound = roundRef.onSnapshot((snapshot) => {
     scannerRealtime.roundReady = true;
-    scannerRealtime.roundData = snapshot.exists ? { id: snapshot.id, ...(snapshot.data() || {}) } : null;
+    if (snapshot.exists) {
+      const firestoreData = { id: snapshot.id, ...(snapshot.data() || {}) };
+      // Защищаем countdownEndsAt от перезаписи Firestore — сокет даёт точное значение
+      // Берём максимальное из двух значений чтобы таймер не прыгал назад
+      const existingCountdownEndsAt = scannerRealtime.roundData?.countdownEndsAt || 0;
+      const firestoreCountdownEndsAt = firestoreData.countdownEndsAt
+        ? (typeof firestoreData.countdownEndsAt.toMillis === 'function'
+            ? firestoreData.countdownEndsAt.toMillis()
+            : Number(firestoreData.countdownEndsAt))
+        : 0;
+      firestoreData.countdownEndsAt = Math.max(existingCountdownEndsAt, firestoreCountdownEndsAt) || firestoreData.countdownEndsAt;
+      scannerRealtime.roundData = firestoreData;
+    } else {
+      scannerRealtime.roundData = null;
+    }
 
     if (!snapshot.exists) {
       subscribeScannerParticipants(null);
