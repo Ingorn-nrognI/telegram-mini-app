@@ -7934,9 +7934,14 @@ function getScannerActiveBeamCacheKey(round, players) {
 }
 
 function getScannerActiveBeamCache(round, players) {
-  if (!round || !Array.isArray(players) || !players.length) return null;
+  if (!round) return null;
+  // Если players пустые — создаём фиктивного игрока чтобы лазер двигался
+  const safePlayers = Array.isArray(players) && players.length > 0
+    ? players
+    : [{ id: 'default', stake: 1, cellCount: 100 }];
+  const playersForCache = safePlayers;
 
-  const key = getScannerActiveBeamCacheKey(round, players);
+  const key = getScannerActiveBeamCacheKey(round, playersForCache);
   if (scannerActiveBeamCache?.key === key && Array.isArray(scannerActiveBeamCache?.samples) && scannerActiveBeamCache.samples.length > 1) {
     return scannerActiveBeamCache;
   }
@@ -9892,7 +9897,7 @@ function getScannerRoundOverlayRight() {
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
   if (status === "active" || status === "shuffling") {
-    return "Round";
+    return appSettings.language === "ru" ? "Раунд" : "Round";
   }
   if (["countdown", "finished", "preparing_next_round"].includes(status)) {
     return formatCountdownMs(scannerGridState.countdownMs || 0);
@@ -9943,7 +9948,7 @@ function renderScannerRound(options = {}) {
   const myChanceValue = formatPercent(((myPlayer?.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
   if (countdown) {
     setTextContentIfChanged(countdown, getScannerCountdownChipText());
-    countdown.classList.toggle("is-round-active", (scannerGridState.status === "active" || scannerGridState.status === "shuffling") && (scannerGridState.countdownMs || 0) >= 0);
+    countdown.classList.toggle("is-round-active", scannerGridState.status === "active");
   }
   const _displayPot = isArenaResetPhase ? 0 : (scannerRealtime.roundData?.totalPot || scannerGridState.totalPot || 0);
   if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(_displayPot)}`);
@@ -11127,6 +11132,7 @@ function renderScannerCanvas() {
       innerColor: "rgba(255,255,255,0.88)",
       centerGap: reticleRadius * 2
     });
+    console.log('[shuffle] status:', roundStatus, 'progress:', getScannerShuffleTransitionProgress(roundData), 'shuffleStartedAt:', roundData?.shuffleStartedAt);
     if (roundStatus === "shuffling") {
       const shuffleProgress = getScannerShuffleTransitionProgress(roundData);
       const easedProgress = smoothstep(0, 1, shuffleProgress);
