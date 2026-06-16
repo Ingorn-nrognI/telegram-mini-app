@@ -8362,10 +8362,13 @@ function applySocketRoundPatch(patch) {
   if (patch.activeEndsAt !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
     scannerRealtime.roundData.activeEndsAt = patch.activeEndsAt;
+    scannerActiveBeamCache = null;
   }
   if (patch.activeStartedAt !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
     scannerRealtime.roundData.activeStartedAt = patch.activeStartedAt;
+    // Сбрасываем кэш активной фазы чтобы лазер пересчитал траекторию с новой стартовой точки
+    scannerActiveBeamCache = null;
   }
   if (patch.shuffleStartedAt !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
@@ -9888,10 +9891,10 @@ function getScannerRoundOverlayRight() {
 
 function getScannerCountdownChipText() {
   const status = String(scannerGridState.status || "idle");
-  if (status === "active") {
+  if (status === "active" || status === "shuffling") {
     return "Round";
   }
-  if (["countdown", "shuffling", "finished", "preparing_next_round"].includes(status)) {
+  if (["countdown", "finished", "preparing_next_round"].includes(status)) {
     return formatCountdownMs(scannerGridState.countdownMs || 0);
   }
   // idle или waiting — всегда показываем 00:20
@@ -9940,7 +9943,7 @@ function renderScannerRound(options = {}) {
   const myChanceValue = formatPercent(((myPlayer?.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
   if (countdown) {
     setTextContentIfChanged(countdown, getScannerCountdownChipText());
-    countdown.classList.toggle("is-round-active", scannerGridState.status === "active" && (scannerGridState.countdownMs || 0) > 0);
+    countdown.classList.toggle("is-round-active", (scannerGridState.status === "active" || scannerGridState.status === "shuffling") && (scannerGridState.countdownMs || 0) >= 0);
   }
   const _displayPot = isArenaResetPhase ? 0 : (scannerRealtime.roundData?.totalPot || scannerGridState.totalPot || 0);
   if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(_displayPot)}`);
