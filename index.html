@@ -8141,13 +8141,18 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "shuffling") {
+    // В shuffling лазер стоит на месте где прилип в конце countdown
+    // Сначала пробуем latchSample из кэша countdown
     const countdownCache = getScannerCountdownBeamCache(roundData);
-    return countdownCache?.latchSample
-      || getScannerCountdownBeamSampleAtTime(
-        roundData,
-        tsToMs(roundData?.countdownEndsAt) || safeTimestamp,
-        getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
-      );
+    if (countdownCache?.latchSample) return countdownCache.latchSample;
+    // Если кэш сброшен — берём последний известный сэмпл луча
+    if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) return scannerLastBeamSample;
+    // Fallback
+    return getScannerCountdownBeamSampleAtTime(
+      roundData,
+      tsToMs(roundData?.countdownEndsAt) || safeTimestamp,
+      getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
+    );
   }
 
   if (safeStatus === "active") {
@@ -11168,8 +11173,12 @@ function renderScannerCanvas() {
       // Текущий угол вращения треугольника
       const currentSec = (now - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000;
       const spinRate = SCANNER_LOBBY_LASER_TURN_SPEED * (1 + (1 - easedProgress) * 8);
-      const currentSpinAngle = (currentSec * spinRate) % (Math.PI * 2);
-      const triangleAngle = currentSpinAngle * (1 - easedProgress) + finalSpinAngle * easedProgress;
+      const currentSpinAngle = currentSec * spinRate;
+      // Правильная интерполяция кругового угла — через кратчайший путь
+      let angleDiff = finalSpinAngle - (currentSpinAngle % (Math.PI * 2));
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      const triangleAngle = currentSpinAngle + angleDiff * easedProgress;
       const orbitR = reticleRadius * 2.8;
       const tx = Math.cos(triangleAngle) * orbitR;
       const ty = Math.sin(triangleAngle) * orbitR;
