@@ -6342,11 +6342,16 @@ function getScannerUniqueRoundColor(roundSeed, playerIndex) {
 
 function assignScannerRoundColors(round, participants) {
   const roundSeed = getScannerRoundColorSeed(round);
-  // Цвет определяется по playerId, а не по индексу — иначе при изменении порядка цвет меняется
+  // Сортируем по joinedAt чтобы цвет не зависел от порядка прихода данных
   const allIds = (participants || [])
+    .slice()
+    .sort((a, b) => {
+      const tA = Number(a.joinedAt || 0);
+      const tB = Number(b.joinedAt || 0);
+      return tA !== tB ? tA - tB : String(a.playerId || '').localeCompare(String(b.playerId || ''));
+    })
     .map(p => String(p.playerId || p.id || ''))
-    .filter(Boolean)
-    .sort();
+    .filter(Boolean);
   return (participants || []).map((participant) => {
     const pid = String(participant.playerId || participant.id || '');
     const colorIndex = allIds.indexOf(pid);
@@ -8376,8 +8381,10 @@ function applySocketRoundPatch(patch) {
   }
   if (patch.countdownEndsAt !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
-    // Не перезаписываем countdownEndsAt если уже установлен — иначе таймер прыгает при входе второго игрока
-    if (!scannerRealtime.roundData.countdownEndsAt) {
+    // Обновляем countdownEndsAt только если новое значение БОЛЬШЕ текущего
+    // Это защищает от прыжка таймера но позволяет корректно обновить при новом раунде
+    const existing = scannerRealtime.roundData.countdownEndsAt || 0;
+    if (!existing || patch.countdownEndsAt > existing) {
       scannerRealtime.roundData.countdownEndsAt = patch.countdownEndsAt;
     }
   }
@@ -8666,10 +8673,8 @@ function syncScannerDerivedState() {
   scannerGridState.roundId = round?.id || null;
   scannerGridState.roundStatus = roundStatus;
 
-  // Защищаем countdownEndsAt от перезаписи Firestore если сокет уже дал точное значение
-  if (round && scannerRealtime._socketCountdownEndsAt && !round.countdownEndsAt) {
-    round = { ...round, countdownEndsAt: scannerRealtime._socketCountdownEndsAt };
-    scannerGridState.roundData = round;
+  if (round && scannerRealtime.roundData?.countdownEndsAt && !round.countdownEndsAt) {
+    round.countdownEndsAt = scannerRealtime.roundData.countdownEndsAt;
   }
 
   scannerGridState.participants = renderParticipants;
@@ -9939,7 +9944,7 @@ function renderScannerRound(options = {}) {
   const myChanceValue = formatPercent(((myPlayer?.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
   if (countdown) {
     setTextContentIfChanged(countdown, getScannerCountdownChipText());
-    countdown.classList.toggle("is-round-active", scannerGridState.status === "active");
+    countdown.classList.toggle("is-round-active", scannerGridState.status === "active" && (scannerGridState.countdownMs || 0) > 0);
   }
   const _displayPot = isArenaResetPhase ? 0 : (scannerRealtime.roundData?.totalPot || scannerGridState.totalPot || 0);
   if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(_displayPot)}`);
