@@ -4379,7 +4379,6 @@ try {
   tgApp?.expand?.();
   tgApp?.setBackgroundColor?.("#050816");
   tgApp?.setHeaderColor?.("#050816");
-  refreshCurrentPlayerCache();
 } catch (error) {
   reportAppError("Ошибка инициализации Telegram WebApp:", error);
   tgUser = null;
@@ -4402,33 +4401,16 @@ function getStableGuestPlayerId() {
   }
 }
 
-// Кэш игрока — инициализируется один раз чтобы имя и цвет не менялись
-let _cachedCurrentPlayer = null;
-let _cachedTgUserId = null;
-
 function getCurrentPlayer() {
-  const id = tgUser?.id ? String(tgUser.id) : getStableGuestPlayerId();
-
-  // Сбрасываем кэш только если сменился пользователь
-  if (_cachedCurrentPlayer && _cachedTgUserId === id) {
-    return _cachedCurrentPlayer;
-  }
-
   const nicknameEl = document.getElementById("nickname");
   const fallbackName = nicknameEl?.innerText?.trim() || "Игрок";
-  // Берём самое полное имя которое есть прямо сейчас
-  const name = tgUser?.first_name || tgUser?.username || fallbackName;
-  const avatar = tgUser?.photo_url || null;
-
-  _cachedCurrentPlayer = { id, name, avatar };
-  _cachedTgUserId = id;
-  return _cachedCurrentPlayer;
-}
-
-// Сбрасываем кэш когда Telegram данные загрузились
-function refreshCurrentPlayerCache() {
-  _cachedCurrentPlayer = null;
-  _cachedTgUserId = null;
+  const id = tgUser?.id ? String(tgUser.id) : getStableGuestPlayerId();
+  const name = tgUser?.username || tgUser?.first_name || fallbackName;
+  return {
+    id,
+    name,
+    avatar: tgUser?.photo_url || null
+  };
 }
 
 function getPlayerInitial(name) {
