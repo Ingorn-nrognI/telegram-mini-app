@@ -8413,7 +8413,11 @@ function applySocketRoundPatch(patch) {
     scannerRealtime.roundData.participantCount = patch.participantCount;
   }
   if (patch.participants !== undefined) {
-    scannerRealtime.participants = Array.isArray(patch.participants) ? patch.participants : [];
+    // Данные от сокета НЕ используются для рендера игроков на арене —
+    // они нестабильны (приходят раньше Firestore) и вызывают скачок цвета/аватара.
+    // Рендер арены берёт игроков только из onSnapshot участников (Firestore).
+    // Сохраняем сокет-данные отдельно — на случай если понадобятся для других целей (баланс/банк).
+    scannerRealtime.socketParticipants = Array.isArray(patch.participants) ? patch.participants : [];
   }
   if (patch.activeEndsAt !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
@@ -8537,7 +8541,7 @@ function applySocketRoundState(data) {
     return;
   }
   scannerRealtime.activeRoundId = roundId;
-  scannerRealtime.participants = Array.isArray(data.participants) ? data.participants : [];
+  scannerRealtime.socketParticipants = Array.isArray(data.participants) ? data.participants : [];
   scannerRealtime.participantsRoundId = roundId;
   scannerRealtime.roundData = {
     id: roundId,
