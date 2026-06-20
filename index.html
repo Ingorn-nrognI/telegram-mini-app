@@ -8454,33 +8454,17 @@ function applySocketRoundPatch(patch) {
   if (patch.roundId !== undefined) {
     scannerRealtime.activeRoundId = patch.roundId || null;
     if (!patch.roundId) {
-      // Приоритет 1: позиция где лазер визуально остановился в countdown (latch)
-      // Приоритет 2: финальная позиция активной фазы (на случай отмены после active)
-      // Приоритет 3: серверная lobby-позиция как fallback
-      const _countdownLatch = scannerCountdownBeamCache?.latchSample;
-      const _activeFinal = scannerActiveBeamCache?.finalSample;
-      const _resetSample = (_countdownLatch && Number.isFinite(_countdownLatch.x))
-        ? _countdownLatch
-        : (_activeFinal && Number.isFinite(_activeFinal.x))
-          ? _activeFinal
-          : (_serverBeamPos && _serverBeamPos.x !== undefined)
-            ? _serverBeamPos
-            : null;
-
-      if (_resetSample) {
-        const _nowMs = getNetworkTime();
-        if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
-        const _vLen = Math.sqrt((_resetSample.vx||0)**2 + (_resetSample.vy||0)**2);
-        const _nvx = _vLen > 0.001 ? (_resetSample.vx / _vLen) * SCANNER_LOBBY_BEAM_BASE_SPEED : SCANNER_LOBBY_BEAM_BASE_SPEED * 0.8;
-        const _nvy = _vLen > 0.001 ? (_resetSample.vy / _vLen) * SCANNER_LOBBY_BEAM_BASE_SPEED : SCANNER_LOBBY_BEAM_BASE_SPEED * 0.6;
-        scannerRealtime.runtimeData.idleBeamMotion = {
-          anchorAt: _nowMs,
-          x: _resetSample.x,
-          y: _resetSample.y,
-          vx: _nvx,
-          vy: _nvy
+      // Сервер теперь сам шлёт idleBeamMotion в этом же patch (patch.idleBeamMotion)
+      // Это гарантирует что ВСЕ клиенты получат одну и ту же стартовую позицию лазера
+      // Локальный пересчёт удалён — он был причиной рассинхрона между клиентами
+      if (patch.idleBeamMotion) {
+        scannerLastBeamSample = {
+          x: patch.idleBeamMotion.x,
+          y: patch.idleBeamMotion.y,
+          vx: patch.idleBeamMotion.vx,
+          vy: patch.idleBeamMotion.vy,
+          angle: Math.atan2(patch.idleBeamMotion.vy || 0, patch.idleBeamMotion.vx || 0)
         };
-        scannerLastBeamSample = { ..._resetSample };
       }
       scannerRealtime.roundData = null;
       scannerRealtime.activeRoundId = null;
