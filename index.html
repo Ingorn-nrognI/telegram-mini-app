@@ -8542,36 +8542,36 @@ function applySocketRoundState(data) {
   if (!data) return;
   const roundId = data.roundId || null;
   scannerRealtime.runtimeReady = true;
-  scannerRealtime.roundReady = true;
-  scannerRealtime.participantsReady = true;
-  scannerRealtime.participantsError = false;
   if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
   scannerRealtime.runtimeData.activeRoundId = roundId;
   if (data.idleBeamMotion) scannerRealtime.runtimeData.idleBeamMotion = data.idleBeamMotion;
-  if (!roundId) {
-    scannerRealtime.activeRoundId = null;
-    scannerRealtime.roundData = null;
-    scannerRealtime.participants = [];
-    scannerRealtime.participantsRoundId = null;
-    syncScannerDerivedState();
-    renderScannerRound();
-    return;
-  }
-  scannerRealtime.activeRoundId = roundId;
+
+  // Используем socket-данные только как временный быстрый снимок —
+  // НЕ устанавливаем scannerRealtime.activeRoundId здесь, чтобы subscribeScannerRuntime
+  // обязательно создал настоящую Firestore-подписку на участников через subscribeScannerRound
   scannerRealtime.socketParticipants = Array.isArray(data.participants) ? data.participants : [];
-  scannerRealtime.participantsRoundId = roundId;
-  scannerRealtime.roundData = {
-    id: roundId,
-    status: data.status || 'waiting',
-    totalPot: data.totalPot || 0,
-    participantCount: data.participantCount || 0,
-    countdownEndsAt: data.countdownEndsAt || null,
-    activeEndsAt: data.activeEndsAt || null,
-    version: data.version || 0
-  };
+
+  if (roundId) {
+    scannerRealtime.roundData = {
+      id: roundId,
+      status: data.status || 'waiting',
+      totalPot: data.totalPot || 0,
+      participantCount: data.participantCount || 0,
+      countdownEndsAt: data.countdownEndsAt || null,
+      activeEndsAt: data.activeEndsAt || null,
+      version: data.version || 0
+    };
+  }
+
   syncScannerDerivedState();
   renderScannerRound();
   ensureScannerVisualLoop();
+
+  // Принудительно гарантируем настоящую Firestore-подписку на этот раунд
+  // Это решает гонку при первой загрузке когда socket прилетает раньше Firestore runtime
+  if (scannerRealtime.activeRoundId !== roundId || !scannerRealtime.unsubRound) {
+    subscribeScannerRound(roundId);
+  }
 }
 
 function applySocketRoundResult(data) {
@@ -11668,6 +11668,14 @@ function initializeScannerGridFeature() {
 }
 
 function enterScannerGridMode(event) {
+  // Предзагружаем аватар текущего игрока заранее чтобы он не грузился долго при входе в раунд
+  {
+    const _player = getCurrentPlayer();
+    if (_player?.avatar) {
+      const _preloadImg = new Image();
+      _preloadImg.src = _player.avatar;
+    }
+  }
   if (event) event.stopPropagation();
   closeModePopup();
   closeHistoryPanel({ preserveNav: true });
