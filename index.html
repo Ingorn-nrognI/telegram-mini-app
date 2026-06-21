@@ -8468,7 +8468,13 @@ function applySocketRoundPatch(patch) {
     scannerRealtime.runtimeData.idleBeamMotion = patch.idleBeamMotion;
   }
   if (patch.roundId !== undefined) {
+    const _prevActiveRoundId = scannerRealtime.activeRoundId;
     scannerRealtime.activeRoundId = patch.roundId || null;
+    // Гарантируем настоящую Firestore-подписку на участников нового раунда —
+    // иначе арена не отображает игроков хотя банк/таймер обновляются через сокет
+    if (patch.roundId && (_prevActiveRoundId !== patch.roundId || !scannerRealtime.unsubRound)) {
+      subscribeScannerRound(patch.roundId);
+    }
     if (!patch.roundId) {
       // Сервер теперь сам шлёт idleBeamMotion в этом же patch (patch.idleBeamMotion)
       // Это гарантирует что ВСЕ клиенты получат одну и ту же стартовую позицию лазера
