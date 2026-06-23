@@ -7792,81 +7792,74 @@ function getScannerCountdownBeamCache(round) {
   let frozenOnWall = false;
   let frozenSample = null;
 
+  // Шаг 1: считаем сколько шагов реально нужно лазеру лететь с нормальной скоростью
+  // чтобы добраться до СВОЕЙ финальной стены, без отдельной фазы "замирания"
+  // которая визуально выглядела как рывок в конце.
+  // Сначала пробуем честно пролететь всю траекторию на постоянной скорости (без замедления)
+  // и смотрим где и когда лазер последний раз касается стены.
+  let probeX = x, probeY = y, probeVx = vx, probeVy = vy;
+  let lastWallStep = 0;
+  let lastWallSample = { x, y, vx, vy, angle: Math.atan2(vy, vx) };
+  const probeSpeed = SCANNER_LOBBY_BEAM_BASE_SPEED;
   for (let step = 0; step < MANUAL_STEPS; step++) {
-    const visualT = step / Math.max(1, MANUAL_STEPS - 1);
-    const timeLeftMs = totalMs * (1 - visualT);
+    const dist = probeSpeed * dtSec;
+    let nx = probeX + probeVx * dist;
+    let ny = probeY + probeVy * dist;
+    let bounced = false;
+    if (nx < pad) { nx = pad + (pad - nx); probeVx = Math.abs(probeVx); bounced = true; }
+    else if (nx > 1 - pad) { nx = (1 - pad) - (nx - (1 - pad)); probeVx = -Math.abs(probeVx); bounced = true; }
+    if (ny < pad) { ny = pad + (pad - ny); probeVy = Math.abs(probeVy); bounced = true; }
+    else if (ny > 1 - pad) { ny = (1 - pad) - (ny - (1 - pad)); probeVy = -Math.abs(probeVy); bounced = true; }
+    probeX = nx; probeY = ny;
+    if (bounced) {
+      lastWallStep = step;
+      lastWallSample = { x: nx, y: ny, vx: probeVx, vy: probeVy, angle: Math.atan2(probeVy, probeVx) };
+    }
+  }
+  // Используем последнее касание стены ИЗ ЭТОЙ пробной траектории как целевую финальную точку.
+  // Если касаний не было вообще — летим до конца с нормальной скоростью без замедления.
+  const targetWallStep = lastWallStep > 0 ? lastWallStep : MANUAL_STEPS - 1;
 
-    // Скорость плавно падает от 1.0 до 0 — вариант Б (сначала почти не заметно, потом резче)
-    const speedFactor = Math.max(0, 1.0 - Math.pow(visualT, 1.8));
-    const currentSpeed = SCANNER_LOBBY_BEAM_BASE_SPEED * speedFactor;
-
+  // Шаг 2: строим реальную траекторию — летим нормально, плавно замедляясь,
+  // ТОЧНО так чтобы прийти к моменту targetWallStep с нулевой скоростью у стены.
+  // Скорость теперь зависит от прогресса ДО targetWallStep, а не до конца таймера —
+  // это устраняет микро-движения и рывок в самом конце.
+  for (let step = 0; step < MANUAL_STEPS; step++) {
     if (frozenOnWall) {
-      // Лазер заморожен на стене — стоим до конца
-      samples.push({ ...frozenSample, progress: visualT });
+      samples.push({ ...frozenSample, progress: step / Math.max(1, MANUAL_STEPS - 1) });
       continue;
     }
 
-    // Расстояние которое пройдём за этот шаг
-    const dist = currentSpeed * dtSec;
-
-    // Вычисляем следующую позицию с отражением от стен
-    let nx = x + vx * dist;
-    let ny = y + vy * dist;
-    let bounced = false;
-
-    // Отражение по X
-    if (nx < pad) { nx = pad + (pad - nx); vx = Math.abs(vx); bounced = true; }
-    else if (nx > 1 - pad) { nx = (1 - pad) - (nx - (1 - pad)); vx = -Math.abs(vx); bounced = true; }
-
-    // Отражение по Y
-    if (ny < pad) { ny = pad + (pad - ny); vy = Math.abs(vy); bounced = true; }
-    else if (ny > 1 - pad) { ny = (1 - pad) - (ny - (1 - pad)); vy = -Math.abs(vy); bounced = true; }
-
-    if (bounced) {
-      // Только что отскочили от стены
-      // Проверяем: успеем ли долететь до следующей стены за оставшееся время?
-      const nextSpeedFactor = Math.max(0, 1.0 - Math.pow(visualT + 0.001, 1.8));
-      const avgSpeed = SCANNER_LOBBY_BEAM_BASE_SPEED * ((speedFactor + nextSpeedFactor) / 2);
-
-      // Время до следующей стены при текущей скорости и направлении
-      const timeToNextX = vx !== 0
-        ? (vx > 0 ? (1 - pad - nx) : (nx - pad)) / (Math.abs(vx) * avgSpeed)
-        : Infinity;
-      const timeToNextY = vy !== 0
-        ? (vy > 0 ? (1 - pad - ny) : (ny - pad)) / (Math.abs(vy) * avgSpeed)
-        : Infinity;
-      const timeToNextWallSec = Math.min(timeToNextX, timeToNextY);
-      const timeToNextWallMs = timeToNextWallSec * 1000;
-
-      // Но скорость убывает — реальное время до стены больше
-      // Умножаем на поправочный коэффициент
-      const correctedTimeMs = timeToNextWallMs * 1.4;
-
-      if (correctedTimeMs > timeLeftMs) {
-        // Не успеем долететь до следующей стены — замораживаемся здесь
-        frozenOnWall = true;
-        frozenSample = {
-          x: nx, y: ny,
-          vx: 0, vy: 0,
-          angle: Math.atan2(vy, vx),
-          travelAngle: Math.atan2(vy, vx),
-          progress: visualT
-        };
-        samples.push({ ...frozenSample, progress: visualT });
-        continue;
-      }
+    if (step >= targetWallStep) {
+      // Достигли целевого шага — фиксируемся здесь до конца
+      frozenOnWall = true;
+      frozenSample = {
+        x, y, vx: 0, vy: 0,
+        angle: Math.atan2(vy, vx),
+        travelAngle: Math.atan2(vy, vx),
+        progress: step / Math.max(1, MANUAL_STEPS - 1)
+      };
+      samples.push({ ...frozenSample, progress: step / Math.max(1, MANUAL_STEPS - 1) });
+      continue;
     }
 
-    x = nx;
-    y = ny;
+    // Скорость плавно падает от 1.0 до ~0.05 на отрезке [0, targetWallStep]
+    const localT = step / Math.max(1, targetWallStep);
+    const speedFactor = Math.max(0.02, 1.0 - Math.pow(localT, 1.6) * 0.98);
+    const currentSpeed = SCANNER_LOBBY_BEAM_BASE_SPEED * speedFactor;
+    const dist = currentSpeed * dtSec;
 
+    let nx = x + vx * dist;
+    let ny = y + vy * dist;
+
+    if (nx < pad) { nx = pad + (pad - nx); vx = Math.abs(vx); }
+    else if (nx > 1 - pad) { nx = (1 - pad) - (nx - (1 - pad)); vx = -Math.abs(vx); }
+    if (ny < pad) { ny = pad + (pad - ny); vy = Math.abs(vy); }
+    else if (ny > 1 - pad) { ny = (1 - pad) - (ny - (1 - pad)); vy = -Math.abs(vy); }
+
+    x = nx; y = ny;
     const angle = Math.atan2(vy, vx);
-    samples.push({
-      x, y, vx, vy,
-      angle,
-      travelAngle: angle,
-      progress: visualT
-    });
+    samples.push({ x, y, vx, vy, angle, travelAngle: angle, progress: step / Math.max(1, MANUAL_STEPS - 1) });
   }
 
   const latchStartSample = frozenSample || samples[samples.length - 1] || lobbyStartSample;
