@@ -7748,9 +7748,10 @@ function getScannerCountdownBeamCache(round) {
 
   const timing = getScannerCountdownTiming(round);
   const motionState = getScannerRoundCountdownBeamState(round);
+  // entropySeed убран из ключа — он появляется с задержкой из Firestore и вызывал
+  // пересчёт всей траектории на середине countdown, что выглядело как телепортация лазера
   const key = [
     round?.id || "round",
-    round?.entropySeed || "seed",
     Math.round(timing.startedAt / 100),
     Math.round(timing.endsAt / 100),
     getScannerBeamMotionSignature(motionState || getScannerDefaultIdleBeamMotion(`${round?.id || "round"}::fallback`))
@@ -7763,7 +7764,7 @@ function getScannerCountdownBeamCache(round) {
   const lobbyStartSample = motionState
     ? getScannerBeamSampleFromMotionState(motionState, timing.startedAt, {
         pad: SCANNER_ACTIVE_BEAM_EDGE_PADDING,
-        seedValue: `${round?.id || "round"}::${round?.entropySeed || "seed"}::countdown`
+        seedValue: `${round?.id || "round"}::countdown`
       })
     : getScannerSharedLobbyBeamSampleAt(timing.startedAt);
 
