@@ -6343,18 +6343,16 @@ function getScannerUniqueRoundColor(roundSeed, playerIndex) {
 
 function assignScannerRoundColors(round, participants) {
   const roundSeed = getScannerRoundColorSeed(round);
-  // Сортируем ТОЛЬКО по playerId — joinedAt нестабилен (сначала Date.now(), потом Firestore Timestamp)
-  // playerId всегда стабилен с момента создания участника
-  const allIds = (participants || [])
-    .map(p => String(p.playerId || p.id || ''))
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b));
+  // Цвет вычисляется напрямую из хэша playerId — НЕ из позиции в отсортированном массиве.
+  // Позиция в массиве сдвигается когда заходит новый игрок с "меньшим" id,
+  // из-за чего цвет уже вошедших игроков менялся каждый раз при входе нового.
   return (participants || []).map((participant) => {
     const pid = String(participant.playerId || participant.id || '');
-    const colorIndex = allIds.indexOf(pid);
+    const playerHash = hashString(`${roundSeed}::${pid}`);
+    const colorIndex = playerHash % 1000;
     return {
       participant,
-      color: getScannerUniqueRoundColor(roundSeed, colorIndex >= 0 ? colorIndex : 0)
+      color: getScannerUniqueRoundColor(roundSeed, colorIndex)
     };
   });
 }
