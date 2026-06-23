@@ -7746,13 +7746,14 @@ function getScannerCountdownBeamCache(round) {
 
   const timing = getScannerCountdownTiming(round);
   const motionState = getScannerRoundCountdownBeamState(round);
-  // entropySeed убран из ключа — он появляется с задержкой из Firestore и вызывал
-  // пересчёт всей траектории на середине countdown, что выглядело как телепортация лазера
+  // Ключ кэша зависит ТОЛЬКО от id раунда и временных границ countdown.
+  // motionState используется только для первичного построения траектории —
+  // если он зависит от ключа, любое обновление round из Firestore (вход второго игрока,
+  // изменение totalPot/participantCount) пересоздаёт весь кэш и лазер телепортируется.
   const key = [
     round?.id || "round",
     Math.round(timing.startedAt / 100),
-    Math.round(timing.endsAt / 100),
-    getScannerBeamMotionSignature(motionState || getScannerDefaultIdleBeamMotion(`${round?.id || "round"}::fallback`))
+    Math.round(timing.endsAt / 100)
   ].join("::");
 
   if (scannerCountdownBeamCache?.key === key && Array.isArray(scannerCountdownBeamCache?.samples) && scannerCountdownBeamCache.samples.length > 1) {
@@ -11202,8 +11203,7 @@ function renderScannerCanvas() {
 
       // Текущий угол вращения треугольника
       const currentSec = (now - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000;
-      // Начальная скорость вращения треугольника снижена в 2 раза (множитель 8 → 4)
-      const spinRate = SCANNER_LOBBY_LASER_TURN_SPEED * (1 + (1 - easedProgress) * 4);
+      const spinRate = SCANNER_LOBBY_LASER_TURN_SPEED * (1 + (1 - easedProgress) * 2);
       const currentSpinAngle = currentSec * spinRate;
       // Правильная интерполяция кругового угла — через кратчайший путь
       let angleDiff = finalSpinAngle - (currentSpinAngle % (Math.PI * 2));
