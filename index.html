@@ -4078,7 +4078,7 @@ const SCANNER_POPULATION_PRESETS = [2, 12, 48, 150, 400, 1000];
 const SCANNER_COUNTDOWN_MS = 20000;
 const SCANNER_ACTIVE_MS = 20000;
 const SCANNER_FINISHED_MS = 4200;
-const SCANNER_PREPARING_MS = 2000;
+const SCANNER_PREPARING_MS = 800;
 const SCANNER_PREVIEW_TRANSITION_MS = 1100;
 const SCANNER_SHUFFLING_MS = SCANNER_PREVIEW_TRANSITION_MS + SCANNER_PREPARING_MS;
 const SCANNER_EDGE_LATCH_MS = 3400;
@@ -11342,6 +11342,7 @@ function subscribeScannerParticipants(roundId) {
     .onSnapshot((snapshot) => {
       const items = [];
       snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
+      items.forEach((p) => { if (p.avatar) getScannerAvatarEntry(p.avatar); });
       scannerRealtime.participants = items;
       scannerRealtime.participantsReady = true;
       scannerRealtime.participantsError = false;
@@ -11354,6 +11355,11 @@ function subscribeScannerParticipants(roundId) {
       syncScannerDerivedState();
       renderScannerRound();
     });
+}
+function preserveTimingField(existingMs, firestoreRawValue) {
+  const firestoreMs = tsToMs(firestoreRawValue);
+  if (existingMs && Math.abs(existingMs - firestoreMs) < 500) return existingMs;
+  return firestoreMs || firestoreRawValue;
 }
 function subscribeScannerRound(roundId) {
   if (scannerRealtime.unsubRound) {
@@ -11387,15 +11393,18 @@ function subscribeScannerRound(roundId) {
     scannerRealtime.roundReady = true;
     if (snapshot.exists) {
       const firestoreData = { id: snapshot.id, ...(snapshot.data() || {}) };
-      // Защищаем countdownEndsAt от перезаписи Firestore — сокет даёт точное значение
-      // Берём максимальное из двух значений чтобы таймер не прыгал назад
+      // Защищаем countdownEndsAt от перезаписи Firestore — берём максимальное
       const existingCountdownEndsAt = scannerRealtime.roundData?.countdownEndsAt || 0;
-      const firestoreCountdownEndsAt = firestoreData.countdownEndsAt
-        ? (typeof firestoreData.countdownEndsAt.toMillis === 'function'
-            ? firestoreData.countdownEndsAt.toMillis()
-            : Number(firestoreData.countdownEndsAt))
-        : 0;
+      const firestoreCountdownEndsAt = tsToMs(firestoreData.countdownEndsAt);
       firestoreData.countdownEndsAt = Math.max(existingCountdownEndsAt, firestoreCountdownEndsAt) || firestoreData.countdownEndsAt;
+      // Защищаем timing-поля фаз от перезаписи Firestore (сокет даёт точные значения)
+      const rd = scannerRealtime.roundData;
+      firestoreData.shuffleStartedAt = preserveTimingField(tsToMs(rd?.shuffleStartedAt), firestoreData.shuffleStartedAt);
+      firestoreData.shuffleEndsAt = preserveTimingField(tsToMs(rd?.shuffleEndsAt), firestoreData.shuffleEndsAt);
+      firestoreData.activeStartedAt = preserveTimingField(tsToMs(rd?.activeStartedAt), firestoreData.activeStartedAt);
+      firestoreData.activeEndsAt = preserveTimingField(tsToMs(rd?.activeEndsAt), firestoreData.activeEndsAt);
+      firestoreData.preparingStartedAt = preserveTimingField(tsToMs(rd?.preparingStartedAt), firestoreData.preparingStartedAt);
+      firestoreData.preparingEndsAt = preserveTimingField(tsToMs(rd?.preparingEndsAt), firestoreData.preparingEndsAt);
       scannerRealtime.roundData = firestoreData;
     } else {
       scannerRealtime.roundData = null;
