@@ -7728,11 +7728,15 @@ function mergeScannerSampleSequences(primary, secondary) {
 
 function getScannerCountdownTiming(round) {
   const countdownEndsAt = tsToMs(round?.countdownEndsAt);
+  // ВСЕГДА вычисляем startedAt из countdownEndsAt (стабильное число из сокета),
+  // а не из round?.countdownStartedAt (Firestore Timestamp, который появляется ПОЗЖЕ
+  // и слегка отличается от вычисленного значения — это и инвалидировало кэш-ключ
+  // при каждом обновлении документа раунда, например когда заходит второй игрок).
   const derivedStart = countdownEndsAt > 0 ? Math.max(0, countdownEndsAt - SCANNER_COUNTDOWN_MS) : 0;
   const fallbackStart = tsToMs(round?.activeStartedAt) > 0
     ? Math.max(0, tsToMs(round?.activeStartedAt) - SCANNER_SHUFFLING_MS - SCANNER_COUNTDOWN_MS)
     : Date.now();
-  const countdownStartedAt = tsToMs(round?.countdownStartedAt) || derivedStart || fallbackStart;
+  const countdownStartedAt = derivedStart || fallbackStart;
   const safeEndsAt = countdownEndsAt || (countdownStartedAt + SCANNER_COUNTDOWN_MS);
   return {
     startedAt: countdownStartedAt,
