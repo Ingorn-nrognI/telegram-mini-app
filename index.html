@@ -1666,7 +1666,7 @@ button {
   padding: 0;
 }
 
-.scanner-result-close-btn svg {
+.scanner-result-close-icon {
   width: 14px;
   height: 14px;
 }
@@ -3700,7 +3700,7 @@ button {
                 stroke-dasharray="75.4" stroke-dashoffset="75.4" stroke-linecap="round"
                 transform="rotate(-90 14 14)"/>
             </svg>
-            <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg class="scanner-result-close-icon" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <line x1="2" y1="2" x2="12" y2="12" stroke="rgba(255,255,255,0.8)" stroke-width="2" stroke-linecap="round"/>
               <line x1="12" y1="2" x2="2" y2="12" stroke="rgba(255,255,255,0.8)" stroke-width="2" stroke-linecap="round"/>
             </svg>
@@ -9904,12 +9904,12 @@ function renderScannerButtons() {
 
 function getScannerResultRevealProgress() {
   const status = String(scannerGridState.status || "idle");
-  return status === "finished" ? 1 : 0;
+  return (status === "finished" || status === "preparing_next_round") ? 1 : 0;
 }
 
 function isScannerResultRevealReady() {
   const status = String(scannerGridState.status || "idle");
-  if (status !== "finished") return false;
+  if (status !== "finished" && status !== "preparing_next_round") return false;
   return !!scannerGridState.winningPlayer && Number.isInteger(scannerGridState.winningCellIndex);
 }
 
@@ -9981,7 +9981,7 @@ function renderScannerRound(options = {}) {
   renderScannerChips("scannerStakeChips", SCANNER_STAKE_PRESETS, scannerGridState.selectedStake, "setScannerStakeAndJoin", " TON");
   renderScannerChips("scannerPopulationChips", SCANNER_POPULATION_PRESETS, scannerGridState.selectedPopulation, "setScannerPopulation", "");
 
-  const isArenaResetPhase = scannerGridState.status === "preparing_next_round";
+  const isArenaResetPhase = false;
   const myPlayer = isArenaResetPhase ? null : getScannerMyPlayer();
   const countdown = document.getElementById("scannerCountdownChip");
   const poolChip = document.getElementById("scannerPoolChip");
@@ -10017,7 +10017,7 @@ function renderScannerRound(options = {}) {
   }
 
   if (resultOverlay && resultTitle && resultText) {
-    const isResultPhase = scannerGridState.status === "finished";
+    const isResultPhase = scannerGridState.status === "finished" || scannerGridState.status === "preparing_next_round";
     if (isResultPhase && scannerGridState.winningPlayer) {
       const winnerPlayer = scannerGridState.winningPlayer;
       const payout = Number(scannerGridState.roundData?.winnerPayout || scannerGridState.totalPot || 0);
@@ -11186,7 +11186,9 @@ function renderScannerCanvas() {
     if (roundStatus === "shuffling") {
       // Полный прогресс shuffling (0..1 за все 3300мс) — для треугольника
       const shuffleProgress = getScannerShuffleProgress(roundData);
-      const easedProgress = smoothstep(0, 1, shuffleProgress);
+      const ROTATION_COMPLETE_AT = 0.65;
+      const rotationProgress = Math.min(1, shuffleProgress / ROTATION_COMPLETE_AT);
+      const easedProgress = smoothstep(0, 1, rotationProgress);
 
       // Финальный угол треугольника — тот же алгоритм что на сервере
       const shuffleStartMs = tsToMs(roundData?.shuffleStartedAt) || 0;
