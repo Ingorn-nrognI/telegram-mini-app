@@ -11177,7 +11177,10 @@ function renderScannerCanvas() {
       innerColor: "rgba(255,255,255,0.88)",
       centerGap: reticleRadius * 2
     });
+    ctx.restore();
     if (roundStatus === "shuffling") {
+      ctx.save();
+      ctx.translate(px, py);
       // Полный прогресс shuffling (0..1 за все 3300мс) — для треугольника
       const shuffleProgress = getScannerShuffleProgress(roundData);
       const ROTATION_COMPLETE_AT = 0.65;
@@ -11242,8 +11245,8 @@ function renderScannerCanvas() {
         ctx.fill();
         ctx.restore();
       }
+      ctx.restore();
     }
-    ctx.restore();
   }
 
   // Border glow — используем реальную позицию луча
