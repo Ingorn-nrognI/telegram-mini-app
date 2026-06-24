@@ -11201,15 +11201,15 @@ function renderScannerCanvas() {
       const shuffleEndSec = (shuffleStartMs - SCANNER_LOBBY_BEAM_EPOCH_MS + SCANNER_SHUFFLING_MS) / 1000;
       const finalSpinAngle = (shuffleEndSec * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
 
-      // Текущий угол вращения треугольника
-      const currentSec = (now - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000;
-      const spinRate = SCANNER_LOBBY_LASER_TURN_SPEED * (1 + (1 - easedProgress) * 2);
-      const currentSpinAngle = currentSec * spinRate;
-      // Правильная интерполяция кругового угла — через кратчайший путь
-      let angleDiff = finalSpinAngle - (currentSpinAngle % (Math.PI * 2));
-      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-      const triangleAngle = currentSpinAngle + angleDiff * easedProgress;
+      // Угол считается через прогресс shuffling (0..1), а не через абсолютное время
+      // умноженное на переменную скорость — старая формула давала скачки на тысячи
+      // радианов при малейшем изменении скорости, что выглядело как дёрганье.
+      // Треугольник делает несколько полных оборотов, плавно замедляясь к финалу,
+      // и гарантированно приходит точно в finalSpinAngle к концу shuffling.
+      const EXTRA_SPINS = 3;
+      const spinEase = 1 - Math.pow(1 - easedProgress, 2); // ease-out: быстро в начале, плавно тормозит
+      const baseRotation = EXTRA_SPINS * Math.PI * 2 * spinEase;
+      const triangleAngle = baseRotation + finalSpinAngle * easedProgress;
       const orbitR = reticleRadius * 2.8;
       const tx = Math.cos(triangleAngle) * orbitR;
       const ty = Math.sin(triangleAngle) * orbitR;
