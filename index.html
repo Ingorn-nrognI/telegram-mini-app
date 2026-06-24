@@ -4259,6 +4259,7 @@ const scannerAvatarCache = new Map();
 const scannerProfileAvatarCache = new Map();
 let scannerCountdownBeamCache = null;
 let scannerActiveBeamCache = null;
+let _scannerShuffleTriangleFreeze = null;
 const scannerDerivedVisualCache = {
   key: "",
   value: null
@@ -10047,13 +10048,6 @@ function renderScannerRound(options = {}) {
           <div class="scanner-result-value"><span>${multiplier}</span></div>
         </div>
       `);
-    } else {
-      if (resultOverlay) {
-        resultOverlay.classList.remove("open");
-        stopScannerResultTimer();
-      }
-      setTextContentIfChanged(resultTitle, "");
-      setInnerHtmlIfChanged(resultText, "");
     }
   }
 
@@ -11205,8 +11199,29 @@ function renderScannerCanvas() {
       const baseRotation = EXTRA_SPINS * Math.PI * 2 * spinEase;
       const triangleAngle = baseRotation + finalSpinAngle * easedProgress;
       const orbitR = reticleRadius * 2.8;
-      const tx = Math.cos(triangleAngle) * orbitR;
-      const ty = Math.sin(triangleAngle) * orbitR;
+
+      // Сброс кэша если начался новый shuffling
+      if (_scannerShuffleTriangleFreeze !== null && _scannerShuffleTriangleFreeze.shuffleStartMs !== shuffleStartMs) {
+        _scannerShuffleTriangleFreeze = null;
+      }
+      // Фиксируем абсолютную позицию в момент завершения вращения
+      if (shuffleProgress >= ROTATION_COMPLETE_AT && _scannerShuffleTriangleFreeze === null) {
+        const _orbitTx = Math.cos(triangleAngle) * orbitR;
+        const _orbitTy = Math.sin(triangleAngle) * orbitR;
+        _scannerShuffleTriangleFreeze = { shuffleStartMs, absX: px + _orbitTx, absY: py + _orbitTy, angle: triangleAngle };
+      }
+
+      let tx, ty, drawAngle;
+      if (_scannerShuffleTriangleFreeze !== null && _scannerShuffleTriangleFreeze.shuffleStartMs === shuffleStartMs) {
+        tx = _scannerShuffleTriangleFreeze.absX - px;
+        ty = _scannerShuffleTriangleFreeze.absY - py;
+        drawAngle = _scannerShuffleTriangleFreeze.angle;
+      } else {
+        tx = Math.cos(triangleAngle) * orbitR;
+        ty = Math.sin(triangleAngle) * orbitR;
+        drawAngle = triangleAngle;
+      }
+
       // Появляется в начале, исчезает в конце shuffling
       const triAlpha = Math.min(1, shuffleProgress * 6) * (1 - Math.max(0, (shuffleProgress - 0.75) / 0.25));
       if (triAlpha > 0.01) {
@@ -11219,7 +11234,7 @@ function renderScannerCanvas() {
         ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
         ctx.beginPath();
         ctx.translate(tx, ty);
-        ctx.rotate(triangleAngle);
+        ctx.rotate(drawAngle);
         ctx.moveTo(0, -triHeight * 0.65);
         ctx.lineTo(-triBase / 2, triHeight * 0.35);
         ctx.lineTo(triBase / 2, triHeight * 0.35);
