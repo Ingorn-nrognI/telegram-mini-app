@@ -4078,7 +4078,7 @@ const SCANNER_POPULATION_PRESETS = [2, 12, 48, 150, 400, 1000];
 const SCANNER_COUNTDOWN_MS = 20000;
 const SCANNER_ACTIVE_MS = 20000;
 const SCANNER_FINISHED_MS = 4200;
-const SCANNER_PREPARING_MS = 2900;
+const SCANNER_PREPARING_MS = 2000;
 const SCANNER_PREVIEW_TRANSITION_MS = 1100;
 const SCANNER_SHUFFLING_MS = SCANNER_PREVIEW_TRANSITION_MS + SCANNER_PREPARING_MS;
 const SCANNER_EDGE_LATCH_MS = 3400;
@@ -11202,7 +11202,7 @@ function renderScannerCanvas() {
 
       // Финальный угол треугольника — тот же алгоритм что на сервере
       const shuffleStartMs = tsToMs(roundData?.shuffleStartedAt) || 0;
-      const shuffleEndSec = (shuffleStartMs - SCANNER_LOBBY_BEAM_EPOCH_MS + SCANNER_SHUFFLING_MS) / 1000;
+      const shuffleEndSec = (shuffleStartMs + SCANNER_SHUFFLING_MS) / 1000;
       const finalSpinAngle = (shuffleEndSec * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
 
       // Угол считается через прогресс shuffling (0..1), а не через абсолютное время
