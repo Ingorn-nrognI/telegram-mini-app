@@ -11218,14 +11218,7 @@ function renderScannerCanvas() {
     const beamLength = size * 4.6;
     const reticleRotation = now * SCANNER_RETICLE_IDLE_SPIN_SPEED;
 
-    let beamRenderAngle;
-    if (!isHotBeam) {
-      beamRenderAngle = scannerLobbyLaserVisual.angle;
-    } else {
-      beamRenderAngle = Number.isFinite(Number(visualBeamSample.renderAngle))
-        ? Number(visualBeamSample.renderAngle)
-        : (Number(visualBeamSample.angle) || 0);
-    }
+    const beamRenderAngle = scannerLobbyLaserVisual.angle;
 
     ctx.save();
     ctx.translate(px, py);
@@ -11772,6 +11765,17 @@ function stopScannerResultTimer() {
   }
   _scannerResultTimerStart = null;
 }
+
+function handleScannerResultVisibilityResume() {
+  if (document.visibilityState !== "visible") return;
+  if (_scannerResultTimerStart === null || _scannerResultTimerStart === undefined) return;
+  const elapsed = performance.now() - _scannerResultTimerStart;
+  if (elapsed >= SCANNER_RESULT_AUTO_CLOSE_MS) {
+    closeScannerResultOverlay();
+  }
+}
+
+document.addEventListener("visibilitychange", handleScannerResultVisibilityResume);
 
 function closeScannerResultOverlay() {
   const overlay = document.getElementById("scannerResultOverlay");
