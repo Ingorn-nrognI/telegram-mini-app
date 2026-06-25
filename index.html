@@ -8848,7 +8848,7 @@ function syncScannerDerivedState() {
   }
 
   if (participantsReady && realParticipantCount === 0) {
-    if (!roundHasVisibleState) {
+    if (!roundHasVisibleState && !scannerRealtime.activeRoundId) {
       scannerGridState.roundData = null;
       scannerGridState.roundId = null;
       scannerGridState.roundStatus = "idle";
