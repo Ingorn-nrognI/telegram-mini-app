@@ -6489,9 +6489,36 @@ function allocateCells(players, totalCells) {
   });
 }
 
+function buildScannerCellTreemap(chunks, x, y, w, h, out) {
+  if (!chunks.length || w <= 0 || h <= 0) return;
+  if (chunks.length === 1) { out.push({ chunk: chunks[0], x, y, w, h }); return; }
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const half = total / 2;
+  let sum = 0, splitAt = 1;
+  for (let i = 0; i < chunks.length; i += 1) {
+    sum += chunks[i].length;
+    if (sum >= half) { splitAt = i + 1; break; }
+  }
+  if (splitAt >= chunks.length) splitAt = chunks.length - 1;
+  const groupA = chunks.slice(0, splitAt);
+  const groupB = chunks.slice(splitAt);
+  const sumA = groupA.reduce((s, c) => s + c.length, 0);
+  const fracA = sumA / total;
+  if (w >= h) {
+    const wA = Math.max(1, Math.min(w - 1, Math.round(w * fracA)));
+    buildScannerCellTreemap(groupA, x, y, wA, h, out);
+    buildScannerCellTreemap(groupB, x + wA, y, w - wA, h, out);
+  } else {
+    const hA = Math.max(1, Math.min(h - 1, Math.round(h * fracA)));
+    buildScannerCellTreemap(groupA, x, y, w, hA, out);
+    buildScannerCellTreemap(groupB, x, y + hA, w, h - hA, out);
+  }
+}
+
 function buildScannerCellOwners(players, totalCells, versionSeed) {
   const rnd = mulberry32(hashString(versionSeed));
   const owners = new Array(totalCells).fill(-1);
+  const need = players.map((player) => player.cellCount);
   const chunks = [];
 
   players.forEach((player, playerIndex) => {
@@ -6518,12 +6545,29 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
     chunks[j] = tmp;
   }
 
-  let pathPos = 0;
-  for (const chunk of chunks) {
-    for (let k = 0; k < chunk.length && pathPos < totalCells; k += 1) {
-      const cellIndex = scannerGridPathOrder[pathPos] || pathPos;
-      owners[cellIndex] = chunk.playerIndex;
-      pathPos += 1;
+  const rects = [];
+  buildScannerCellTreemap(chunks, 0, 0, SCANNER_GRID_COLS, SCANNER_GRID_ROWS, rects);
+
+  rects.forEach(({ chunk, x, y, w, h }) => {
+    let placed = 0;
+    for (let r = 0; r < h && placed < chunk.length; r += 1) {
+      for (let c = 0; c < w && placed < chunk.length; c += 1) {
+        const idx = (y + r) * SCANNER_GRID_COLS + (x + c);
+        owners[idx] = chunk.playerIndex;
+        placed += 1;
+      }
+    }
+    need[chunk.playerIndex] -= placed;
+  });
+
+  for (let idx = 0; idx < totalCells; idx += 1) {
+    if (owners[idx] !== -1) continue;
+    for (let p = 0; p < need.length; p += 1) {
+      if (need[p] > 0) {
+        owners[idx] = p;
+        need[p] -= 1;
+        break;
+      }
     }
   }
 
