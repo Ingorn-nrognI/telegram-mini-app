@@ -4569,23 +4569,21 @@ async function ensureDemoBalanceForCurrentUser() {
 }
 
 function subscribeCurrentUserBalance() {
-  async function fetchUserBalance() {
-    try {
-      const snapshot = await getUserRef(getCurrentPlayer().id).get();
-      if (snapshot.exists) {
-        const data = snapshot.data() || {};
-        const balance = getUserDemoBalanceFromData(data);
-        syncLocalDemoBalance(balance);
-        currentDemoTonBalanceLoaded = true;
-      }
-    } catch (e) {
-      console.warn('Не удалось загрузить баланс:', e.message);
-    }
+  if (currentUserBalanceUnsub) {
+    currentUserBalanceUnsub();
+    currentUserBalanceUnsub = null;
   }
 
-  fetchUserBalance();
-  if (currentUserBalanceUnsub) { currentUserBalanceUnsub(); currentUserBalanceUnsub = null; }
-  setInterval(fetchUserBalance, 60000);
+  currentUserBalanceUnsub = getUserRef(getCurrentPlayer().id).onSnapshot((snapshot) => {
+    if (snapshot.exists) {
+      const data = snapshot.data() || {};
+      const balance = getUserDemoBalanceFromData(data);
+      syncLocalDemoBalance(balance);
+      currentDemoTonBalanceLoaded = true;
+    }
+  }, (e) => {
+    console.warn('Не удалось подписаться на баланс:', e.message);
+  });
 }
 
 function createInsufficientBalanceError() {
@@ -11643,9 +11641,17 @@ function subscribeScannerHistory() {
     scannerRealtime.unsubHistory = null;
   }
 
-  loadScannerHistory();
-  const intervalId = setInterval(loadScannerHistory, 120000);
-  scannerRealtime.unsubHistory = () => clearInterval(intervalId);
+  scannerRealtime.unsubHistory = scannerHistoryCollection()
+    .orderBy("finishedAt", "desc")
+    .limit(5)
+    .onSnapshot((snapshot) => {
+      const items = [];
+      snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
+      scannerGridState.recentRounds = items;
+      renderScannerRecentList();
+    }, (e) => {
+      console.warn('История раундов: ошибка подписки:', e.message);
+    });
 }
 
 function initializeScannerGridFeature() {
