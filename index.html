@@ -6354,33 +6354,33 @@ function getScannerUniqueRoundColor(roundSeed, playerIndex) {
 
 function assignScannerRoundColors(round, participants) {
   const roundSeed = getScannerRoundColorSeed(round);
-  const entries = (participants || []).map((participant) => {
-    const pid = String(participant.playerId || participant.id || '');
-    const playerHash = hashString(`${roundSeed}::${pid}`);
-    const colorIndex = playerHash % 1000;
-    const parts = getScannerUniqueRoundColorParts(roundSeed, colorIndex);
-    return { participant, pid, hue: parts.hue, saturation: parts.saturation, lightness: parts.lightness };
+  const roundHash = hashString(roundSeed);
+  const hueBase = roundHash % 360;
+  const saturationCycle = [72, 76, 80, 84, 88, 70, 74, 78, 82, 86];
+  const lightnessCycle = [58, 62, 54, 66, 50, 60, 56, 64, 52, 68];
+
+  const ordered = (participants || []).slice().sort((a, b) =>
+    String(a.playerId || a.id || "").localeCompare(String(b.playerId || b.id || ""))
+  );
+  const n = Math.max(1, ordered.length);
+  const step = 360 / n;
+
+  const colorByPid = new Map();
+  ordered.forEach((participant, index) => {
+    const pid = String(participant.playerId || participant.id || "");
+    const hue = (hueBase + index * step) % 360;
+    const saturation = saturationCycle[index % saturationCycle.length];
+    const lightness = lightnessCycle[index % lightnessCycle.length];
+    colorByPid.set(pid, getScannerColorHsl(hue, saturation, lightness));
   });
 
-  // Защита от коллизий: если у двух игроков в одном раунде оттенки слишком близкие —
-  // сдвигаем оттенок более позднего (по стабильному порядку pid), чтобы поля были
-  // визуально различимы. Порядок сравнения стабилен и не зависит от порядка прихода данных.
-  const MIN_HUE_GAP = 26;
-  const ordered = entries.slice().sort((a, b) => a.pid.localeCompare(b.pid));
-  for (let i = 1; i < ordered.length; i += 1) {
-    for (let j = 0; j < i; j += 1) {
-      let diff = Math.abs(ordered[i].hue - ordered[j].hue);
-      if (diff > 180) diff = 360 - diff;
-      if (diff < MIN_HUE_GAP) {
-        ordered[i].hue = (ordered[j].hue + MIN_HUE_GAP) % 360;
-      }
-    }
-  }
-
-  return entries.map((entry) => ({
-    participant: entry.participant,
-    color: getScannerColorHsl(entry.hue, entry.saturation, entry.lightness)
-  }));
+  return (participants || []).map((participant) => {
+    const pid = String(participant.playerId || participant.id || "");
+    return {
+      participant,
+      color: colorByPid.get(pid) || getScannerColorHsl(hueBase, 78, 58)
+    };
+  });
 }
 
 function normalizeStakeValue(value) {
