@@ -7910,6 +7910,18 @@ function getScannerCountdownBeamCache(round) {
     }
   }
 
+  if (round?.countdownLatchSample &&
+      Number.isFinite(round.countdownLatchSample.x) &&
+      Number.isFinite(round.countdownLatchSample.y)) {
+    frozenSample = {
+      x: round.countdownLatchSample.x,
+      y: round.countdownLatchSample.y,
+      vx: 0,
+      vy: 0,
+      angle: Number.isFinite(round.countdownLatchSample.angle) ? round.countdownLatchSample.angle : frozenSample?.angle
+    };
+  }
+
   const latchStartSample = frozenSample || samples[samples.length - 1] || lobbyStartSample;
   const latchSimulation = {
     side: getScannerWallSideFromPosition(latchStartSample, pad),
