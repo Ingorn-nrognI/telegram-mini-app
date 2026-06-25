@@ -6490,47 +6490,41 @@ function allocateCells(players, totalCells) {
 }
 
 function buildScannerCellOwners(players, totalCells, versionSeed) {
-  const owners = new Array(totalCells).fill(-1);
-  const pool = players.map((player, index) => ({
-    index,
-    remaining: player.cellCount,
-    weight: Math.max(1, player.cellCount)
-  }));
   const rnd = mulberry32(hashString(versionSeed));
-  let currentIndex = -1;
-  let runLeft = 0;
+  const owners = new Array(totalCells).fill(-1);
+  const chunks = [];
 
-  function pickNextIndex() {
-    const active = pool.filter((item) => item.remaining > 0);
-    if (!active.length) return -1;
-    const totalRemaining = active.reduce((sum, item) => sum + item.remaining, 0);
-    let cursor = rnd() * totalRemaining;
-    for (const item of active) {
-      cursor -= item.remaining;
-      if (cursor <= 0) return item.index;
+  players.forEach((player, playerIndex) => {
+    let remaining = player.cellCount;
+    if (remaining <= 0) return;
+    let chunkCount;
+    if (remaining <= 3) {
+      chunkCount = 1;
+    } else {
+      chunkCount = Math.min(remaining, 2 + Math.floor(rnd() * 3));
     }
-    return active[active.length - 1].index;
+    const base = Math.floor(remaining / chunkCount);
+    const extra = remaining % chunkCount;
+    for (let c = 0; c < chunkCount; c += 1) {
+      const length = base + (c < extra ? 1 : 0);
+      if (length > 0) chunks.push({ playerIndex, length });
+    }
+  });
+
+  for (let i = chunks.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rnd() * (i + 1));
+    const tmp = chunks[i];
+    chunks[i] = chunks[j];
+    chunks[j] = tmp;
   }
 
-  function computeRunLength(targetPoolItem) {
-    if (!targetPoolItem) return 1;
-    const activePlayers = pool.filter((item) => item.remaining > 0).length;
-    const densityFactor = activePlayers <= 16 ? 9 : activePlayers <= 64 ? 5 : activePlayers <= 180 ? 3 : 1.4;
-    const proportionalFactor = Math.max(1, Math.round((targetPoolItem.remaining / totalCells) * 28));
-    return Math.max(1, Math.min(targetPoolItem.remaining, Math.round(densityFactor + proportionalFactor * rnd())));
-  }
-
-  for (let orderIndex = 0; orderIndex < totalCells; orderIndex += 1) {
-    if (currentIndex === -1 || runLeft <= 0 || pool[currentIndex].remaining <= 0) {
-      currentIndex = pickNextIndex();
-      if (currentIndex === -1) break;
-      runLeft = computeRunLength(pool[currentIndex]);
+  let pathPos = 0;
+  for (const chunk of chunks) {
+    for (let k = 0; k < chunk.length && pathPos < totalCells; k += 1) {
+      const cellIndex = scannerGridPathOrder[pathPos] || pathPos;
+      owners[cellIndex] = chunk.playerIndex;
+      pathPos += 1;
     }
-
-    const targetCellIndex = scannerGridPathOrder[orderIndex] || orderIndex;
-    owners[targetCellIndex] = currentIndex;
-    pool[currentIndex].remaining -= 1;
-    runLeft -= 1;
   }
 
   return owners;
@@ -6730,7 +6724,7 @@ function buildScannerPlayersFromFirestore(round, participants) {
 
   // version намеренно убран из seed — он увеличивается при каждом обновлении Firestore
   // и менял расположение клеток и цвет игрока при каждом обновлении
-  return finalizeScannerPlayers(normalized, `${round?.id || "round"}_${round?.status || "idle"}`);
+  return finalizeScannerPlayers(normalized, `${round?.id || "round"}_${round?.entropySeed || "seed"}_grid`);
 }
 
 function resetScannerDerivedVisualCache() {
