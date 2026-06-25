@@ -6326,7 +6326,12 @@ function getScannerRoundColorSeed(round) {
   return String(round?.id || "round");
 }
 
-function getScannerUniqueRoundColor(roundSeed, playerIndex) {
+function getScannerColorHsl(hue, saturation, lightness) {
+  const safeHue = ((hue % 360) + 360) % 360;
+  return `hsl(${safeHue.toFixed(3)} ${saturation}% ${lightness}%)`;
+}
+
+function getScannerUniqueRoundColorParts(roundSeed, playerIndex) {
   const safeIndex = Math.max(0, Number(playerIndex) || 0);
   const roundHash = hashString(`${roundSeed || "round_seed"}`);
   const hueBase = roundHash % 360;
@@ -6339,23 +6344,43 @@ function getScannerUniqueRoundColor(roundSeed, playerIndex) {
   const lightnessCycle = [58, 62, 54, 66, 50, 60, 56, 64, 52, 68];
   const saturation = saturationCycle[hueBand % saturationCycle.length] + (Math.floor(hueBand / saturationCycle.length) % 3);
   const lightness = lightnessCycle[Math.floor(hueBand / saturationCycle.length) % lightnessCycle.length];
-  return `hsl(${preciseHue.toFixed(3)} ${saturation}% ${lightness}%)`;
+  return { hue: preciseHue, saturation, lightness };
+}
+
+function getScannerUniqueRoundColor(roundSeed, playerIndex) {
+  const parts = getScannerUniqueRoundColorParts(roundSeed, playerIndex);
+  return getScannerColorHsl(parts.hue, parts.saturation, parts.lightness);
 }
 
 function assignScannerRoundColors(round, participants) {
   const roundSeed = getScannerRoundColorSeed(round);
-  // Цвет вычисляется напрямую из хэша playerId — НЕ из позиции в отсортированном массиве.
-  // Позиция в массиве сдвигается когда заходит новый игрок с "меньшим" id,
-  // из-за чего цвет уже вошедших игроков менялся каждый раз при входе нового.
-  return (participants || []).map((participant) => {
+  const entries = (participants || []).map((participant) => {
     const pid = String(participant.playerId || participant.id || '');
     const playerHash = hashString(`${roundSeed}::${pid}`);
     const colorIndex = playerHash % 1000;
-    return {
-      participant,
-      color: getScannerUniqueRoundColor(roundSeed, colorIndex)
-    };
+    const parts = getScannerUniqueRoundColorParts(roundSeed, colorIndex);
+    return { participant, pid, hue: parts.hue, saturation: parts.saturation, lightness: parts.lightness };
   });
+
+  // Защита от коллизий: если у двух игроков в одном раунде оттенки слишком близкие —
+  // сдвигаем оттенок более позднего (по стабильному порядку pid), чтобы поля были
+  // визуально различимы. Порядок сравнения стабилен и не зависит от порядка прихода данных.
+  const MIN_HUE_GAP = 26;
+  const ordered = entries.slice().sort((a, b) => a.pid.localeCompare(b.pid));
+  for (let i = 1; i < ordered.length; i += 1) {
+    for (let j = 0; j < i; j += 1) {
+      let diff = Math.abs(ordered[i].hue - ordered[j].hue);
+      if (diff > 180) diff = 360 - diff;
+      if (diff < MIN_HUE_GAP) {
+        ordered[i].hue = (ordered[j].hue + MIN_HUE_GAP) % 360;
+      }
+    }
+  }
+
+  return entries.map((entry) => ({
+    participant: entry.participant,
+    color: getScannerColorHsl(entry.hue, entry.saturation, entry.lightness)
+  }));
 }
 
 function normalizeStakeValue(value) {
@@ -6803,7 +6828,7 @@ function getScannerDerivedVisualState(round, participants) {
   }
 
   const finalized = buildScannerPlayersFromFirestore(round, participants);
-  const previewVersion = `${finalized.gridVersion}_preview_${round?.status || "idle"}`;
+  const previewVersion = `${finalized.gridVersion}_preview`;
   const previewCellOwners = buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
   const previewZones = buildScannerPreviewZones(previewCellOwners, finalized.players);
   const nextValue = {
