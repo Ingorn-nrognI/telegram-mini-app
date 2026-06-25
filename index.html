@@ -8522,22 +8522,6 @@ function applySocketRoundPatch(patch) {
       scannerRealtime.participantsError = false;
       scannerRealtime.fallbackRoundId = null;
       scannerRealtime.bootstrappingRound = false;
-      // Переносим финальную позицию раунда в idleBeamMotion ДО сброса кэша
-      const _finalSample = scannerRoundFinalBeamSample || scannerActiveBeamCache?.finalSample;
-      if (_finalSample && Number.isFinite(_finalSample.x)) {
-        if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
-        const _vLen = Math.sqrt((_finalSample.vx||0)**2 + (_finalSample.vy||0)**2);
-        const _nvx = _vLen > 0.001 ? (_finalSample.vx / _vLen) * SCANNER_LOBBY_BEAM_BASE_SPEED : SCANNER_LOBBY_BEAM_BASE_SPEED * 0.8;
-        const _nvy = _vLen > 0.001 ? (_finalSample.vy / _vLen) * SCANNER_LOBBY_BEAM_BASE_SPEED : SCANNER_LOBBY_BEAM_BASE_SPEED * 0.6;
-        scannerRealtime.runtimeData.idleBeamMotion = {
-          anchorAt: getNetworkTime(),
-          x: _finalSample.x,
-          y: _finalSample.y,
-          vx: _nvx,
-          vy: _nvy
-        };
-        scannerLastBeamSample = { ..._finalSample };
-      }
       scannerRoundFinalBeamSample = null;
       // Сбрасываем все кэши луча чтобы следующий раунд стартовал чисто
       scannerCountdownBeamCache = null;
