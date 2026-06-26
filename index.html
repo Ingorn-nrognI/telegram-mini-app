@@ -6583,6 +6583,30 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
     need[chunk.playerIndex] -= placed;
   });
 
+  const gridCols = SCANNER_GRID_COLS;
+  const gridRows = SCANNER_GRID_ROWS;
+  for (let pass = 0; pass < 3; pass += 1) {
+    let changedAny = false;
+    for (let idx = 0; idx < totalCells; idx += 1) {
+      if (owners[idx] !== -1) continue;
+      const row = Math.floor(idx / gridCols);
+      const col = idx % gridCols;
+      const neighborOffsets = [[-1,0],[1,0],[0,-1],[0,1]];
+      let bestOwner = -1;
+      for (const [dr, dc] of neighborOffsets) {
+        const nr = row + dr, nc = col + dc;
+        if (nr < 0 || nr >= gridRows || nc < 0 || nc >= gridCols) continue;
+        const nOwner = owners[nr * gridCols + nc];
+        if (nOwner !== -1 && need[nOwner] > 0) { bestOwner = nOwner; break; }
+      }
+      if (bestOwner !== -1) {
+        owners[idx] = bestOwner;
+        need[bestOwner] -= 1;
+        changedAny = true;
+      }
+    }
+    if (!changedAny) break;
+  }
   for (let idx = 0; idx < totalCells; idx += 1) {
     if (owners[idx] !== -1) continue;
     for (let p = 0; p < need.length; p += 1) {
