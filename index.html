@@ -6764,29 +6764,6 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
     need[chunk.playerIndex] -= placed;
   });
 
-  rects.forEach(({ chunk, x, y, w, h }) => {
-    if (rnd() > 0.5) return;
-    const depth = Math.min(4, Math.floor(Math.min(w, h) / 3));
-    if (depth <= 0) return;
-    let freed = 0;
-    for (let r = 0; r < depth; r += 1) {
-      const cut = depth - r;
-      for (let c = 0; c < cut; c += 1) {
-        const topLeft = (y + r) * SCANNER_GRID_COLS + (x + c);
-        const topRight = (y + r) * SCANNER_GRID_COLS + (x + w - 1 - c);
-        const bottomLeft = (y + h - 1 - r) * SCANNER_GRID_COLS + (x + c);
-        const bottomRight = (y + h - 1 - r) * SCANNER_GRID_COLS + (x + w - 1 - c);
-        [topLeft, topRight, bottomLeft, bottomRight].forEach((idx) => {
-          if (owners[idx] === chunk.playerIndex) {
-            owners[idx] = -1;
-            freed += 1;
-          }
-        });
-      }
-    }
-    need[chunk.playerIndex] += freed;
-  });
-
   const gridCols = SCANNER_GRID_COLS;
   const gridRows = SCANNER_GRID_ROWS;
   for (let pass = 0; pass < 3; pass += 1) {
@@ -6848,6 +6825,52 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
     }
     owners.length = 0;
     next.forEach((v) => owners.push(v));
+  }
+
+  rects.forEach(({ chunk, x, y, w, h }) => {
+    if (rnd() > 0.5) return;
+    const depth = Math.min(4, Math.floor(Math.min(w, h) / 3));
+    if (depth <= 0) return;
+    let freed = 0;
+    for (let r = 0; r < depth; r += 1) {
+      const cut = depth - r;
+      for (let c = 0; c < cut; c += 1) {
+        const topLeft = (y + r) * SCANNER_GRID_COLS + (x + c);
+        const topRight = (y + r) * SCANNER_GRID_COLS + (x + w - 1 - c);
+        const bottomLeft = (y + h - 1 - r) * SCANNER_GRID_COLS + (x + c);
+        const bottomRight = (y + h - 1 - r) * SCANNER_GRID_COLS + (x + w - 1 - c);
+        [topLeft, topRight, bottomLeft, bottomRight].forEach((idx) => {
+          if (owners[idx] === chunk.playerIndex) {
+            owners[idx] = -1;
+            freed += 1;
+          }
+        });
+      }
+    }
+    need[chunk.playerIndex] += freed;
+  });
+
+  for (let pass = 0; pass < 3; pass += 1) {
+    let changedAny = false;
+    for (let idx = 0; idx < totalCells; idx += 1) {
+      if (owners[idx] !== -1) continue;
+      const row = Math.floor(idx / gridCols);
+      const col = idx % gridCols;
+      const neighborOffsets = [[-1,0],[1,0],[0,-1],[0,1]];
+      let bestOwner = -1;
+      for (const [dr, dc] of neighborOffsets) {
+        const nr = row + dr, nc = col + dc;
+        if (nr < 0 || nr >= gridRows || nc < 0 || nc >= gridCols) continue;
+        const nOwner = owners[nr * gridCols + nc];
+        if (nOwner !== -1 && need[nOwner] > 0) { bestOwner = nOwner; break; }
+      }
+      if (bestOwner !== -1) {
+        owners[idx] = bestOwner;
+        need[bestOwner] -= 1;
+        changedAny = true;
+      }
+    }
+    if (!changedAny) break;
   }
 
   return owners;
@@ -8167,13 +8190,28 @@ function getScannerCountdownBeamCache(round) {
   if (round?.countdownLatchSample &&
       Number.isFinite(round.countdownLatchSample.x) &&
       Number.isFinite(round.countdownLatchSample.y)) {
+    const overrideAngle = Number.isFinite(round.countdownLatchSample.angle)
+      ? round.countdownLatchSample.angle
+      : (frozenSample?.angle ?? samples[samples.length - 1]?.angle ?? 0);
     frozenSample = {
       x: round.countdownLatchSample.x,
       y: round.countdownLatchSample.y,
       vx: 0,
       vy: 0,
-      angle: Number.isFinite(round.countdownLatchSample.angle) ? round.countdownLatchSample.angle : frozenSample?.angle
+      angle: overrideAngle
     };
+    if (samples.length > 0) {
+      const lastIdx = samples.length - 1;
+      samples[lastIdx] = {
+        ...samples[lastIdx],
+        x: round.countdownLatchSample.x,
+        y: round.countdownLatchSample.y,
+        vx: 0,
+        vy: 0,
+        angle: overrideAngle,
+        travelAngle: overrideAngle
+      };
+    }
   }
 
   const latchStartSample = frozenSample || samples[samples.length - 1] || lobbyStartSample;
