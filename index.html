@@ -6704,7 +6704,31 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
   const COLS = SCANNER_GRID_COLS;
   const ROWS = SCANNER_GRID_ROWS;
 
-  const backgroundStyle = rnd() < 0.3;
+  const styleRoll = rnd();
+  let styleLabel;
+  let backgroundStyle = false;
+  let minChunks = 2;
+  let maxChunks = 4;
+
+  if (styleRoll < 0.25) {
+    styleLabel = "Фон + вставки";
+    backgroundStyle = true;
+    minChunks = 1;
+    maxChunks = 3;
+  } else if (styleRoll < 0.5) {
+    styleLabel = "Острова";
+    minChunks = 1;
+    maxChunks = 2;
+  } else if (styleRoll < 0.75) {
+    styleLabel = "Мозаика";
+    minChunks = 4;
+    maxChunks = 7;
+  } else {
+    styleLabel = "Смешанный";
+    minChunks = 2;
+    maxChunks = 4;
+  }
+
   let backgroundPlayerIndex = -1;
   if (backgroundStyle) {
     let maxCells = -1;
@@ -6724,7 +6748,7 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
       chunkCount = 1;
     } else {
       const maxReasonable = Math.max(1, Math.floor(remaining / 4));
-      const desired = 1 + Math.floor(rnd() * 5);
+      const desired = minChunks + Math.floor(rnd() * (maxChunks - minChunks + 1));
       chunkCount = Math.max(1, Math.min(desired, maxReasonable, remaining));
     }
     const weights = [];
@@ -6743,20 +6767,6 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
     lengths.forEach((len) => { if (len > 0) chunks.push({ playerIndex, length: len, isBackground: false }); });
   });
 
-  let styleLabel;
-  if (backgroundStyle) {
-    styleLabel = "Фон + вставки";
-  } else {
-    const growChunksCountPreview = chunks.filter((c) => !c.isBackground).length;
-    const avgChunksPerPlayer = players.length > 0 ? growChunksCountPreview / players.length : 0;
-    if (avgChunksPerPlayer <= 1.5) {
-      styleLabel = "Острова";
-    } else if (avgChunksPerPlayer >= 3.5) {
-      styleLabel = "Мозаика";
-    } else {
-      styleLabel = "Смешанный";
-    }
-  }
   console.log("[ScannerGrid] Стиль раскладки клеток:", styleLabel, "| фон:", backgroundStyle, "| seed:", versionSeed);
 
   let backgroundChunk = null;
