@@ -8680,6 +8680,8 @@ function stopScannerVisualAnimation() {
 
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
+let _lobbyJumpPrevSample = null;
+let _lobbyJumpPrevTime = null;
 let _scannerRoundFinishedAtMs = null;
 let _beamTransitionEndMs = 0;
 let _serverBeamPosSmoothed = null;
@@ -11390,6 +11392,32 @@ function renderScannerCanvas() {
   scannerLobbyLaserVisual.angle = (((nowMs - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   scannerLobbyLaserVisual.lastAt = now;
   const _frameLobbyBeamSample = getScannerSharedLobbyBeamSample(nowMs);
+
+  if ((roundStatus === "idle" || roundStatus === "waiting") &&
+      _lobbyJumpPrevSample &&
+      _lobbyJumpPrevTime !== null) {
+    const dtSec = (nowMs - _lobbyJumpPrevTime) / 1000;
+    if (dtSec > 0 && dtSec < 5) {
+      const dx = _frameLobbyBeamSample.x - _lobbyJumpPrevSample.x;
+      const dy = _frameLobbyBeamSample.y - _lobbyJumpPrevSample.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const maxExpected = SCANNER_LOBBY_BEAM_BASE_SPEED * dtSec * 3;
+      if (dist > maxExpected && dist > 0.05) {
+        console.warn("[ЛАЗЕР-СКАЧОК] Обнаружен скачок позиции в режиме ожидания!", {
+          time: new Date().toISOString(),
+          prevPos: { x: _lobbyJumpPrevSample.x, y: _lobbyJumpPrevSample.y },
+          newPos: { x: _frameLobbyBeamSample.x, y: _frameLobbyBeamSample.y },
+          distance: dist,
+          dtSeconds: dtSec,
+          idleBeamMotion: scannerRealtime.runtimeData?.idleBeamMotion,
+          serverBeamPos: _serverBeamPos ? { ..._serverBeamPos } : null,
+          roundStatus
+        });
+      }
+    }
+  }
+  _lobbyJumpPrevSample = { x: _frameLobbyBeamSample.x, y: _frameLobbyBeamSample.y };
+  _lobbyJumpPrevTime = nowMs;
 
   // Border glow — удалить отсюда, перенесём после рисования луча где есть реальная позиция
 
