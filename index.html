@@ -6764,6 +6764,29 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
     need[chunk.playerIndex] -= placed;
   });
 
+  rects.forEach(({ chunk, x, y, w, h }) => {
+    if (rnd() > 0.5) return;
+    const depth = Math.min(4, Math.floor(Math.min(w, h) / 3));
+    if (depth <= 0) return;
+    let freed = 0;
+    for (let r = 0; r < depth; r += 1) {
+      const cut = depth - r;
+      for (let c = 0; c < cut; c += 1) {
+        const topLeft = (y + r) * SCANNER_GRID_COLS + (x + c);
+        const topRight = (y + r) * SCANNER_GRID_COLS + (x + w - 1 - c);
+        const bottomLeft = (y + h - 1 - r) * SCANNER_GRID_COLS + (x + c);
+        const bottomRight = (y + h - 1 - r) * SCANNER_GRID_COLS + (x + w - 1 - c);
+        [topLeft, topRight, bottomLeft, bottomRight].forEach((idx) => {
+          if (owners[idx] === chunk.playerIndex) {
+            owners[idx] = -1;
+            freed += 1;
+          }
+        });
+      }
+    }
+    need[chunk.playerIndex] += freed;
+  });
+
   const gridCols = SCANNER_GRID_COLS;
   const gridRows = SCANNER_GRID_ROWS;
   for (let pass = 0; pass < 3; pass += 1) {
