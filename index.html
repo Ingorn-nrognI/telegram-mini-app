@@ -6521,22 +6521,39 @@ function getScannerUniqueRoundColor(roundSeed, playerIndex) {
 function assignScannerRoundColors(round, participants) {
   const roundSeed = getScannerRoundColorSeed(round);
   const roundHash = hashString(roundSeed);
-  const hueBase = roundHash % 360;
+  const hueRotation = roundHash % 30;
+  const HUE_SLOTS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
   const saturationCycle = [72, 76, 80, 84, 88, 70, 74, 78, 82, 86];
   const lightnessCycle = [58, 62, 54, 66, 50, 60, 56, 64, 52, 68];
 
   const ordered = (participants || []).slice().sort((a, b) =>
     String(a.playerId || a.id || "").localeCompare(String(b.playerId || b.id || ""))
   );
-  const n = Math.max(1, ordered.length);
-  const step = 360 / n;
 
+  const slotOwner = new Map();
   const colorByPid = new Map();
-  ordered.forEach((participant, index) => {
+
+  ordered.forEach((participant) => {
     const pid = String(participant.playerId || participant.id || "");
-    const hue = (hueBase + index * step) % 360;
-    const saturation = saturationCycle[index % saturationCycle.length];
-    const lightness = lightnessCycle[index % lightnessCycle.length];
+    const playerHash = hashString(`${roundSeed}::${pid}`);
+    let slot = playerHash % HUE_SLOTS.length;
+
+    if (slotOwner.has(slot)) {
+      const otherPid = slotOwner.get(slot);
+      const otherHash = hashString(`${roundSeed}::${otherPid}`);
+      if (playerHash >= otherHash) {
+        let attempts = 0;
+        while (slotOwner.has(slot) && attempts < HUE_SLOTS.length) {
+          slot = (slot + 1) % HUE_SLOTS.length;
+          attempts += 1;
+        }
+      }
+    }
+    slotOwner.set(slot, pid);
+
+    const hue = (HUE_SLOTS[slot] + hueRotation) % 360;
+    const saturation = saturationCycle[slot % saturationCycle.length];
+    const lightness = lightnessCycle[slot % lightnessCycle.length];
     colorByPid.set(pid, getScannerColorHsl(hue, saturation, lightness));
   });
 
@@ -6544,7 +6561,7 @@ function assignScannerRoundColors(round, participants) {
     const pid = String(participant.playerId || participant.id || "");
     return {
       participant,
-      color: colorByPid.get(pid) || getScannerColorHsl(hueBase, 78, 58)
+      color: colorByPid.get(pid) || getScannerColorHsl(hueRotation, 78, 58)
     };
   });
 }
@@ -6680,197 +6697,182 @@ function allocateCells(players, totalCells) {
   });
 }
 
-function buildScannerCellTreemap(chunks, x, y, w, h, out) {
-  if (!chunks.length || w <= 0 || h <= 0) return;
-  if (chunks.length === 1) { out.push({ chunk: chunks[0], x, y, w, h }); return; }
-  const total = chunks.reduce((s, c) => s + c.length, 0);
-  const half = total / 2;
-  let sum = 0, splitAt = 1;
-  for (let i = 0; i < chunks.length; i += 1) {
-    sum += chunks[i].length;
-    if (sum >= half) { splitAt = i + 1; break; }
-  }
-  if (splitAt >= chunks.length) splitAt = chunks.length - 1;
-  const groupA = chunks.slice(0, splitAt);
-  const groupB = chunks.slice(splitAt);
-  const sumA = groupA.reduce((s, c) => s + c.length, 0);
-  const fracA = sumA / total;
-  if (w >= h) {
-    const wA = Math.max(1, Math.min(w - 1, Math.round(w * fracA)));
-    buildScannerCellTreemap(groupA, x, y, wA, h, out);
-    buildScannerCellTreemap(groupB, x + wA, y, w - wA, h, out);
-  } else {
-    const hA = Math.max(1, Math.min(h - 1, Math.round(h * fracA)));
-    buildScannerCellTreemap(groupA, x, y, w, hA, out);
-    buildScannerCellTreemap(groupB, x, y + hA, w, h - hA, out);
-  }
-}
-
 function buildScannerCellOwners(players, totalCells, versionSeed) {
   const rnd = mulberry32(hashString(versionSeed));
   const owners = new Array(totalCells).fill(-1);
-  const need = players.map((player) => player.cellCount);
-  const chunks = [];
+  const chunkId = new Array(totalCells).fill(-1);
+  const COLS = SCANNER_GRID_COLS;
+  const ROWS = SCANNER_GRID_ROWS;
 
+  const backgroundStyle = rnd() < 0.3;
+  let backgroundPlayerIndex = -1;
+  if (backgroundStyle) {
+    let maxCells = -1;
+    players.forEach((p, idx) => { if (p.cellCount > maxCells) { maxCells = p.cellCount; backgroundPlayerIndex = idx; } });
+  }
+
+  const chunks = [];
   players.forEach((player, playerIndex) => {
     let remaining = player.cellCount;
     if (remaining <= 0) return;
+    if (playerIndex === backgroundPlayerIndex) {
+      chunks.push({ playerIndex, length: remaining, isBackground: true });
+      return;
+    }
     let chunkCount;
-    if (remaining <= 6) {
+    if (remaining <= 5) {
       chunkCount = 1;
     } else {
-      const maxReasonable = Math.max(1, Math.floor(remaining / 3));
-      const desired = 3 + Math.floor(rnd() * 8);
+      const maxReasonable = Math.max(1, Math.floor(remaining / 4));
+      const desired = 1 + Math.floor(rnd() * 5);
       chunkCount = Math.max(1, Math.min(desired, maxReasonable, remaining));
     }
-    const base = Math.floor(remaining / chunkCount);
-    const extra = remaining % chunkCount;
-    for (let c = 0; c < chunkCount; c += 1) {
-      const length = base + (c < extra ? 1 : 0);
-      if (length > 0) chunks.push({ playerIndex, length });
+    const weights = [];
+    for (let c = 0; c < chunkCount; c += 1) weights.push(0.3 + rnd());
+    const totalWeight = weights.reduce((s, w) => s + w, 0);
+    const lengths = weights.map((w) => Math.max(1, Math.round((w / totalWeight) * remaining)));
+    let diff = remaining - lengths.reduce((s, l) => s + l, 0);
+    let guardI = 0;
+    while (diff !== 0 && guardI < 10000) {
+      const idx = guardI % lengths.length;
+      lengths[idx] += diff > 0 ? 1 : -1;
+      if (lengths[idx] < 1) lengths[idx] = 1;
+      diff = remaining - lengths.reduce((s, l) => s + l, 0);
+      guardI += 1;
     }
+    lengths.forEach((len) => { if (len > 0) chunks.push({ playerIndex, length: len, isBackground: false }); });
   });
 
-  for (let i = chunks.length - 1; i > 0; i -= 1) {
+  let styleLabel;
+  if (backgroundStyle) {
+    styleLabel = "Фон + вставки";
+  } else {
+    const growChunksCountPreview = chunks.filter((c) => !c.isBackground).length;
+    const avgChunksPerPlayer = players.length > 0 ? growChunksCountPreview / players.length : 0;
+    if (avgChunksPerPlayer <= 1.5) {
+      styleLabel = "Острова";
+    } else if (avgChunksPerPlayer >= 3.5) {
+      styleLabel = "Мозаика";
+    } else {
+      styleLabel = "Смешанный";
+    }
+  }
+  console.log("[ScannerGrid] Стиль раскладки клеток:", styleLabel, "| фон:", backgroundStyle, "| seed:", versionSeed);
+
+  let backgroundChunk = null;
+  const growChunks = [];
+  chunks.forEach((c) => { if (c.isBackground) backgroundChunk = c; else growChunks.push(c); });
+
+  for (let i = growChunks.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rnd() * (i + 1));
-    const tmp = chunks[i];
-    chunks[i] = chunks[j];
-    chunks[j] = tmp;
+    const tmp = growChunks[i];
+    growChunks[i] = growChunks[j];
+    growChunks[j] = tmp;
   }
 
-  const rects = [];
-  buildScannerCellTreemap(chunks, 0, 0, SCANNER_GRID_COLS, SCANNER_GRID_ROWS, rects);
+  function touchesOtherChunkSameOwner(idx, playerIndex, myChunkId) {
+    const row = Math.floor(idx / COLS);
+    const col = idx % COLS;
+    const offs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    for (const [dr, dc] of offs) {
+      const nr = row + dr, nc = col + dc;
+      if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+      const nidx = nr * COLS + nc;
+      if (owners[nidx] === playerIndex && chunkId[nidx] !== myChunkId) return true;
+    }
+    return false;
+  }
 
-  rects.forEach(({ chunk, x, y, w, h }) => {
-    const length = chunk.length;
-    const fullRows = Math.min(h, Math.floor(length / w));
-    const remainder = length - fullRows * w;
-    let placed = 0;
-    for (let r = 0; r < fullRows; r += 1) {
-      for (let c = 0; c < w; c += 1) {
-        const idx = (y + r) * SCANNER_GRID_COLS + (x + c);
-        owners[idx] = chunk.playerIndex;
-        placed += 1;
-      }
+  let nextChunkId = 0;
+  const frontiersAll = [];
+  growChunks.forEach((chunk) => {
+    const myId = nextChunkId;
+    nextChunkId += 1;
+    let seedIdx = -1;
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const cand = Math.floor(rnd() * totalCells);
+      if (owners[cand] !== -1) continue;
+      if (touchesOtherChunkSameOwner(cand, chunk.playerIndex, myId)) continue;
+      seedIdx = cand;
+      break;
     }
-    if (remainder > 0 && fullRows < h) {
-      const offset = Math.floor((w - remainder) / 2);
-      for (let c = 0; c < remainder; c += 1) {
-        const idx = (y + fullRows) * SCANNER_GRID_COLS + (x + offset + c);
-        owners[idx] = chunk.playerIndex;
-        placed += 1;
-      }
+    if (seedIdx === -1) {
+      for (let idx = 0; idx < totalCells; idx += 1) { if (owners[idx] === -1) { seedIdx = idx; break; } }
     }
-    need[chunk.playerIndex] -= placed;
+    if (seedIdx === -1) return;
+    owners[seedIdx] = chunk.playerIndex;
+    chunkId[seedIdx] = myId;
+    frontiersAll.push({ playerIndex: chunk.playerIndex, chunkId: myId, remaining: chunk.length - 1, frontier: [seedIdx] });
   });
 
-  const gridCols = SCANNER_GRID_COLS;
-  const gridRows = SCANNER_GRID_ROWS;
-  for (let pass = 0; pass < 3; pass += 1) {
-    let changedAny = false;
-    for (let idx = 0; idx < totalCells; idx += 1) {
-      if (owners[idx] !== -1) continue;
-      const row = Math.floor(idx / gridCols);
-      const col = idx % gridCols;
-      const neighborOffsets = [[-1,0],[1,0],[0,-1],[0,1]];
-      let bestOwner = -1;
-      for (const [dr, dc] of neighborOffsets) {
-        const nr = row + dr, nc = col + dc;
-        if (nr < 0 || nr >= gridRows || nc < 0 || nc >= gridCols) continue;
-        const nOwner = owners[nr * gridCols + nc];
-        if (nOwner !== -1 && need[nOwner] > 0) { bestOwner = nOwner; break; }
+  let active = frontiersAll.filter((f) => f.remaining > 0);
+  let guard = 0;
+  while (active.length > 0 && guard < totalCells * 6) {
+    guard += 1;
+    for (const f of active) {
+      if (f.remaining <= 0) continue;
+      let placed = false;
+      const tries = Math.min(f.frontier.length, 8);
+      for (let t = 0; t < tries && !placed; t += 1) {
+        const pick = f.frontier[Math.floor(rnd() * f.frontier.length)];
+        const row = Math.floor(pick / COLS), col = pick % COLS;
+        const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        for (let k = dirs.length - 1; k > 0; k -= 1) {
+          const j = Math.floor(rnd() * (k + 1));
+          const tmp = dirs[k]; dirs[k] = dirs[j]; dirs[j] = tmp;
+        }
+        for (const [dr, dc] of dirs) {
+          const nr = row + dr, nc = col + dc;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+          const nidx = nr * COLS + nc;
+          if (owners[nidx] !== -1) continue;
+          if (touchesOtherChunkSameOwner(nidx, f.playerIndex, f.chunkId)) continue;
+          owners[nidx] = f.playerIndex;
+          chunkId[nidx] = f.chunkId;
+          f.frontier.push(nidx);
+          f.remaining -= 1;
+          placed = true;
+          break;
+        }
+        if (placed) break;
       }
-      if (bestOwner !== -1) {
-        owners[idx] = bestOwner;
-        need[bestOwner] -= 1;
-        changedAny = true;
-      }
-    }
-    if (!changedAny) break;
-  }
-  for (let idx = 0; idx < totalCells; idx += 1) {
-    if (owners[idx] !== -1) continue;
-    for (let p = 0; p < need.length; p += 1) {
-      if (need[p] > 0) {
-        owners[idx] = p;
-        need[p] -= 1;
-        break;
-      }
-    }
-  }
-
-  for (let despeckle = 0; despeckle < 2; despeckle += 1) {
-    const next = owners.slice();
-    for (let idx = 0; idx < totalCells; idx += 1) {
-      const row = Math.floor(idx / SCANNER_GRID_COLS);
-      const col = idx % SCANNER_GRID_COLS;
-      const counts = new Map();
-      const neighborOffsets = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-      let sameAsOwn = 0;
-      for (const [dr, dc] of neighborOffsets) {
-        const nr = row + dr, nc = col + dc;
-        if (nr < 0 || nr >= SCANNER_GRID_ROWS || nc < 0 || nc >= SCANNER_GRID_COLS) continue;
-        const nOwner = owners[nr * SCANNER_GRID_COLS + nc];
-        counts.set(nOwner, (counts.get(nOwner) || 0) + 1);
-        if (nOwner === owners[idx]) sameAsOwn += 1;
-      }
-      if (sameAsOwn <= 1) {
-        let bestOwner = owners[idx];
-        let bestCount = -1;
-        counts.forEach((cnt, ownerId) => {
-          if (cnt > bestCount) { bestCount = cnt; bestOwner = ownerId; }
-        });
-        if (bestCount >= 2) next[idx] = bestOwner;
-      }
-    }
-    owners.length = 0;
-    next.forEach((v) => owners.push(v));
-  }
-
-  rects.forEach(({ chunk, x, y, w, h }) => {
-    if (rnd() > 0.5) return;
-    const depth = Math.min(4, Math.floor(Math.min(w, h) / 3));
-    if (depth <= 0) return;
-    let freed = 0;
-    for (let r = 0; r < depth; r += 1) {
-      const cut = depth - r;
-      for (let c = 0; c < cut; c += 1) {
-        const topLeft = (y + r) * SCANNER_GRID_COLS + (x + c);
-        const topRight = (y + r) * SCANNER_GRID_COLS + (x + w - 1 - c);
-        const bottomLeft = (y + h - 1 - r) * SCANNER_GRID_COLS + (x + c);
-        const bottomRight = (y + h - 1 - r) * SCANNER_GRID_COLS + (x + w - 1 - c);
-        [topLeft, topRight, bottomLeft, bottomRight].forEach((idx) => {
-          if (owners[idx] === chunk.playerIndex) {
-            owners[idx] = -1;
-            freed += 1;
+      if (!placed) {
+        for (let t = 0; t < tries; t += 1) {
+          const pick = f.frontier[Math.floor(rnd() * f.frontier.length)];
+          const row = Math.floor(pick / COLS), col = pick % COLS;
+          const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          for (const [dr, dc] of dirs) {
+            const nr = row + dr, nc = col + dc;
+            if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+            const nidx = nr * COLS + nc;
+            if (owners[nidx] !== -1) continue;
+            owners[nidx] = f.playerIndex;
+            chunkId[nidx] = f.chunkId;
+            f.frontier.push(nidx);
+            f.remaining -= 1;
+            placed = true;
+            break;
           }
-        });
+          if (placed) break;
+        }
       }
     }
-    need[chunk.playerIndex] += freed;
-  });
+    active = active.filter((f) => f.remaining > 0);
+  }
 
-  for (let pass = 0; pass < 3; pass += 1) {
-    let changedAny = false;
+  if (backgroundChunk) {
+    for (let idx = 0; idx < totalCells; idx += 1) {
+      if (owners[idx] === -1) owners[idx] = backgroundChunk.playerIndex;
+    }
+  } else {
+    const need = players.map((p) => p.cellCount);
+    owners.forEach((o) => { if (o !== -1) need[o] -= 1; });
     for (let idx = 0; idx < totalCells; idx += 1) {
       if (owners[idx] !== -1) continue;
-      const row = Math.floor(idx / gridCols);
-      const col = idx % gridCols;
-      const neighborOffsets = [[-1,0],[1,0],[0,-1],[0,1]];
-      let bestOwner = -1;
-      for (const [dr, dc] of neighborOffsets) {
-        const nr = row + dr, nc = col + dc;
-        if (nr < 0 || nr >= gridRows || nc < 0 || nc >= gridCols) continue;
-        const nOwner = owners[nr * gridCols + nc];
-        if (nOwner !== -1 && need[nOwner] > 0) { bestOwner = nOwner; break; }
-      }
-      if (bestOwner !== -1) {
-        owners[idx] = bestOwner;
-        need[bestOwner] -= 1;
-        changedAny = true;
+      for (let p = 0; p < need.length; p += 1) {
+        if (need[p] > 0) { owners[idx] = p; need[p] -= 1; break; }
       }
     }
-    if (!changedAny) break;
   }
 
   return owners;
@@ -8203,13 +8205,13 @@ function getScannerCountdownBeamCache(round) {
     if (samples.length > 0) {
       const lastIdx = samples.length - 1;
       samples[lastIdx] = {
-        ...samples[lastIdx],
         x: round.countdownLatchSample.x,
         y: round.countdownLatchSample.y,
         vx: 0,
         vy: 0,
         angle: overrideAngle,
-        travelAngle: overrideAngle
+        travelAngle: overrideAngle,
+        progress: samples[lastIdx].progress
       };
     }
   }
