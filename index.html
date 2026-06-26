@@ -8803,6 +8803,10 @@ function applySocketRoundState(data) {
   if (!data) return;
   const roundId = data.roundId || null;
   scannerRealtime.runtimeReady = true;
+  if (data.status === "finished" && data.activeEndsAt) {
+    const finishedAtMs = tsToMs(data.activeEndsAt) || Number(data.activeEndsAt) || Date.now();
+    _scannerRoundFinishedAtMs = finishedAtMs;
+  }
   if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
   scannerRealtime.runtimeData.activeRoundId = roundId;
   if (data.idleBeamMotion) scannerRealtime.runtimeData.idleBeamMotion = data.idleBeamMotion;
