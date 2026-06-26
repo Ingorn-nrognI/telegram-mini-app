@@ -6742,10 +6742,21 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
   buildScannerCellTreemap(chunks, 0, 0, SCANNER_GRID_COLS, SCANNER_GRID_ROWS, rects);
 
   rects.forEach(({ chunk, x, y, w, h }) => {
+    const length = chunk.length;
+    const fullRows = Math.min(h, Math.floor(length / w));
+    const remainder = length - fullRows * w;
     let placed = 0;
-    for (let r = 0; r < h && placed < chunk.length; r += 1) {
-      for (let c = 0; c < w && placed < chunk.length; c += 1) {
+    for (let r = 0; r < fullRows; r += 1) {
+      for (let c = 0; c < w; c += 1) {
         const idx = (y + r) * SCANNER_GRID_COLS + (x + c);
+        owners[idx] = chunk.playerIndex;
+        placed += 1;
+      }
+    }
+    if (remainder > 0 && fullRows < h) {
+      const offset = Math.floor((w - remainder) / 2);
+      for (let c = 0; c < remainder; c += 1) {
+        const idx = (y + fullRows) * SCANNER_GRID_COLS + (x + offset + c);
         owners[idx] = chunk.playerIndex;
         placed += 1;
       }
@@ -8589,6 +8600,7 @@ function stopScannerVisualAnimation() {
 
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
+let _scannerRoundFinishedAtMs = null;
 let _beamTransitionEndMs = 0;
 let _serverBeamPosSmoothed = null;
 let _serverBeamPosLastUpdate = 0;
@@ -8655,6 +8667,12 @@ function applySocketRoundPatch(patch) {
   if (patch.status !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
     scannerRealtime.roundData.status = patch.status;
+    if (patch.status === "finished" && _scannerRoundFinishedAtMs === null) {
+      _scannerRoundFinishedAtMs = Number(patch.timestamp) || Date.now();
+    }
+    if (patch.status === "idle" || patch.roundId === null) {
+      _scannerRoundFinishedAtMs = null;
+    }
   }
   if (patch.totalPot !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
@@ -11973,7 +11991,8 @@ const SCANNER_RESULT_AUTO_CLOSE_MS = 30000;
 
 function startScannerResultTimer() {
   stopScannerResultTimer();
-  _scannerResultTimerStart = performance.now();
+  const elapsedAlready = _scannerRoundFinishedAtMs ? Math.max(0, Date.now() - _scannerRoundFinishedAtMs) : 0;
+  _scannerResultTimerStart = performance.now() - elapsedAlready;
   function tick() {
     const arc = document.getElementById("scannerResultTimerArc");
     if (!arc) return;
