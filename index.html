@@ -2879,11 +2879,14 @@ button {
 .profile-settings-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
 .profile-settings-btn {
   width: 100%;
+}
+
+.profile-settings-btn:not(:last-child) {
+  margin-bottom: 10px;
 }
 
 .bottom-bar {
