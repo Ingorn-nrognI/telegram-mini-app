@@ -8324,9 +8324,17 @@ function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(
 }
 
 function getScannerActiveBeamSample(round, players, progressOverride = null) {
-  if (_serverBeamPos &&
-      _serverBeamPos.x !== undefined &&
-      _serverBeamPos.roundId === scannerGridState.roundId) {
+  const serverPosFresh = _serverBeamPos &&
+    Number.isFinite(_serverBeamPos.x) &&
+    Number.isFinite(_serverBeamPos.y) &&
+    typeof _serverBeamPos._receiveTime === "number" &&
+    (performance.now() - _serverBeamPos._receiveTime) < 1500;
+
+  const roundIdMatches = !_serverBeamPos?.roundId ||
+    !scannerGridState.roundId ||
+    String(_serverBeamPos.roundId) === String(scannerGridState.roundId);
+
+  if (serverPosFresh && roundIdMatches) {
     return {
       x: _serverBeamPos.x,
       y: _serverBeamPos.y,
@@ -8335,6 +8343,15 @@ function getScannerActiveBeamSample(round, players, progressOverride = null) {
       renderAngle: _serverBeamPos.angle || 0
     };
   }
+
+  console.warn("[Scanner] Активная фаза: используется локальный фоллбэк вместо серверной позиции", {
+    hasServerPos: !!_serverBeamPos,
+    serverPosFresh,
+    roundIdMatches,
+    serverRoundId: _serverBeamPos?.roundId,
+    clientRoundId: scannerGridState.roundId
+  });
+
   return getScannerActiveBeamSampleAtTime(round, players, Date.now(), progressOverride);
 }
 
