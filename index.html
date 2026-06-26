@@ -3807,7 +3807,7 @@ button {
 
       <section class="profile-settings-card">
         <button type="button" class="profile-settings-btn" onclick="openReferrals()">🤝 Рефералы</button>
-        <button type="button" class="profile-settings-btn" onclick="openSettings()">⚙️ Настройки</button>
+        <button type="button" id="profileSettingsBtn" class="profile-settings-btn" onclick="openSettings()">⚙️ Настройки</button>
       </section>
     </div>
   </div>
@@ -5938,7 +5938,7 @@ function applyAppLanguage(lang) {
   if (profileActions[2]) profileActions[2].textContent = t.withdraw;
 
   // Settings button in profile
-  const profileSettingsBtn = document.querySelector(".profile-settings-btn");
+  const profileSettingsBtn = document.getElementById("profileSettingsBtn");
   if (profileSettingsBtn) profileSettingsBtn.innerHTML = "⚙️ " + t.settings;
 
   // Stake settings sheet
