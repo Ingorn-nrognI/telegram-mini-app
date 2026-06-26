@@ -6548,10 +6548,12 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
     let remaining = player.cellCount;
     if (remaining <= 0) return;
     let chunkCount;
-    if (remaining <= 3) {
+    if (remaining <= 6) {
       chunkCount = 1;
     } else {
-      chunkCount = Math.min(remaining, 2 + Math.floor(rnd() * 3));
+      const maxReasonable = Math.max(1, Math.floor(remaining / 3));
+      const desired = 3 + Math.floor(rnd() * 8);
+      chunkCount = Math.max(1, Math.min(desired, maxReasonable, remaining));
     }
     const base = Math.floor(remaining / chunkCount);
     const extra = remaining % chunkCount;
@@ -6616,6 +6618,34 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
         break;
       }
     }
+  }
+
+  for (let despeckle = 0; despeckle < 2; despeckle += 1) {
+    const next = owners.slice();
+    for (let idx = 0; idx < totalCells; idx += 1) {
+      const row = Math.floor(idx / SCANNER_GRID_COLS);
+      const col = idx % SCANNER_GRID_COLS;
+      const counts = new Map();
+      const neighborOffsets = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      let sameAsOwn = 0;
+      for (const [dr, dc] of neighborOffsets) {
+        const nr = row + dr, nc = col + dc;
+        if (nr < 0 || nr >= SCANNER_GRID_ROWS || nc < 0 || nc >= SCANNER_GRID_COLS) continue;
+        const nOwner = owners[nr * SCANNER_GRID_COLS + nc];
+        counts.set(nOwner, (counts.get(nOwner) || 0) + 1);
+        if (nOwner === owners[idx]) sameAsOwn += 1;
+      }
+      if (sameAsOwn <= 1) {
+        let bestOwner = owners[idx];
+        let bestCount = -1;
+        counts.forEach((cnt, ownerId) => {
+          if (cnt > bestCount) { bestCount = cnt; bestOwner = ownerId; }
+        });
+        if (bestCount >= 2) next[idx] = bestOwner;
+      }
+    }
+    owners.length = 0;
+    next.forEach((v) => owners.push(v));
   }
 
   return owners;
