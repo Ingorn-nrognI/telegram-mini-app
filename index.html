@@ -3806,6 +3806,7 @@ button {
       </section>
 
       <section class="profile-settings-card">
+        <button type="button" class="profile-settings-btn" onclick="openReferrals()">🤝 Рефералы</button>
         <button type="button" class="profile-settings-btn" onclick="openSettings()">⚙️ Настройки</button>
       </section>
     </div>
@@ -3997,6 +3998,39 @@ button {
           <button id="settingsVibOff" class="app-settings-chip" onclick="setAppVibration(false)">Выкл</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div
+  id="appReferralsOverlay"
+  class="app-settings-overlay"
+  onclick="handleReferralsBackdrop(event)"
+  aria-hidden="true"
+>
+  <div class="app-settings-sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="appReferralsTitle">
+    <div class="app-settings-handle"></div>
+    <div class="app-settings-header">
+      <span class="app-settings-title" id="appReferralsTitle">Рефералы</span>
+      <button class="app-settings-close" onclick="closeReferrals()" aria-label="Закрыть">✕</button>
+    </div>
+
+    <div class="app-settings-section">
+      <div class="app-settings-section-title">Твоя ссылка-приглашение</div>
+      <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+        <input
+          id="referralLinkInput"
+          type="text"
+          readonly
+          style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px 12px; color:#fff; font-size:13px;"
+        />
+        <button class="app-settings-chip" onclick="copyReferralLink()">Скопировать</button>
+      </div>
+    </div>
+
+    <div class="app-settings-section">
+      <div class="app-settings-section-title">Приглашено игроков: <span id="referralCount">0</span></div>
+      <div id="referralList" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;"></div>
     </div>
   </div>
 </div>
@@ -4384,6 +4418,10 @@ try {
   reportAppError("Ошибка инициализации Telegram WebApp:", error);
   tgUser = null;
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(tryClaimReferralFromStartParam, 1500);
+});
 
 function hasTelegramSystemBackButton() {
   return !!(tgApp?.BackButton && typeof tgApp.BackButton.show === "function");
@@ -6012,6 +6050,101 @@ function closeSettings() {
   overlay.classList.remove("open");
   overlay.setAttribute("aria-hidden", "true");
   syncAppBackButton();
+}
+
+function getMyReferralLink() {
+  const myId = getCurrentPlayer().id;
+  return `https://t.me/bobr_up_bot/bobr_up?startapp=ref_${myId}`;
+}
+
+function openReferrals() {
+  const overlay = document.getElementById("appReferralsOverlay");
+  if (!overlay) return;
+  overlay.classList.add("open");
+  overlay.removeAttribute("aria-hidden");
+  renderReferralsScreen();
+  syncAppBackButton({ forceShow: true, onClick: closeReferrals });
+}
+
+function closeReferrals() {
+  const overlay = document.getElementById("appReferralsOverlay");
+  if (!overlay) return;
+  overlay.classList.remove("open");
+  overlay.setAttribute("aria-hidden", "true");
+  syncAppBackButton();
+}
+
+function handleReferralsBackdrop(event) {
+  if (event.target === document.getElementById("appReferralsOverlay")) {
+    closeReferrals();
+  }
+}
+
+function copyReferralLink() {
+  const input = document.getElementById("referralLinkInput");
+  if (!input) return;
+  input.select();
+  try {
+    navigator.clipboard?.writeText(input.value);
+  } catch (e) {
+    document.execCommand("copy");
+  }
+  tgApp?.showPopup?.({ message: "Ссылка скопирована" });
+}
+
+async function renderReferralsScreen() {
+  const linkInput = document.getElementById("referralLinkInput");
+  if (linkInput) linkInput.value = getMyReferralLink();
+
+  const countEl = document.getElementById("referralCount");
+  const listEl = document.getElementById("referralList");
+  if (!listEl) return;
+  listEl.innerHTML = "Загрузка...";
+
+  try {
+    const myId = getCurrentPlayer().id;
+    const snapshot = await db.collection("users").where("referredBy", "==", String(myId)).get();
+    const items = [];
+    snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
+
+    if (countEl) countEl.textContent = String(items.length);
+
+    if (items.length === 0) {
+      listEl.innerHTML = `<div style="opacity:0.6; font-size:13px;">Пока никого не пригласил${getCurrentPlayer().name ? "" : ""}.</div>`;
+      return;
+    }
+
+    listEl.innerHTML = items.map((item) => {
+      const name = escapeHtml(item.name || item.username || ("Игрок " + item.id));
+      return `<div style="display:flex; justify-content:space-between; padding:8px 10px; background:rgba(255,255,255,0.04); border-radius:8px; font-size:13px;">
+        <span>${name}</span>
+      </div>`;
+    }).join("");
+  } catch (e) {
+    listEl.innerHTML = `<div style="opacity:0.6; font-size:13px;">Не удалось загрузить список.</div>`;
+    console.warn("Ошибка загрузки рефералов:", e.message);
+  }
+}
+
+function tryClaimReferralFromStartParam() {
+  try {
+    const startParam = tgApp?.initDataUnsafe?.start_param || "";
+    if (!startParam.startsWith("ref_")) return;
+    const referrerId = startParam.slice(4);
+    const myId = getCurrentPlayer().id;
+    if (!referrerId || referrerId === String(myId)) return;
+
+    const claimedKey = "bobr_world_referral_claim_attempted_v1";
+    if (localStorage.getItem(claimedKey) === "1") return;
+
+    _socket.emit("referral:claim", { playerId: String(myId), referrerId: String(referrerId) }, (response) => {
+      if (response?.ok) {
+        localStorage.setItem(claimedKey, "1");
+      }
+    });
+  } catch (e) {
+    console.warn("Ошибка обработки реферальной ссылки:", e.message);
+  }
 }
 
 function handleAppSettingsBackdrop(event) {
@@ -11941,6 +12074,10 @@ window.showProfilePlaceholderAction = showProfilePlaceholderAction;
 window.handleTelegramAppBack = handleTelegramAppBack;
 window.openSettings = openSettings;
 window.closeSettings = closeSettings;
+window.openReferrals = openReferrals;
+window.closeReferrals = closeReferrals;
+window.handleReferralsBackdrop = handleReferralsBackdrop;
+window.copyReferralLink = copyReferralLink;
 window.renderAppSettings = renderAppSettings;
 window.handleAppSettingsBackdrop = handleAppSettingsBackdrop;
 window.setAppLanguage = setAppLanguage;
