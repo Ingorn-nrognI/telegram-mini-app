@@ -8781,6 +8781,10 @@ function applySocketRoundResult(data) {
     scannerRealtime.roundData.winnerId = data.winnerPlayerId;
     scannerRealtime.roundData.winnerName = data.winnerName;
     scannerRealtime.roundData.winnerPayout = data.winnerPayout;
+
+    if (String(data.winnerPlayerId) === String(getCurrentPlayer().id)) {
+      loadProfileBestRoundWin();
+    }
   }
   syncScannerDerivedState();
   renderScannerRound();
