@@ -4033,7 +4033,7 @@ button {
           readonly
           style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px 12px; color:#fff; font-size:13px;"
         />
-        <button class="app-settings-chip" onclick="copyReferralLink()">Скопировать</button>
+        <button id="copyReferralBtn" class="app-settings-chip" onclick="copyReferralLink()">Скопировать</button>
       </div>
     </div>
 
@@ -6089,8 +6089,11 @@ function handleReferralsBackdrop(event) {
   }
 }
 
+let _copyReferralResetTimer = null;
+
 function copyReferralLink() {
   const input = document.getElementById("referralLinkInput");
+  const btn = document.getElementById("copyReferralBtn");
   if (!input) return;
   input.select();
   try {
@@ -6098,7 +6101,27 @@ function copyReferralLink() {
   } catch (e) {
     document.execCommand("copy");
   }
-  tgApp?.showPopup?.({ message: "Ссылка скопирована" });
+
+  if (btn) {
+    if (!btn.dataset.originalText) {
+      btn.dataset.originalText = btn.textContent;
+    }
+    btn.textContent = "Скопировано";
+    btn.style.background = "linear-gradient(135deg, #2fe07a, #1fb866)";
+    btn.style.color = "#06101f";
+    btn.style.borderColor = "rgba(255,255,255,0.18)";
+
+    if (_copyReferralResetTimer) {
+      clearTimeout(_copyReferralResetTimer);
+    }
+    _copyReferralResetTimer = setTimeout(() => {
+      btn.textContent = btn.dataset.originalText || "Скопировать";
+      btn.style.background = "";
+      btn.style.color = "";
+      btn.style.borderColor = "";
+      _copyReferralResetTimer = null;
+    }, 2000);
+  }
 }
 
 async function renderReferralsScreen() {
