@@ -6172,6 +6172,9 @@ function tryClaimReferralFromStartParam() {
     _socket.emit("referral:claim", { playerId: String(myId), referrerId: String(referrerId) }, (response) => {
       if (response?.ok) {
         localStorage.setItem(claimedKey, "1");
+        ensureDemoBalanceForCurrentUser().catch((e) => {
+          console.warn("Не удалось повторно проверить стартовый баланс после реферала:", e.message);
+        });
       }
     });
   } catch (e) {
