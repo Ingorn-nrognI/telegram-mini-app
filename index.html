@@ -8129,7 +8129,8 @@ function getScannerCountdownBeamCache(round) {
   const key = [
     round?.id || "round",
     Math.round(timing.startedAt / 100),
-    Math.round(timing.endsAt / 100)
+    Math.round(timing.endsAt / 100),
+    round?.countdownLatchSample ? "latched" : "nolatch"
   ].join("::");
 
   if (scannerCountdownBeamCache?.key === key && Array.isArray(scannerCountdownBeamCache?.samples) && scannerCountdownBeamCache.samples.length > 1) {
