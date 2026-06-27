@@ -6952,6 +6952,9 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed) {
     owners[cellIndex] = owner;
   }
 
+  const _debugCounts = {};
+  owners.forEach((o) => { _debugCounts[o] = (_debugCounts[o] || 0) + 1; });
+  console.log("[ПРЕВЬЮ-ОТЛАДКА] Распределение клеток превью:", _debugCounts, "| игроков:", players.length, "| доли:", players.map(p => ({ id: p.id, cellCount: p.cellCount })));
   return owners;
 }
 
