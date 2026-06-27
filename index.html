@@ -11445,8 +11445,13 @@ function renderScannerCanvas() {
       }
     }
   }
-  _lobbyJumpPrevSample = { x: _frameLobbyBeamSample.x, y: _frameLobbyBeamSample.y };
-  _lobbyJumpPrevTime = nowMs;
+  if (roundStatus === "idle" || roundStatus === "waiting") {
+    _lobbyJumpPrevSample = { x: _frameLobbyBeamSample.x, y: _frameLobbyBeamSample.y };
+    _lobbyJumpPrevTime = nowMs;
+  } else {
+    _lobbyJumpPrevSample = null;
+    _lobbyJumpPrevTime = null;
+  }
 
   // Border glow — удалить отсюда, перенесём после рисования луча где есть реальная позиция
 
