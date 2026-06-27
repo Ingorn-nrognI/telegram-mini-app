@@ -7098,7 +7098,7 @@ function buildScannerPlayersFromFirestore(round, participants) {
       totalPot,
       cellOwners: [],
       totalPlayers: allocated.length,
-      gridVersion: `${round?.id || "round"}_${round?.status || "idle"}_pending`
+      gridVersion: `${round?.id || "round"}_${round?.status || "idle"}_${allocated.length}_${totalPot.toFixed(2)}_pending`
     };
   }
   return finalizeScannerPlayers(normalized, `${round?.id || "round"}_${round?.entropySeed || "seed"}_grid`);
