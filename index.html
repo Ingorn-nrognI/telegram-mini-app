@@ -7082,6 +7082,17 @@ function buildScannerPlayersFromFirestore(round, participants) {
 
   // version намеренно убран из seed — он увеличивается при каждом обновлении Firestore
   // и менял расположение клеток и цвет игрока при каждом обновлении
+  const lobbyStatuses = ["waiting", "countdown"];
+  if (lobbyStatuses.includes(String(round?.status || ""))) {
+    const totalPot = normalized.reduce((sum, p) => sum + Number(p.stake || 0), 0);
+    return {
+      players: normalized,
+      totalPot,
+      cellOwners: [],
+      totalPlayers: normalized.length,
+      gridVersion: `${round?.id || "round"}_${round?.status || "idle"}_pending`
+    };
+  }
   return finalizeScannerPlayers(normalized, `${round?.id || "round"}_${round?.entropySeed || "seed"}_grid`);
 }
 
