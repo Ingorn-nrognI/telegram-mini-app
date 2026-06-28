@@ -8841,6 +8841,7 @@ let _serverBeamPos = null;
 let _lobbyJumpPrevSample = null;
 let _lobbyJumpPrevTime = null;
 let _scannerRoundFinishedAtMs = null;
+let _lastFrozenResultPos = null;
 let _beamTransitionEndMs = 0;
 let _serverBeamPosSmoothed = null;
 let _serverBeamPosLastUpdate = 0;
@@ -8960,6 +8961,19 @@ function applySocketRoundPatch(patch) {
   if (patch.idleBeamMotion !== undefined) {
     if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
     scannerRealtime.runtimeData.idleBeamMotion = patch.idleBeamMotion;
+    if (patch.idleBeamMotion && _lastFrozenResultPos) {
+      const dx = patch.idleBeamMotion.x - _lastFrozenResultPos.x;
+      const dy = patch.idleBeamMotion.y - _lastFrozenResultPos.y;
+      const realJump = Math.sqrt(dx * dx + dy * dy);
+      console.warn(
+        "[РЕАЛЬНЫЙ СТЫК РАУНД->ОЖИДАНИЕ] замороженная_x=" + _lastFrozenResultPos.x.toFixed(4) +
+        " замороженная_y=" + _lastFrozenResultPos.y.toFixed(4) +
+        " | новая_idle_x=" + patch.idleBeamMotion.x.toFixed(4) +
+        " новая_idle_y=" + patch.idleBeamMotion.y.toFixed(4) +
+        " | РАЗНИЦА=" + realJump.toFixed(4)
+      );
+      _lastFrozenResultPos = null;
+    }
   }
   if (patch.roundId !== undefined) {
     const _prevActiveRoundId = scannerRealtime.activeRoundId;
@@ -11751,6 +11765,9 @@ function renderScannerCanvas() {
 
   const visualBeamSample = beamSample || null;
   if (visualBeamSample) scannerLastBeamSample = visualBeamSample;
+  if (visualBeamSample && (roundStatus === "finished" || roundStatus === "preparing_next_round")) {
+    _lastFrozenResultPos = { x: visualBeamSample.x, y: visualBeamSample.y };
+  }
 
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
