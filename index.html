@@ -10664,7 +10664,11 @@ function getScannerCanvasMetrics() {
   let size = scannerCanvasMetricsState.size;
   if (scannerCanvasMetricsState.dirty || !size) {
     const measuredWidth = canvas.clientWidth || canvas.getBoundingClientRect().width || 320;
-    size = Math.max(240, Math.floor(measuredWidth));
+    const viewportCap = Math.max(320, Math.min(window.innerWidth || 800, window.innerHeight || 800));
+    if (measuredWidth > viewportCap * 1.5) {
+      console.warn("[ScannerCanvas] Аномально большая измеренная ширина канваса, ограничиваю:", measuredWidth, "→", viewportCap);
+    }
+    size = Math.max(240, Math.min(Math.floor(measuredWidth), Math.floor(viewportCap * 1.5)));
   }
 
   if (
