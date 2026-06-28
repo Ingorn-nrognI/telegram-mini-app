@@ -7041,7 +7041,7 @@ function finalizeScannerPlayers(players, versionSeed) {
   };
 }
 
-function buildScannerPreviewCellOwners(players, totalCells, versionSeed) {
+function buildScannerPreviewCellOwners(players, totalCells, versionSeed, roundId) {
   const owners = new Array(totalCells).fill(-1);
   if (!players.length) return owners;
   if (players.length === 1) {
@@ -7049,48 +7049,36 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed) {
     return owners;
   }
 
-  const seed = hashString(`diag_${versionSeed}`);
-  const rnd = mulberry32(seed);
-  const angle = rnd() * Math.PI;
-  const cosA = Math.cos(angle);
-  const sinA = Math.sin(angle);
+  const COLS = SCANNER_GRID_COLS;
+  const rnd = mulberry32(hashString(`guillotine_${roundId || versionSeed}`));
 
-  // Compute cumulative share thresholds based on each player's cellCount
-  const shares = players.map((player) => {
-    const raw = Number(player.cellCount || 0) / Math.max(1, totalCells);
-    return raw > 0 ? raw : 1 / Math.max(1, players.length);
-  });
-  const totalShare = shares.reduce((s, v) => s + v, 0) || 1;
-  const cumulative = [];
-  let acc = 0;
-  for (let i = 0; i < shares.length; i += 1) {
-    acc += shares[i] / totalShare;
-    cumulative.push(acc);
-  }
+  const shares = players.map((p) => Math.max(0.0001, Number(p.cellCount || 0)));
+  let remainingIdx = [];
+  for (let i = 0; i < totalCells; i += 1) remainingIdx.push(i);
 
-  // Find min/max projection over all cell centres to normalise into [0, 1]
-  let minProj = Infinity;
-  let maxProj = -Infinity;
-  for (let row = 0; row < SCANNER_GRID_ROWS; row += 1) {
-    for (let col = 0; col < SCANNER_GRID_COLS; col += 1) {
-      const proj = (col / SCANNER_GRID_COLS) * cosA + (row / SCANNER_GRID_ROWS) * sinA;
-      if (proj < minProj) minProj = proj;
-      if (proj > maxProj) maxProj = proj;
-    }
-  }
-  const projRange = maxProj - minProj || 1;
+  for (let p = 0; p < players.length - 1; p += 1) {
+    const remainingShareSum = shares.slice(p).reduce((s, v) => s + v, 0) || 1;
+    const fraction = shares[p] / remainingShareSum;
 
-  for (let cellIndex = 0; cellIndex < totalCells; cellIndex += 1) {
-    const col = cellIndex % SCANNER_GRID_COLS;
-    const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
-    const proj = (col / SCANNER_GRID_COLS) * cosA + (row / SCANNER_GRID_ROWS) * sinA;
-    const t = (proj - minProj) / projRange;
-    let owner = cumulative.length - 1;
-    for (let i = 0; i < cumulative.length - 1; i += 1) {
-      if (t <= cumulative[i]) { owner = i; break; }
-    }
-    owners[cellIndex] = owner;
+    const dirRoll = Math.floor(rnd() * 4);
+    let metricFn;
+    if (dirRoll === 0) metricFn = (idx) => idx % COLS;
+    else if (dirRoll === 1) metricFn = (idx) => Math.floor(idx / COLS);
+    else if (dirRoll === 2) metricFn = (idx) => (idx % COLS) + Math.floor(idx / COLS);
+    else metricFn = (idx) => (idx % COLS) - Math.floor(idx / COLS);
+    const flip = rnd() < 0.5;
+
+    const targetCount = Math.round(remainingIdx.length * fraction);
+
+    const sorted = remainingIdx.slice().sort((a, b) => {
+      const ma = flip ? -metricFn(a) : metricFn(a);
+      const mb = flip ? -metricFn(b) : metricFn(b);
+      return ma - mb;
+    });
+    for (let i = 0; i < targetCount; i += 1) owners[sorted[i]] = p;
+    remainingIdx = sorted.slice(targetCount);
   }
+  remainingIdx.forEach((idx) => { owners[idx] = players.length - 1; });
 
   const _debugCounts = {};
   owners.forEach((o) => { _debugCounts[o] = (_debugCounts[o] || 0) + 1; });
