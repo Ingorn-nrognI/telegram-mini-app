@@ -9009,6 +9009,18 @@ function applySocketRoundPatch(patch) {
       scannerLobbyLaserVisual.angle = null;
       scannerLobbyLaserVisual.lastAt = 0;
     }
+    if (patch.status === "active" && Number.isFinite(patch.launchX) && Number.isFinite(patch.launchY)) {
+      _serverBeamPos = {
+        x: patch.launchX,
+        y: patch.launchY,
+        vx: Number(patch.launchVx) || 0,
+        vy: Number(patch.launchVy) || 0,
+        angle: Math.atan2(Number(patch.launchVy) || 0, Number(patch.launchVx) || 0.0001),
+        roundId: scannerRealtime.activeRoundId || patch.roundId || scannerGridState.roundId,
+        timestamp: Number(patch.timestamp) || Date.now(),
+        _receiveTime: performance.now()
+      };
+    }
   }
   // Если сервер явно сбросил раунд в idle — запрещаем bootstrap подхватить старый раунд
   if (patch.status === 'idle' && !patch.roundId) {
@@ -11529,8 +11541,17 @@ function drawScannerWinnerHighlight(ctx, cellSize) {
   const pulse = (Math.sin(performance.now() / 180) + 1) / 2;
 
   ctx.save();
-  ctx.shadowBlur = 26;
-  ctx.shadowColor = `rgba(255, 255, 255, ${0.35 + pulse * 0.45})`;
+
+  const glowLayers = [
+    { pad: cellSize * 1.4, alpha: 0.06 + pulse * 0.05 },
+    { pad: cellSize * 0.9, alpha: 0.10 + pulse * 0.08 },
+    { pad: cellSize * 0.45, alpha: 0.16 + pulse * 0.12 }
+  ];
+  glowLayers.forEach((layer) => {
+    ctx.fillStyle = `rgba(255,255,255,${layer.alpha})`;
+    ctx.fillRect(x - layer.pad, y - layer.pad, cellSize + layer.pad * 2, cellSize + layer.pad * 2);
+  });
+
   ctx.fillStyle = `rgba(255,255,255,${0.18 + pulse * 0.18})`;
   ctx.fillRect(x, y, cellSize, cellSize);
   ctx.lineWidth = 2;
