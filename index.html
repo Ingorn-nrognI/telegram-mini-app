@@ -6697,6 +6697,83 @@ function allocateCells(players, totalCells) {
   });
 }
 
+function buildScannerShapeMask(shapeType, targetArea, rnd) {
+  let width, height, rowRanges;
+  if (shapeType === "square") {
+    const side = Math.max(1, Math.round(Math.sqrt(targetArea)));
+    width = side; height = side;
+    rowRanges = [];
+    for (let r = 0; r < height; r += 1) rowRanges.push([0, width - 1]);
+  } else if (shapeType === "rectangle") {
+    const aspect = 0.4 + rnd() * 1.8;
+    const h = Math.max(1, Math.round(Math.sqrt(targetArea / aspect)));
+    const w = Math.max(1, Math.round(targetArea / h));
+    width = w; height = h;
+    rowRanges = [];
+    for (let r = 0; r < height; r += 1) rowRanges.push([0, width - 1]);
+  } else if (shapeType === "diamond") {
+    let r = 1;
+    while (2 * r * r + 2 * r + 1 < targetArea) r += 1;
+    height = 2 * r + 1; width = 2 * r + 1;
+    rowRanges = [];
+    for (let i = 0; i < height; i += 1) {
+      const distFromMid = Math.abs(i - r);
+      const halfWidth = r - distFromMid;
+      rowRanges.push([r - halfWidth, r + halfWidth]);
+    }
+  } else if (shapeType === "hexagon") {
+    let w = Math.max(3, Math.round(Math.sqrt(targetArea * 1.5)));
+    let h = Math.max(3, Math.round((targetArea / w) * 1.2));
+    let d = Math.max(1, Math.min(Math.floor(w / 3), Math.floor(h / 3)));
+    let area;
+    let guard = 0;
+    do {
+      rowRanges = [];
+      for (let r = 0; r < h; r += 1) {
+        let inset = 0;
+        if (r < d) inset = d - r;
+        else if (r >= h - d) inset = d - (h - 1 - r);
+        rowRanges.push([inset, w - 1 - inset]);
+      }
+      area = 0;
+      rowRanges.forEach(([a, b]) => { area += Math.max(0, b - a + 1); });
+      if (area < targetArea) { w += 1; h += 1; d = Math.max(1, Math.min(Math.floor(w / 3), Math.floor(h / 3))); }
+      guard += 1;
+    } while (area < targetArea && guard < 200);
+    width = w; height = h;
+  } else {
+    const h = Math.max(2, Math.round(Math.sqrt(targetArea * 2)));
+    const w = Math.max(1, Math.round((2 * targetArea) / h));
+    width = w; height = h;
+    rowRanges = [];
+    for (let r = 0; r < height; r += 1) {
+      const rowWidth = Math.max(1, Math.round(((r + 1) / height) * width));
+      const offset = Math.floor((width - rowWidth) / 2);
+      rowRanges.push([offset, offset + rowWidth - 1]);
+    }
+  }
+
+  let area = 0;
+  rowRanges.forEach(([a, b]) => { area += Math.max(0, b - a + 1); });
+  let diff = targetArea - area;
+  let lastIdx = rowRanges.length - 1;
+  let guardFit = 0;
+  while (diff !== 0 && lastIdx >= 0 && guardFit < 100000) {
+    guardFit += 1;
+    let [a, b] = rowRanges[lastIdx];
+    if (diff > 0) {
+      if (a > 0) { a -= 1; diff -= 1; }
+      else if (b < width - 1) { b += 1; diff -= 1; }
+      else { lastIdx -= 1; continue; }
+    } else {
+      if (b > a) { b -= 1; diff += 1; }
+      else { lastIdx -= 1; continue; }
+    }
+    rowRanges[lastIdx] = [a, b];
+  }
+  return { width, height, rowRanges };
+}
+
 function buildScannerCellOwners(players, totalCells, versionSeed) {
   const rnd = mulberry32(hashString(versionSeed));
   const owners = new Array(totalCells).fill(-1);
@@ -6704,51 +6781,19 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
   const COLS = SCANNER_GRID_COLS;
   const ROWS = SCANNER_GRID_ROWS;
 
-  const styleRoll = rnd();
-  let styleLabel;
-  let backgroundStyle = false;
-  let minChunks = 2;
-  let maxChunks = 4;
-
-  if (styleRoll < 0.25) {
-    styleLabel = "Фон + вставки";
-    backgroundStyle = true;
-    minChunks = 1;
-    maxChunks = 3;
-  } else if (styleRoll < 0.5) {
-    styleLabel = "Острова";
-    minChunks = 1;
-    maxChunks = 2;
-  } else if (styleRoll < 0.75) {
-    styleLabel = "Мозаика";
-    minChunks = 4;
-    maxChunks = 7;
-  } else {
-    styleLabel = "Смешанный";
-    minChunks = 2;
-    maxChunks = 4;
-  }
-
-  let backgroundPlayerIndex = -1;
-  if (backgroundStyle) {
-    let maxCells = -1;
-    players.forEach((p, idx) => { if (p.cellCount > maxCells) { maxCells = p.cellCount; backgroundPlayerIndex = idx; } });
-  }
+  const useGeometric = rnd() < 0.5;
+  const styleLabel = useGeometric ? "Геометрические фигуры" : "Мозаика";
 
   const chunks = [];
   players.forEach((player, playerIndex) => {
     let remaining = player.cellCount;
     if (remaining <= 0) return;
-    if (playerIndex === backgroundPlayerIndex) {
-      chunks.push({ playerIndex, length: remaining, isBackground: true });
-      return;
-    }
     let chunkCount;
     if (remaining <= 5) {
       chunkCount = 1;
     } else {
       const maxReasonable = Math.max(1, Math.floor(remaining / 4));
-      const desired = minChunks + Math.floor(rnd() * (maxChunks - minChunks + 1));
+      const desired = 1 + Math.floor(rnd() * 7);
       chunkCount = Math.max(1, Math.min(desired, maxReasonable, remaining));
     }
     const weights = [];
@@ -6764,98 +6809,102 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
       diff = remaining - lengths.reduce((s, l) => s + l, 0);
       guardI += 1;
     }
-    lengths.forEach((len) => { if (len > 0) chunks.push({ playerIndex, length: len, isBackground: false }); });
+    lengths.forEach((len) => { if (len > 0) chunks.push({ playerIndex, length: len }); });
   });
 
-  console.log("[ScannerGrid] Стиль раскладки клеток:", styleLabel, "| фон:", backgroundStyle, "| seed:", versionSeed);
+  console.log("[ScannerGrid] Стиль раскладки клеток:", styleLabel, "| seed:", versionSeed);
 
-  let backgroundChunk = null;
-  const growChunks = [];
-  chunks.forEach((c) => { if (c.isBackground) backgroundChunk = c; else growChunks.push(c); });
-
-  for (let i = growChunks.length - 1; i > 0; i -= 1) {
+  for (let i = chunks.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rnd() * (i + 1));
-    const tmp = growChunks[i];
-    growChunks[i] = growChunks[j];
-    growChunks[j] = tmp;
+    const tmp = chunks[i];
+    chunks[i] = chunks[j];
+    chunks[j] = tmp;
   }
 
-  function touchesOtherChunkSameOwner(idx, playerIndex, myChunkId) {
-    const row = Math.floor(idx / COLS);
-    const col = idx % COLS;
-    const offs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-    for (const [dr, dc] of offs) {
-      const nr = row + dr, nc = col + dc;
-      if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
-      const nidx = nr * COLS + nc;
-      if (owners[nidx] === playerIndex && chunkId[nidx] !== myChunkId) return true;
-    }
-    return false;
-  }
-
-  let nextChunkId = 0;
-  const frontiersAll = [];
-  growChunks.forEach((chunk) => {
-    const myId = nextChunkId;
-    nextChunkId += 1;
-    let seedIdx = -1;
-    for (let attempt = 0; attempt < 30; attempt += 1) {
-      const cand = Math.floor(rnd() * totalCells);
-      if (owners[cand] !== -1) continue;
-      if (touchesOtherChunkSameOwner(cand, chunk.playerIndex, myId)) continue;
-      seedIdx = cand;
-      break;
-    }
-    if (seedIdx === -1) {
-      for (let idx = 0; idx < totalCells; idx += 1) { if (owners[idx] === -1) { seedIdx = idx; break; } }
-    }
-    if (seedIdx === -1) return;
-    owners[seedIdx] = chunk.playerIndex;
-    chunkId[seedIdx] = myId;
-    frontiersAll.push({ playerIndex: chunk.playerIndex, chunkId: myId, remaining: chunk.length - 1, frontier: [seedIdx] });
-  });
-
-  let active = frontiersAll.filter((f) => f.remaining > 0);
-  let guard = 0;
-  while (active.length > 0 && guard < totalCells * 6) {
-    guard += 1;
-    for (const f of active) {
-      if (f.remaining <= 0) continue;
-      let placed = false;
-      const tries = Math.min(f.frontier.length, 8);
-      for (let t = 0; t < tries && !placed; t += 1) {
-        const pick = f.frontier[Math.floor(rnd() * f.frontier.length)];
-        const row = Math.floor(pick / COLS), col = pick % COLS;
-        const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-        for (let k = dirs.length - 1; k > 0; k -= 1) {
-          const j = Math.floor(rnd() * (k + 1));
-          const tmp = dirs[k]; dirs[k] = dirs[j]; dirs[j] = tmp;
-        }
-        for (const [dr, dc] of dirs) {
-          const nr = row + dr, nc = col + dc;
-          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
-          const nidx = nr * COLS + nc;
-          if (owners[nidx] !== -1) continue;
-          if (touchesOtherChunkSameOwner(nidx, f.playerIndex, f.chunkId)) continue;
-          owners[nidx] = f.playerIndex;
-          chunkId[nidx] = f.chunkId;
-          f.frontier.push(nidx);
-          f.remaining -= 1;
-          placed = true;
-          break;
-        }
-        if (placed) break;
+  if (useGeometric) {
+    const SHAPES = ["square", "rectangle", "diamond", "hexagon", "triangle"];
+    chunks.forEach((chunk) => {
+      const shapeType = SHAPES[Math.floor(rnd() * SHAPES.length)];
+      const mask = buildScannerShapeMask(shapeType, chunk.length, rnd);
+      let bestRow = 0, bestCol = 0, bestFree = -1;
+      const maxRow = Math.max(0, ROWS - mask.height);
+      const maxCol = Math.max(0, COLS - mask.width);
+      for (let attempt = 0; attempt < 25; attempt += 1) {
+        const row = Math.floor(rnd() * (maxRow + 1));
+        const col = Math.floor(rnd() * (maxCol + 1));
+        let free = 0;
+        mask.rowRanges.forEach(([a, b], r) => {
+          for (let c = a; c <= b; c += 1) {
+            const idx = (row + r) * COLS + (col + c);
+            if (owners[idx] === -1) free += 1;
+          }
+        });
+        if (free > bestFree) { bestFree = free; bestRow = row; bestCol = col; }
+        if (free >= chunk.length) break;
       }
-      if (!placed) {
-        for (let t = 0; t < tries; t += 1) {
+      mask.rowRanges.forEach(([a, b], r) => {
+        for (let c = a; c <= b; c += 1) {
+          const idx = (bestRow + r) * COLS + (bestCol + c);
+          if (owners[idx] === -1) owners[idx] = chunk.playerIndex;
+        }
+      });
+    });
+  } else {
+    function touchesOtherChunkSameOwner(idx, playerIndex, myChunkId) {
+      const row = Math.floor(idx / COLS);
+      const col = idx % COLS;
+      const offs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      for (const [dr, dc] of offs) {
+        const nr = row + dr, nc = col + dc;
+        if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+        const nidx = nr * COLS + nc;
+        if (owners[nidx] === playerIndex && chunkId[nidx] !== myChunkId) return true;
+      }
+      return false;
+    }
+    let nextChunkId = 0;
+    const frontiersAll = [];
+    chunks.forEach((chunk) => {
+      const myId = nextChunkId;
+      nextChunkId += 1;
+      let seedIdx = -1;
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const cand = Math.floor(rnd() * totalCells);
+        if (owners[cand] !== -1) continue;
+        if (touchesOtherChunkSameOwner(cand, chunk.playerIndex, myId)) continue;
+        seedIdx = cand;
+        break;
+      }
+      if (seedIdx === -1) {
+        for (let idx = 0; idx < totalCells; idx += 1) { if (owners[idx] === -1) { seedIdx = idx; break; } }
+      }
+      if (seedIdx === -1) return;
+      owners[seedIdx] = chunk.playerIndex;
+      chunkId[seedIdx] = myId;
+      frontiersAll.push({ playerIndex: chunk.playerIndex, chunkId: myId, remaining: chunk.length - 1, frontier: [seedIdx] });
+    });
+    let active = frontiersAll.filter((f) => f.remaining > 0);
+    let guard = 0;
+    while (active.length > 0 && guard < totalCells * 6) {
+      guard += 1;
+      for (const f of active) {
+        if (f.remaining <= 0) continue;
+        let placed = false;
+        const tries = Math.min(f.frontier.length, 8);
+        for (let t = 0; t < tries && !placed; t += 1) {
           const pick = f.frontier[Math.floor(rnd() * f.frontier.length)];
           const row = Math.floor(pick / COLS), col = pick % COLS;
           const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          for (let k = dirs.length - 1; k > 0; k -= 1) {
+            const j = Math.floor(rnd() * (k + 1));
+            const tmp = dirs[k]; dirs[k] = dirs[j]; dirs[j] = tmp;
+          }
           for (const [dr, dc] of dirs) {
             const nr = row + dr, nc = col + dc;
             if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
             const nidx = nr * COLS + nc;
             if (owners[nidx] !== -1) continue;
+            if (touchesOtherChunkSameOwner(nidx, f.playerIndex, f.chunkId)) continue;
             owners[nidx] = f.playerIndex;
             chunkId[nidx] = f.chunkId;
             f.frontier.push(nidx);
@@ -6865,23 +6914,114 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
           }
           if (placed) break;
         }
+        if (!placed) {
+          for (let t = 0; t < tries; t += 1) {
+            const pick = f.frontier[Math.floor(rnd() * f.frontier.length)];
+            const row = Math.floor(pick / COLS), col = pick % COLS;
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            for (const [dr, dc] of dirs) {
+              const nr = row + dr, nc = col + dc;
+              if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+              const nidx = nr * COLS + nc;
+              if (owners[nidx] !== -1) continue;
+              owners[nidx] = f.playerIndex;
+              chunkId[nidx] = f.chunkId;
+              f.frontier.push(nidx);
+              f.remaining -= 1;
+              placed = true;
+              break;
+            }
+            if (placed) break;
+          }
+        }
       }
+      active = active.filter((f) => f.remaining > 0);
     }
-    active = active.filter((f) => f.remaining > 0);
   }
 
-  if (backgroundChunk) {
-    for (let idx = 0; idx < totalCells; idx += 1) {
-      if (owners[idx] === -1) owners[idx] = backgroundChunk.playerIndex;
-    }
-  } else {
-    const need = players.map((p) => p.cellCount);
-    owners.forEach((o) => { if (o !== -1) need[o] -= 1; });
+  const need = players.map((p) => p.cellCount);
+  owners.forEach((o) => { if (o !== -1) need[o] -= 1; });
+  for (let pass = 0; pass < 3; pass += 1) {
+    let changedAny = false;
     for (let idx = 0; idx < totalCells; idx += 1) {
       if (owners[idx] !== -1) continue;
-      for (let p = 0; p < need.length; p += 1) {
-        if (need[p] > 0) { owners[idx] = p; need[p] -= 1; break; }
+      const row = Math.floor(idx / COLS);
+      const col = idx % COLS;
+      const offs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      let bestOwner = -1;
+      for (const [dr, dc] of offs) {
+        const nr = row + dr, nc = col + dc;
+        if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+        const nOwner = owners[nr * COLS + nc];
+        if (nOwner !== -1 && need[nOwner] > 0) { bestOwner = nOwner; break; }
       }
+      if (bestOwner !== -1) { owners[idx] = bestOwner; need[bestOwner] -= 1; changedAny = true; }
+    }
+    if (!changedAny) break;
+  }
+  for (let idx = 0; idx < totalCells; idx += 1) {
+    if (owners[idx] !== -1) continue;
+    for (let p = 0; p < need.length; p += 1) {
+      if (need[p] > 0) { owners[idx] = p; need[p] -= 1; break; }
+    }
+  }
+
+  if (!useGeometric) {
+    for (let despeckle = 0; despeckle < 2; despeckle += 1) {
+      const next = owners.slice();
+      for (let idx = 0; idx < totalCells; idx += 1) {
+        const row = Math.floor(idx / COLS);
+        const col = idx % COLS;
+        const counts = new Map();
+        const offs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        let sameAsOwn = 0;
+        for (const [dr, dc] of offs) {
+          const nr = row + dr, nc = col + dc;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+          const nOwner = owners[nr * COLS + nc];
+          counts.set(nOwner, (counts.get(nOwner) || 0) + 1);
+          if (nOwner === owners[idx]) sameAsOwn += 1;
+        }
+        if (sameAsOwn <= 1) {
+          let bestOwner = owners[idx];
+          let bestCount = -1;
+          counts.forEach((cnt, ownerId) => { if (cnt > bestCount) { bestCount = cnt; bestOwner = ownerId; } });
+          if (bestCount >= 2) next[idx] = bestOwner;
+        }
+      }
+      owners.length = 0;
+      next.forEach((v) => owners.push(v));
+    }
+
+    // Точная балансировка после сглаживания — гарантируем, что каждый игрок получил
+    // РОВНО cellCount клеток (despeckle может слегка сместить баланс на ±десяток клеток)
+    const finalCounts = players.map(() => 0);
+    owners.forEach((o) => { if (o >= 0) finalCounts[o] += 1; });
+    const rebalanceDelta = players.map((p, i) => p.cellCount - finalCounts[i]);
+    let rebalanceGuard = 0;
+    while (rebalanceDelta.some((d) => d !== 0) && rebalanceGuard < 50000) {
+      rebalanceGuard += 1;
+      let moved = false;
+      for (let idx = 0; idx < totalCells && !moved; idx += 1) {
+        const owner = owners[idx];
+        if (rebalanceDelta[owner] >= 0) continue;
+        const row = Math.floor(idx / COLS);
+        const col = idx % COLS;
+        const offs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        for (const [dr, dc] of offs) {
+          const nr = row + dr, nc = col + dc;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+          const nOwner = owners[nr * COLS + nc];
+          if (nOwner !== owner && rebalanceDelta[nOwner] > 0) {
+            owners[idx] = nOwner;
+            rebalanceDelta[owner] += 1;
+            rebalanceDelta[nOwner] -= 1;
+            moved = true;
+            break;
+          }
+        }
+      }
+      if (!moved) break;
     }
   }
 
