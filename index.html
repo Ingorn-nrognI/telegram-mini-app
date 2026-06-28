@@ -7215,18 +7215,31 @@ function buildScannerPlayersFromFirestore(round, participants) {
   // и менял расположение клеток и цвет игрока при каждом обновлении
   const lobbyStatuses = ["waiting", "countdown"];
   if (lobbyStatuses.includes(String(round?.status || ""))) {
-    // Во время ожидания/обратного отсчёта считаем cellCount/sharePercent (дёшево, нужно
-    // для "Мои шансы" и превью-сетки), но НЕ строим дорогую органическую раскладку клеток
-    // cellOwners — она не используется превью-системой и просчитывается заново при каждом
-    // изменении ставки, что и вызывало лаги на телефоне.
     const allocated = allocateCells(normalized, SCANNER_GRID_TOTAL_CELLS);
     const totalPot = allocated.reduce((sum, p) => sum + Number(p.stake || 0), 0);
+    const versionKey = `${round?.id || "round"}_${allocated.length}_${totalPot.toFixed(2)}`;
+    const now = Date.now();
+    const throttleMs = 700;
+
+    if (
+      !scannerLobbyGridThrottleState.lastVersionKey ||
+      scannerLobbyGridThrottleState.lastVersionKey !== versionKey
+    ) {
+      if (now - (scannerLobbyGridThrottleState.lastComputeAt || 0) >= throttleMs || !scannerLobbyGridThrottleState.cellOwners) {
+        scannerLobbyGridThrottleState.cellOwners = buildScannerCellOwners(
+          allocated, SCANNER_GRID_TOTAL_CELLS, `${round?.id || "round"}_${round?.entropySeed || "seed"}_grid`
+        );
+        scannerLobbyGridThrottleState.lastComputeAt = now;
+        scannerLobbyGridThrottleState.lastVersionKey = versionKey;
+      }
+    }
+
     return {
       players: allocated,
       totalPot,
-      cellOwners: [],
+      cellOwners: scannerLobbyGridThrottleState.cellOwners || [],
       totalPlayers: allocated.length,
-      gridVersion: `${round?.id || "round"}_${round?.status || "idle"}_${allocated.length}_${totalPot.toFixed(2)}_pending`
+      gridVersion: `${round?.id || "round"}_pending_${scannerLobbyGridThrottleState.lastVersionKey || versionKey}`
     };
   }
   return finalizeScannerPlayers(normalized, `${round?.id || "round"}_${round?.entropySeed || "seed"}_grid`);
@@ -8647,9 +8660,17 @@ function getScannerPreparingProgress(round) {
 }
 
 function getScannerPreparingBeamSample(round, players) {
-  const activeCache = getScannerActiveBeamCache(round, players || []);
-  if (activeCache?.finalSample) {
-    return activeCache.finalSample;
+  if (_serverBeamPos &&
+      Number.isFinite(_serverBeamPos.x) &&
+      Number.isFinite(_serverBeamPos.y) &&
+      (!_serverBeamPos.roundId || !round?.id || String(_serverBeamPos.roundId) === String(round.id))) {
+    return {
+      x: _serverBeamPos.x,
+      y: _serverBeamPos.y,
+      angle: _serverBeamPos.angle || 0,
+      vx: 0,
+      vy: 0
+    };
   }
 
   if (Number.isInteger(round?.winningCellIndex)) {
@@ -8661,6 +8682,11 @@ function getScannerPreparingBeamSample(round, players) {
       vx: 0,
       vy: 0
     };
+  }
+
+  const activeCache = getScannerActiveBeamCache(round, players || []);
+  if (activeCache?.finalSample) {
+    return activeCache.finalSample;
   }
 
   return getScannerSharedLobbyBeamSample();
@@ -8838,6 +8864,7 @@ function stopScannerVisualAnimation() {
 
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
+let scannerLobbyGridThrottleState = { lastComputeAt: 0, lastVersionKey: null, cellOwners: null };
 let _lobbyJumpPrevSample = null;
 let _lobbyJumpPrevTime = null;
 let _scannerRoundFinishedAtMs = null;
