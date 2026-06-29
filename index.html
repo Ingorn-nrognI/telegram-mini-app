@@ -12067,7 +12067,13 @@ function subscribeScannerRound(roundId) {
       firestoreData.activeEndsAt = preserveTimingField(tsToMs(rd?.activeEndsAt), firestoreData.activeEndsAt);
       firestoreData.preparingStartedAt = preserveTimingField(tsToMs(rd?.preparingStartedAt), firestoreData.preparingStartedAt);
       firestoreData.preparingEndsAt = preserveTimingField(tsToMs(rd?.preparingEndsAt), firestoreData.preparingEndsAt);
-      scannerRealtime.roundData = firestoreData;
+      const existingVersion = Number(scannerRealtime.roundData?.version || 0);
+      const incomingVersion = Number(firestoreData.version || 0);
+      if (incomingVersion < existingVersion) {
+        console.warn("[ScannerRound] Игнорирую устаревший снэпшот Firestore (версия " + incomingVersion + " < текущей " + existingVersion + ")");
+      } else {
+        scannerRealtime.roundData = firestoreData;
+      }
     } else {
       scannerRealtime.roundData = null;
     }
