@@ -7488,14 +7488,18 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     ? Math.max(0, safeFrameTime - scannerBeamRenderState.lastFrameAt)
     : 0;
   const deltaMs = Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, rawDeltaMs);
-  if (rawDeltaMs > 60 && (scannerGridState.status === "idle" || scannerGridState.status === "waiting")) {
-    console.warn("[ЛАЗЕР-ДИАГ] Долгий кадр (rawDeltaMs > 60мс)", {
-      rawDeltaMs,
-      time: new Date().toISOString()
-    });
-  }
 
   if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
+    return resetScannerBeamRenderState(target, safeKey);
+  }
+
+  // Долгое подвисание кадра (фоновая вкладка, GC-пауза) — само подвисание незаметно
+  // глазу (кадры не рисовались), а вот попытка плавно "догнать" реальную позицию после
+  // него выглядит как рывок/ускорение лазера вперёд по треку. Поэтому при заметном
+  // разрыве просто мгновенно переставляем позицию на цель без анимации — это
+  // незаметно, в отличие от ускоренного догона.
+  const SCANNER_BEAM_STALL_SNAP_MS = 100;
+  if (rawDeltaMs >= SCANNER_BEAM_STALL_SNAP_MS) {
     return resetScannerBeamRenderState(target, safeKey);
   }
   const positionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
