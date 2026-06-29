@@ -10714,11 +10714,14 @@ function getScannerCanvasMetrics() {
   let size = scannerCanvasMetricsState.size;
   if (scannerCanvasMetricsState.dirty || !size) {
     const measuredWidth = canvas.clientWidth || canvas.getBoundingClientRect().width || 320;
-    const viewportCap = Math.max(320, Math.min(window.innerWidth || 800, window.innerHeight || 800));
-    if (measuredWidth > viewportCap * 1.5) {
-      console.warn("[ScannerCanvas] Аномально большая измеренная ширина канваса, ограничиваю:", measuredWidth, "→", viewportCap);
+    // Абсолютный потолок — ловит только катастрофические измерения (как баг на Telegram
+    // Desktop), не трогает обычные широкие/узкие окна браузера с любым разумным соотношением
+    // сторон.
+    const absoluteSanityCap = 2200;
+    if (measuredWidth > absoluteSanityCap) {
+      console.warn("[ScannerCanvas] Аномально большая измеренная ширина канваса, ограничиваю:", measuredWidth, "→", absoluteSanityCap);
     }
-    size = Math.max(240, Math.min(Math.floor(measuredWidth), Math.floor(viewportCap * 1.5)));
+    size = Math.max(240, Math.min(Math.floor(measuredWidth), absoluteSanityCap));
   }
 
   if (
