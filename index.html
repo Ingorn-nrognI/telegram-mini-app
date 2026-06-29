@@ -8744,16 +8744,7 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
     return getScannerActiveBeamSampleAtTime(roundData, safePlayers, safeTimestamp);
   }
 
-  if (safeStatus === "finished") {
-    return getScannerActiveBeamSampleAtTime(
-      roundData,
-      safePlayers,
-      tsToMs(roundData?.activeEndsAt) || safeTimestamp,
-      1
-    );
-  }
-
-  if (safeStatus === "preparing_next_round") {
+  if (safeStatus === "finished" || safeStatus === "preparing_next_round") {
     return getScannerPreparingBeamSample(roundData, safePlayers);
   }
 
