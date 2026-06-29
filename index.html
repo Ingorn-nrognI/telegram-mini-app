@@ -11734,21 +11734,16 @@ function renderScannerCanvas() {
         nowMs: now
       });
     } else {
-      const _idleTarget = getScannerBeamTargetSample(
-        _frameLobbyBeamSample,
-        roundStatus,
+      const idleVisualBeamSample = getSmoothedScannerBeamSample(
+        getScannerBeamTargetSample(
+          _frameLobbyBeamSample,
+          roundStatus,
+          beamRenderKey,
+          nowMs
+        ),
         beamRenderKey,
-        nowMs
+        now
       );
-      const idleVisualBeamSample = {
-        x: _frameLobbyBeamSample.x,
-        y: _frameLobbyBeamSample.y,
-        angle: _idleTarget.angle,
-        renderAngle: _idleTarget.renderAngle,
-        travelAngle: _idleTarget.travelAngle,
-        vx: _frameLobbyBeamSample.vx,
-        vy: _frameLobbyBeamSample.vy,
-      };
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
