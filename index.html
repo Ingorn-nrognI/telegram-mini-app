@@ -9145,8 +9145,34 @@ function applySocketRoundResult(data) {
 
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
+  if (!window._fpsDiag) {
+    window._fpsDiag = { count: 0, longFrames: 0, maxGap: 0, lastRafAt: 0, lastLogAt: performance.now() };
+  }
   const tick = (now) => {
     if (!scannerGridVisualFrame) return;
+    {
+      const diag = window._fpsDiag;
+      const gap = diag.lastRafAt > 0 ? now - diag.lastRafAt : 0;
+      diag.lastRafAt = now;
+      diag.count += 1;
+      if (gap > 50) diag.longFrames += 1;
+      if (gap > diag.maxGap) diag.maxGap = gap;
+      const elapsed = now - diag.lastLogAt;
+      if (elapsed >= 2000) {
+        const fps = (diag.count / (elapsed / 1000)).toFixed(1);
+        console.log("[ЛАЗЕР-FPS]", {
+          fps,
+          rafCallsIn2s: diag.count,
+          longFramesOver50ms: diag.longFrames,
+          maxGapMs: Math.round(diag.maxGap),
+          time: new Date().toISOString()
+        });
+        diag.count = 0;
+        diag.longFrames = 0;
+        diag.maxGap = 0;
+        diag.lastLogAt = now;
+      }
+    }
     if (!shouldRenderScannerCanvasLive()) {
       scannerGridVisualFrame = null;
       return;
