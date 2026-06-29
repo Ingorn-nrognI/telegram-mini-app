@@ -7480,11 +7480,29 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     : 0;
   const deltaMs = Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, rawDeltaMs);
 
-  if (
-    rawDeltaMs >= SCANNER_BEAM_SNAP_DELTA_MS ||
-    hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE
-  ) {
+  if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
     return resetScannerBeamRenderState(target, safeKey);
+  }
+  if (rawDeltaMs >= SCANNER_BEAM_SNAP_DELTA_MS) {
+    // Большой разрыв по времени, но дистанция не критичная — досчитываем плавно за
+    // укороченное время вместо мгновенного скачка
+    const catchUpTauMs = Math.max(40, SCANNER_BEAM_SMOOTH_TAU_MS * 0.3);
+    const catchUpBlend = 1 - Math.exp(-Math.min(rawDeltaMs, SCANNER_BEAM_MAX_FRAME_DELTA_MS) / catchUpTauMs);
+    const catchUpX = previous.x + (target.x - previous.x) * catchUpBlend;
+    const catchUpY = previous.y + (target.y - previous.y) * catchUpBlend;
+    const nextSample = {
+      x: catchUpX,
+      y: catchUpY,
+      angle: target.angle,
+      renderAngle: target.angle,
+      travelAngle: target.angle,
+      vx: Number(target.vx) || 0,
+      vy: Number(target.vy) || 0
+    };
+    scannerBeamRenderState.sample = nextSample;
+    scannerBeamRenderState.lastFrameAt = safeFrameTime;
+    scannerBeamRenderState.key = safeKey;
+    return nextSample;
   }
 
   const positionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
