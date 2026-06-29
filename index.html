@@ -4182,6 +4182,15 @@ const SCANNER_QUICK_STAKES_STORAGE_KEY = "bobr_world_scanner_quick_stakes_v1";
   let serverTimestampOffset = 0;
 
 function getNetworkTime() {
+  if (_serverTimeOffsetTarget !== _serverTimeOffset) {
+    const nowPerf = performance.now();
+    const lastAt = _serverTimeOffsetLastEaseAt || nowPerf;
+    const dt = Math.max(0, Math.min(2000, nowPerf - lastAt));
+    const easeTauMs = 4000;
+    const blend = dt <= 0 ? 0 : 1 - Math.exp(-dt / easeTauMs);
+    _serverTimeOffset += (_serverTimeOffsetTarget - _serverTimeOffset) * blend;
+    _serverTimeOffsetLastEaseAt = nowPerf;
+  }
   const socketOffset = (typeof _serverTimeOffset === 'number' && _serverTimeOffset !== 0)
     ? _serverTimeOffset
     : serverTimestampOffset;
@@ -8883,6 +8892,8 @@ let _serverBeamPosSmoothed = null;
 let _serverBeamPosLastUpdate = 0;
 let _serverTimeOffset = 0;
 let _serverTimeOffsetSmoothed = 0;
+let _serverTimeOffsetTarget = 0;
+let _serverTimeOffsetLastEaseAt = 0;
 let _socket = null;
 
 function initSocketConnection() {
@@ -8899,9 +8910,13 @@ function initSocketConnection() {
       if (_serverTimeOffset === 0) {
         _serverTimeOffset = newOffset;
         _serverTimeOffsetSmoothed = newOffset;
+        _serverTimeOffsetTarget = newOffset;
       } else {
         _serverTimeOffsetSmoothed += (newOffset - _serverTimeOffsetSmoothed) * 0.1;
-        _serverTimeOffset = Math.round(_serverTimeOffsetSmoothed);
+        _serverTimeOffsetTarget = _serverTimeOffsetSmoothed;
+        // _serverTimeOffset больше НЕ обновляем здесь мгновенно —
+        // он плавно "доезжает" до _serverTimeOffsetTarget внутри getNetworkTime(),
+        // чтобы коррекция времени не дёргала позицию лазера скачком
       }
     }
   });
