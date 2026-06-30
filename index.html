@@ -9284,6 +9284,11 @@ function stopScannerHeartbeat() {
 function startScannerLifecycleTimer() {
   if (scannerRealtime.lifecycleTimer) return;
   scannerRealtime.lifecycleTimer = setInterval(() => {
+    // В idle-режиме (нет активного раунда) lifecycle-таймер — лишний:
+    // все обновления UI (банк, игроки, таймер) приходят через socket-события напрямую.
+    // Пропускаем тяжёлую работу DOM чтобы избежать принудительного layout каждые 800мс,
+    // который создаёт видимый микро-рывок лазера с частотой ровно 2 раза за traversal.
+    if (!scannerRealtime.activeRoundId) return;
     syncScannerDerivedState();
     renderScannerRound();
   }, 800);
