@@ -9137,34 +9137,8 @@ function applySocketRoundResult(data) {
 
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
-  if (!window._fpsDiag) {
-    window._fpsDiag = { count: 0, longFrames: 0, maxGap: 0, lastRafAt: 0, lastLogAt: performance.now() };
-  }
   const tick = (now) => {
     if (!scannerGridVisualFrame) return;
-    {
-      const diag = window._fpsDiag;
-      const gap = diag.lastRafAt > 0 ? now - diag.lastRafAt : 0;
-      diag.lastRafAt = now;
-      diag.count += 1;
-      if (gap > 50) diag.longFrames += 1;
-      if (gap > diag.maxGap) diag.maxGap = gap;
-      const elapsed = now - diag.lastLogAt;
-      if (elapsed >= 2000) {
-        const fps = (diag.count / (elapsed / 1000)).toFixed(1);
-        console.log("[ЛАЗЕР-FPS]", {
-          fps,
-          rafCallsIn2s: diag.count,
-          longFramesOver50ms: diag.longFrames,
-          maxGapMs: Math.round(diag.maxGap),
-          time: new Date().toISOString()
-        });
-        diag.count = 0;
-        diag.longFrames = 0;
-        diag.maxGap = 0;
-        diag.lastLogAt = now;
-      }
-    }
     if (!shouldRenderScannerCanvasLive()) {
       scannerGridVisualFrame = null;
       return;
@@ -11650,36 +11624,7 @@ function renderScannerCanvas() {
   scannerLobbyLaserVisual.lastAt = now;
   const _frameLobbyBeamSample = getScannerSharedLobbyBeamSample(nowMs);
 
-  if ((roundStatus === "idle" || roundStatus === "waiting") &&
-      _lobbyJumpPrevSample &&
-      _lobbyJumpPrevTime !== null) {
-    const dtSec = (nowMs - _lobbyJumpPrevTime) / 1000;
-    if (dtSec > 0 && dtSec < 5) {
-      const dx = _frameLobbyBeamSample.x - _lobbyJumpPrevSample.x;
-      const dy = _frameLobbyBeamSample.y - _lobbyJumpPrevSample.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const maxExpected = SCANNER_LOBBY_BEAM_BASE_SPEED * dtSec * 3;
-      if (dist > maxExpected && dist > 0.004) {
-        console.warn("[ЛАЗЕР-СКАЧОК] Обнаружен скачок позиции в режиме ожидания!", {
-          time: new Date().toISOString(),
-          prevPos: { x: _lobbyJumpPrevSample.x, y: _lobbyJumpPrevSample.y },
-          newPos: { x: _frameLobbyBeamSample.x, y: _frameLobbyBeamSample.y },
-          distance: dist,
-          dtSeconds: dtSec,
-          idleBeamMotion: scannerRealtime.runtimeData?.idleBeamMotion,
-          serverBeamPos: _serverBeamPos ? { ..._serverBeamPos } : null,
-          roundStatus
-        });
-      }
-    }
-  }
-  if (roundStatus === "idle" || roundStatus === "waiting") {
-    _lobbyJumpPrevSample = { x: _frameLobbyBeamSample.x, y: _frameLobbyBeamSample.y };
-    _lobbyJumpPrevTime = nowMs;
-  } else {
-    _lobbyJumpPrevSample = null;
-    _lobbyJumpPrevTime = null;
-  }
+  // Диагностика скачков убрана — баг устранён, лишняя нагрузка на рендер-цикл не нужна
 
   // Border glow — удалить отсюда, перенесём после рисования луча где есть реальная позиция
 
