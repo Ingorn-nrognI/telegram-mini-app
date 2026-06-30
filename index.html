@@ -7059,25 +7059,87 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed, roundId
   }
 
   const COLS = SCANNER_GRID_COLS;
+  const ROWS = SCANNER_GRID_ROWS;
   const rnd = mulberry32(hashString(`guillotine_${roundId || versionSeed}`));
 
   const shares = players.map((p) => Math.max(0.0001, Number(p.cellCount || 0)));
   let remainingIdx = [];
   for (let i = 0; i < totalCells; i += 1) remainingIdx.push(i);
 
+  const MIN_STRIP_THICKNESS = 12;
+
   for (let p = 0; p < players.length - 1; p += 1) {
     const remainingShareSum = shares.slice(p).reduce((s, v) => s + v, 0) || 1;
     const fraction = shares[p] / remainingShareSum;
+    const targetCount = Math.max(0, Math.round(remainingIdx.length * fraction));
+
+    if (targetCount <= 0) {
+      continue;
+    }
+
+    let minCol = COLS, maxCol = -1, minRow = ROWS, maxRow = -1;
+    for (let i = 0; i < remainingIdx.length; i += 1) {
+      const idx = remainingIdx[i];
+      const c = idx % COLS;
+      const r = Math.floor(idx / COLS);
+      if (c < minCol) minCol = c;
+      if (c > maxCol) maxCol = c;
+      if (r < minRow) minRow = r;
+      if (r > maxRow) maxRow = r;
+    }
+    const boxWidth = Math.max(1, maxCol - minCol + 1);
+    const boxHeight = Math.max(1, maxRow - minRow + 1);
 
     const dirRoll = Math.floor(rnd() * 4);
+    const flip = rnd() < 0.5;
+
+    let perpDim;
+    if (dirRoll === 0) perpDim = boxHeight;
+    else if (dirRoll === 1) perpDim = boxWidth;
+    else perpDim = Math.min(boxWidth, boxHeight);
+    const wouldBeTooThin = targetCount < perpDim && perpDim >= MIN_STRIP_THICKNESS;
+
+    if (wouldBeTooThin) {
+      const aspect = boxWidth / boxHeight;
+      const patchW = Math.max(1, Math.min(boxWidth, Math.round(Math.sqrt(targetCount * aspect))));
+      const patchH = Math.max(1, Math.min(boxHeight, Math.ceil(targetCount / patchW)));
+      const cornerRoll = Math.floor(rnd() * 4);
+      const fromLeft = cornerRoll === 0 || cornerRoll === 2;
+      const fromTop = cornerRoll === 0 || cornerRoll === 1;
+      const patchMinCol = fromLeft ? minCol : Math.max(minCol, maxCol - patchW + 1);
+      const patchMinRow = fromTop ? minRow : Math.max(minRow, maxRow - patchH + 1);
+
+      const patchSet = new Set();
+      let collected = 0;
+      for (let r = patchMinRow; r <= maxRow && collected < targetCount; r += 1) {
+        if (r - patchMinRow >= patchH) break;
+        for (let c = patchMinCol; c <= maxCol && collected < targetCount; c += 1) {
+          if (c - patchMinCol >= patchW) break;
+          patchSet.add(r * COLS + c);
+          collected += 1;
+        }
+      }
+      if (collected < targetCount) {
+        for (let i = 0; i < remainingIdx.length && collected < targetCount; i += 1) {
+          const idx = remainingIdx[i];
+          if (!patchSet.has(idx)) { patchSet.add(idx); collected += 1; }
+        }
+      }
+      const nextRemaining = [];
+      for (let i = 0; i < remainingIdx.length; i += 1) {
+        const idx = remainingIdx[i];
+        if (patchSet.has(idx)) owners[idx] = p;
+        else nextRemaining.push(idx);
+      }
+      remainingIdx = nextRemaining;
+      continue;
+    }
+
     let metricFn;
     if (dirRoll === 0) metricFn = (idx) => idx % COLS;
     else if (dirRoll === 1) metricFn = (idx) => Math.floor(idx / COLS);
     else if (dirRoll === 2) metricFn = (idx) => (idx % COLS) + Math.floor(idx / COLS);
     else metricFn = (idx) => (idx % COLS) - Math.floor(idx / COLS);
-    const flip = rnd() < 0.5;
-
-    const targetCount = Math.round(remainingIdx.length * fraction);
 
     const sorted = remainingIdx.slice().sort((a, b) => {
       const ma = flip ? -metricFn(a) : metricFn(a);
