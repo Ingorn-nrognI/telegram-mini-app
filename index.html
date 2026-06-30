@@ -8851,13 +8851,10 @@ function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestam
 }
 
 function stopScannerVisualAnimation() {
-  if (scannerGridVisualFrame) {
-    cancelAnimationFrame(scannerGridVisualFrame);
-    scannerGridVisualFrame = null;
-  }
-  // НЕ сбрасываем scannerBeamRenderState здесь — он должен жить
-  // непрерывно через все lifecycle-сбросы (вызовы каждые 500мс),
-  // иначе каждый сброс создаёт мгновенный снап позиции лазера на ~50px
+  // Намеренно не отменяем requestAnimationFrame и не сбрасываем scannerBeamRenderState.
+  // Функция вызывается из resetScannerRoundVisualState каждые 500мс (lifecycleTimer),
+  // cancelAnimationFrame здесь создавал пропуск 1 кадра каждые 500мс — видимое микро-подёргивание.
+  // Рендер-цикл должен работать непрерывно пока shouldRenderScannerCanvasLive() = true.
 }
 
 const SOCKET_SERVER = 'https://bobrworld.com';
