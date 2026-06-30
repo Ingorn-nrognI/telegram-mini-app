@@ -9149,18 +9149,26 @@ function ensureScannerVisualLoop() {
       renderScannerCanvas();
       const _status = scannerGridState.status;
       {
-        const _cd = document.getElementById("scannerCountdownChip");
-        const _cdScreen = document.getElementById("scannerScreenCountdownChip");
+        // Обновляем таймер только раз в секунду — текст меняется не чаще
+        if (!ensureScannerVisualLoop._cdEl) {
+          ensureScannerVisualLoop._cdEl = document.getElementById("scannerCountdownChip");
+          ensureScannerVisualLoop._cdScreenEl = document.getElementById("scannerScreenCountdownChip");
+          ensureScannerVisualLoop._lastChipText = "";
+          ensureScannerVisualLoop._lastChipStatus = "";
+        }
+        const _cd = ensureScannerVisualLoop._cdEl;
+        const _cdScreen = ensureScannerVisualLoop._cdScreenEl;
         const _text = getScannerCountdownChipText();
-        if (_cd) setTextContentIfChanged(_cd, _text);
-        if (_cdScreen) setTextContentIfChanged(_cdScreen, _text);
-        // Всегда обновляем классы — в том числе при idle чтобы сбросить зелёный цвет
-        if (_cd) _cd.classList.toggle("is-round-active", _status === "active");
-        if (_cdScreen) _cdScreen.classList.toggle("is-round-active", _status === "active");
-        // is-round-phase только для shuffling — finished и preparing не должны быть зелёными
-        const _isRoundPhase = _status === "shuffling";
-        if (_cd) _cd.classList.toggle("is-round-phase", _isRoundPhase);
-        if (_cdScreen) _cdScreen.classList.toggle("is-round-phase", _isRoundPhase);
+        const _isActive = _status === "active";
+        const _isPhase = _status === "shuffling";
+        const _chipSig = _text + _status;
+        if (_chipSig !== ensureScannerVisualLoop._lastChipSig) {
+          ensureScannerVisualLoop._lastChipSig = _chipSig;
+          if (_cd) setTextContentIfChanged(_cd, _text);
+          if (_cdScreen) setTextContentIfChanged(_cdScreen, _text);
+          if (_cd) { _cd.classList.toggle("is-round-active", _isActive); _cd.classList.toggle("is-round-phase", _isPhase); }
+          if (_cdScreen) { _cdScreen.classList.toggle("is-round-active", _isActive); _cdScreen.classList.toggle("is-round-phase", _isPhase); }
+        }
       }
     } catch (err) {
       console.warn("Scanner canvas render error:", err);
@@ -9188,7 +9196,7 @@ function startScannerLifecycleTimer() {
   scannerRealtime.lifecycleTimer = setInterval(() => {
     syncScannerDerivedState();
     renderScannerRound();
-  }, 500);
+  }, 800);
 }
 
 function stopScannerLifecycleTimer() {
@@ -11232,7 +11240,7 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   const spanAlt = span > 0 ? span - Math.PI : span + Math.PI;
   if (Math.abs(spanAlt) < Math.abs(span)) span = spanAlt;
 
-  const steps = Math.max(2, Math.min(8, Math.ceil(Math.abs(span) / 0.003)));
+  const steps = Math.max(1, Math.min(3, Math.ceil(Math.abs(span) / 0.008)));
   const frameScale = Math.max(1, Math.min(3, (cache.lastElapsed || 16) / 16.67));
   const alphaPerStep = (0.72 / steps) * frameScale;
 
