@@ -4197,6 +4197,27 @@ function getNetworkTime() {
   return Date.now() + socketOffset;
 }
 
+const _perfTimeEpochMs = Date.now() - performance.now();
+function getNetworkTimeHighRes() {
+  if (_serverTimeOffsetTarget !== _serverTimeOffset) {
+    const nowPerf = performance.now();
+    const lastAt = _serverTimeOffsetLastEaseAt || nowPerf;
+    const dt = Math.max(0, Math.min(2000, nowPerf - lastAt));
+    const easeTauMs = 4000;
+    const blend = dt <= 0 ? 0 : 1 - Math.exp(-dt / easeTauMs);
+    _serverTimeOffset += (_serverTimeOffsetTarget - _serverTimeOffset) * blend;
+    _serverTimeOffsetLastEaseAt = nowPerf;
+  }
+  const socketOffset = (typeof _serverTimeOffset === 'number' && _serverTimeOffset !== 0)
+    ? _serverTimeOffset
+    : serverTimestampOffset;
+  // performance.now() — высокоточный монотонный таймер без "ступенек" системных часов
+  // (на некоторых Windows-системах Date.now() обновляется скачками по ~15.6мс,
+  // что даёт видимые микро-рывки в позиции лазера). Используем его для анимации,
+  // сохраняя ту же серверную синхронизацию через socketOffset.
+  return performance.now() + _perfTimeEpochMs + socketOffset;
+}
+
 function syncServerTime() {
   if (typeof firebase !== 'undefined' && firebase.database) {
     const offsetRef = firebase.database().ref(".info/serverTimeOffset");
@@ -11686,7 +11707,7 @@ function renderScannerCanvas() {
   const roundStatus = scannerGridState.status;
   const hasGrid = scannerGridState.players.length > 0;
   const now = performance.now(); // Это оставляем для плавности (fps)
-  const nowMs = getNetworkTime();
+  const nowMs = getNetworkTimeHighRes();
   scannerLobbyLaserVisual.angle = (((nowMs - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
   scannerLobbyLaserVisual.lastAt = now;
   const _frameLobbyBeamSample = getScannerSharedLobbyBeamSample(nowMs);
