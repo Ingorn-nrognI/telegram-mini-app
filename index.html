@@ -7576,6 +7576,15 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     return resetScannerBeamRenderState(target, safeKey);
   }
 
+  if (scannerGridState.status === "idle" || scannerGridState.status === "waiting") {
+    if (rawDeltaMs > 25) {
+      console.warn("[ЛАЗЕР-ДИАГ2] Кадр длиннее 25мс", { rawDeltaMs: rawDeltaMs.toFixed(1) });
+    }
+    if (hardDistance > 0.012) {
+      console.warn("[ЛАЗЕР-ДИАГ2] Большая дистанция до цели", { hardDistance: hardDistance.toFixed(4), rawDeltaMs: rawDeltaMs.toFixed(1) });
+    }
+  }
+
   const positionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
   const baseAngleTauMs = Math.max(
     1,
