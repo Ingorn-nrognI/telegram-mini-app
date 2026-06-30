@@ -7493,15 +7493,6 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     return resetScannerBeamRenderState(target, safeKey);
   }
 
-  // Долгое подвисание кадра (фоновая вкладка, GC-пауза) — само подвисание незаметно
-  // глазу (кадры не рисовались), а вот попытка плавно "догнать" реальную позицию после
-  // него выглядит как рывок/ускорение лазера вперёд по треку. Поэтому при заметном
-  // разрыве просто мгновенно переставляем позицию на цель без анимации — это
-  // незаметно, в отличие от ускоренного догона.
-  const SCANNER_BEAM_STALL_SNAP_MS = 100;
-  if (rawDeltaMs >= SCANNER_BEAM_STALL_SNAP_MS) {
-    return resetScannerBeamRenderState(target, safeKey);
-  }
   const positionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
   const baseAngleTauMs = Math.max(
     1,
@@ -8864,8 +8855,9 @@ function stopScannerVisualAnimation() {
     cancelAnimationFrame(scannerGridVisualFrame);
     scannerGridVisualFrame = null;
   }
-  scannerBeamRenderState.initialized = false;
-  scannerBeamRenderState.key = "";
+  // НЕ сбрасываем scannerBeamRenderState здесь — он должен жить
+  // непрерывно через все lifecycle-сбросы (вызовы каждые 500мс),
+  // иначе каждый сброс создаёт мгновенный снап позиции лазера на ~50px
 }
 
 const SOCKET_SERVER = 'https://bobrworld.com';
