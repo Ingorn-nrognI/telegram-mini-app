@@ -7575,15 +7575,9 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
     return resetScannerBeamRenderState(target, safeKey);
   }
-
-  if (scannerGridState.status === "idle" || scannerGridState.status === "waiting") {
-    if (rawDeltaMs > 25) {
-      console.warn("[ЛАЗЕР-ДИАГ2] Кадр длиннее 25мс", { rawDeltaMs: rawDeltaMs.toFixed(1) });
-    }
-    if (hardDistance > 0.012) {
-      console.warn("[ЛАЗЕР-ДИАГ2] Большая дистанция до цели", { hardDistance: hardDistance.toFixed(4), rawDeltaMs: rawDeltaMs.toFixed(1) });
-    }
-  }
+  // Диагностика подтвердила: редкие микро-рывки — это единичные пропуски кадра на
+  // уровне видеодрайвера/композитора ОС (один длинный кадр + один короткий сразу же
+  // компенсирующий его), не баг в этой математике. Убрана как избыточная и шумная.
 
   const positionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
   const baseAngleTauMs = Math.max(
@@ -7625,20 +7619,24 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const desiredRenderAngle = smoothedTravelAngle + renderAngleOffset;
   const smoothedRenderAngle = lerpScannerAngle(previousRenderAngle, desiredRenderAngle, renderAngleBlend);
 
-  const nextSample = {
-    x: nextX,
-    y: nextY,
-    angle: smoothedRenderAngle,
-    renderAngle: smoothedRenderAngle,
-    travelAngle: smoothedTravelAngle,
-    vx: Number(target.vx) || 0,
-    vy: Number(target.vy) || 0
-  };
+  // Переиспользуем один и тот же объект каждый кадр вместо создания нового —
+  // снижает частоту мелких сборок мусора V8, которые могут быть одной из причин
+  // редких микро-пауз рендера.
+  const reuseSample = scannerBeamRenderState.sample && typeof scannerBeamRenderState.sample === "object"
+    ? scannerBeamRenderState.sample
+    : {};
+  reuseSample.x = nextX;
+  reuseSample.y = nextY;
+  reuseSample.angle = smoothedRenderAngle;
+  reuseSample.renderAngle = smoothedRenderAngle;
+  reuseSample.travelAngle = smoothedTravelAngle;
+  reuseSample.vx = Number(target.vx) || 0;
+  reuseSample.vy = Number(target.vy) || 0;
 
-  scannerBeamRenderState.sample = nextSample;
+  scannerBeamRenderState.sample = reuseSample;
   scannerBeamRenderState.lastFrameAt = safeFrameTime;
   scannerBeamRenderState.key = safeKey;
-  return nextSample;
+  return reuseSample;
 }
 
 function interpolateScannerSampleSequence(samples, progress) {
