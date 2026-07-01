@@ -2277,6 +2277,11 @@ button {
   color: #06101f;
   box-shadow: 0 10px 22px rgba(45, 225, 255, 0.18);
 }
+.scanner-bet-edit-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
 
 .scanner-bet-main {
   padding: 0 12px;
@@ -2475,6 +2480,11 @@ button {
   color: #ffffff;
   font-size: 18px;
   font-weight: 900;
+}
+.scanner-stake-settings-clear svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .scanner-stake-settings-error {
@@ -2892,6 +2902,13 @@ button {
 
 .profile-settings-btn:not(:last-child) {
   margin-bottom: 10px;
+}
+.btn-inline-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: -3px;
+  margin-right: 6px;
 }
 
 .bottom-bar {
@@ -3832,13 +3849,18 @@ button {
 
       <section class="profile-settings-card">
         <button type="button" class="profile-settings-btn" onclick="openReferrals()">🤝 Рефералы</button>
-        <button type="button" id="profileSettingsBtn" class="profile-settings-btn" onclick="openSettings()">⚙️ Настройки</button>
+        <button type="button" id="profileSettingsBtn" class="profile-settings-btn" onclick="openSettings()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="btn-inline-icon" aria-hidden="true"><path fill="currentColor" d="M259.1 73.5C262.1 58.7 275.2 48 290.4 48L350.2 48C365.4 48 378.5 58.7 381.5 73.5L396 143.5C410.1 149.5 423.3 157.2 435.3 166.3L503.1 143.8C517.5 139 533.3 145 540.9 158.2L570.8 210C578.4 223.2 575.7 239.8 564.3 249.9L511 297.3C511.9 304.7 512.3 312.3 512.3 320C512.3 327.7 511.8 335.3 511 342.7L564.4 390.2C575.8 400.3 578.4 417 570.9 430.1L541 481.9C533.4 495 517.6 501.1 503.2 496.3L435.4 473.8C423.3 482.9 410.1 490.5 396.1 496.6L381.7 566.5C378.6 581.4 365.5 592 350.4 592L290.6 592C275.4 592 262.3 581.3 259.3 566.5L244.9 496.6C230.8 490.6 217.7 482.9 205.6 473.8L137.5 496.3C123.1 501.1 107.3 495.1 99.7 481.9L69.8 430.1C62.2 416.9 64.9 400.3 76.3 390.2L129.7 342.7C128.8 335.3 128.4 327.7 128.4 320C128.4 312.3 128.9 304.7 129.7 297.3L76.3 249.8C64.9 239.7 62.3 223 69.8 209.9L99.7 158.1C107.3 144.9 123.1 138.9 137.5 143.7L205.3 166.2C217.4 157.1 230.6 149.5 244.6 143.4L259.1 73.5zM320.3 400C364.5 399.8 400.2 363.9 400 319.7C399.8 275.5 363.9 239.8 319.7 240C275.5 240.2 239.8 276.1 240 320.3C240.2 364.5 276.1 400.2 320.3 400z"/></svg>
+          Настройки
+        </button>
       </section>
     </div>
   </div>
 
   <div id="scannerBetBar" class="scanner-bet-bar" onclick="event.stopPropagation()" aria-label="Бар ставок Сканера">
-    <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="Настроить быстрые ставки">✏️</button>
+    <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="Настроить быстрые ставки">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="scanner-bet-edit-icon" aria-hidden="true"><path fill="currentColor" d="M100.4 417.2C104.5 402.6 112.2 389.3 123 378.5L304.2 197.3L338.1 163.4C354.7 180 389.4 214.7 442.1 267.4L476 301.3L442.1 335.2L260.9 516.4C250.2 527.1 236.8 534.9 222.2 539L94.4 574.6C86.1 576.9 77.1 574.6 71 568.4C64.9 562.2 62.6 553.3 64.9 545L100.4 417.2zM156 413.5C151.6 418.2 148.4 423.9 146.7 430.1L122.6 517L209.5 492.9C215.9 491.1 221.7 487.8 226.5 483.2L155.9 413.5zM510 267.4C493.4 250.8 458.7 216.1 406 163.4L372 129.5C398.5 103 413.4 88.1 416.9 84.6C430.4 71 448.8 63.4 468 63.4C487.2 63.4 505.6 71 519.1 84.6L554.8 120.3C568.4 133.9 576 152.3 576 171.4C576 190.5 568.4 209 554.8 222.5C551.3 226 536.4 240.9 509.9 267.4z"/></svg>
+    </button>
     <button type="button" id="scannerBetBarQuick0" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(0, event)">1</button>
     <button type="button" id="scannerBetBarQuick1" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(1, event)">10</button>
     <button type="button" id="scannerBetBarQuick2" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(2, event)">25</button>
@@ -3883,7 +3905,9 @@ button {
           oninput="handleScannerStakeSettingsInput(event)"
         >
         <span class="scanner-stake-settings-ton">TON</span>
-        <button type="button" class="scanner-stake-settings-clear" onclick="clearScannerStakeSettingsValue(event)" aria-label="Стереть ставку">×</button>
+        <button type="button" class="scanner-stake-settings-clear" onclick="clearScannerStakeSettingsValue(event)" aria-label="Стереть ставку">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true"><path fill="currentColor" d="M576 192C576 156.7 547.3 128 512 128L205.3 128C188.3 128 172 134.7 160 146.7L9.4 297.4C3.4 303.4 0 311.5 0 320C0 328.5 3.4 336.6 9.4 342.6L160 493.3C172 505.3 188.3 512 205.3 512L512 512C547.3 512 576 483.3 576 448L576 192zM284.1 252.1C293.5 242.7 308.7 242.7 318 252.1L351.9 286L385.8 252.1C395.2 242.7 410.4 242.7 419.7 252.1C429 261.5 429.1 276.7 419.7 286L385.8 319.9L419.7 353.8C429.1 363.2 429.1 378.4 419.7 387.7C410.3 397 395.1 397.1 385.8 387.7L351.9 353.8L318 387.7C308.6 397.1 293.4 397.1 284.1 387.7C274.8 378.3 274.7 363.1 284.1 353.8L318 319.9L284.1 286C274.7 276.6 274.7 261.4 284.1 252.1z"/></svg>
+        </button>
       </div>
 
       <div id="scannerStakeSettingsError" class="scanner-stake-settings-error"></div>
@@ -3920,7 +3944,11 @@ button {
       data-nav="leaderboard"
       onclick="handleBottomNav('leaderboard', event)"
     >
-      <span class="nav-icon">🏆</span>
+      <span class="nav-icon nav-icon-svg">
+        <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2.5.5A.5.5 0 0 1 3 0h10a.5.5 0 0 1 .5.5c0 .538-.012 1.05-.034 1.536a3 3 0 1 1-1.133 5.89c-.79 1.865-1.878 2.777-2.833 3.011v2.173l1.425.356c.194.048.377.135.537.255L13.3 15.1a.5.5 0 0 1-.3.9H3a.5.5 0 0 1-.3-.9l1.838-1.379c.16-.12.343-.207.537-.255L6.5 13.11v-2.173c-.955-.234-2.043-1.146-2.833-3.012a3 3 0 1 1-1.133-5.89A33.076 33.076 0 0 1 2.5.5zm.099 2.54a2 2 0 0 0 .72 3.935c-.333-1.05-.588-2.346-.72-3.935zm10.702 0c-.133 1.59-.388 2.885-.72 3.935a2 2 0 0 0 .72-3.935z"/>
+        </svg>
+      </span>
       <span class="nav-label">Таблица</span>
     </button>
 
@@ -3932,7 +3960,13 @@ button {
       data-games-trigger="true"
       onclick="handleBottomNav('games', event)"
     >
-      <span class="nav-icon">🎮</span>
+      <span class="nav-icon nav-icon-svg">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="4" r="3"/>
+          <rect x="11" y="6" width="2" height="9" rx="1"/>
+          <rect x="4" y="16" width="16" height="6" rx="3"/>
+        </svg>
+      </span>
       <span class="nav-label">Игры</span>
     </button>
 
@@ -3970,7 +4004,13 @@ button {
       data-history-trigger="true"
       onclick="handleBottomNav('history', event)"
     >
-      <span class="nav-icon">🕘</span>
+      <span class="nav-icon nav-icon-svg nav-icon-stroke">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3.5 9a9 9 0 1 1-1 5"/>
+          <path d="M1.5 5v4h4"/>
+          <path d="M12 7v5l3.5 2"/>
+        </svg>
+      </span>
       <span class="nav-label">История</span>
     </button>
 
@@ -6000,7 +6040,11 @@ function applyAppLanguage(lang) {
 
   // Settings button in profile
   const profileSettingsBtn = document.getElementById("profileSettingsBtn");
-  if (profileSettingsBtn) profileSettingsBtn.innerHTML = "⚙️ " + t.settings;
+  if (profileSettingsBtn) {
+    const iconEl = profileSettingsBtn.querySelector(".btn-inline-icon");
+    profileSettingsBtn.textContent = t.settings;
+    if (iconEl) profileSettingsBtn.prepend(iconEl);
+  }
 
   // Stake settings sheet
   set(".scanner-stake-settings-title", t.stakeSettings);
