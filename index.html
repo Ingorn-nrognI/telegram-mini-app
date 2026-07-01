@@ -9284,11 +9284,6 @@ function stopScannerHeartbeat() {
 function startScannerLifecycleTimer() {
   if (scannerRealtime.lifecycleTimer) return;
   scannerRealtime.lifecycleTimer = setInterval(() => {
-    // В idle-режиме (нет активного раунда) lifecycle-таймер — лишний:
-    // все обновления UI (банк, игроки, таймер) приходят через socket-события напрямую.
-    // Пропускаем тяжёлую работу DOM чтобы избежать принудительного layout каждые 800мс,
-    // который создаёт видимый микро-рывок лазера с частотой ровно 2 раза за traversal.
-    if (!scannerRealtime.activeRoundId) return;
     syncScannerDerivedState();
     renderScannerRound();
   }, 800);
@@ -10990,13 +10985,16 @@ function drawScannerBeam(ctx, length, options = {}) {
 
   if (qualityTier !== "low") {
     ctx.save();
-    const halo = ctx.createLinearGradient(-halfLength, 0, halfLength, 0);
-    halo.addColorStop(0, "rgba(45, 225, 255, 0)");
-    halo.addColorStop(0.18, "rgba(45, 225, 255, 0.12)");
-    halo.addColorStop(0.5, "rgba(45, 225, 255, 0.22)");
-    halo.addColorStop(0.82, "rgba(45, 225, 255, 0.12)");
-    halo.addColorStop(1, "rgba(45, 225, 255, 0)");
-    ctx.fillStyle = halo;
+    if (_cachedBeamHaloLength !== halfLength || !_cachedBeamHaloGradient) {
+      _cachedBeamHaloGradient = ctx.createLinearGradient(-halfLength, 0, halfLength, 0);
+      _cachedBeamHaloGradient.addColorStop(0, "rgba(45, 225, 255, 0)");
+      _cachedBeamHaloGradient.addColorStop(0.18, "rgba(45, 225, 255, 0.12)");
+      _cachedBeamHaloGradient.addColorStop(0.5, "rgba(45, 225, 255, 0.22)");
+      _cachedBeamHaloGradient.addColorStop(0.82, "rgba(45, 225, 255, 0.12)");
+      _cachedBeamHaloGradient.addColorStop(1, "rgba(45, 225, 255, 0)");
+      _cachedBeamHaloLength = halfLength;
+    }
+    ctx.fillStyle = _cachedBeamHaloGradient;
 
     if (gapHalf > 0) {
       ctx.fillRect(-halfLength, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
@@ -11335,7 +11333,7 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
   const spanAlt = span > 0 ? span - Math.PI : span + Math.PI;
   if (Math.abs(spanAlt) < Math.abs(span)) span = spanAlt;
 
-  const steps = Math.max(1, Math.min(3, Math.ceil(Math.abs(span) / 0.008)));
+  const steps = 1;
   const frameScale = Math.max(1, Math.min(3, (cache.lastElapsed || 16) / 16.67));
   const alphaPerStep = (0.72 / steps) * frameScale;
 
@@ -11449,10 +11447,19 @@ function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   ctx.restore();
 }
 
+let _cachedArenaBaseGradient = null;
+let _cachedArenaBaseGradientSize = -1;
+let _cachedBeamHaloGradient = null;
+let _cachedBeamHaloLength = -1;
+
 function drawScannerArenaBase(ctx, size) {
-  const gradient = ctx.createLinearGradient(0, 0, 0, size);
-  gradient.addColorStop(0, "#040a1a");
-  gradient.addColorStop(1, "#060d20");
+  if (_cachedArenaBaseGradientSize !== size || !_cachedArenaBaseGradient) {
+    _cachedArenaBaseGradient = ctx.createLinearGradient(0, 0, 0, size);
+    _cachedArenaBaseGradient.addColorStop(0, "#040a1a");
+    _cachedArenaBaseGradient.addColorStop(1, "#060d20");
+    _cachedArenaBaseGradientSize = size;
+  }
+  const gradient = _cachedArenaBaseGradient;
   const rb = Math.max(16, size * 0.055);
   ctx.save();
   ctx.beginPath();
