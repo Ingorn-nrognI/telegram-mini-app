@@ -11506,7 +11506,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     const _bx = size * safeSample.x;
     const _by = size * safeSample.y;
     const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
-    const _zone = size * 0.012;
+    const _zone = size * 0.055;
     const _bw = Math.max(11, size * 0.031) + 1;
     const _walls = {
       L: _bx - _pad < _zone,
@@ -11979,7 +11979,7 @@ function renderScannerCanvas() {
       const _by = _gs.y * size;
       const _bw = Math.max(11, size * 0.031) + 1;
       const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
-      const _zone = size * 0.012;
+      const _zone = size * 0.055;
       const _walls = {
         L: _bx - _pad < _zone,
         R: (size - _pad) - _bx < _zone,
