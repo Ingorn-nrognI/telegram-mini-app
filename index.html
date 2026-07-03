@@ -4408,7 +4408,9 @@ const scannerBeamRenderState = {
   initialized: false,
   key: "",
   sample: { x: 0.5, y: 0.5, angle: 0, renderAngle: 0, travelAngle: 0 },
-  lastFrameAt: 0
+  lastFrameAt: 0,
+  lastTargetVx: 0,
+  lastTargetVy: 0
 };
 
 // Independent visual angle for the lobby laser — updated at a fixed angular
@@ -7597,6 +7599,8 @@ function resetScannerBeamRenderState(sample = null, key = "") {
     vy: Number(nextSample.vy) || 0
   };
   scannerBeamRenderState.lastFrameAt = 0;
+  scannerBeamRenderState.lastTargetVx = Number(nextSample.vx) || 0;
+  scannerBeamRenderState.lastTargetVy = Number(nextSample.vy) || 0;
   return scannerBeamRenderState.sample;
 }
 
@@ -7638,7 +7642,16 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   // уровне видеодрайвера/композитора ОС (один длинный кадр + один короткий сразу же
   // компенсирующий его), не баг в этой математике. Убрана как избыточная и шумная.
 
-  const positionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
+  const _targetVx = Number(target.vx) || 0;
+  const _targetVy = Number(target.vy) || 0;
+  const _prevTargetVx = Number(scannerBeamRenderState.lastTargetVx) || 0;
+  const _prevTargetVy = Number(scannerBeamRenderState.lastTargetVy) || 0;
+  const _justBouncedX = _prevTargetVx !== 0 && _targetVx !== 0 && Math.sign(_targetVx) !== Math.sign(_prevTargetVx);
+  const _justBouncedY = _prevTargetVy !== 0 && _targetVy !== 0 && Math.sign(_targetVy) !== Math.sign(_prevTargetVy);
+  const basePositionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
+  // В момент реального отскока (смена знака скорости) снимаем инерцию позиции,
+  // чтобы визуальная точка не "доезжала" вдоль бортика по старой траектории
+  const positionTauMs = (_justBouncedX || _justBouncedY) ? Math.min(6, basePositionTauMs) : basePositionTauMs;
   const baseAngleTauMs = Math.max(
     1,
     Number(options.angleTauMs) || Number(target.turnTauMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS
@@ -7695,6 +7708,8 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   scannerBeamRenderState.sample = reuseSample;
   scannerBeamRenderState.lastFrameAt = safeFrameTime;
   scannerBeamRenderState.key = safeKey;
+  if (_targetVx !== 0) scannerBeamRenderState.lastTargetVx = _targetVx;
+  if (_targetVy !== 0) scannerBeamRenderState.lastTargetVy = _targetVy;
   return reuseSample;
 }
 
@@ -10925,6 +10940,10 @@ function buildScannerCanvasCache(size, owners, players) {
 }
 
 const _borderGlowPoints = [];
+let _borderGlowLobbyLastVx = 0;
+let _borderGlowLobbyLastVy = 0;
+let _borderGlowActiveLastVx = 0;
+let _borderGlowActiveLastVy = 0;
 
 function drawScannerGridLines(ctx, size, cellSize) {
   return;
@@ -11560,31 +11579,22 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   });
   ctx.restore();
   drawScannerArenaBorderBackground(ctx, size);
-  // Детекция свечения бортика в lobby режиме
+  // Детекция свечения бортика — срабатывает точно в момент реального отскока
+  // (смена знака скорости по оси), а не по приближению к стенке
   {
-    const _bx = size * safeSample.x;
-    const _by = size * safeSample.y;
-    const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
-    const _zone = size * 0.055;
     const _bw = Math.max(11, size * 0.031) + 1;
-    const _walls = {
-      L: _bx - _pad < _zone,
-      R: (size - _pad) - _bx < _zone,
-      T: _by - _pad < _zone,
-      B: (size - _pad) - _by < _zone,
-    };
-    for (const [wall, hit] of Object.entries(_walls)) {
-      const key = '_lastWall_' + wall;
-      if (hit && !drawScannerEmptyArenaState[key]) {
-        let _gwx, _gwy;
-        if (wall === 'L')      { _gwx = _bw * 0.5;        _gwy = _by; }
-        else if (wall === 'R') { _gwx = size - _bw * 0.5; _gwy = _by; }
-        else if (wall === 'T') { _gwx = _bx;              _gwy = _bw * 0.5; }
-        else                   { _gwx = _bx;              _gwy = size - _bw * 0.5; }
-        addBorderGlowPoint(size, _gwx, _gwy);
-      }
-      drawScannerEmptyArenaState[key] = hit;
+    const _vx = Number(safeSample.vx) || 0;
+    const _vy = Number(safeSample.vy) || 0;
+    if (_borderGlowLobbyLastVx !== 0 && _vx !== 0 && Math.sign(_vx) !== Math.sign(_borderGlowLobbyLastVx)) {
+      const _gwx = _borderGlowLobbyLastVx > 0 ? size - _bw * 0.5 : _bw * 0.5;
+      addBorderGlowPoint(size, _gwx, size * safeSample.y);
     }
+    if (_borderGlowLobbyLastVy !== 0 && _vy !== 0 && Math.sign(_vy) !== Math.sign(_borderGlowLobbyLastVy)) {
+      const _gwy = _borderGlowLobbyLastVy > 0 ? size - _bw * 0.5 : _bw * 0.5;
+      addBorderGlowPoint(size, size * safeSample.x, _gwy);
+    }
+    if (_vx !== 0) _borderGlowLobbyLastVx = _vx;
+    if (_vy !== 0) _borderGlowLobbyLastVy = _vy;
   }
   drawScannerArenaBorder(ctx, size);
   ctx.save();
@@ -12030,33 +12040,23 @@ function renderScannerCanvas() {
     }
   }
 
-  // Border glow — используем реальную позицию луча
+  // Border glow — срабатывает точно в момент реального отскока луча
   {
     const _gs = visualBeamSample || scannerLastBeamSample || _frameLobbyBeamSample;
     if (_gs) {
-      const _bx = _gs.x * size;
-      const _by = _gs.y * size;
       const _bw = Math.max(11, size * 0.031) + 1;
-      const _pad = size * SCANNER_LOBBY_BEAM_EDGE_PADDING;
-      const _zone = size * 0.055;
-      const _walls = {
-        L: _bx - _pad < _zone,
-        R: (size - _pad) - _bx < _zone,
-        T: _by - _pad < _zone,
-        B: (size - _pad) - _by < _zone,
-      };
-      for (const [wall, hit] of Object.entries(_walls)) {
-        const key = '_lastWall_' + wall;
-        if (hit && !renderScannerCanvas[key]) {
-          let _gwx, _gwy;
-          if (wall === 'L')      { _gwx = _bw * 0.5;        _gwy = _by; }
-          else if (wall === 'R') { _gwx = size - _bw * 0.5; _gwy = _by; }
-          else if (wall === 'T') { _gwx = _bx;              _gwy = _bw * 0.5; }
-          else                   { _gwx = _bx;              _gwy = size - _bw * 0.5; }
-          addBorderGlowPoint(size, _gwx, _gwy);
-        }
-        renderScannerCanvas[key] = hit;
+      const _vx = Number(_gs.vx) || 0;
+      const _vy = Number(_gs.vy) || 0;
+      if (_borderGlowActiveLastVx !== 0 && _vx !== 0 && Math.sign(_vx) !== Math.sign(_borderGlowActiveLastVx)) {
+        const _gwx = _borderGlowActiveLastVx > 0 ? size - _bw * 0.5 : _bw * 0.5;
+        addBorderGlowPoint(size, _gwx, _gs.y * size);
       }
+      if (_borderGlowActiveLastVy !== 0 && _vy !== 0 && Math.sign(_vy) !== Math.sign(_borderGlowActiveLastVy)) {
+        const _gwy = _borderGlowActiveLastVy > 0 ? size - _bw * 0.5 : _bw * 0.5;
+        addBorderGlowPoint(size, _gs.x * size, _gwy);
+      }
+      if (_vx !== 0) _borderGlowActiveLastVx = _vx;
+      if (_vy !== 0) _borderGlowActiveLastVy = _vy;
     }
   }
 
