@@ -2218,15 +2218,15 @@ button {
   grid-template-columns: 46px repeat(3, minmax(54px, 1fr)) 72px;
   gap: 7px;
   align-items: center;
-  border-radius: 26px 26px 14px 14px;
+  border-radius: 26px 26px 0 0;
   background:
     radial-gradient(circle at 50% 0%, rgba(45, 225, 255, 0.16), transparent 56%),
     linear-gradient(180deg, rgba(12, 20, 47, 0.94), rgba(6, 10, 24, 0.97));
   border: 1px solid rgba(255,255,255,0.08);
   border-bottom: none;
   box-shadow:
-    0 20px 38px rgba(0, 0, 0, 0.44),
-    0 0 28px rgba(45, 225, 255, 0.12),
+    0 -10px 24px rgba(0, 0, 0, 0.32),
+    0 0 28px rgba(45, 225, 255, 0.1),
     inset 0 1px 0 rgba(255,255,255,0.1);
   backdrop-filter: blur(18px);
   z-index: 70;
@@ -2239,7 +2239,7 @@ button {
 .scanner-bet-bar.is-visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, calc(-1 * (var(--bottom-nav-height) + var(--bottom-nav-offset) + var(--bottom-stack-gap)))) scale(1);
+  transform: translate(-50%, calc(-1 * (var(--bottom-nav-height) + var(--bottom-nav-offset)))) scale(1);
 }
 
 .scanner-bet-btn {
