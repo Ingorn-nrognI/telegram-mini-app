@@ -237,9 +237,11 @@ button {
   display: inline-flex;
   position: relative;
   overflow: visible;
+  perspective: 120px;
 }
 
 .balance-icon svg {
+  transform-style: preserve-3d;
   animation: balanceIconSpinHop 5s ease-in-out infinite;
 }
 
@@ -256,13 +258,13 @@ button {
 
 @keyframes balanceIconSpinHop {
   0%, 78% {
-    transform: translateY(0) rotate(0deg);
+    transform: translateY(0) rotateY(0deg);
   }
   84% {
-    transform: translateY(-3px) rotate(180deg);
+    transform: translateY(-3px) rotateY(180deg);
   }
   90%, 100% {
-    transform: translateY(0) rotate(360deg);
+    transform: translateY(0) rotateY(360deg);
   }
 }
 
