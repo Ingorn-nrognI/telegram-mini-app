@@ -5945,9 +5945,23 @@ function setAppLiveBg(level) {
   saveAppSettings();
   renderAppSettings();
   applyLiveBgTier();
+  refreshLiveBgTierCache();
 }
 
 applyLiveBgTier();
+
+let _liveBgTierCache = "low";
+function refreshLiveBgTierCache() {
+  _liveBgTierCache = getEffectiveLiveBg();
+}
+refreshLiveBgTierCache();
+
+function isScannerScreenActive() {
+  const el = document.getElementById("scannerScreen");
+  if (el && !el.hidden && el.offsetParent !== null) return true;
+  const canvas = document.getElementById("scannerCanvas");
+  return !!(canvas && canvas.offsetParent !== null);
+}
 
 (function initLiveBackgroundEffects() {
   const appBg = document.querySelector(".app-bg");
@@ -5956,14 +5970,21 @@ applyLiveBgTier();
   let touchStartX = 0;
   let touchStartY = 0;
   let touchActive = false;
+  let pendingShift = null;
+  let rafScheduled = false;
 
   function parallaxEnabled() {
-    const tier = getEffectiveLiveBg();
-    return tier === "mid" || tier === "high";
+    return (_liveBgTierCache === "mid" || _liveBgTierCache === "high") && !isScannerScreenActive();
   }
 
   function rippleEnabled() {
-    return getEffectiveLiveBg() === "high";
+    return _liveBgTierCache === "high" && !isScannerScreenActive();
+  }
+
+  function flushParallax() {
+    rafScheduled = false;
+    if (!pendingShift) return;
+    appBg.style.transform = `translate3d(${pendingShift.x}px, ${pendingShift.y}px, 0)`;
   }
 
   document.addEventListener("touchstart", (e) => {
@@ -5978,14 +5999,23 @@ applyLiveBgTier();
     const dx = e.touches[0].clientX - touchStartX;
     const dy = e.touches[0].clientY - touchStartY;
     const maxShift = 10;
-    const shiftX = Math.max(-maxShift, Math.min(maxShift, dx * 0.08));
-    const shiftY = Math.max(-maxShift, Math.min(maxShift, dy * 0.08));
-    appBg.style.transform = `translate3d(${shiftX}px, ${shiftY}px, 0)`;
+    pendingShift = {
+      x: Math.max(-maxShift, Math.min(maxShift, dx * 0.08)),
+      y: Math.max(-maxShift, Math.min(maxShift, dy * 0.08))
+    };
+    if (!rafScheduled) {
+      rafScheduled = true;
+      requestAnimationFrame(flushParallax);
+    }
   }, { passive: true });
 
   function resetParallax() {
     touchActive = false;
-    appBg.style.transform = "translate3d(0, 0, 0)";
+    pendingShift = { x: 0, y: 0 };
+    if (!rafScheduled) {
+      rafScheduled = true;
+      requestAnimationFrame(flushParallax);
+    }
   }
   document.addEventListener("touchend", resetParallax, { passive: true });
   document.addEventListener("touchcancel", resetParallax, { passive: true });
