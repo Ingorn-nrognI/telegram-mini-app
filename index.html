@@ -7632,12 +7632,10 @@ function buildScannerPlayersFromFirestore(round, participants) {
     !scannerLobbyGridThrottleState.lastVersionKey ||
     scannerLobbyGridThrottleState.lastVersionKey !== versionKey
   ) {
-    if (now - (scannerLobbyGridThrottleState.lastComputeAt || 0) >= throttleMs || !scannerLobbyGridThrottleState.cellOwners) {
-      scannerLobbyGridThrottleState.cellOwners = buildScannerCellOwners(
-        allocated, SCANNER_GRID_TOTAL_CELLS, `${round?.id || "round"}_${round?.entropySeed || "seed"}_grid`
+    if (now - (scannerLobbyGridThrottleState.lastRequestAt || 0) >= throttleMs || !scannerLobbyGridThrottleState.cellOwners) {
+      requestScannerCellOwnersAsync(
+        allocated, SCANNER_GRID_TOTAL_CELLS, `${round?.id || "round"}_${round?.entropySeed || "seed"}_grid`, versionKey
       );
-      scannerLobbyGridThrottleState.lastComputeAt = now;
-      scannerLobbyGridThrottleState.lastVersionKey = versionKey;
     }
   }
 
@@ -9275,7 +9273,64 @@ function stopScannerVisualAnimation() {
 
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
-let scannerLobbyGridThrottleState = { lastComputeAt: 0, lastVersionKey: null, cellOwners: null };
+let scannerLobbyGridThrottleState = { lastComputeAt: 0, lastVersionKey: null, cellOwners: null, lastRequestAt: 0, workerBusy: false, pendingRequest: null, pendingVersionKeyResolved: null };
+
+let _scannerGridWorker = null;
+let _scannerGridWorkerRequestId = 0;
+
+function getScannerGridWorker() {
+  if (_scannerGridWorker) return _scannerGridWorker;
+  const workerSource = `
+    const SCANNER_GRID_COLS = ${SCANNER_GRID_COLS};
+    const SCANNER_GRID_ROWS = ${SCANNER_GRID_ROWS};
+    ${hashString.toString()}
+    ${mulberry32.toString()}
+    ${buildScannerShapeMask.toString()}
+    ${buildScannerCellOwners.toString()}
+    self.onmessage = function(e) {
+      const { requestId, players, totalCells, versionSeed } = e.data;
+      const cellOwners = buildScannerCellOwners(players, totalCells, versionSeed);
+      self.postMessage({ requestId, cellOwners });
+    };
+  `;
+  const blob = new Blob([workerSource], { type: "application/javascript" });
+  _scannerGridWorker = new Worker(URL.createObjectURL(blob));
+  _scannerGridWorker.onmessage = (e) => {
+    const { requestId, cellOwners } = e.data || {};
+    if (requestId !== _scannerGridWorkerRequestId) return;
+    scannerLobbyGridThrottleState.cellOwners = cellOwners;
+    scannerLobbyGridThrottleState.lastComputeAt = Date.now();
+    scannerLobbyGridThrottleState.lastVersionKey = scannerLobbyGridThrottleState.pendingVersionKeyResolved;
+    scannerLobbyGridThrottleState.workerBusy = false;
+    resetScannerDerivedVisualCache();
+    if (scannerLobbyGridThrottleState.pendingRequest) {
+      const next = scannerLobbyGridThrottleState.pendingRequest;
+      scannerLobbyGridThrottleState.pendingRequest = null;
+      requestScannerCellOwnersAsync(next.players, next.totalCells, next.versionSeed, next.versionKey);
+    } else {
+      syncScannerDerivedState();
+    }
+  };
+  return _scannerGridWorker;
+}
+
+function requestScannerCellOwnersAsync(players, totalCells, versionSeed, versionKey) {
+  scannerLobbyGridThrottleState.lastRequestAt = Date.now();
+  if (scannerLobbyGridThrottleState.workerBusy) {
+    scannerLobbyGridThrottleState.pendingRequest = { players, totalCells, versionSeed, versionKey };
+    return;
+  }
+  scannerLobbyGridThrottleState.workerBusy = true;
+  scannerLobbyGridThrottleState.pendingVersionKeyResolved = versionKey;
+  const worker = getScannerGridWorker();
+  _scannerGridWorkerRequestId += 1;
+  worker.postMessage({
+    requestId: _scannerGridWorkerRequestId,
+    players,
+    totalCells,
+    versionSeed
+  });
+}
 let _lobbyJumpPrevSample = null;
 let _lobbyJumpPrevTime = null;
 let _scannerRoundFinishedAtMs = null;
