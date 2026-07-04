@@ -7623,38 +7623,35 @@ function buildScannerPlayersFromFirestore(round, participants) {
     color
   }));
 
-  // version намеренно убран из seed — он увеличивается при каждом обновлении Firestore
-  // и менял расположение клеток и цвет игрока при каждом обновлении
-  const lobbyStatuses = ["waiting", "countdown"];
-  if (lobbyStatuses.includes(String(round?.status || ""))) {
-    const allocated = allocateCells(normalized, SCANNER_GRID_TOTAL_CELLS);
-    const totalPot = allocated.reduce((sum, p) => sum + Number(p.stake || 0), 0);
-    const versionKey = `${round?.id || "round"}_${allocated.length}_${totalPot.toFixed(2)}`;
-    const now = Date.now();
-    const throttleMs = 700;
+  // Throttle применяется всегда, при ЛЮБОМ статусе раунда (waiting/countdown/shuffling/active/finished),
+  // а не только в лобби — раньше тяжёлый пересчёт 10 000 клеток гонялся без throttle
+  // на каждый джойн/ставку/смену статуса, отсюда и жёсткие лаги.
+  const allocated = allocateCells(normalized, SCANNER_GRID_TOTAL_CELLS);
+  const totalPot = allocated.reduce((sum, p) => sum + Number(p.stake || 0), 0);
+  const versionKey = `${round?.id || "round"}_${round?.status || "idle"}_${allocated.length}_${totalPot.toFixed(2)}`;
+  const now = Date.now();
+  const throttleMs = 700;
 
-    if (
-      !scannerLobbyGridThrottleState.lastVersionKey ||
-      scannerLobbyGridThrottleState.lastVersionKey !== versionKey
-    ) {
-      if (now - (scannerLobbyGridThrottleState.lastComputeAt || 0) >= throttleMs || !scannerLobbyGridThrottleState.cellOwners) {
-        scannerLobbyGridThrottleState.cellOwners = buildScannerCellOwners(
-          allocated, SCANNER_GRID_TOTAL_CELLS, `${round?.id || "round"}_${round?.entropySeed || "seed"}_grid`
-        );
-        scannerLobbyGridThrottleState.lastComputeAt = now;
-        scannerLobbyGridThrottleState.lastVersionKey = versionKey;
-      }
+  if (
+    !scannerLobbyGridThrottleState.lastVersionKey ||
+    scannerLobbyGridThrottleState.lastVersionKey !== versionKey
+  ) {
+    if (now - (scannerLobbyGridThrottleState.lastComputeAt || 0) >= throttleMs || !scannerLobbyGridThrottleState.cellOwners) {
+      scannerLobbyGridThrottleState.cellOwners = buildScannerCellOwners(
+        allocated, SCANNER_GRID_TOTAL_CELLS, `${round?.id || "round"}_${round?.entropySeed || "seed"}_grid`
+      );
+      scannerLobbyGridThrottleState.lastComputeAt = now;
+      scannerLobbyGridThrottleState.lastVersionKey = versionKey;
     }
-
-    return {
-      players: allocated,
-      totalPot,
-      cellOwners: scannerLobbyGridThrottleState.cellOwners || [],
-      totalPlayers: allocated.length,
-      gridVersion: `${round?.id || "round"}_pending_${scannerLobbyGridThrottleState.lastVersionKey || versionKey}`
-    };
   }
-  return finalizeScannerPlayers(normalized, `${round?.id || "round"}_${round?.entropySeed || "seed"}_grid`);
+
+  return {
+    players: allocated,
+    totalPot,
+    cellOwners: scannerLobbyGridThrottleState.cellOwners || [],
+    totalPlayers: allocated.length,
+    gridVersion: `${round?.id || "round"}_${scannerLobbyGridThrottleState.lastVersionKey || versionKey}`
+  };
 }
 
 function resetScannerDerivedVisualCache() {
