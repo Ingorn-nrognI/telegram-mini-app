@@ -7818,7 +7818,7 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const basePositionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
   // В момент реального отскока (смена знака скорости) снимаем инерцию позиции,
   // чтобы визуальная точка не "доезжала" вдоль бортика по старой траектории
-  const positionTauMs = (_justBouncedX || _justBouncedY) ? Math.min(6, basePositionTauMs) : basePositionTauMs;
+  const positionTauMs = (_justBouncedX || _justBouncedY) ? Math.min(22, basePositionTauMs) : basePositionTauMs;
   const baseAngleTauMs = Math.max(
     1,
     Number(options.angleTauMs) || Number(target.turnTauMs) || SCANNER_BEAM_ANGLE_SMOOTH_TAU_MS
