@@ -1240,15 +1240,23 @@ button {
 }
 
 .home-promo-dot {
+  -webkit-appearance: none;
+  appearance: none;
   width: 6px;
   height: 6px;
+  min-width: 6px;
+  min-height: 6px;
+  margin: 0;
   border-radius: 50%;
   background: rgba(255,255,255,0.85);
   border: none;
+  outline: none;
+  box-shadow: none;
   padding: 0;
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  flex-shrink: 0;
   transition: width 0.25s ease, border-radius 0.25s ease, background 0.25s ease;
 }
 
