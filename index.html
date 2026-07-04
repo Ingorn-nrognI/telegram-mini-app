@@ -189,6 +189,7 @@ button {
   background:
     radial-gradient(circle at 30% 30%, rgba(255,255,255,0.38), transparent 35%),
     linear-gradient(135deg, #4da0ff, #6e65ff 58%, #40d9ff);
+  border: 2px solid rgba(45, 225, 255, 0.55);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.22),
     0 10px 22px rgba(48, 112, 255, 0.28);
@@ -1183,6 +1184,88 @@ button {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.04),
     0 14px 28px rgba(0, 0, 0, 0.14);
+}
+
+.home-promo-carousel {
+  position: relative;
+  width: 100%;
+  min-height: 143px;
+  border-radius: 26px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(100, 167, 255, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(14, 24, 54, 0.6), rgba(8, 12, 28, 0.5));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 18px 36px rgba(0, 0, 0, 0.16);
+}
+
+.home-promo-track {
+  display: flex;
+  width: 200%;
+  height: calc(100% - 30px);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  touch-action: pan-y;
+}
+
+.home-promo-slide {
+  width: 50%;
+  flex-shrink: 0;
+  padding: 20px 22px 0;
+  box-sizing: border-box;
+}
+
+.home-promo-slide-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #f4f8ff;
+  margin-bottom: 6px;
+}
+
+.home-promo-slide-text {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.home-promo-dots {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 2;
+}
+
+.home-promo-dot {
+  width: 28px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  border: none;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.home-promo-dot-fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: #ffffff;
+  border-radius: 999px;
+}
+
+.home-promo-dot.active .home-promo-dot-fill {
+  animation: homePromoDotFill 5s linear forwards;
+}
+
+@keyframes homePromoDotFill {
+  from { width: 0%; }
+  to { width: 100%; }
 }
 
 .scanner-feature-card {
@@ -3722,9 +3805,24 @@ button {
     <div class="screen-inner">
 
       
-      <div id="bobrMascotBlock" class="home-top-spacer" aria-label="Пустое окно персонажа">
-        <div class="empty-window-shell">
-          <div class="empty-window-box"></div>
+      <div id="homePromoCarousel" class="home-promo-carousel" aria-label="Промо-карусель">
+        <div class="home-promo-track" id="homePromoTrack">
+          <div class="home-promo-slide" data-slide="0">
+            <div class="home-promo-slide-title">Реферальная программа</div>
+            <div class="home-promo-slide-text">Приглашай друзей и получай бонусы за каждого приглашённого игрока.</div>
+          </div>
+          <div class="home-promo-slide" data-slide="1">
+            <div class="home-promo-slide-title">Турнир</div>
+            <div class="home-promo-slide-text">Участвуй в розыгрыше призового банка среди игроков Bobr World.</div>
+          </div>
+        </div>
+        <div class="home-promo-dots">
+          <button type="button" class="home-promo-dot active" data-dot="0" aria-label="Слайд 1">
+            <span class="home-promo-dot-fill"></span>
+          </button>
+          <button type="button" class="home-promo-dot" data-dot="1" aria-label="Слайд 2">
+            <span class="home-promo-dot-fill"></span>
+          </button>
         </div>
       </div>
 
@@ -3739,35 +3837,6 @@ button {
           <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:20</div>
           <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">0.00 TON</div>
           <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">Зайти в Сканер</button>
-        </div>
-      </section>
-
-      <section class="hero-card scanner-home-hub">
-        <div class="hero-topline">🌐 Главный хаб</div>
-        <h1 class="hero-title">Bobr World</h1>
-        <p class="hero-text">
-          Главный экран Bobr World сохранён, а игровой PvP-блок теперь встроен прямо сюда: ставки, плотность, последние раунды, история, таблица лидеров и остальная навигация продолжают работать в общей оболочке.
-        </p>
-
-        <div class="hero-actions">
-          <button
-            type="button"
-            id="mainPlayButton"
-            class="primary-action"
-            data-games-trigger="true"
-            onclick="toggleModePopup(event)"
-          >
-            ▶ Играть
-          </button>
-
-          <button
-            type="button"
-            class="secondary-action"
-            data-history-trigger="true"
-            onclick="toggleHistoryPanel(event)"
-          >
-            🕘 История
-          </button>
         </div>
       </section>
 
@@ -12686,6 +12755,66 @@ window.hideAppNotice = hideAppNotice;
 window.showBobrRunComingSoon = showBobrRunComingSoon;
 window.openSkins = openSkins;
 window.openProfileScreen = openProfileScreen;
+
+(function initHomePromoCarousel() {
+  const track = document.getElementById("homePromoTrack");
+  const dots = Array.from(document.querySelectorAll(".home-promo-dot"));
+  if (!track || !dots.length) return;
+  const slideCount = dots.length;
+  let current = 0;
+  let autoTimer = null;
+
+  function renderDots() {
+    dots.forEach((dot, i) => {
+      dot.classList.toggle("active", i === current);
+      const fill = dot.querySelector(".home-promo-dot-fill");
+      if (!fill) return;
+      fill.style.animation = "none";
+      void fill.offsetWidth;
+      if (i === current) {
+        fill.style.width = "";
+        fill.style.animation = "homePromoDotFill 5s linear forwards";
+      } else if (i < current) {
+        fill.style.width = "100%";
+      } else {
+        fill.style.width = "0%";
+      }
+    });
+  }
+
+  function goToSlide(index) {
+    current = ((index % slideCount) + slideCount) % slideCount;
+    track.style.transform = `translateX(-${current * (100 / slideCount)}%)`;
+    renderDots();
+    restartAutoTimer();
+  }
+
+  function restartAutoTimer() {
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = setTimeout(() => goToSlide(current + 1), 5000);
+  }
+
+  dots.forEach((dot, i) => {
+    dot.addEventListener("click", () => goToSlide(i));
+  });
+
+  let touchStartX = 0;
+  let touchActive = false;
+  track.addEventListener("touchstart", (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchActive = true;
+  }, { passive: true });
+  track.addEventListener("touchend", (e) => {
+    if (!touchActive) return;
+    touchActive = false;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 40) {
+      goToSlide(current + (dx < 0 ? 1 : -1));
+    }
+  }, { passive: true });
+
+  goToSlide(0);
+})();
 window.closeProfileScreen = closeProfileScreen;
 window.renderProfileScreen = renderProfileScreen;
 window.showProfilePlaceholderAction = showProfilePlaceholderAction;
