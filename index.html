@@ -6067,7 +6067,7 @@ const APP_TRANSLATIONS = {
     totalBank: "Общий банк", myResult: "Мой результат",
     playerProfile: "ПРОФИЛЬ ИГРОКА", deposit: "Пополнить", withdraw: "Вывести",
     totalWins: "ВСЕГО ПОБЕД", settings: "Настройки",
-    language: "ЯЗЫК", graphicsQuality: "КАЧЕСТВО ГРАФИКИ",
+    language: "ЯЗЫК", graphicsQuality: "КАЧЕСТВО ГРАФИКИ", liveBg: "ЖИВОЙ ФОН",
     vibration: "ВИБРАЦИЯ", low: "Низкое", medium: "Среднее", high: "Высокое",
     on: "Вкл", off: "Выкл", winner: "Победитель",
     dateTime: "Дата и время", playersCount: "Игроков", stake: "Ставка",
@@ -6092,7 +6092,7 @@ const APP_TRANSLATIONS = {
     totalBank: "Total bank", myResult: "My result",
     playerProfile: "PLAYER PROFILE", deposit: "Deposit", withdraw: "Withdraw",
     totalWins: "TOTAL WINS", settings: "Settings",
-    language: "LANGUAGE", graphicsQuality: "GRAPHICS QUALITY",
+    language: "LANGUAGE", graphicsQuality: "GRAPHICS QUALITY", liveBg: "LIVE BACKGROUND",
     vibration: "VIBRATION", low: "Low", medium: "Medium", high: "High",
     on: "On", off: "Off", winner: "Winner",
     dateTime: "Date & time", playersCount: "Players", stake: "Stake",
@@ -6127,7 +6127,7 @@ function applyAppLanguage(lang) {
   // Settings overlay
   set("#appSettingsTitle", t.settingsTitle);
   const settingsSections = document.querySelectorAll(".app-settings-section-title");
-  const sectionKeys = [t.language, t.graphicsQuality, t.fpsLabel, t.vibration];
+  const sectionKeys = [t.language, t.graphicsQuality, t.liveBg, t.fpsLabel, t.vibration];
   settingsSections.forEach((el, i) => { if (sectionKeys[i]) el.textContent = sectionKeys[i]; });
 
   // Settings chips labels
