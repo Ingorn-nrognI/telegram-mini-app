@@ -78,6 +78,8 @@ button {
   inset: 0;
   pointer-events: none;
   overflow: hidden;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
 
 .bg-orb {
@@ -110,6 +112,104 @@ button {
   left: max(16px, calc((100vw - min(calc(100vw - 32px), 464px)) / 2));
   transform: none;
   background: rgba(116, 73, 255, 0.22);
+}
+
+.orb-4 {
+  width: 140px;
+  height: 140px;
+  top: 40%;
+  right: 8%;
+  opacity: 0.4;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.orb-5 {
+  width: 110px;
+  height: 110px;
+  top: 60%;
+  left: 6%;
+  opacity: 0.4;
+  background: rgba(45, 225, 255, 0.24);
+}
+
+.orb-6 {
+  width: 90px;
+  height: 90px;
+  top: 15%;
+  left: 45%;
+  opacity: 0.4;
+  background: rgba(111, 63, 255, 0.2);
+}
+
+.orb-7 {
+  width: 130px;
+  height: 130px;
+  bottom: 10%;
+  right: 20%;
+  opacity: 0.4;
+  background: rgba(74, 118, 255, 0.18);
+}
+
+@keyframes bgOrbDriftA {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(18px, -14px) scale(1.08); }
+  66%  { transform: translate(-12px, 10px) scale(0.95); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes bgOrbDriftB {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(-20px, 16px) scale(1.1); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes bgOrbFadeCycle {
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  15% { opacity: 1; transform: scale(1); }
+  75% { opacity: 1; transform: scale(1); }
+  90% { opacity: 0; transform: scale(0.7); }
+}
+
+.app-bg.live-bg-mid .orb-1, .app-bg.live-bg-high .orb-1 { animation: bgOrbDriftA 22s ease-in-out infinite; }
+.app-bg.live-bg-mid .orb-2, .app-bg.live-bg-high .orb-2 { animation: bgOrbDriftB 26s ease-in-out infinite; }
+.app-bg.live-bg-mid .orb-3, .app-bg.live-bg-high .orb-3 { animation: bgOrbDriftA 30s ease-in-out infinite reverse; }
+.app-bg.live-bg-mid .orb-4, .app-bg.live-bg-high .orb-4 { animation: bgOrbFadeCycle 14s ease-in-out infinite; animation-delay: 0s; }
+.app-bg.live-bg-mid .orb-5, .app-bg.live-bg-high .orb-5 { animation: bgOrbFadeCycle 17s ease-in-out infinite; animation-delay: 4s; }
+.app-bg.live-bg-mid .orb-6, .app-bg.live-bg-high .orb-6 { animation: bgOrbFadeCycle 20s ease-in-out infinite; animation-delay: 8s; }
+.app-bg.live-bg-mid .orb-7, .app-bg.live-bg-high .orb-7 { animation: bgOrbFadeCycle 16s ease-in-out infinite; animation-delay: 2s; }
+
+.bg-tap-ripple {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.35), rgba(45,225,255,0.12) 55%, transparent 75%);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  animation: bgTapRipple 0.9s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes bgTapRipple {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(14); opacity: 0; }
+}
+
+.bg-idle-ripple {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(120, 170, 255, 0.25);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  animation: bgIdleRipple 4.5s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes bgIdleRipple {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0.5; }
+  100% { transform: translate(-50%, -50%) scale(18); opacity: 0; }
 }
 
 .top-bar {
@@ -1070,9 +1170,7 @@ button {
   min-height: 143px;
   border-radius: 26px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 18%, rgba(100, 167, 255, 0.18), transparent 34%),
-    linear-gradient(180deg, rgba(14, 24, 54, 0.6), rgba(8, 12, 28, 0.5));
+  background: linear-gradient(180deg, rgba(14, 24, 54, 0.6), rgba(8, 12, 28, 0.5));
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.04),
@@ -3563,6 +3661,10 @@ button {
     <div class="bg-orb orb-1"></div>
     <div class="bg-orb orb-2"></div>
     <div class="bg-orb orb-3"></div>
+    <div class="bg-orb orb-4"></div>
+    <div class="bg-orb orb-5"></div>
+    <div class="bg-orb orb-6"></div>
+    <div class="bg-orb orb-7"></div>
   </div>
 
   <div class="top-bar">
@@ -3960,6 +4062,15 @@ button {
           <button id="settingsQualityLow" class="app-settings-chip" onclick="setAppQuality('low')">Низкое</button>
           <button id="settingsQualityMid" class="app-settings-chip" onclick="setAppQuality('mid')">Среднее</button>
           <button id="settingsQualityHigh" class="app-settings-chip" onclick="setAppQuality('high')">Высокое</button>
+        </div>
+      </div>
+      <div class="app-settings-section">
+        <div class="app-settings-section-title">Живой фон</div>
+        <div class="app-settings-chips">
+          <button id="settingsLiveBgAuto" class="app-settings-chip" onclick="setAppLiveBg('auto')">Авто</button>
+          <button id="settingsLiveBgLow" class="app-settings-chip" onclick="setAppLiveBg('low')">Низкое</button>
+          <button id="settingsLiveBgMid" class="app-settings-chip" onclick="setAppLiveBg('mid')">Среднее</button>
+          <button id="settingsLiveBgHigh" class="app-settings-chip" onclick="setAppLiveBg('high')">Высокое</button>
         </div>
       </div>
       <div class="app-settings-section">
@@ -5812,8 +5923,104 @@ const appSettings = {
   quality: window._savedAppSettings?.quality || "auto",
   vibration: window._savedAppSettings?.vibration !== undefined ? window._savedAppSettings.vibration : true,
   fps: window._savedAppSettings?.fps || "auto",
+  liveBg: window._savedAppSettings?.liveBg || "auto",
 };
 delete window._savedAppSettings;
+
+function getEffectiveLiveBg() {
+  if (appSettings.liveBg === "auto") return detectOptimalQuality();
+  return appSettings.liveBg;
+}
+
+function applyLiveBgTier() {
+  const bg = document.querySelector(".app-bg");
+  if (!bg) return;
+  const tier = getEffectiveLiveBg();
+  bg.classList.remove("live-bg-low", "live-bg-mid", "live-bg-high");
+  bg.classList.add("live-bg-" + tier);
+}
+
+function setAppLiveBg(level) {
+  appSettings.liveBg = level;
+  saveAppSettings();
+  renderAppSettings();
+  applyLiveBgTier();
+}
+
+applyLiveBgTier();
+
+(function initLiveBackgroundEffects() {
+  const appBg = document.querySelector(".app-bg");
+  if (!appBg) return;
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchActive = false;
+
+  function parallaxEnabled() {
+    const tier = getEffectiveLiveBg();
+    return tier === "mid" || tier === "high";
+  }
+
+  function rippleEnabled() {
+    return getEffectiveLiveBg() === "high";
+  }
+
+  document.addEventListener("touchstart", (e) => {
+    if (!parallaxEnabled() || !e.touches[0]) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchActive = true;
+  }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    if (!touchActive || !parallaxEnabled() || !e.touches[0]) return;
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+    const maxShift = 10;
+    const shiftX = Math.max(-maxShift, Math.min(maxShift, dx * 0.08));
+    const shiftY = Math.max(-maxShift, Math.min(maxShift, dy * 0.08));
+    appBg.style.transform = `translate3d(${shiftX}px, ${shiftY}px, 0)`;
+  }, { passive: true });
+
+  function resetParallax() {
+    touchActive = false;
+    appBg.style.transform = "translate3d(0, 0, 0)";
+  }
+  document.addEventListener("touchend", resetParallax, { passive: true });
+  document.addEventListener("touchcancel", resetParallax, { passive: true });
+
+  document.addEventListener("click", (e) => {
+    if (!rippleEnabled()) return;
+    const ripple = document.createElement("div");
+    ripple.className = "bg-tap-ripple";
+    ripple.style.left = e.clientX + "px";
+    ripple.style.top = e.clientY + "px";
+    appBg.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 950);
+  }, { passive: true });
+
+  let lastActivityAt = Date.now();
+  ["touchstart", "click", "scroll"].forEach((evt) => {
+    document.addEventListener(evt, () => { lastActivityAt = Date.now(); }, { passive: true });
+  });
+
+  function scheduleIdleRipple() {
+    const delay = 16000 + Math.random() * 9000;
+    setTimeout(() => {
+      if (rippleEnabled() && Date.now() - lastActivityAt > 5000) {
+        const ripple = document.createElement("div");
+        ripple.className = "bg-idle-ripple";
+        ripple.style.left = (10 + Math.random() * 80) + "%";
+        ripple.style.top = (15 + Math.random() * 70) + "%";
+        appBg.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 4600);
+      }
+      scheduleIdleRipple();
+    }, delay);
+  }
+  scheduleIdleRipple();
+})();
 
 const APP_TRANSLATIONS = {
   ru: {
@@ -6010,6 +6217,10 @@ function renderAppSettings() {
     settingsQualityLow: appSettings.quality === "low",
     settingsQualityMid: appSettings.quality === "mid",
     settingsQualityHigh: appSettings.quality === "high",
+    settingsLiveBgAuto: appSettings.liveBg === "auto",
+    settingsLiveBgLow: appSettings.liveBg === "low",
+    settingsLiveBgMid: appSettings.liveBg === "mid",
+    settingsLiveBgHigh: appSettings.liveBg === "high",
     settingsFpsAuto: appSettings.fps === "auto",
     settingsFpsLow: appSettings.fps === "low",
     settingsFpsMid: appSettings.fps === "mid",
@@ -6040,6 +6251,20 @@ function renderAppSettings() {
     const hintId = qualityAutoHintMap[detectedQuality];
     if (hintId) {
       const el = document.getElementById(hintId);
+      if (el) el.classList.add("auto-hint");
+    }
+  }
+
+  const liveBgAutoHintMap = { low: "settingsLiveBgLow", mid: "settingsLiveBgMid", high: "settingsLiveBgHigh" };
+  ["settingsLiveBgLow", "settingsLiveBgMid", "settingsLiveBgHigh"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("auto-hint");
+  });
+  if (appSettings.liveBg === "auto") {
+    const detectedLiveBg = detectOptimalQuality();
+    const liveBgHintId = liveBgAutoHintMap[detectedLiveBg];
+    if (liveBgHintId) {
+      const el = document.getElementById(liveBgHintId);
       if (el) el.classList.add("auto-hint");
     }
   }
