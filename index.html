@@ -9561,13 +9561,18 @@ function applySocketRoundPatch(patch) {
       // Это гарантирует что ВСЕ клиенты получат одну и ту же стартовую позицию лазера
       // Локальный пересчёт удалён — он был причиной рассинхрона между клиентами
       if (patch.idleBeamMotion) {
-        scannerLastBeamSample = {
+        const _idleSample = {
           x: patch.idleBeamMotion.x,
           y: patch.idleBeamMotion.y,
           vx: patch.idleBeamMotion.vx,
           vy: patch.idleBeamMotion.vy,
           angle: Math.atan2(patch.idleBeamMotion.vy || 0, patch.idleBeamMotion.vx || 0)
         };
+        scannerLastBeamSample = _idleSample;
+        // Hard reset сглаживания луча — чтобы он не "телепортировался" из
+        // финальной позиции раунда в новую idle-позицию через плавный easing,
+        // а сразу стоял в правильной точке и оттуда плавно поехал
+        resetScannerBeamRenderState(_idleSample, "idle_reset");
       }
       scannerRealtime.roundData = null;
       scannerRealtime.activeRoundId = null;
