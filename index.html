@@ -7929,10 +7929,12 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const hardAngle = Math.abs(getScannerAngleDelta(previousTravelAngle, targetAngles.travelAngle));
 
   if (scannerBeamRenderState.key !== safeKey) {
-    if (
-      hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE ||
-      hardAngle >= SCANNER_BEAM_HARD_RESET_ANGLE
-    ) {
+    // Сброс позиции — только при реальном скачке РАССТОЯНИЯ. Смена угла сама по себе
+    // не должна дёргать позицию: ключ рендера может смениться несколько раз подряд
+    // при переходе shuffling → active (сокет-патч и Firestore приходят не одновременно),
+    // и раньше каждая такая смена ключа при большой разнице углов сбрасывала позицию
+    // на текущую цель — из-за чего лазер "телепортировался" при старте движения.
+    if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
       return resetScannerBeamRenderState(target, safeKey);
     }
     scannerBeamRenderState.key = safeKey;
