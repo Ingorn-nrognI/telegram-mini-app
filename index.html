@@ -7153,6 +7153,42 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
     const SHAPES = ["square", "rectangle", "diamond", "hexagon", "triangle"];
 
     function growContiguousBlock(playerIndex, length) {
+      // Вместо органического роста — пробуем ещё раз разместить геометрическую фигуру
+      // в уменьшенном масштабе пока не найдётся место, и только в крайнем случае органика
+      const fallbackShapes = ["square", "rectangle", "diamond"];
+      for (let shrink = 1; shrink <= 4; shrink += 1) {
+        const shrunkLen = Math.max(4, Math.floor(length / (shrink * shrink)));
+        for (let fs = 0; fs < fallbackShapes.length; fs += 1) {
+          const fShape = fallbackShapes[fs];
+          const fMask = buildScannerShapeMask(fShape, shrunkLen, rnd);
+          const fMaxRow = Math.max(0, ROWS - fMask.height);
+          const fMaxCol = Math.max(0, COLS - fMask.width);
+          let fBestRow = 0, fBestCol = 0, fBestFree = -1;
+          for (let attempt = 0; attempt < 80; attempt += 1) {
+            const row = Math.floor(rnd() * (fMaxRow + 1));
+            const col = Math.floor(rnd() * (fMaxCol + 1));
+            let free = 0;
+            fMask.rowRanges.forEach(([a, b], r) => {
+              for (let c = a; c <= b; c += 1) {
+                const idx = (row + r) * COLS + (col + c);
+                if (owners[idx] === -1) free += 1;
+              }
+            });
+            if (free > fBestFree) { fBestFree = free; fBestRow = row; fBestCol = col; }
+            if (fBestFree >= shrunkLen) break;
+          }
+          if (fBestFree >= shrunkLen) {
+            fMask.rowRanges.forEach(([a, b], r) => {
+              for (let c = a; c <= b; c += 1) {
+                const idx = (fBestRow + r) * COLS + (fBestCol + c);
+                if (owners[idx] === -1) owners[idx] = playerIndex;
+              }
+            });
+            return;
+          }
+        }
+      }
+      // Крайний случай: органический рост если места совсем нет
       let seedIdx = -1;
       for (let attempt = 0; attempt < 60; attempt += 1) {
         const cand = Math.floor(rnd() * totalCells);
@@ -7164,17 +7200,13 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
       if (seedIdx === -1) return;
       owners[seedIdx] = playerIndex;
       const frontier = [seedIdx];
-      let remaining = length - 1;
+      let rem = length - 1;
       let guard = 0;
-      while (remaining > 0 && frontier.length > 0 && guard < totalCells * 4) {
+      while (rem > 0 && frontier.length > 0 && guard < totalCells * 2) {
         guard += 1;
         const pick = frontier[Math.floor(rnd() * frontier.length)];
         const row = Math.floor(pick / COLS), col = pick % COLS;
         const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-        for (let k = dirs.length - 1; k > 0; k -= 1) {
-          const j = Math.floor(rnd() * (k + 1));
-          const tmp = dirs[k]; dirs[k] = dirs[j]; dirs[j] = tmp;
-        }
         let placed = false;
         for (const [dr, dc] of dirs) {
           const nr = row + dr, nc = col + dc;
@@ -7183,7 +7215,7 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
           if (owners[nidx] !== -1) continue;
           owners[nidx] = playerIndex;
           frontier.push(nidx);
-          remaining -= 1;
+          rem -= 1;
           placed = true;
           break;
         }
@@ -9636,9 +9668,29 @@ function applySocketRoundResult(data) {
     scannerRealtime.roundData.winnerId = data.winnerPlayerId;
     scannerRealtime.roundData.winnerName = data.winnerName;
     scannerRealtime.roundData.winnerPayout = data.winnerPayout;
+    scannerRealtime.roundData.winnerStake = data.winnerStake;
 
     if (String(data.winnerPlayerId) === String(getCurrentPlayer().id)) {
       loadProfileBestRoundWin();
+    }
+
+    // Принудительно ставим winnerPlayerId напрямую в state чтобы окно
+    // победителя открылось немедленно из сокета, не ожидая Firestore
+    scannerGridState.winnerPlayerId = data.winnerPlayerId;
+    scannerGridState.winningCellIndex = Number.isInteger(data.winningCellIndex) ? data.winningCellIndex : scannerGridState.winningCellIndex;
+    if (!scannerGridState.winningPlayer && scannerGridState.players) {
+      scannerGridState.winningPlayer = scannerGridState.players.find(
+        (p) => String(p.id) === String(data.winnerPlayerId)
+      ) || null;
+    }
+    // Если игрок ещё не в списке — создаём минимальный объект чтобы показать окно
+    if (!scannerGridState.winningPlayer && data.winnerPlayerId) {
+      scannerGridState.winningPlayer = {
+        id: String(data.winnerPlayerId),
+        name: data.winnerName || "Победитель",
+        color: getScannerColorById(data.winnerPlayerId, scannerGridState.roundId || "winner"),
+        stake: data.winnerStake || 0
+      };
     }
   }
   syncScannerDerivedState();
