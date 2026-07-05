@@ -12223,7 +12223,7 @@ function renderScannerCanvas() {
     : Infinity;
   const ZOOM_START_MS = 5000;
   const ZOOM_DURATION_MS = 2500;
-  const ZOOM_OUT_DURATION_MS = 1200;
+  const ZOOM_OUT_DURATION_MS = 1400;
   const MAX_ZOOM = 3.2;
   let scannerEndZoom = 1;
   if (roundStatus === "active") {
@@ -12237,22 +12237,36 @@ function renderScannerCanvas() {
     if (_scannerZoomOutStartMs === null) _scannerZoomOutStartMs = now;
     const zoomOutElapsed = now - _scannerZoomOutStartMs;
     const zoomOutProgress = Math.min(1, zoomOutElapsed / ZOOM_OUT_DURATION_MS);
-    const easedOut = zoomOutProgress * zoomOutProgress * (3 - 2 * zoomOutProgress);
-    scannerEndZoom = MAX_ZOOM * (1 - easedOut);
+    const easedOut = 1 - Math.pow(1 - zoomOutProgress, 3);
+    scannerEndZoom = 1 + (MAX_ZOOM - 1) * (1 - easedOut);
     if (scannerEndZoom < 1) scannerEndZoom = 1;
   } else {
     _scannerZoomOutStartMs = null;
   }
 
-  ctx.clearRect(0, 0, size, size);
-  if (scannerEndZoom > 1) {
-    const focusX = scannerLastBeamSample.x * size;
-    const focusY = scannerLastBeamSample.y * size;
-    ctx.save();
-    ctx.translate(focusX, focusY);
-    ctx.scale(scannerEndZoom, scannerEndZoom);
-    ctx.translate(-focusX, -focusY);
+  // Зум через CSS на GPU — плавно без перерисовки канваса
+  {
+    const _shells = [
+      document.getElementById("scannerHomeCanvasShell"),
+      document.getElementById("scannerScreenCanvasShell")
+    ];
+    for (const _shell of _shells) {
+      if (!_shell) continue;
+      if (scannerEndZoom > 1.001) {
+        const _fx = ((scannerLastBeamSample?.x ?? 0.5) * 100).toFixed(1);
+        const _fy = ((scannerLastBeamSample?.y ?? 0.5) * 100).toFixed(1);
+        _shell.style.transformOrigin = `${_fx}% ${_fy}%`;
+        _shell.style.transform = `scale(${scannerEndZoom.toFixed(4)})`;
+        _shell.style.zIndex = "10";
+      } else {
+        _shell.style.transform = "";
+        _shell.style.transformOrigin = "";
+        _shell.style.zIndex = "";
+      }
+    }
   }
+
+  ctx.clearRect(0, 0, size, size);
 
   const beamRenderKey = getScannerBeamRenderKey(roundStatus, roundData, hasGrid ? "grid" : "empty");
 
@@ -12475,9 +12489,6 @@ function renderScannerCanvas() {
   if (isScannerResultRevealReady()) {
     drawScannerWinnerHighlight(ctx, cellSize);
   }
-  if (scannerEndZoom > 1) {
-    ctx.restore();
-  }
   drawScannerArenaBorder(ctx, size);
 
   if (visualBeamSample) {
@@ -12496,7 +12507,7 @@ function renderScannerCanvas() {
     ctx.restore();
   }
 
-  if (scannerEndZoom > 1 && visualBeamSample && scannerGridState.players?.length > 0) {
+  if (visualBeamSample && scannerGridState.players?.length > 0) {
     const beamCellIndex = getScannerCellIndexFromPoint(visualBeamSample.x, visualBeamSample.y);
     const ownerIndex = scannerGridState.cellOwners?.[beamCellIndex] ?? -1;
     const ownerPlayer = ownerIndex >= 0 ? scannerGridState.players[ownerIndex] : null;
