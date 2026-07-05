@@ -12452,16 +12452,38 @@ function renderScannerCanvas() {
         const triHeight = reticleRadius * 1.1;
         ctx.save();
         ctx.globalAlpha = triAlpha;
-        ctx.shadowColor = "rgba(45, 225, 255, 0.4)";
-        ctx.shadowBlur = reticleRadius * 1.5;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
-        ctx.beginPath();
         ctx.translate(tx, ty);
         ctx.rotate(drawAngle);
-        ctx.moveTo(0, -triHeight * 0.65);
-        ctx.lineTo(-triBase / 2, triHeight * 0.35);
-        ctx.lineTo(triBase / 2, triHeight * 0.35);
+        // Треугольник-стрелка с закруглёнными углами, острие смотрит вперёд (вправо по оси X)
+        const tW = triHeight * 1.0;  // длина стрелки
+        const tH = triBase * 0.85;   // ширина основания
+        const tR = tH * 0.28;        // радиус закругления углов
+        // Три вершины: острие (вправо), верхний левый, нижний левый
+        const tip  = [  tW * 0.52,  0 ];
+        const topL = [ -tW * 0.48, -tH * 0.5 ];
+        const botL = [ -tW * 0.48,  tH * 0.5 ];
+        ctx.beginPath();
+        // Функция закруглённого угла между тремя точками
+        function roundedCorner(x0, y0, x1, y1, x2, y2, r) {
+          const d01 = Math.hypot(x1 - x0, y1 - y0);
+          const d12 = Math.hypot(x2 - x1, y2 - y1);
+          const t0 = Math.min(r / d01, 0.5);
+          const t1 = Math.min(r / d12, 0.5);
+          const cx0 = x1 + (x0 - x1) * t0, cy0 = y1 + (y0 - y1) * t0;
+          const cx1 = x1 + (x2 - x1) * t1, cy1 = y1 + (y2 - y1) * t1;
+          ctx.lineTo(cx0, cy0);
+          ctx.quadraticCurveTo(x1, y1, cx1, cy1);
+        }
+        // Начало на середине стороны tip→topL
+        const startX = (tip[0] + topL[0]) / 2, startY = (tip[1] + topL[1]) / 2;
+        ctx.moveTo(startX, startY);
+        roundedCorner(tip[0], tip[1], topL[0], topL[1], botL[0], botL[1], tR * 0.6);
+        roundedCorner(topL[0], topL[1], botL[0], botL[1], tip[0], tip[1], tR);
+        roundedCorner(botL[0], botL[1], tip[0], tip[1], topL[0], topL[1], tR * 0.4);
         ctx.closePath();
+        ctx.shadowColor = "rgba(45, 225, 255, 0.55)";
+        ctx.shadowBlur = reticleRadius * 1.8;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
         ctx.fill();
         ctx.restore();
       }
