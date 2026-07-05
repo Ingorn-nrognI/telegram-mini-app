@@ -12406,7 +12406,10 @@ function renderScannerCanvas() {
 
       // Финальный угол треугольника — тот же алгоритм что на сервере
       const shuffleStartMs = tsToMs(roundData?.shuffleStartedAt) || 0;
-      const shuffleEndSec = (shuffleStartMs + SCANNER_SHUFFLING_MS) / 1000;
+      // Используем серверный тайминг shuffling (4000мс) для finalSpinAngle —
+      // он должен совпадать с тем что сервер использует для запуска лазера
+      const SERVER_SHUFFLING_MS = 4000;
+      const shuffleEndSec = (shuffleStartMs + SERVER_SHUFFLING_MS) / 1000;
       const finalSpinAngle = (shuffleEndSec * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
 
       // Угол считается через прогресс shuffling (0..1), а не через абсолютное время
