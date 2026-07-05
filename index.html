@@ -9611,9 +9611,15 @@ function applySocketRoundPatch(patch) {
       scannerLobbyLaserVisual.lastAt = 0;
     }
     if (patch.status === "active" && Number.isFinite(patch.launchX) && Number.isFinite(patch.launchY)) {
+      // Позиция старта = ровно то место, что было на экране кадром раньше
+      // (последняя видимая точка во время shuffling), а не серверные launchX/launchY —
+      // так позиция гарантированно непрерывна, даже если независимые расчёты
+      // клиента и сервера чуть разошлись. Направление же берём от сервера — оно верное.
+      const _continuityX = Number.isFinite(scannerLastBeamSample?.x) ? scannerLastBeamSample.x : patch.launchX;
+      const _continuityY = Number.isFinite(scannerLastBeamSample?.y) ? scannerLastBeamSample.y : patch.launchY;
       _serverBeamPos = {
-        x: patch.launchX,
-        y: patch.launchY,
+        x: _continuityX,
+        y: _continuityY,
         vx: Number(patch.launchVx) || 0,
         vy: Number(patch.launchVy) || 0,
         angle: Math.atan2(Number(patch.launchVy) || 0, Number(patch.launchVx) || 0.0001),
@@ -9621,12 +9627,9 @@ function applySocketRoundPatch(patch) {
         timestamp: Number(patch.timestamp) || Date.now(),
         _receiveTime: performance.now()
       };
-      // Hard reset сглаживания прямо в точку запуска — иначе первый кадр active
-      // берёт уже "убежавшую вперёд" по времени цель (сетевая задержка), и точка
-      // визуально дёргается вперёд по маршруту вместо плавного старта с места остановки
       resetScannerBeamRenderState({
-        x: patch.launchX,
-        y: patch.launchY,
+        x: _continuityX,
+        y: _continuityY,
         vx: Number(patch.launchVx) || 0,
         vy: Number(patch.launchVy) || 0,
         angle: Math.atan2(Number(patch.launchVy) || 0, Number(patch.launchVx) || 0.0001)
