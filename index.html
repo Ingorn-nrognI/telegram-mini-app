@@ -9455,6 +9455,9 @@ function initSocketConnection() {
   _socket.on('disconnect', () => {});
   _socket.on('beam:position', (data) => {
     const now = performance.now();
+    if (data?.roundId && scannerGridState.status === "active" && !_serverBeamPos?._loggedFirst) {
+      console.log("[ТЕЛЕПОРТ-ОТЛАДКА] первый beam:position после active:", { x: data.x, y: data.y, prevServerBeamPos: _serverBeamPos });
+    }
     _serverBeamPos = {
       x: data.x,
       y: data.y,
@@ -9465,7 +9468,8 @@ function initSocketConnection() {
       roundId: data.roundId,
       idleBeamMotion: data.idleBeamMotion,
       timestamp: data.timestamp,
-      _receiveTime: now
+      _receiveTime: now,
+      _loggedFirst: true
     };
     _serverBeamPosLastUpdate = Date.now();
     if (data?.idleBeamMotion) {
@@ -9619,6 +9623,12 @@ function applySocketRoundPatch(patch) {
       // клиента и сервера чуть разошлись. Направление же берём от сервера — оно верное.
       const _continuityX = Number.isFinite(scannerLastBeamSample?.x) ? scannerLastBeamSample.x : patch.launchX;
       const _continuityY = Number.isFinite(scannerLastBeamSample?.y) ? scannerLastBeamSample.y : patch.launchY;
+      console.log("[ТЕЛЕПОРТ-ОТЛАДКА] patch active получен:", {
+        "scannerLastBeamSample (что было на экране)": scannerLastBeamSample,
+        "patch.launchX/Y (от сервера)": { x: patch.launchX, y: patch.launchY },
+        "_continuityX/Y (что используем)": { x: _continuityX, y: _continuityY },
+        "roundData?.countdownLatchSample": scannerRealtime?.roundData?.countdownLatchSample
+      });
       _serverBeamPos = {
         x: _continuityX,
         y: _continuityY,
