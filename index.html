@@ -9234,6 +9234,13 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
         vy: yr.velocity
       };
     }
+    // Реальных данных от сервера ещё нет — держим точку неподвижно на месте
+    // прилипания вместо случайного fallback-направления (getScannerActiveBeamSampleAtTime
+    // угадывает случайное направление по хешу, не совпадающее с реальным углом запуска,
+    // из-за чего лазер на долю секунды летел не туда, а потом резко "прыгал" на правильный курс)
+    const countdownCacheFallback = getScannerCountdownBeamCache(roundData);
+    if (countdownCacheFallback?.latchSample) return countdownCacheFallback.latchSample;
+    if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) return scannerLastBeamSample;
     return getScannerActiveBeamSampleAtTime(roundData, safePlayers, safeTimestamp);
   }
 
