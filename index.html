@@ -12532,7 +12532,8 @@ function renderScannerCanvas() {
     ctx.restore();
   }
 
-  if (visualBeamSample && scannerGridState.players?.length > 0) {
+  const _showBeamLabel = roundStatus === "active" && timeLeftMs <= ZOOM_START_MS;
+  if (_showBeamLabel && visualBeamSample && scannerGridState.players?.length > 0) {
     const beamCellIndex = getScannerCellIndexFromPoint(visualBeamSample.x, visualBeamSample.y);
     const ownerIndex = scannerGridState.cellOwners?.[beamCellIndex] ?? -1;
     const ownerPlayer = ownerIndex >= 0 ? scannerGridState.players[ownerIndex] : null;
