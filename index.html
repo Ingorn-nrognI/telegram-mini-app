@@ -12379,9 +12379,7 @@ function renderScannerCanvas() {
     const beamLength = size * 4.6;
     const reticleRotation = now * SCANNER_RETICLE_IDLE_SPIN_SPEED;
 
-    const beamRenderAngle = (roundStatus === "active" || roundStatus === "finished" || roundStatus === "preparing_next_round")
-      ? (Number.isFinite(visualBeamSample.angle) ? visualBeamSample.angle : Math.atan2(visualBeamSample.vy || 0.0001, visualBeamSample.vx || 0.0001))
-      : scannerLobbyLaserVisual.angle;
+    const beamRenderAngle = scannerLobbyLaserVisual.angle;
 
     ctx.save();
     ctx.translate(px, py);
