@@ -12410,7 +12410,15 @@ function renderScannerCanvas() {
       // он должен совпадать с тем что сервер использует для запуска лазера
       const SERVER_SHUFFLING_MS = 4000;
       const shuffleEndSec = (shuffleStartMs + SERVER_SHUFFLING_MS) / 1000;
-      const finalSpinAngle = (shuffleEndSec * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
+      // Смещение угла на основе roundId — чтобы направление лазера не совпадало
+      // каждый раз с одним и тем же местом относительно вращающейся линии
+      const _roundIdForAngle = String(scannerGridState.roundId || roundData?.id || "round");
+      let _angleHash = 0;
+      for (let _i = 0; _i < _roundIdForAngle.length; _i += 1) {
+        _angleHash = ((_angleHash << 5) - _angleHash + _roundIdForAngle.charCodeAt(_i)) | 0;
+      }
+      const roundAngleOffset = ((Math.abs(_angleHash) % 100000) / 100000) * Math.PI * 2;
+      const finalSpinAngle = (shuffleEndSec * SCANNER_LOBBY_LASER_TURN_SPEED + roundAngleOffset) % (Math.PI * 2);
 
       // Угол считается через прогресс shuffling (0..1), а не через абсолютное время
       // умноженное на переменную скорость — старая формула давала скачки на тысячи
