@@ -7680,7 +7680,7 @@ function getScannerDerivedVisualState(round, participants) {
   }
 
   const finalized = buildScannerPlayersFromFirestore(round, participants);
-  const previewVersion = `${finalized.gridVersion}_preview`;
+  const previewVersion = `${round?.id || "round"}_${round?.entropySeed || "seed"}_${finalized.totalPlayers}_${finalized.totalPot.toFixed(2)}_preview`;
   const previewCellOwners = buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
   const previewZones = buildScannerPreviewZones(previewCellOwners, finalized.players);
   const nextValue = {
