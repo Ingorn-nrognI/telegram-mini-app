@@ -7169,13 +7169,53 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
 
   if (useGeometric) {
     const SHAPES = ["square", "rectangle", "diamond", "hexagon", "triangle"];
+
+    function growContiguousBlock(playerIndex, length) {
+      let seedIdx = -1;
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        const cand = Math.floor(rnd() * totalCells);
+        if (owners[cand] === -1) { seedIdx = cand; break; }
+      }
+      if (seedIdx === -1) {
+        for (let idx = 0; idx < totalCells; idx += 1) { if (owners[idx] === -1) { seedIdx = idx; break; } }
+      }
+      if (seedIdx === -1) return;
+      owners[seedIdx] = playerIndex;
+      const frontier = [seedIdx];
+      let remaining = length - 1;
+      let guard = 0;
+      while (remaining > 0 && frontier.length > 0 && guard < totalCells * 4) {
+        guard += 1;
+        const pick = frontier[Math.floor(rnd() * frontier.length)];
+        const row = Math.floor(pick / COLS), col = pick % COLS;
+        const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        for (let k = dirs.length - 1; k > 0; k -= 1) {
+          const j = Math.floor(rnd() * (k + 1));
+          const tmp = dirs[k]; dirs[k] = dirs[j]; dirs[j] = tmp;
+        }
+        let placed = false;
+        for (const [dr, dc] of dirs) {
+          const nr = row + dr, nc = col + dc;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+          const nidx = nr * COLS + nc;
+          if (owners[nidx] !== -1) continue;
+          owners[nidx] = playerIndex;
+          frontier.push(nidx);
+          remaining -= 1;
+          placed = true;
+          break;
+        }
+        if (!placed) frontier.splice(frontier.indexOf(pick), 1);
+      }
+    }
+
     chunks.forEach((chunk) => {
       const shapeType = SHAPES[Math.floor(rnd() * SHAPES.length)];
       const mask = buildScannerShapeMask(shapeType, chunk.length, rnd);
       let bestRow = 0, bestCol = 0, bestFree = -1;
       const maxRow = Math.max(0, ROWS - mask.height);
       const maxCol = Math.max(0, COLS - mask.width);
-      for (let attempt = 0; attempt < 25; attempt += 1) {
+      for (let attempt = 0; attempt < 150; attempt += 1) {
         const row = Math.floor(rnd() * (maxRow + 1));
         const col = Math.floor(rnd() * (maxCol + 1));
         let free = 0;
@@ -7188,12 +7228,16 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
         if (free > bestFree) { bestFree = free; bestRow = row; bestCol = col; }
         if (free >= chunk.length) break;
       }
-      mask.rowRanges.forEach(([a, b], r) => {
-        for (let c = a; c <= b; c += 1) {
-          const idx = (bestRow + r) * COLS + (bestCol + c);
-          if (owners[idx] === -1) owners[idx] = chunk.playerIndex;
-        }
-      });
+      if (bestFree >= chunk.length) {
+        mask.rowRanges.forEach(([a, b], r) => {
+          for (let c = a; c <= b; c += 1) {
+            const idx = (bestRow + r) * COLS + (bestCol + c);
+            if (owners[idx] === -1) owners[idx] = chunk.playerIndex;
+          }
+        });
+      } else {
+        growContiguousBlock(chunk.playerIndex, chunk.length);
+      }
     });
   } else {
     function touchesOtherChunkSameOwner(idx, playerIndex, myChunkId) {
@@ -9047,17 +9091,32 @@ function getScannerCountdownBeamSample(round, fallbackSample, players) {
   return getScannerCountdownBeamSampleAtTime(round, getNetworkTime(), fallbackSample || getScannerSharedLobbyBeamSample());
 }
 
+let _scannerShuffleLocalStartMs = null;
+let _scannerShuffleLocalRoundId = null;
+
 function getScannerShuffleProgress(round) {
-  if (String(round?.status || "") !== "shuffling") return 0;
+  if (String(round?.status || "") !== "shuffling") {
+    _scannerShuffleLocalStartMs = null;
+    _scannerShuffleLocalRoundId = null;
+    return 0;
+  }
+  const roundId = String(round?.id || round?.roundId || scannerGridState.roundId || "round");
+  const nowHi = getNetworkTimeHighRes();
+
+  // Фиксируем локальный старт перемешивания при первом кадре этого статуса.
+  // Это гарантирует, что прогресс всегда стартует с 0 на клиенте — без телепорта
+  // раскладки из-за рассинхрона серверного времени или задержки патча shuffleStartedAt.
+  if (_scannerShuffleLocalStartMs === null || _scannerShuffleLocalRoundId !== roundId) {
+    _scannerShuffleLocalStartMs = nowHi;
+    _scannerShuffleLocalRoundId = roundId;
+  }
+
   const startedAt = tsToMs(round?.shuffleStartedAt);
   const endsAt = tsToMs(round?.shuffleEndsAt);
-  if (startedAt > 0 && endsAt > startedAt) {
-    return clampScannerNumber((getNetworkTime() - startedAt) / Math.max(1, endsAt - startedAt), 0, 1);
-  }
-  if (startedAt > 0) {
-    return clampScannerNumber((getNetworkTime() - startedAt) / SCANNER_SHUFFLING_MS, 0, 1);
-  }
-  return 0;
+  const serverDuration = (startedAt > 0 && endsAt > startedAt) ? (endsAt - startedAt) : SCANNER_SHUFFLING_MS;
+
+  const localElapsed = nowHi - _scannerShuffleLocalStartMs;
+  return clampScannerNumber(localElapsed / Math.max(1, serverDuration), 0, 1);
 }
 
 function getScannerShuffleTransitionProgress(round) {
@@ -9334,6 +9393,7 @@ function requestScannerCellOwnersAsync(players, totalCells, versionSeed, version
 let _lobbyJumpPrevSample = null;
 let _lobbyJumpPrevTime = null;
 let _scannerRoundFinishedAtMs = null;
+let _scannerResultShownForRound = null;
 let _lastFrozenResultPos = null;
 let _beamTransitionEndMs = 0;
 let _serverBeamPosSmoothed = null;
@@ -11101,13 +11161,17 @@ function renderScannerRound(options = {}) {
 
   if (resultOverlay && resultTitle && resultText) {
     const isResultPhase = scannerGridState.status === "finished" || scannerGridState.status === "preparing_next_round";
+    const _resultRoundId = String(scannerGridState.roundId || scannerGridState.renderSeed || "");
     if (isResultPhase && scannerGridState.winningPlayer) {
       const winnerPlayer = scannerGridState.winningPlayer;
       const payout = Number(scannerGridState.roundData?.winnerPayout || scannerGridState.totalPot || 0);
       const winnerStake = Number(winnerPlayer.stake || scannerGridState.roundData?.winnerStake || 0);
       const multiplier = formatScannerMultiplier(payout, winnerStake);
       const winnerColor = escapeHtml(winnerPlayer.color || getScannerColorById(winnerPlayer.id, scannerGridState.roundId || scannerGridState.renderSeed || "winner"));
-      if (resultOverlay && !resultOverlay.classList.contains("open")) {
+      // Показываем окно один раз за раунд. Если пользователь закрыл его крестиком —
+      // не открываем повторно на следующих кадрах того же раунда.
+      if (resultOverlay && !resultOverlay.classList.contains("open") && _scannerResultShownForRound !== _resultRoundId) {
+        _scannerResultShownForRound = _resultRoundId;
         resultOverlay.classList.add("open");
         startScannerResultTimer();
       }
