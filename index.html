@@ -9572,6 +9572,7 @@ function applySocketRoundPatch(patch) {
         // Hard reset сглаживания луча — чтобы он не "телепортировался" из
         // финальной позиции раунда в новую idle-позицию через плавный easing,
         // а сразу стоял в правильной точке и оттуда плавно поехал
+        _serverBeamPos = null;
         resetScannerBeamRenderState(_idleSample, "idle_reset");
       }
       scannerRealtime.roundData = null;
