@@ -7099,24 +7099,6 @@ function buildScannerShapeMask(shapeType, targetArea, rnd) {
     }
   }
 
-  let area = 0;
-  rowRanges.forEach(([a, b]) => { area += Math.max(0, b - a + 1); });
-  let diff = targetArea - area;
-  let lastIdx = rowRanges.length - 1;
-  let guardFit = 0;
-  while (diff !== 0 && lastIdx >= 0 && guardFit < 100000) {
-    guardFit += 1;
-    let [a, b] = rowRanges[lastIdx];
-    if (diff > 0) {
-      if (a > 0) { a -= 1; diff -= 1; }
-      else if (b < width - 1) { b += 1; diff -= 1; }
-      else { lastIdx -= 1; continue; }
-    } else {
-      if (b > a) { b -= 1; diff += 1; }
-      else { lastIdx -= 1; continue; }
-    }
-    rowRanges[lastIdx] = [a, b];
-  }
   return { width, height, rowRanges };
 }
 
