@@ -9614,6 +9614,16 @@ function applySocketRoundPatch(patch) {
         timestamp: Number(patch.timestamp) || Date.now(),
         _receiveTime: performance.now()
       };
+      // Hard reset сглаживания прямо в точку запуска — иначе первый кадр active
+      // берёт уже "убежавшую вперёд" по времени цель (сетевая задержка), и точка
+      // визуально дёргается вперёд по маршруту вместо плавного старта с места остановки
+      resetScannerBeamRenderState({
+        x: patch.launchX,
+        y: patch.launchY,
+        vx: Number(patch.launchVx) || 0,
+        vy: Number(patch.launchVy) || 0,
+        angle: Math.atan2(Number(patch.launchVy) || 0, Number(patch.launchVx) || 0.0001)
+      }, "active_launch_reset");
     }
   }
   // Если сервер явно сбросил раунд в idle — запрещаем bootstrap подхватить старый раунд
