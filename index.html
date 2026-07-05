@@ -9407,6 +9407,7 @@ function requestScannerCellOwnersAsync(players, totalCells, versionSeed, version
 let _lobbyJumpPrevSample = null;
 let _lobbyJumpPrevTime = null;
 let _scannerRoundFinishedAtMs = null;
+let _scannerZoomOutStartMs = null;
 let _scannerResultShownForRound = null;
 let _lastFrozenResultPos = null;
 let _beamTransitionEndMs = 0;
@@ -12222,12 +12223,25 @@ function renderScannerCanvas() {
     : Infinity;
   const ZOOM_START_MS = 5000;
   const ZOOM_DURATION_MS = 2500;
+  const ZOOM_OUT_DURATION_MS = 1200;
   const MAX_ZOOM = 3.2;
   let scannerEndZoom = 1;
-  if (timeLeftMs <= ZOOM_START_MS && timeLeftMs !== Infinity) {
-    const zoomProgress = Math.min(1, (ZOOM_START_MS - timeLeftMs) / ZOOM_DURATION_MS);
-    const easedZoom = zoomProgress * zoomProgress * (3 - 2 * zoomProgress);
-    scannerEndZoom = 1 + (MAX_ZOOM - 1) * easedZoom;
+  if (roundStatus === "active") {
+    _scannerZoomOutStartMs = null;
+    if (timeLeftMs <= ZOOM_START_MS && timeLeftMs !== Infinity) {
+      const zoomProgress = Math.min(1, (ZOOM_START_MS - timeLeftMs) / ZOOM_DURATION_MS);
+      const easedZoom = zoomProgress * zoomProgress * (3 - 2 * zoomProgress);
+      scannerEndZoom = 1 + (MAX_ZOOM - 1) * easedZoom;
+    }
+  } else if (roundStatus === "finished" || roundStatus === "preparing_next_round") {
+    if (_scannerZoomOutStartMs === null) _scannerZoomOutStartMs = now;
+    const zoomOutElapsed = now - _scannerZoomOutStartMs;
+    const zoomOutProgress = Math.min(1, zoomOutElapsed / ZOOM_OUT_DURATION_MS);
+    const easedOut = zoomOutProgress * zoomOutProgress * (3 - 2 * zoomOutProgress);
+    scannerEndZoom = MAX_ZOOM * (1 - easedOut);
+    if (scannerEndZoom < 1) scannerEndZoom = 1;
+  } else {
+    _scannerZoomOutStartMs = null;
   }
 
   ctx.clearRect(0, 0, size, size);
