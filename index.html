@@ -12307,24 +12307,11 @@ function renderScannerCanvas() {
     }
     previewBadgeAlpha = 1 - shuffleProgress;
   } else if (roundStatus === "preparing_next_round") {
-    const preparingBeamSample = getSmoothedScannerBeamSample(
-      getScannerBeamTargetSample(
-        getScannerPreparingBeamSample(roundData, scannerGridState.players || []),
-        roundStatus,
-        beamRenderKey,
-        nowMs
-      ),
-      beamRenderKey,
-      now
-    );
-    const preparingVisualBeamSample = preparingBeamSample;
-    drawScannerEmptyArenaState(ctx, size, preparingVisualBeamSample, {
-      waitingTextAlpha: smoothstep(0.18, 1, getScannerPreparingProgress(roundData)),
-      reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
-      reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE,
-      nowMs: now
-    });
-    return;
+    // В preparing_next_round рисуем финальные поля как в finished —
+    // чтобы не было паузы с пустым экраном перед переходом в idle
+    if (scannerGridCache?.canvas) {
+      ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
+    }
   } else if (scannerGridCache?.canvas) {
     ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
   }
