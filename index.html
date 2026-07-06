@@ -8758,12 +8758,14 @@ function getScannerCountdownBeamCache(round) {
     return scannerCountdownBeamCache;
   }
 
-  const lobbyStartSample = motionState
-    ? getScannerBeamSampleFromMotionState(motionState, timing.startedAt, {
-        pad: SCANNER_ACTIVE_BEAM_EDGE_PADDING,
-        seedValue: `${round?.id || "round"}::countdown`
-      })
-    : getScannerSharedLobbyBeamSampleAt(timing.startedAt);
+  const lobbyStartSample = (round?.lobbyStartSample && Number.isFinite(round.lobbyStartSample.x) && Number.isFinite(round.lobbyStartSample.y))
+    ? round.lobbyStartSample
+    : (motionState
+        ? getScannerBeamSampleFromMotionState(motionState, timing.startedAt, {
+            pad: SCANNER_ACTIVE_BEAM_EDGE_PADDING,
+            seedValue: `${round?.id || "round"}::countdown`
+          })
+        : getScannerSharedLobbyBeamSampleAt(timing.startedAt));
 
   const pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
   const totalMs = timing.durationMs;
@@ -9502,6 +9504,10 @@ function applySocketRoundPatch(patch) {
   if (patch.status === "shuffling" && patch.countdownLatchSample) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
     scannerRealtime.roundData.countdownLatchSample = patch.countdownLatchSample;
+  }
+  if (patch.lobbyStartSample) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.lobbyStartSample = patch.lobbyStartSample;
   }
   if (patch.status !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
