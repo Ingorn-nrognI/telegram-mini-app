@@ -12436,14 +12436,19 @@ function renderScannerCanvas() {
   const visualBeamSample = beamSample || null;
   if (visualBeamSample) {
     if (roundStatus === "countdown" || roundStatus === "shuffling") {
-      if (!window._lastRoundStatusForBeamLog || window._lastRoundStatusForBeamLog !== roundStatus) {
-        console.log(
-          "[РЕНДЕР-ОТЛАДКА] статус=" + roundStatus +
-          " x=" + visualBeamSample.x.toFixed(6) + " y=" + visualBeamSample.y.toFixed(6) +
-          " | scannerLastBeamSample_ДО=" + (scannerLastBeamSample ? scannerLastBeamSample.x.toFixed(6) + "," + scannerLastBeamSample.y.toFixed(6) : "null")
-        );
-        window._lastRoundStatusForBeamLog = roundStatus;
+      window._beamFrameLog = window._beamFrameLog || [];
+      window._beamFrameLog.push({
+        t: Math.round(now),
+        status: roundStatus,
+        x: Number(visualBeamSample.x.toFixed(6)),
+        y: Number(visualBeamSample.y.toFixed(6))
+      });
+      if (window._beamFrameLog.length > 120) window._beamFrameLog.shift();
+      if (roundStatus === "shuffling" && !window._shufflingLogPrinted) {
+        window._shufflingLogPrinted = true;
+        console.log("[КАДРЫ-ОТЛАДКА]", JSON.stringify(window._beamFrameLog));
       }
+      if (roundStatus === "countdown") window._shufflingLogPrinted = false;
     }
     scannerLastBeamSample = visualBeamSample;
   }
