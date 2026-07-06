@@ -9260,6 +9260,15 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
         vy: _serverBeamPos.vy || 0
       };
     }
+    // Настоящая трансляция для ЭТОГО раунда ещё не пришла (окно до ~50мс сразу после
+    // создания раунда). Раньше здесь запускался независимый локальный расчёт — та самая
+    // хаотичная физика, которую мы убрали отовсюду — и хотя он работал доли секунды,
+    // он мог чуть разойтись с сервером и дать видимый скачок в момент прихода настоящих
+    // данных. Правильно — просто держать последнюю известную точку неподвижно эти
+    // несколько кадров, а не считать что-то заново на клиенте.
+    if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
+      return scannerLastBeamSample;
+    }
     return getScannerCountdownBeamSampleAtTime(
       roundData,
       safeTimestamp,
