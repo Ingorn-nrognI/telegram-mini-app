@@ -9218,14 +9218,11 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   const safePlayers = Array.isArray(players) ? players : [];
 
   if (!roundData) {
-    // Сервер постоянно транслирует настоящую позицию и в режиме ожидания (idle) тоже —
-    // используем её вместо независимого локального расчёта. Это последнее место, где
-    // клиент ещё считал позицию сам, и именно из-за него был скачок при входе в раунд
-    // и при возврате в ожидание после сброса.
     const _idleServerFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
     if (_serverBeamPos &&
         Number.isFinite(_serverBeamPos.x) &&
         Number.isFinite(_serverBeamPos.y) &&
+        !_serverBeamPos.roundId &&
         _idleServerFreshMs < 500) {
       return {
         x: _serverBeamPos.x,
@@ -9234,6 +9231,12 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
         vx: _serverBeamPos.vx || 0,
         vy: _serverBeamPos.vy || 0
       };
+    }
+    // Если от сервера ещё вообще ничего не приходило (первое подключение, доля секунды
+    // после захода на сайт) — держим точку неподвижно в дефолтном центре вместо
+    // резервного локального расчёта, который мог давать случайную несвязную позицию.
+    if (!_serverBeamPos) {
+      return { x: 0.5, y: 0.5, angle: 0, vx: 0, vy: 0 };
     }
     return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
   }
