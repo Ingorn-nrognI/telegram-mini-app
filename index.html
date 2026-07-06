@@ -12434,7 +12434,19 @@ function renderScannerCanvas() {
   );
 
   const visualBeamSample = beamSample || null;
-  if (visualBeamSample) scannerLastBeamSample = visualBeamSample;
+  if (visualBeamSample) {
+    if (roundStatus === "countdown" || roundStatus === "shuffling") {
+      if (!window._lastRoundStatusForBeamLog || window._lastRoundStatusForBeamLog !== roundStatus) {
+        console.log(
+          "[РЕНДЕР-ОТЛАДКА] статус=" + roundStatus +
+          " x=" + visualBeamSample.x.toFixed(6) + " y=" + visualBeamSample.y.toFixed(6) +
+          " | scannerLastBeamSample_ДО=" + (scannerLastBeamSample ? scannerLastBeamSample.x.toFixed(6) + "," + scannerLastBeamSample.y.toFixed(6) : "null")
+        );
+        window._lastRoundStatusForBeamLog = roundStatus;
+      }
+    }
+    scannerLastBeamSample = visualBeamSample;
+  }
   if (visualBeamSample && (roundStatus === "finished" || roundStatus === "preparing_next_round")) {
     _lastFrozenResultPos = { x: visualBeamSample.x, y: visualBeamSample.y };
   }
