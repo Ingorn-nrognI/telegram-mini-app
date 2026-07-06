@@ -8870,6 +8870,12 @@ function getScannerCountdownBeamCache(round) {
   }
 
   const latchStartSample = frozenSample || samples[samples.length - 1] || lobbyStartSample;
+  console.log("[СИМУЛЯЦИЯ-ОТЛАДКА] countdown кэш построен:", {
+    "lobbyStartSample (откуда стартовали)": { x: lobbyStartSample.x, y: lobbyStartSample.y, vx: lobbyStartSample.vx, vy: lobbyStartSample.vy },
+    "клиент насчитал frozenSample": frozenSample ? { x: frozenSample.x, y: frozenSample.y } : null,
+    "round.countdownLatchSample (от сервера)": round?.countdownLatchSample ? { x: round.countdownLatchSample.x, y: round.countdownLatchSample.y } : null,
+    "durationMs использованный": totalMs
+  });
   const latchSimulation = {
     side: getScannerWallSideFromPosition(latchStartSample, pad),
     targetSample: latchStartSample,
