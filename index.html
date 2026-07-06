@@ -12478,6 +12478,23 @@ function renderScannerCanvas() {
 
   const visualBeamSample = beamSample || null;
   if (visualBeamSample) {
+    if (roundStatus === "idle" || roundStatus === "countdown" || roundStatus === "shuffling") {
+      window._beamFrameLog2 = window._beamFrameLog2 || [];
+      window._beamFrameLog2.push({
+        t: Math.round(now),
+        status: roundStatus,
+        x: Number(visualBeamSample.x.toFixed(6)),
+        y: Number(visualBeamSample.y.toFixed(6)),
+        vx: Number((visualBeamSample.vx || 0).toFixed(6)),
+        vy: Number((visualBeamSample.vy || 0).toFixed(6))
+      });
+      if (window._beamFrameLog2.length > 200) window._beamFrameLog2.shift();
+      if (roundStatus === "countdown" && !window._countdownLogPrinted) {
+        window._countdownLogPrinted = true;
+        console.log("[ВХОД-ОТЛАДКА]", JSON.stringify(window._beamFrameLog2));
+      }
+      if (roundStatus === "idle") window._countdownLogPrinted = false;
+    }
     if (roundStatus === "countdown" || roundStatus === "shuffling") {
       window._beamFrameLog = window._beamFrameLog || [];
       window._beamFrameLog.push({
