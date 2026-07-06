@@ -9499,6 +9499,10 @@ function initSocketConnection() {
 function applySocketRoundPatch(patch) {
   if (!patch) return;
   console.log('[patch] Получен:', JSON.stringify(patch));
+  if (patch.status === "shuffling" && patch.countdownLatchSample) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.countdownLatchSample = patch.countdownLatchSample;
+  }
   if (patch.status !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
     scannerRealtime.roundData.status = patch.status;
@@ -9653,6 +9657,11 @@ function applySocketRoundPatch(patch) {
       vy: Number(patch.launchVy) || 0,
       angle: Math.atan2(Number(patch.launchVy) || 0, Number(patch.launchVx) || 0.0001)
     }, "active_launch_reset");
+    // Сбрасываем отслеживание смены знака скорости для свечения бортиков —
+    // иначе оно сравнивает направление НОВОГО раунда со старым значением от
+    // ПРОШЛОГО раунда и ложно "видит отскок" сразу на нескольких стенах разом
+    _borderGlowActiveLastVx = 0;
+    _borderGlowActiveLastVy = 0;
   }
   // Если сервер явно сбросил раунд в idle — запрещаем bootstrap подхватить старый раунд
   if (patch.status === 'idle' && !patch.roundId) {
