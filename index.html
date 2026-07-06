@@ -12720,7 +12720,7 @@ function subscribeScannerRound(roundId) {
       const existingVersion = Number(scannerRealtime.roundData?.version || 0);
       const incomingVersion = Number(firestoreData.version || 0);
       if (incomingVersion < existingVersion) {
-        console.warn("[ScannerRound] Игнорирую устаревший снэпшот Firestore (версия " + incomingVersion + " < текущей " + существующей + ")".replace("существующей", existingVersion));
+        console.warn("[ScannerRound] Игнорирую устаревший снэпшот Firestore (версия " + incomingVersion + " < текущей " + existingVersion + ")");
         // countdownLatchSample — статичное поле, пишется один раз в начале раунда и
         // больше никогда не меняется. Оно не может быть "устаревшим" по смыслу, но
         // раньше терялось навсегда, если снэпшот с ним отклонялся защитой по версии —
