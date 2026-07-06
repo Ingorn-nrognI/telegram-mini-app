@@ -8870,12 +8870,13 @@ function getScannerCountdownBeamCache(round) {
   }
 
   const latchStartSample = frozenSample || samples[samples.length - 1] || lobbyStartSample;
-  console.log("[СИМУЛЯЦИЯ-ОТЛАДКА] countdown кэш построен:", {
-    "lobbyStartSample (откуда стартовали)": { x: lobbyStartSample.x, y: lobbyStartSample.y, vx: lobbyStartSample.vx, vy: lobbyStartSample.vy },
-    "клиент насчитал frozenSample": frozenSample ? { x: frozenSample.x, y: frozenSample.y } : null,
-    "round.countdownLatchSample (от сервера)": round?.countdownLatchSample ? { x: round.countdownLatchSample.x, y: round.countdownLatchSample.y } : null,
-    "durationMs использованный": totalMs
-  });
+  console.log(
+    "[СИМУЛЯЦИЯ-ОТЛАДКА] старт=(" + lobbyStartSample.x.toFixed(6) + "," + lobbyStartSample.y.toFixed(6) +
+    ") vx=" + lobbyStartSample.vx.toFixed(6) + " vy=" + lobbyStartSample.vy.toFixed(6) +
+    " | КЛИЕНТ_насчитал=(" + (frozenSample ? frozenSample.x.toFixed(6) + "," + frozenSample.y.toFixed(6) : "null") + ")" +
+    " | СЕРВЕР_прислал=(" + (round?.countdownLatchSample ? round.countdownLatchSample.x.toFixed(6) + "," + round.countdownLatchSample.y.toFixed(6) : "null") + ")" +
+    " | durationMs=" + totalMs
+  );
   const latchSimulation = {
     side: getScannerWallSideFromPosition(latchStartSample, pad),
     targetSample: latchStartSample,
