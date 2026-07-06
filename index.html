@@ -12720,7 +12720,20 @@ function subscribeScannerRound(roundId) {
       const existingVersion = Number(scannerRealtime.roundData?.version || 0);
       const incomingVersion = Number(firestoreData.version || 0);
       if (incomingVersion < existingVersion) {
-        console.warn("[ScannerRound] Игнорирую устаревший снэпшот Firestore (версия " + incomingVersion + " < текущей " + existingVersion + ")");
+        console.warn("[ScannerRound] Игнорирую устаревший снэпшот Firestore (версия " + incomingVersion + " < текущей " + существующей + ")".replace("существующей", existingVersion));
+        // countdownLatchSample — статичное поле, пишется один раз в начале раунда и
+        // больше никогда не меняется. Оно не может быть "устаревшим" по смыслу, но
+        // раньше терялось навсегда, если снэпшот с ним отклонялся защитой по версии —
+        // из-за этого позиция лазера при старте active не совпадала с тем, что видел игрок.
+        if (
+          !scannerRealtime.roundData?.countdownLatchSample &&
+          firestoreData.countdownLatchSample &&
+          Number.isFinite(firestoreData.countdownLatchSample.x) &&
+          Number.isFinite(firestoreData.countdownLatchSample.y)
+        ) {
+          if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+          scannerRealtime.roundData.countdownLatchSample = firestoreData.countdownLatchSample;
+        }
       } else {
         scannerRealtime.roundData = firestoreData;
       }
