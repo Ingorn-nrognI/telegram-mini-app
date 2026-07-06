@@ -9222,6 +9222,23 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "countdown") {
+    // Сервер теперь транслирует настоящую позицию countdown-физики каждые 50мс
+    // (точно так же, как для active) — используем её напрямую вместо независимого
+    // расчёта на клиенте. Это устраняет расхождение между клиентом и сервером
+    // в принципе, а не сглаживает его задним числом.
+    const _serverFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
+    if (_serverBeamPos &&
+        Number.isFinite(_serverBeamPos.x) &&
+        Number.isFinite(_serverBeamPos.y) &&
+        _serverFreshMs < 500) {
+      return {
+        x: _serverBeamPos.x,
+        y: _serverBeamPos.y,
+        angle: _serverBeamPos.angle || 0,
+        vx: _serverBeamPos.vx || 0,
+        vy: _serverBeamPos.vy || 0
+      };
+    }
     return getScannerCountdownBeamSampleAtTime(
       roundData,
       safeTimestamp,
