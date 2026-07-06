@@ -12467,6 +12467,16 @@ function renderScannerCanvas() {
       const spinEase = 1 - Math.pow(1 - easedProgress, 2); // ease-out: быстро в начале, плавно тормозит
       const baseRotation = EXTRA_SPINS * Math.PI * 2 * spinEase;
       const triangleAngle = baseRotation + finalSpinAngle * easedProgress;
+      if (easedProgress > 0.98 && !window._angleLoggedForRound) {
+        window._angleLoggedForRound = _roundIdForAngle;
+        console.log("[УГОЛ-ОТЛАДКА] треугольник почти финиш:", {
+          "finalSpinAngle (куда должен указать)": finalSpinAngle,
+          "shuffleStartMs": shuffleStartMs,
+          "roundAngleOffset": roundAngleOffset,
+          "roundId": _roundIdForAngle
+        });
+      }
+      if (easedProgress <= 0.98) window._angleLoggedForRound = null;
       const orbitR = reticleRadius * 2.8;
 
       // Сброс кэша если начался новый shuffling
