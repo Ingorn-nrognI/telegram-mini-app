@@ -9239,14 +9239,15 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "countdown") {
-    // Сервер теперь транслирует настоящую позицию countdown-физики каждые 50мс
-    // (точно так же, как для active) — используем её напрямую вместо независимого
-    // расчёта на клиенте. Это устраняет расхождение между клиентом и сервером
-    // в принципе, а не сглаживает его задним числом.
+    // Проверяем не только свежесть, но и что позиция реально относится к ЭТОМУ раунду —
+    // иначе в первый момент countdown можно показать последнюю трансляцию idle-режима
+    // (она "свежая" по времени, но принадлежит другому состоянию), а через мгновение
+    // картинка дёргается на правильную позицию когда придёт настоящая трансляция.
     const _serverFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
     if (_serverBeamPos &&
         Number.isFinite(_serverBeamPos.x) &&
         Number.isFinite(_serverBeamPos.y) &&
+        String(_serverBeamPos.roundId || "") === String(roundData?.id || "") &&
         _serverFreshMs < 500) {
       return {
         x: _serverBeamPos.x,
