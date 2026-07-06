@@ -9155,10 +9155,17 @@ function getScannerPreparingProgress(round) {
 }
 
 function getScannerPreparingBeamSample(round, players) {
+  // Раньше здесь строго проверялось совпадение roundId у _serverBeamPos — из-за гонки
+  // данных (Firestore/сокет) это условие иногда не срабатывало, и код проваливался
+  // в резервный вариант со случайным направлением, из-за чего "замороженная" позиция
+  // в конце раунда оказывалась не там, где реально закончился полёт лазера — отсюда
+  // огромный скачок при сбросе арены в ожидание. Проверяем свежесть данных вместо roundId —
+  // это надёжнее, так как _serverBeamPos обновляется каждые 50мс пока раунд активен.
+  const _serverBeamFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
   if (_serverBeamPos &&
       Number.isFinite(_serverBeamPos.x) &&
       Number.isFinite(_serverBeamPos.y) &&
-      (!_serverBeamPos.roundId || !round?.id || String(_serverBeamPos.roundId) === String(round.id))) {
+      _serverBeamFreshMs < 10000) {
     return {
       x: _serverBeamPos.x,
       y: _serverBeamPos.y,
