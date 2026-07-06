@@ -9684,6 +9684,11 @@ function applySocketRoundState(data) {
   scannerRealtime.socketParticipants = Array.isArray(data.participants) ? data.participants : [];
 
   if (roundId) {
+    // Сохраняем countdownLatchSample если он уже был получен от Firestore
+    // ранее для ЭТОГО ЖЕ раунда — иначе этот bootstrap-снимок стирает его
+    const _prevLatch = (scannerRealtime.roundData?.id === roundId)
+      ? scannerRealtime.roundData?.countdownLatchSample
+      : null;
     scannerRealtime.roundData = {
       id: roundId,
       status: data.status || 'waiting',
@@ -9693,6 +9698,9 @@ function applySocketRoundState(data) {
       activeEndsAt: data.activeEndsAt || null,
       version: data.version || 0
     };
+    if (_prevLatch) {
+      scannerRealtime.roundData.countdownLatchSample = _prevLatch;
+    }
   }
 
   syncScannerDerivedState();
