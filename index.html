@@ -12664,6 +12664,13 @@ function subscribeScannerRound(roundId) {
 
   if (!roundId) {
     scannerRealtime.roundData = null;
+  } else if (String(scannerRealtime.roundData?.id || "") !== String(roundId)) {
+    // Новый раунд — обязательно сбрасываем старые данные (включая version).
+    // Иначе version-защита от устаревших снэпшотов Firestore сравнивает версию
+    // НОВОГО раунда (который стартует с 1) со старой версией ПРЕДЫДУЩЕГО раунда
+    // (например 4) — и все настоящие снэпшоты нового раунда отбрасываются как
+    // "устаревшие" до конца раунда, включая поле countdownLatchSample.
+    scannerRealtime.roundData = null;
   }
   scannerRealtime.roundReady = !roundId;
   scannerRealtime.activeRoundId = roundId || null;
