@@ -9616,37 +9616,36 @@ function applySocketRoundPatch(patch) {
       scannerLobbyLaserVisual.angle = null;
       scannerLobbyLaserVisual.lastAt = 0;
     }
-    if (patch.status === "active" && Number.isFinite(patch.launchX) && Number.isFinite(patch.launchY)) {
-      // Позиция старта = ровно то место, что было на экране кадром раньше
-      // (последняя видимая точка во время shuffling), а не серверные launchX/launchY —
-      // так позиция гарантированно непрерывна, даже если независимые расчёты
-      // клиента и сервера чуть разошлись. Направление же берём от сервера — оно верное.
-      const _continuityX = Number.isFinite(scannerLastBeamSample?.x) ? scannerLastBeamSample.x : patch.launchX;
-      const _continuityY = Number.isFinite(scannerLastBeamSample?.y) ? scannerLastBeamSample.y : patch.launchY;
-      console.log("[ТЕЛЕПОРТ-ОТЛАДКА] patch active получен:", {
-        "scannerLastBeamSample (что было на экране)": scannerLastBeamSample,
-        "patch.launchX/Y (от сервера)": { x: patch.launchX, y: patch.launchY },
-        "_continuityX/Y (что используем)": { x: _continuityX, y: _continuityY },
-        "roundData?.countdownLatchSample": scannerRealtime?.roundData?.countdownLatchSample
-      });
-      _serverBeamPos = {
-        x: _continuityX,
-        y: _continuityY,
-        vx: Number(patch.launchVx) || 0,
-        vy: Number(patch.launchVy) || 0,
-        angle: Math.atan2(Number(patch.launchVy) || 0, Number(patch.launchVx) || 0.0001),
-        roundId: scannerRealtime.activeRoundId || patch.roundId || scannerGridState.roundId,
-        timestamp: Number(patch.timestamp) || Date.now(),
-        _receiveTime: performance.now()
-      };
-      resetScannerBeamRenderState({
-        x: _continuityX,
-        y: _continuityY,
-        vx: Number(patch.launchVx) || 0,
-        vy: Number(patch.launchVy) || 0,
-        angle: Math.atan2(Number(patch.launchVy) || 0, Number(patch.launchVx) || 0.0001)
-      }, "active_launch_reset");
-    }
+  }
+  if (patch.status === "active" && Number.isFinite(patch.launchX) && Number.isFinite(patch.launchY)) {
+    // ВАЖНО: этот блок должен быть СНАРУЖИ if(patch.roundId !== undefined) —
+    // серверный патч для active не содержит поля roundId вообще, поэтому раньше
+    // этот код был недостижим и никогда не выполнялся при старте active-фазы.
+    const _continuityX = Number.isFinite(scannerLastBeamSample?.x) ? scannerLastBeamSample.x : patch.launchX;
+    const _continuityY = Number.isFinite(scannerLastBeamSample?.y) ? scannerLastBeamSample.y : patch.launchY;
+    console.log("[ТЕЛЕПОРТ-ОТЛАДКА] patch active получен:", {
+      "scannerLastBeamSample (что было на экране)": scannerLastBeamSample,
+      "patch.launchX/Y (от сервера)": { x: patch.launchX, y: patch.launchY },
+      "_continuityX/Y (что используем)": { x: _continuityX, y: _continuityY },
+      "roundData?.countdownLatchSample": scannerRealtime?.roundData?.countdownLatchSample
+    });
+    _serverBeamPos = {
+      x: _continuityX,
+      y: _continuityY,
+      vx: Number(patch.launchVx) || 0,
+      vy: Number(patch.launchVy) || 0,
+      angle: Math.atan2(Number(patch.launchVy) || 0, Number(patch.launchVx) || 0.0001),
+      roundId: scannerRealtime.activeRoundId || patch.roundId || scannerGridState.roundId,
+      timestamp: Number(patch.timestamp) || Date.now(),
+      _receiveTime: performance.now()
+    };
+    resetScannerBeamRenderState({
+      x: _continuityX,
+      y: _continuityY,
+      vx: Number(patch.launchVx) || 0,
+      vy: Number(patch.launchVy) || 0,
+      angle: Math.atan2(Number(patch.launchVy) || 0, Number(patch.launchVx) || 0.0001)
+    }, "active_launch_reset");
   }
   // Если сервер явно сбросил раунд в idle — запрещаем bootstrap подхватить старый раунд
   if (patch.status === 'idle' && !patch.roundId) {
