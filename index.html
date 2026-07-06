@@ -8848,25 +8848,34 @@ function getScannerCountdownBeamCache(round) {
     const overrideAngle = Number.isFinite(round.countdownLatchSample.angle)
       ? round.countdownLatchSample.angle
       : (frozenSample?.angle ?? samples[samples.length - 1]?.angle ?? 0);
-    frozenSample = {
+    // Клиентская и серверная симуляции — обе хаотичные системы (много отскоков подряд),
+    // и даже при идентичных исходных данных к концу расходятся на десятки процентов
+    // экрана (подтверждено диагностикой). Раньше подменялся только последний сэмпл (~7мс),
+    // из-за чего вся эта разница схлопывалась в один видимый рывок под самый конец.
+    // Теперь растягиваем коррекцию на последние 15% времени (~3 секунды при 20-секундном
+    // отсчёте) — шар в этот момент и так уже почти остановился, поэтому доседание на
+    // нужное место выглядит как естественное затухание, а не как скачок.
+    if (samples.length > 0) {
+      const blendStartIdx = Math.floor(samples.length * 0.85);
+      const denom = Math.max(1, samples.length - 1 - blendStartIdx);
+      for (let i = blendStartIdx; i < samples.length; i += 1) {
+        const localT = (i - blendStartIdx) / denom;
+        const eased = localT * localT * (3 - 2 * localT);
+        const bx = samples[i].x + (round.countdownLatchSample.x - samples[i].x) * eased;
+        const by = samples[i].y + (round.countdownLatchSample.y - samples[i].y) * eased;
+        const bangle = i === samples.length - 1 ? overrideAngle : samples[i].angle;
+        samples[i] = {
+          x: bx, y: by, vx: 0, vy: 0,
+          angle: bangle, travelAngle: bangle,
+          progress: samples[i].progress
+        };
+      }
+    }
+    frozenSample = samples[samples.length - 1] || {
       x: round.countdownLatchSample.x,
       y: round.countdownLatchSample.y,
-      vx: 0,
-      vy: 0,
-      angle: overrideAngle
+      vx: 0, vy: 0, angle: overrideAngle
     };
-    if (samples.length > 0) {
-      const lastIdx = samples.length - 1;
-      samples[lastIdx] = {
-        x: round.countdownLatchSample.x,
-        y: round.countdownLatchSample.y,
-        vx: 0,
-        vy: 0,
-        angle: overrideAngle,
-        travelAngle: overrideAngle,
-        progress: samples[lastIdx].progress
-      };
-    }
   }
 
   const latchStartSample = frozenSample || samples[samples.length - 1] || lobbyStartSample;
