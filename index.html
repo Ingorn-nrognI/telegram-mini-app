@@ -9226,11 +9226,16 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   const safePlayers = Array.isArray(players) ? players : [];
 
   if (!roundData) {
+    // Убрана проверка "roundId должен быть пустым" — в момент создания нового раунда
+    // сервер уже шлёт трансляцию с настоящим roundId чуть РАНЬШЕ, чем локальное
+    // состояние (roundData/status) успевает обновиться. Раньше в этом узком окне
+    // проверка проваливалась и код откатывался на старый локальный резервный расчёт,
+    // что и давало скачок. Раз мы всё равно ничего не знаем локально о раунде —
+    // любая свежая трансляция лучше локального пересчёта, вне зависимости от roundId.
     const _idleServerFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
     if (_serverBeamPos &&
         Number.isFinite(_serverBeamPos.x) &&
         Number.isFinite(_serverBeamPos.y) &&
-        !_serverBeamPos.roundId &&
         _idleServerFreshMs < 500) {
       return {
         x: _serverBeamPos.x,
