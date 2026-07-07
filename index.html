@@ -12422,9 +12422,15 @@ function renderScannerCanvas() {
         nowMs: now
       });
     } else {
+      // Раньше здесь использовалась ОТДЕЛЬНАЯ, независимая функция расчёта позиции
+      // (_frameLobbyBeamSample), которая никак не связана с getScannerUnifiedBeamSample
+      // и живой трансляцией сервера — из-за этого scannerLastBeamSample никогда не
+      // обновлялся в режиме ожидания, шарик визуально стоял неподвижно в центре, а при
+      // входе в раунд резко "телепортировался" туда, где он на самом деле уже был.
+      const idleUnifiedSample = getScannerUnifiedBeamSample(roundStatus, roundData, scannerGridState.players || [], nowMs);
       const idleVisualBeamSample = getSmoothedScannerBeamSample(
         getScannerBeamTargetSample(
-          _frameLobbyBeamSample,
+          idleUnifiedSample,
           roundStatus,
           beamRenderKey,
           nowMs
@@ -12432,6 +12438,7 @@ function renderScannerCanvas() {
         beamRenderKey,
         now
       );
+      if (idleVisualBeamSample) scannerLastBeamSample = idleVisualBeamSample;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
         reticleRotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
