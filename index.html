@@ -4325,6 +4325,14 @@ const scannerGridPathOrder = (() => {
 })();
 
 let scannerLastBeamSample = { x: 0.5, y: 0.5 };
+setInterval(() => {
+  console.log(
+    "[НЕЗАВИСИМЫЙ-ТАЙМЕР] status=" + (scannerGridState?.status || "нет") +
+    " scannerLastBeamSample=(" + (scannerLastBeamSample?.x?.toFixed(4) || "?") + "," + (scannerLastBeamSample?.y?.toFixed(4) || "?") + ")" +
+    " _serverBeamPos=(" + (typeof _serverBeamPos !== "undefined" && _serverBeamPos ? _serverBeamPos.x.toFixed(4) + "," + _serverBeamPos.y.toFixed(4) + " roundId=" + _serverBeamPos.roundId : "нет") + ")" +
+    " currentMenuView=" + (typeof currentMenuView !== "undefined" ? currentMenuView : "?")
+  );
+}, 500);
 let scannerRoundFinalBeamSample = null; // позиция лазера в конце раунда — не перезаписывается
 
 const scannerGridState = {
