@@ -12526,7 +12526,12 @@ function renderScannerCanvas() {
         window._countdownLogPrinted = true;
         console.log("[ВХОД-ОТЛАДКА]", JSON.stringify(window._beamFrameLog2));
       }
+      if (roundStatus === "idle" && !window._idleResetLogPrinted) {
+        window._idleResetLogPrinted = true;
+        console.log("[СБРОС-ОТЛАДКА]", JSON.stringify(window._beamFrameLog2));
+      }
       if (roundStatus === "idle") window._countdownLogPrinted = false;
+      if (roundStatus === "countdown" || roundStatus === "shuffling") window._idleResetLogPrinted = false;
     }
     if (roundStatus === "countdown" || roundStatus === "shuffling") {
       window._beamFrameLog = window._beamFrameLog || [];
