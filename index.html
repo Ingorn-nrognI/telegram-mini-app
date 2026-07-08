@@ -12674,6 +12674,19 @@ function renderScannerCanvas() {
     const beamLength = size * 4.6;
     const reticleRotation = now * SCANNER_RETICLE_IDLE_SPIN_SPEED;
 
+    // Синхронизируем декоративный угол лучей с РЕАЛЬНЫМ углом движения шарика
+    // на каждом кадре во время раунда (countdown/active/shuffling/finished).
+    // Раньше scannerLobbyLaserVisual.angle крутился независимо с постоянной
+    // скоростью весь раунд и никогда не совпадал с реальным направлением —
+    // из-за этого при сбросе в idle (где угол жёстко выставляется на реальный)
+    // получался видимый скачок лучей. Теперь угол всегда актуален, и скачка
+    // при сбросе просто не возникает — идти уже некуда, он уже там.
+    const _realBeamAngle = Number.isFinite(visualBeamSample?.travelAngle)
+      ? visualBeamSample.travelAngle
+      : (Number.isFinite(visualBeamSample?.angle) ? visualBeamSample.angle : scannerLobbyLaserVisual.angle);
+    scannerLobbyLaserVisual.angle = _realBeamAngle;
+    scannerLobbyLaserVisual.lastAt = now;
+
     const beamRenderAngle = scannerLobbyLaserVisual.angle;
 
     ctx.save();
