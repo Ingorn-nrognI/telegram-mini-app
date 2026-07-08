@@ -12470,6 +12470,14 @@ function renderScannerCanvas() {
       // и живой трансляцией сервера — из-за этого scannerLastBeamSample никогда не
       // обновлялся в режиме ожидания, шарик визуально стоял неподвижно в центре, а при
       // входе в раунд резко "телепортировался" туда, где он на самом деле уже был.
+      if (_wasHasGridLastFrame) {
+        // Гарантируем, что сброс состояния сглаживания на настоящую idle-точку —
+        // это ПОСЛЕДНЕЕ, что происходит перед первым реальным блендом в этой ветке,
+        // а не более раннее (в обработчике патча), которое мог перезаписать ещё один
+        // "старый" вызов из основной (grid) ветки рендера, проскочивший на стыке кадров.
+        resetScannerBeamRenderState(scannerLastBeamSample, beamRenderKey);
+      }
+      _wasHasGridLastFrame = false;
       const idleUnifiedSample = getScannerUnifiedBeamSample(roundStatus, roundData, scannerGridState.players || [], nowMs);
       const _idleTargetForLog = getScannerBeamTargetSample(
         idleUnifiedSample,
@@ -12572,6 +12580,7 @@ function renderScannerCanvas() {
     beamRenderKey,
     nowMs
   );
+  _wasHasGridLastFrame = true;
   beamSample = getSmoothedScannerBeamSample(
     _rawTargetForLog,
     beamRenderKey,
