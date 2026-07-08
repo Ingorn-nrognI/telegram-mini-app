@@ -4325,6 +4325,7 @@ const scannerGridPathOrder = (() => {
 })();
 
 let scannerLastBeamSample = { x: 0.5, y: 0.5 };
+let _wasHasGridLastFrame = false;
 setInterval(() => {
   console.log(
     "[НЕЗАВИСИМЫЙ-ТАЙМЕР] status=" + (scannerGridState?.status || "нет") +
