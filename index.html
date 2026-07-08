@@ -9714,7 +9714,7 @@ function applySocketRoundPatch(patch) {
       scannerActiveBeamCache = null;
       scannerBeamRenderState.initialized = false;
       scannerBeamRenderState.key = "";
-      scannerLobbyLaserVisual.angle = Number.isFinite(patch.idleBeamMotion.vx) && Number.isFinite(patch.idleBeamMotion.vy)
+      scannerLobbyLaserVisual.angle = (patch.idleBeamMotion && Number.isFinite(patch.idleBeamMotion.vx) && Number.isFinite(patch.idleBeamMotion.vy))
         ? Math.atan2(patch.idleBeamMotion.vy, patch.idleBeamMotion.vx)
         : null;
       scannerLobbyLaserVisual.lastAt = 0;
