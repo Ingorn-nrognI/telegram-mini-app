@@ -12343,6 +12343,16 @@ function renderScannerCanvas() {
   const { ctx, size, cellSize } = metrics;
   const roundStatus = scannerGridState.status;
   const hasGrid = scannerGridState.players.length > 0;
+  if (roundStatus === "idle") {
+    window._idleBranchLogCount = (window._idleBranchLogCount || 0) + 1;
+    if (window._idleBranchLogCount % 60 === 1) {
+      console.log(
+        "[ВЕТКА-ОТЛАДКА] hasGrid=" + hasGrid +
+        " roundData=" + (scannerGridState.roundData ? "НЕ пусто (id=" + scannerGridState.roundData.id + ")" : "пусто") +
+        " playersLen=" + scannerGridState.players.length
+      );
+    }
+  }
   const now = performance.now(); // Это оставляем для плавности (fps)
   const nowMs = getNetworkTimeHighRes();
   scannerLobbyLaserVisual.angle = (((nowMs - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
