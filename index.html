@@ -9220,21 +9220,11 @@ function getScannerPreparingBeamSample(round, players) {
   return getScannerSharedLobbyBeamSample();
 }
 
-let _stabilizeUntilMs = 0;
-let _stabilizeLastRoundId = undefined;
-let _stabilizeLastStatus = undefined;
-const SCANNER_TRANSITION_STABILIZE_MS = 130;
-
 function getScannerStabilizedBeamSample(roundStatus, roundData, players, nowMs) {
-  const currentRoundId = roundData?.id || null;
-  if (_stabilizeLastStatus !== roundStatus || _stabilizeLastRoundId !== currentRoundId) {
-    _stabilizeLastStatus = roundStatus;
-    _stabilizeLastRoundId = currentRoundId;
-    _stabilizeUntilMs = Date.now() + SCANNER_TRANSITION_STABILIZE_MS;
-  }
-  if (Date.now() < _stabilizeUntilMs && scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
-    return scannerLastBeamSample;
-  }
+  // Стабилизационная пауза убрана — реальные данные (countdownLatchSample,
+  // lobbyStartSample, roundId) и без неё оказались полностью непрерывными на
+  // границах статусов. Сама 130мс заморозка стала выглядеть как лишний "рывок",
+  // а не решение проблемы, которой уже нет.
   return getScannerUnifiedBeamSample(roundStatus, roundData, players, nowMs);
 }
 
