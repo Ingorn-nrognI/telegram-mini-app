@@ -9220,6 +9220,24 @@ function getScannerPreparingBeamSample(round, players) {
   return getScannerSharedLobbyBeamSample();
 }
 
+let _stabilizeUntilMs = 0;
+let _stabilizeLastRoundId = undefined;
+let _stabilizeLastStatus = undefined;
+const SCANNER_TRANSITION_STABILIZE_MS = 130;
+
+function getScannerStabilizedBeamSample(roundStatus, roundData, players, nowMs) {
+  const currentRoundId = roundData?.id || null;
+  if (_stabilizeLastStatus !== roundStatus || _stabilizeLastRoundId !== currentRoundId) {
+    _stabilizeLastStatus = roundStatus;
+    _stabilizeLastRoundId = currentRoundId;
+    _stabilizeUntilMs = Date.now() + SCANNER_TRANSITION_STABILIZE_MS;
+  }
+  if (Date.now() < _stabilizeUntilMs && scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
+    return scannerLastBeamSample;
+  }
+  return getScannerUnifiedBeamSample(roundStatus, roundData, players, nowMs);
+}
+
 function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampMs = getNetworkTime()) {
   const safeStatus = String(roundStatus || "idle");
   const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : getNetworkTime();
