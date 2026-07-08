@@ -9684,10 +9684,12 @@ function applySocketRoundPatch(patch) {
           angle: Math.atan2(patch.idleBeamMotion.vy || 0, patch.idleBeamMotion.vx || 0)
         };
         scannerLastBeamSample = _idleSample;
-        // Hard reset сглаживания луча — чтобы он не "телепортировался" из
-        // финальной позиции раунда в новую idle-позицию через плавный easing,
-        // а сразу стоял в правильной точке и оттуда плавно поехал
-        _serverBeamPos = null;
+        // Раньше здесь стоял "_serverBeamPos = null" — оставшийся от раннего этапа
+        // разработки, до того как idle стал полностью серверным. Теперь это активно
+        // вредит: пока не придёт следующая трансляция beam:position (до ~50мс), код
+        // проваливается в аварийный резерв {x:0.5,y:0.5}, давая вспышку в центр на
+        // один кадр — то самое "тепехнулся и сразу вернулся". Просто сбрасываем
+        // состояние сглаживания на правильную точку, не трогая _serverBeamPos.
         resetScannerBeamRenderState(_idleSample, "idle_reset");
       }
       scannerRealtime.roundData = null;
