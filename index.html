@@ -12503,21 +12503,40 @@ function renderScannerCanvas() {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
   }
 
-  beamSample = getSmoothedScannerBeamSample(
-    getScannerBeamTargetSample(
-      getScannerUnifiedBeamSample(
-        roundStatus,
-        roundData,
-        scannerGridState.players || [],
-        nowMs
-      ),
+  const _rawTargetForLog = getScannerBeamTargetSample(
+    getScannerUnifiedBeamSample(
       roundStatus,
-      beamRenderKey,
+      roundData,
+      scannerGridState.players || [],
       nowMs
     ),
+    roundStatus,
+    beamRenderKey,
+    nowMs
+  );
+  beamSample = getSmoothedScannerBeamSample(
+    _rawTargetForLog,
     beamRenderKey,
     now
   );
+  if (roundStatus === "countdown") {
+    window._angleDiagLog = window._angleDiagLog || [];
+    window._angleDiagLog.push({
+      t: Math.round(now),
+      rawAngle: Number((_rawTargetForLog.angle || 0).toFixed(4)),
+      smoothAngle: Number((beamSample?.angle || beamSample?.renderAngle || 0).toFixed(4)),
+      rawVx: Number((_rawTargetForLog.vx || 0).toFixed(4)),
+      rawVy: Number((_rawTargetForLog.vy || 0).toFixed(4))
+    });
+    if (window._angleDiagLog.length > 150) window._angleDiagLog.shift();
+    if (!window._angleDiagPrinted) {
+      window._angleDiagPrinted = true;
+      setTimeout(() => {
+        console.log("[УГОЛ-ДИАГ]", JSON.stringify(window._angleDiagLog));
+      }, 2500);
+    }
+  }
+  if (roundStatus !== "countdown") window._angleDiagPrinted = false;
 
   const visualBeamSample = beamSample || null;
   if (visualBeamSample) {
