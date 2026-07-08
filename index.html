@@ -9260,6 +9260,16 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
     if (!_serverBeamPos) {
       return { x: 0.5, y: 0.5, angle: 0, vx: 0, vy: 0 };
     }
+    // Раньше здесь был вызов независимой функции getScannerSharedLobbyBeamSampleAt —
+    // она не знает, где луч только что остановился, и при малейшей задержке первой
+    // idle-трансляции от сервера (>500мс) рисовала луч в случайной точке арены,
+    // из-за чего он на мгновение "телепортировался" в другое место и тут же
+    // прыгал обратно, когда приходила настоящая позиция. Теперь держим последнюю
+    // известную точку неподвижно (как уже сделано в ветке countdown ниже) —
+    // это то самое место, где раунд реально закончился.
+    if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
+      return scannerLastBeamSample;
+    }
     return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
   }
 
