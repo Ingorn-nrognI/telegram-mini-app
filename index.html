@@ -9731,10 +9731,13 @@ function applySocketRoundPatch(patch) {
       scannerActiveBeamCache = null;
       scannerBeamRenderState.initialized = false;
       scannerBeamRenderState.key = "";
-      scannerLobbyLaserVisual.angle = (patch.idleBeamMotion && Number.isFinite(patch.idleBeamMotion.vx) && Number.isFinite(patch.idleBeamMotion.vy))
-        ? Math.atan2(patch.idleBeamMotion.vy, patch.idleBeamMotion.vx)
-        : null;
-      scannerLobbyLaserVisual.lastAt = 0;
+      // Раньше здесь угол жёстко перезаписывался на реальное направление
+      // полёта — из-за этого декоративное вращение лучей делало видимый
+      // скачок в момент сброса раунда. Теперь угол просто не трогаем —
+      // вращение продолжается непрерывно с той же скоростью, без разрыва.
+      // (scannerLobbyLaserVisual.lastAt тоже не обнуляем — иначе первый
+      // кадр после сброса посчитает нулевую дельту времени и вращение
+      // на miллисекунду "зависнет", что тоже выглядит как микро-заминка.)
     }
   }
   if (patch.status === "active" && Number.isFinite(patch.launchX) && Number.isFinite(patch.launchY)) {
@@ -12673,19 +12676,6 @@ function renderScannerCanvas() {
     const py = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.y * size));
     const beamLength = size * 4.6;
     const reticleRotation = now * SCANNER_RETICLE_IDLE_SPIN_SPEED;
-
-    // Синхронизируем декоративный угол лучей с РЕАЛЬНЫМ углом движения шарика
-    // на каждом кадре во время раунда (countdown/active/shuffling/finished).
-    // Раньше scannerLobbyLaserVisual.angle крутился независимо с постоянной
-    // скоростью весь раунд и никогда не совпадал с реальным направлением —
-    // из-за этого при сбросе в idle (где угол жёстко выставляется на реальный)
-    // получался видимый скачок лучей. Теперь угол всегда актуален, и скачка
-    // при сбросе просто не возникает — идти уже некуда, он уже там.
-    const _realBeamAngle = Number.isFinite(visualBeamSample?.travelAngle)
-      ? visualBeamSample.travelAngle
-      : (Number.isFinite(visualBeamSample?.angle) ? visualBeamSample.angle : scannerLobbyLaserVisual.angle);
-    scannerLobbyLaserVisual.angle = _realBeamAngle;
-    scannerLobbyLaserVisual.lastAt = now;
 
     const beamRenderAngle = scannerLobbyLaserVisual.angle;
 
