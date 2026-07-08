@@ -12469,16 +12469,35 @@ function renderScannerCanvas() {
       // обновлялся в режиме ожидания, шарик визуально стоял неподвижно в центре, а при
       // входе в раунд резко "телепортировался" туда, где он на самом деле уже был.
       const idleUnifiedSample = getScannerUnifiedBeamSample(roundStatus, roundData, scannerGridState.players || [], nowMs);
+      const _idleTargetForLog = getScannerBeamTargetSample(
+        idleUnifiedSample,
+        roundStatus,
+        beamRenderKey,
+        nowMs
+      );
       const idleVisualBeamSample = getSmoothedScannerBeamSample(
-        getScannerBeamTargetSample(
-          idleUnifiedSample,
-          roundStatus,
-          beamRenderKey,
-          nowMs
-        ),
+        _idleTargetForLog,
         beamRenderKey,
         now
       );
+      window._idleTransitionLog = window._idleTransitionLog || [];
+      window._idleTransitionLog.push({
+        t: Math.round(now),
+        key: beamRenderKey,
+        rawX: Number(idleUnifiedSample.x.toFixed(5)),
+        rawY: Number(idleUnifiedSample.y.toFixed(5)),
+        targetX: Number(_idleTargetForLog.x.toFixed(5)),
+        targetY: Number(_idleTargetForLog.y.toFixed(5)),
+        smoothX: Number((idleVisualBeamSample?.x || 0).toFixed(5)),
+        smoothY: Number((idleVisualBeamSample?.y || 0).toFixed(5))
+      });
+      if (window._idleTransitionLog.length > 40) window._idleTransitionLog.shift();
+      if (!window._idleLogPrintedOnce) {
+        window._idleLogPrintedOnce = true;
+        setTimeout(() => {
+          console.log("[ПОЗИЦИЯ-ПЕРЕХОД-ОТЛАДКА]", JSON.stringify(window._idleTransitionLog));
+        }, 400);
+      }
       if (idleVisualBeamSample) scannerLastBeamSample = idleVisualBeamSample;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
