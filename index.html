@@ -9667,6 +9667,10 @@ function applySocketRoundPatch(patch) {
   if (patch.roundId !== undefined) {
     const _prevActiveRoundId = scannerRealtime.activeRoundId;
     scannerRealtime.activeRoundId = patch.roundId || null;
+    if (patch.roundId) {
+      if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+      scannerRealtime.roundData.id = patch.roundId;
+    }
     // Гарантируем настоящую Firestore-подписку на участников нового раунда —
     // иначе арена не отображает игроков хотя банк/таймер обновляются через сокет
     if (patch.roundId && (_prevActiveRoundId !== patch.roundId || !scannerRealtime.unsubRound)) {
