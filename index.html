@@ -12616,6 +12616,7 @@ function renderScannerCanvas() {
         console.log("[СБРОС-ОТЛАДКА]", JSON.stringify(window._beamFrameLog2));
       }
       if (roundStatus === "idle") window._countdownLogPrinted = false;
+      if (roundStatus === "countdown" || roundStatus === "shuffling") window._idleLogPrintedOnce = false;
       if (roundStatus === "countdown" || roundStatus === "shuffling") window._idleResetLogPrinted = false;
     }
     if (roundStatus === "countdown" || roundStatus === "shuffling") {
