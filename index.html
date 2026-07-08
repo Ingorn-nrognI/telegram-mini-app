@@ -12481,6 +12481,17 @@ function renderScannerCanvas() {
         reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE,
         nowMs: now
       });
+      // ВРЕМЕННО: рисуем прямо на канвасе реальные x,y координаты, которые используются
+      // для отрисовки прицела ПРЯМО СЕЙЧАС — чтобы на скриншоте было видно одновременно
+      // и картинку, и точные цифры, и можно было раз и навсегда понять, врёт код
+      // (данные говорят одно, а рисует в другом месте) или нет.
+      ctx.save();
+      ctx.font = "bold 20px monospace";
+      ctx.fillStyle = "#ff0000";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText("x=" + idleVisualBeamSample.x.toFixed(4) + " y=" + idleVisualBeamSample.y.toFixed(4), 10, 10);
+      ctx.restore();
     }
     return;
   }
