@@ -12363,7 +12363,19 @@ function renderScannerCanvas() {
   }
   const now = performance.now(); // Это оставляем для плавности (fps)
   const nowMs = getNetworkTimeHighRes();
-  scannerLobbyLaserVisual.angle = (((nowMs - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED) % (Math.PI * 2);
+  // Раньше угол декоративного вращения луча в режиме ожидания считался абсолютной
+  // формулой от времени, независимо от настоящего направления полёта шарика во время
+  // countdown/active. При каждом переходе между режимами эти два угла (независимые
+  // друг от друга) не совпадали — и линия луча резко "дёргалась" на новый угол в
+  // момент смены статуса, хотя сама точка оставалась на месте. Теперь вращение
+  // продолжается ПЛАВНО с того угла, на котором закончилось настоящее движение,
+  // а не откуда-то с независимой временной шкалы.
+  if (scannerLobbyLaserVisual.angle === null || typeof scannerLobbyLaserVisual.angle !== "number") {
+    scannerLobbyLaserVisual.angle = Number(_serverBeamPos?.angle) || 0;
+  } else {
+    const _lobbySpinDeltaMs = scannerLobbyLaserVisual.lastAt > 0 ? Math.max(0, now - scannerLobbyLaserVisual.lastAt) : 0;
+    scannerLobbyLaserVisual.angle = scannerLobbyLaserVisual.angle + (_lobbySpinDeltaMs / 1000) * SCANNER_LOBBY_LASER_TURN_SPEED;
+  }
   scannerLobbyLaserVisual.lastAt = now;
   const _frameLobbyBeamSample = getScannerSharedLobbyBeamSample(nowMs);
 
