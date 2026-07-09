@@ -13085,6 +13085,28 @@ function isScannerBootstrapCandidate(round) {
     return recentEdge >= Date.now() - 60000;
   }
 
+  // Раньше countdown/waiting/active принимались без проверки давности вообще —
+  // из-за этого при перезаходе в приложение клиент мог подхватить из Firestore
+  // давно "мёртвый" раунд, у которого countdownEndsAt/activeEndsAt уже прошли
+  // много минут или часов назад (Firestore-документ раунда не обновляется на
+  // idle, это чисто сокет-логика). Арена показывала уже завершённый раунд с
+  // замершим лучом, потому что реального сервера для него уже нет.
+  // Теперь для countdown/active проверяем, что дедлайн ещё не прошёл (с запасом
+  // 5 секунд на сетевую задержку), а для waiting — что документ обновлялся
+  // недавно (свежее 60 секунд), как и для остальных статусов.
+  if (status === "countdown") {
+    const endsAt = tsToMs(round.countdownEndsAt || 0);
+    return endsAt > 0 && endsAt >= Date.now() - 5000;
+  }
+  if (status === "active") {
+    const endsAt = tsToMs(round.activeEndsAt || 0);
+    return endsAt > 0 && endsAt >= Date.now() - 5000;
+  }
+  if (status === "waiting") {
+    const updatedAt = tsToMs(round.updatedAt || 0);
+    return updatedAt >= Date.now() - 60000;
+  }
+
   return true;
 }
 
