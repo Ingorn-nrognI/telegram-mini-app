@@ -963,12 +963,14 @@ button {
 }
 
 .bottom-btn.is-active:not(.center-fab) {
-  background:
-    linear-gradient(180deg, rgba(24, 36, 80, 0.95), rgba(13, 19, 42, 0.95));
+  /* Раньше тут был жирный залитый фон — выглядело так, будто пользователь
+     реально "внутри" раздела. Теперь используем тот же лёгкий стиль обводки,
+     что и .app-settings-chip.auto-hint в настройках — просто мягкий индикатор,
+     а не имитация "активного состояния". */
+  background: rgba(255,255,255,0.04);
   color: #ffffff;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.08),
-    0 10px 22px rgba(12, 18, 40, 0.28);
+  border-color: rgba(45, 225, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(45, 225, 255, 0.28);
 }
 
 .center-fab {
@@ -4199,6 +4201,7 @@ let expandedHistoryMatchId = null;
 let currentMenuView = "home";
 let currentBottomNav = "games";
 let homeScreenContext = "games";
+let userHasNavigatedManually = false;
 let homeInitialGameScrollApplied = false;
 let homeInitialGameScrollScheduled = false;
 let currentProfileBestRoundWin = 0;
@@ -5149,6 +5152,12 @@ function setActiveBottomNav(navName) {
 }
 
 function getPreferredHomeNav() {
+  // Раньше тут всегда возвращалось "games" по умолчанию — из-за этого кнопка
+  // "Игры" подсвечивалась сразу при заходе в приложение, хотя пользователь
+  // ещё ничего не нажимал и находится на обычном главном экране, а не внутри
+  // какого-либо игрового режима. Теперь подсветка появляется только после
+  // того, как пользователь реально нажал на одну из кнопок нижнего меню.
+  if (!userHasNavigatedManually) return "";
   return homeScreenContext === "pvp" ? "pvp" : "games";
 }
 
@@ -6687,6 +6696,7 @@ function setAppFps(level) {
 
 function handleBottomNav(action, event) {
   if (event) event.stopPropagation();
+  userHasNavigatedManually = true;
 
   switch (action) {
     case "leaderboard":
