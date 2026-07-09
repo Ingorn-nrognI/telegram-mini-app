@@ -3870,6 +3870,23 @@ button {
     </div>
   </div>
 
+  <div id="inventoryScreen" class="menu-screen">
+    <div class="screen-inner">
+      <section class="section-card">
+        <h1 class="section-title">Инвентарь</h1>
+        <p class="section-subtitle">Здесь будут отображаться подарки Telegram (NFT), которые вы добавите из своего кошелька.</p>
+      </section>
+      <section class="section-card" style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:36px 20px; text-align:center;">
+        <span style="width:56px; height:56px; display:flex; align-items:center; justify-content:center; border-radius:16px; background:rgba(255,255,255,0.06); color:var(--text-soft);">
+          <svg width="28" height="28" fill="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M4.04 7.43a4 4 0 0 1 7.92 0 .5.5 0 1 1-.99.14 3 3 0 0 0-5.94 0 .5.5 0 1 1-.99-.14"/><path fill-rule="evenodd" d="M4 9.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zm1 .5v3h6v-3h-1v.5a.5.5 0 0 1-1 0V10z"/><path d="M6 2.341V2a2 2 0 1 1 4 0v.341c2.33.824 4 3.047 4 5.659v1.191l1.17.585a1.5 1.5 0 0 1 .83 1.342V13.5a1.5 1.5 0 0 1-1.5 1.5h-1c-.456.607-1.182 1-2 1h-7a2.5 2.5 0 0 1-2-1h-1A1.5 1.5 0 0 1 0 13.5v-2.382a1.5 1.5 0 0 1 .83-1.342L2 9.191V8a6 6 0 0 1 4-5.659M7 2v.083a6 6 0 0 1 2 0V2a1 1 0 0 0-2 0M3 13.5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5V8A5 5 0 0 0 3 8zm-1-3.19-.724.362a.5.5 0 0 0-.276.447V13.5a.5.5 0 0 0 .5.5H2zm12 0V14h.5a.5.5 0 0 0 .5-.5v-2.382a.5.5 0 0 0-.276-.447L14 10.309Z"/></svg>
+        </span>
+        <div style="color:var(--text-soft); font-size:14px; line-height:1.5;">
+          Пока пусто.<br>Подключение кошелька и добавление подарков появится позже.
+        </div>
+      </section>
+    </div>
+  </div>
+
   <div id="scannerBetBar" class="scanner-bet-bar" onclick="event.stopPropagation()" aria-label="Бар ставок Сканера">
     <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="Настроить быстрые ставки">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="scanner-bet-edit-icon" aria-hidden="true"><path fill="currentColor" d="M100.4 417.2C104.5 402.6 112.2 389.3 123 378.5L304.2 197.3L338.1 163.4C354.7 180 389.4 214.7 442.1 267.4L476 301.3L442.1 335.2L260.9 516.4C250.2 527.1 236.8 534.9 222.2 539L94.4 574.6C86.1 576.9 77.1 574.6 71 568.4C64.9 562.2 62.6 553.3 64.9 545L100.4 417.2zM156 413.5C151.6 418.2 148.4 423.9 146.7 430.1L122.6 517L209.5 492.9C215.9 491.1 221.7 487.8 226.5 483.2L155.9 413.5zM510 267.4C493.4 250.8 458.7 216.1 406 163.4L372 129.5C398.5 103 413.4 88.1 416.9 84.6C430.4 71 448.8 63.4 468 63.4C487.2 63.4 505.6 71 519.1 84.6L554.8 120.3C568.4 133.9 576 152.3 576 171.4C576 190.5 568.4 209 554.8 222.5C551.3 226 536.4 240.9 509.9 267.4z"/></svg>
@@ -3997,8 +4014,10 @@ button {
       data-nav="skins"
       onclick="handleBottomNav('skins', event)"
     >
-      <span class="nav-icon">🎨</span>
-      <span class="nav-label">Скины</span>
+      <span class="nav-icon nav-icon-svg">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M4.04 7.43a4 4 0 0 1 7.92 0 .5.5 0 1 1-.99.14 3 3 0 0 0-5.94 0 .5.5 0 1 1-.99-.14"/><path fill-rule="evenodd" d="M4 9.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zm1 .5v3h6v-3h-1v.5a.5.5 0 0 1-1 0V10z"/><path d="M6 2.341V2a2 2 0 1 1 4 0v.341c2.33.824 4 3.047 4 5.659v1.191l1.17.585a1.5 1.5 0 0 1 .83 1.342V13.5a1.5 1.5 0 0 1-1.5 1.5h-1c-.456.607-1.182 1-2 1h-7a2.5 2.5 0 0 1-2-1h-1A1.5 1.5 0 0 1 0 13.5v-2.382a1.5 1.5 0 0 1 .83-1.342L2 9.191V8a6 6 0 0 1 4-5.659M7 2v.083a6 6 0 0 1 2 0V2a1 1 0 0 0-2 0M3 13.5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5V8A5 5 0 0 0 3 8zm-1-3.19-.724.362a.5.5 0 0 0-.276.447V13.5a.5.5 0 0 0 .5.5H2zm12 0V14h.5a.5.5 0 0 0 .5-.5v-2.382a.5.5 0 0 0-.276-.447L14 10.309Z"/></svg>
+      </span>
+      <span class="nav-label">Инвентарь</span>
     </button>
 
     <button
@@ -5260,6 +5279,8 @@ function setMenuView(view, options = {}) {
   const scannerScreen = document.getElementById("scannerScreen");
   if (scannerScreen) scannerScreen.classList.toggle("active", view === "scannerScreen");
   if (profileScreen) profileScreen.classList.toggle("active", view === "profile");
+  const inventoryScreen = document.getElementById("inventoryScreen");
+  if (inventoryScreen) inventoryScreen.classList.toggle("active", view === "inventory");
   if (modePopup) modePopup.classList.remove("open");
   if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
 
@@ -5888,7 +5909,10 @@ function showBobrRunComingSoon(event) {
 function openSkins(event) {
   if (event) event.stopPropagation();
   closeModePopup();
-  showAppNotice("Скины на стадии разработке", { timeoutMs: 2600 });
+  closeHistoryPanel({ preserveNav: true });
+  closeLeaderboard();
+  closeBobrRunRooms();
+  setMenuView("inventory");
 }
 
 function openWallet() {
@@ -6149,7 +6173,7 @@ function isScannerScreenActive() {
 const APP_TRANSLATIONS = {
   ru: {
     balance: "Баланс", wallet: "Кошелёк", tabLeaderboard: "Таблица",
-    tabGames: "Игры", tabPvp: "PvP", tabSkins: "Скины", tabHistory: "История",
+    tabGames: "Игры", tabPvp: "PvP", tabSkins: "Инвентарь", tabHistory: "История",
     settingsTitle: "Настройки", connecting: "Подключение...",
     waitingRound: "Ожидание раунда...", players: "Игроки",
     recentRounds: "Последние раунды", scanner: "Сканер",
