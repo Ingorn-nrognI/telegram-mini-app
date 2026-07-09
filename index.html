@@ -2312,7 +2312,6 @@ button {
   width: calc(100vw - 24px);
   min-height: 54px;
   padding: 9px;
-  padding-bottom: 24px;
   display: grid;
   grid-template-columns: 46px repeat(3, minmax(54px, 1fr)) 72px;
   gap: 7px;
@@ -2333,6 +2332,20 @@ button {
   pointer-events: none;
   transform: translate(-50%, 0) scale(0.98);
   transition: opacity 0.24s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Продлевает фон бара ставок вниз, за его реальную нижнюю границу, не
+   сдвигая и не увеличивая сам бар — просто отдельный слой фона позади,
+   который "выглядывает" из-под нижнего меню без изменения позиции бара. */
+.scanner-bet-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -20px;
+  height: 20px;
+  background: linear-gradient(180deg, rgba(6, 10, 24, 0.97), rgba(6, 10, 24, 0.97));
+  z-index: -1;
 }
 
 .scanner-bet-bar.is-visible {
