@@ -6028,7 +6028,11 @@ function stepLiveBgPhysics(dt, bounds) {
 function liveBgPhysicsLoop(now) {
   const appBg = document.querySelector(".app-bg");
   const tierActive = _liveBgTierCache === "mid" || _liveBgTierCache === "high";
-  if (appBg && _liveBgOrbs && tierActive && !isScannerScreenActive()) {
+  // Раньше физика движения фоновых шариков полностью останавливалась на экране
+  // сканера (!isScannerScreenActive()) — сами шарики не исчезали, но замирали
+  // на месте до возврата на главный экран, из-за чего фон выглядел не живым,
+  // пока идёт игра. Теперь движение продолжается на всех экранах одинаково.
+  if (appBg && _liveBgOrbs && tierActive) {
     const dt = Math.min(0.05, _liveBgLastFrameTime ? (now - _liveBgLastFrameTime) / 1000 : 0.016);
     const rect = appBg.getBoundingClientRect();
     stepLiveBgPhysics(dt, { width: rect.width, height: rect.height });
