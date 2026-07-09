@@ -2325,8 +2325,7 @@ button {
   box-shadow:
     0 -10px 24px rgba(0, 0, 0, 0.32),
     0 0 28px rgba(45, 225, 255, 0.1),
-    inset 0 1px 0 rgba(255,255,255,0.1),
-    0 20px 0 -1px rgba(6, 10, 24, 0.97);
+    inset 0 1px 0 rgba(255,255,255,0.1);
   backdrop-filter: blur(18px);
   z-index: 70;
   opacity: 0;
@@ -2338,7 +2337,7 @@ button {
 .scanner-bet-bar.is-visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, calc(-1 * (var(--bottom-nav-height) + var(--bottom-nav-offset)))) scale(1);
+  transform: translate(-50%, calc(-1 * var(--bottom-nav-height))) scale(1);
 }
 
 .scanner-bet-btn {
