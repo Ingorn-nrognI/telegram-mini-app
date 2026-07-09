@@ -2325,27 +2325,14 @@ button {
   box-shadow:
     0 -10px 24px rgba(0, 0, 0, 0.32),
     0 0 28px rgba(45, 225, 255, 0.1),
-    inset 0 1px 0 rgba(255,255,255,0.1);
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    0 20px 0 -1px rgba(6, 10, 24, 0.97);
   backdrop-filter: blur(18px);
   z-index: 70;
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, 0) scale(0.98);
   transition: opacity 0.24s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Продлевает фон бара ставок вниз, за его реальную нижнюю границу, не
-   сдвигая и не увеличивая сам бар — просто отдельный слой фона позади,
-   который "выглядывает" из-под нижнего меню без изменения позиции бара. */
-.scanner-bet-bar::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -20px;
-  height: 20px;
-  background: linear-gradient(180deg, rgba(6, 10, 24, 0.97), rgba(6, 10, 24, 0.97));
-  z-index: -1;
 }
 
 .scanner-bet-bar.is-visible {
