@@ -4396,7 +4396,8 @@ const scannerRealtime = {
   lastPersistedRoundId: null,
   lastAnimatedRoundId: null,
   bootstrappingRound: false,
-  fallbackRoundId: null
+  fallbackRoundId: null,
+  hasLiveRoundUpdate: false
 };
 
 let scannerGridVisualFrame = null;
@@ -9595,6 +9596,7 @@ function initSocketConnection() {
 
 function applySocketRoundPatch(patch) {
   if (!patch) return;
+  scannerRealtime.hasLiveRoundUpdate = true;
   console.log('[patch] Получен:', JSON.stringify(patch));
   if (patch.status === "shuffling" && patch.countdownLatchSample) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
@@ -9794,6 +9796,7 @@ function applySocketRoundPatch(patch) {
 
 function applySocketRoundState(data) {
   if (!data) return;
+  scannerRealtime.hasLiveRoundUpdate = true;
   const roundId = data.roundId || null;
   scannerRealtime.runtimeReady = true;
   if (data.status === "finished" && data.activeEndsAt) {
@@ -13112,6 +13115,14 @@ function isScannerBootstrapCandidate(round) {
 
 async function bootstrapScannerRoundFromRecentState(options = {}) {
   const { force = false } = options;
+  // Раньше эта функция дёргалась при каждом сворачивании/разворачивании
+  // приложения (handleVisibilityChange) — включая моменты, когда раунд уже
+  // естественно завершился и сбросился на idle через живой сокет. Firestore-
+  // документ раунда не обновляется на idle, поэтому резерв иногда снова
+  // подхватывал уже мёртвый раунд, и арена "зависала" на нём вместо сброса.
+  // Теперь: если сокет хоть раз в этой сессии уже прислал реальное состояние
+  // раунда — доверяем только ему и резерв из Firestore больше не трогаем.
+  if (scannerRealtime.hasLiveRoundUpdate) return;
   if (scannerRealtime.bootstrappingRound) return;
   if (!force && scannerRealtime.runtimeData?.activeRoundId) return;
   if (scannerRealtime.fallbackRoundId === '__cleared__') return;
