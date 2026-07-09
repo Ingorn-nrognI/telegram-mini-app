@@ -9065,38 +9065,6 @@ function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(
   return clampScannerNumber((Date.now() - window._localRoundStart[rid]) / SCANNER_ACTIVE_MS, 0, 1);
 }
 
-function getScannerActiveBeamSample(round, players, progressOverride = null) {
-  const serverPosFresh = _serverBeamPos &&
-    Number.isFinite(_serverBeamPos.x) &&
-    Number.isFinite(_serverBeamPos.y) &&
-    typeof _serverBeamPos._receiveTime === "number" &&
-    (performance.now() - _serverBeamPos._receiveTime) < 1500;
-
-  const roundIdMatches = !_serverBeamPos?.roundId ||
-    !scannerGridState.roundId ||
-    String(_serverBeamPos.roundId) === String(scannerGridState.roundId);
-
-  if (serverPosFresh && roundIdMatches) {
-    return {
-      x: _serverBeamPos.x,
-      y: _serverBeamPos.y,
-      angle: _serverBeamPos.angle || 0,
-      travelAngle: _serverBeamPos.angle || 0,
-      renderAngle: _serverBeamPos.angle || 0
-    };
-  }
-
-  console.warn("[Scanner] Активная фаза: используется локальный фоллбэк вместо серверной позиции", {
-    hasServerPos: !!_serverBeamPos,
-    serverPosFresh,
-    roundIdMatches,
-    serverRoundId: _serverBeamPos?.roundId,
-    clientRoundId: scannerGridState.roundId
-  });
-
-  return getScannerActiveBeamSampleAtTime(round, players, Date.now(), progressOverride);
-}
-
 function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetworkTime(), progressOverride = null) {
   const cache = getScannerActiveBeamCache(round, players);
   if (!cache) return { x: 0.5, y: 0.5, angle: 0 };
@@ -9106,9 +9074,6 @@ function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetwo
   );
 }
 
-function getScannerActiveBeamSample(round, players, progressOverride = null) {
-  return getScannerActiveBeamSampleAtTime(round, players, Date.now(), progressOverride);
-}
 
 function getScannerCountdownLatchProgress(round) {
   const cache = getScannerCountdownBeamCache(round);
@@ -9532,12 +9497,18 @@ let _serverTimeOffsetSmoothed = 0;
 let _serverTimeOffsetTarget = 0;
 let _serverTimeOffsetLastEaseAt = 0;
 let _socket = null;
+let _scannerPingIntervalId = null;
 
 function initSocketConnection() {
   _socket = io(SOCKET_SERVER, { transports: ['websocket'], reconnection: true });
   _socket.on('connect', () => {
     _socket.emit('ping_time', { clientTime: Date.now() });
-    setInterval(() => {
+    // Раньше setInterval создавался заново при каждом reconnect и никогда не
+    // очищался — после нескольких реконнектов копилось несколько параллельных
+    // таймеров, шлющих дублирующиеся ping_time. Теперь очищаем предыдущий
+    // перед созданием нового.
+    if (_scannerPingIntervalId) clearInterval(_scannerPingIntervalId);
+    _scannerPingIntervalId = setInterval(() => {
       _socket.emit('ping_time', { clientTime: Date.now() });
     }, 10000);
   });
@@ -9813,11 +9784,18 @@ function applySocketRoundState(data) {
   scannerRealtime.socketParticipants = Array.isArray(data.participants) ? data.participants : [];
 
   if (roundId) {
-    // Сохраняем countdownLatchSample если он уже был получен от Firestore
-    // ранее для ЭТОГО ЖЕ раунда — иначе этот bootstrap-снимок стирает его
-    const _prevLatch = (scannerRealtime.roundData?.id === roundId)
-      ? scannerRealtime.roundData?.countdownLatchSample
-      : null;
+    // Раньше сохранялся только countdownLatchSample при повторном срабатывании
+    // этого обработчика для того же раунда (например при реконнекте сокета
+    // посреди countdown) — но lobbyStartSample и тайминги фаз стирались
+    // полностью. Физика луча во время countdown/active строится именно на
+    // lobbyStartSample — его потеря приводила бы к точно такому же прыжку
+    // луча, который мы чинили в idleBeamMotion. Теперь сохраняем все поля,
+    // которых нет в новом снимке от сокета, если это тот же самый раунд.
+    const _isSameRound = scannerRealtime.roundData?.id === roundId;
+    const _prevLatch = _isSameRound ? scannerRealtime.roundData?.countdownLatchSample : null;
+    const _prevLobbyStart = _isSameRound ? scannerRealtime.roundData?.lobbyStartSample : null;
+    const _prevActiveStartedAt = _isSameRound ? scannerRealtime.roundData?.activeStartedAt : null;
+    const _prevShuffleStartedAt = _isSameRound ? scannerRealtime.roundData?.shuffleStartedAt : null;
     scannerRealtime.roundData = {
       id: roundId,
       status: data.status || 'waiting',
@@ -9829,6 +9807,15 @@ function applySocketRoundState(data) {
     };
     if (_prevLatch) {
       scannerRealtime.roundData.countdownLatchSample = _prevLatch;
+    }
+    if (_prevLobbyStart) {
+      scannerRealtime.roundData.lobbyStartSample = _prevLobbyStart;
+    }
+    if (_prevActiveStartedAt) {
+      scannerRealtime.roundData.activeStartedAt = _prevActiveStartedAt;
+    }
+    if (_prevShuffleStartedAt) {
+      scannerRealtime.roundData.shuffleStartedAt = _prevShuffleStartedAt;
     }
   }
 
