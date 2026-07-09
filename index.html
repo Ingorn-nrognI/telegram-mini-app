@@ -8768,6 +8768,41 @@ function getScannerCountdownBeamCache(round) {
     return scannerCountdownBeamCache;
   }
 
+  // Раньше здесь ВСЕГДА прогонялась полная тяжёлая симуляция (~72000 шагов,
+  // плюс до 25 повторов ради подбора формы торможения), даже когда сервер уже
+  // прислал настоящую точку прилипания (countdownLatchSample) — а прислана она
+  // почти всегда, с самого первого патча раунда. Результат тяжёлой симуляции
+  // в этом случае тут же на 85% переписывался серверным значением. Теперь при
+  // наличии серверной точки строим дешёвый прямой путь (старт → точка сервера)
+  // вместо полной физической симуляции — итоговая траектория для реального
+  // отображения не меняется (её всё равно перекрывает scannerLastBeamSample
+  // и серверные трансляции), но экономим тяжёлые вычисления на каждый раунд.
+  if (round?.countdownLatchSample &&
+      Number.isFinite(round.countdownLatchSample.x) &&
+      Number.isFinite(round.countdownLatchSample.y)) {
+    const cheapStart = (round?.lobbyStartSample && Number.isFinite(round.lobbyStartSample.x) && Number.isFinite(round.lobbyStartSample.y))
+      ? round.lobbyStartSample
+      : getScannerSharedLobbyBeamSampleAt(timing.startedAt);
+    const cheapAngle = Number.isFinite(round.countdownLatchSample.angle)
+      ? round.countdownLatchSample.angle
+      : Math.atan2((round.countdownLatchSample.y - cheapStart.y), (round.countdownLatchSample.x - cheapStart.x));
+    const cheapSamples = [
+      { x: cheapStart.x, y: cheapStart.y, vx: cheapStart.vx || 0, vy: cheapStart.vy || 0, angle: cheapAngle, travelAngle: cheapAngle, progress: 0 },
+      { x: round.countdownLatchSample.x, y: round.countdownLatchSample.y, vx: 0, vy: 0, angle: cheapAngle, travelAngle: cheapAngle, progress: 1 }
+    ];
+    scannerCountdownBeamCache = {
+      key,
+      timing,
+      motionState,
+      samples: cheapSamples,
+      startSample: cheapStart,
+      latchStartSample: cheapSamples[1],
+      latchSample: round.countdownLatchSample,
+      latchSide: getScannerWallSideFromPosition(round.countdownLatchSample, SCANNER_ACTIVE_BEAM_EDGE_PADDING)
+    };
+    return scannerCountdownBeamCache;
+  }
+
   const lobbyStartSample = (round?.lobbyStartSample && Number.isFinite(round.lobbyStartSample.x) && Number.isFinite(round.lobbyStartSample.y))
     ? round.lobbyStartSample
     : (motionState
@@ -8889,13 +8924,6 @@ function getScannerCountdownBeamCache(round) {
   }
 
   const latchStartSample = frozenSample || samples[samples.length - 1] || lobbyStartSample;
-  console.log(
-    "[СИМУЛЯЦИЯ-ОТЛАДКА] старт=(" + lobbyStartSample.x.toFixed(6) + "," + lobbyStartSample.y.toFixed(6) +
-    ") vx=" + lobbyStartSample.vx.toFixed(6) + " vy=" + lobbyStartSample.vy.toFixed(6) +
-    " | КЛИЕНТ_насчитал=(" + (frozenSample ? frozenSample.x.toFixed(6) + "," + frozenSample.y.toFixed(6) : "null") + ")" +
-    " | СЕРВЕР_прислал=(" + (round?.countdownLatchSample ? round.countdownLatchSample.x.toFixed(6) + "," + round.countdownLatchSample.y.toFixed(6) : "null") + ")" +
-    " | durationMs=" + totalMs
-  );
   const latchSimulation = {
     side: getScannerWallSideFromPosition(latchStartSample, pad),
     targetSample: latchStartSample,
