@@ -5152,13 +5152,18 @@ function setActiveBottomNav(navName) {
 }
 
 function getPreferredHomeNav() {
-  // Раньше тут всегда возвращалось "games" по умолчанию — из-за этого кнопка
-  // "Игры" подсвечивалась сразу при заходе в приложение, хотя пользователь
-  // ещё ничего не нажимал и находится на обычном главном экране, а не внутри
-  // какого-либо игрового режима. Теперь подсветка появляется только после
-  // того, как пользователь реально нажал на одну из кнопок нижнего меню.
   if (!userHasNavigatedManually) return "";
-  return homeScreenContext === "pvp" ? "pvp" : "games";
+  // homeScreenContext === "pvp" никогда не выставляется нигде в коде — вход в
+  // PvP (enterScannerGridMode) переключает экран напрямую, не трогая эту
+  // переменную. Из-за этого функция всегда откатывалась к "games", даже если
+  // пользователь только что вернулся из PvP на обычный главный экран, где
+  // никакого игрового режима сейчас не открыто. Подсвечиваем "Игры" только
+  // тогда, когда реально открыто всплывающее меню выбора игры — иначе на
+  // чистом главном экране подсветки быть не должно вообще.
+  if (homeScreenContext === "pvp") return "pvp";
+  const modePopup = document.getElementById("modePopup");
+  const gamesMenuOpen = !!modePopup?.classList.contains("open");
+  return gamesMenuOpen ? "games" : "";
 }
 
 function getActiveModeLabel() {
@@ -5294,7 +5299,13 @@ function setMenuView(view, options = {}) {
   if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
 
   if (!preserveNav && document.readyState === "complete") {
-    setActiveBottomNav(view === "home" ? getPreferredHomeNav() : "pvp");
+    // Раньше любой экран кроме home автоматически подсвечивал кнопку PvP,
+    // если явно не попросили сохранить текущую подсветку (preserveNav) —
+    // из-за этого при открытии Инвентаря (и потенциально Bobr Run) в баре
+    // ошибочно загоралась кнопка PvP вместо той, что реально соответствует
+    // открытому экрану.
+    const navForView = { scannerScreen: "pvp", inventory: "skins", bobrRun: "games" };
+    setActiveBottomNav(view === "home" ? getPreferredHomeNav() : (navForView[view] || ""));
   }
 
   syncAppBackButton();
