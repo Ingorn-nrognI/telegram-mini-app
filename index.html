@@ -4326,14 +4326,6 @@ const scannerGridPathOrder = (() => {
 
 let scannerLastBeamSample = { x: 0.5, y: 0.5 };
 let _wasHasGridLastFrame = false;
-setInterval(() => {
-  console.log(
-    "[НЕЗАВИСИМЫЙ-ТАЙМЕР] status=" + (scannerGridState?.status || "нет") +
-    " scannerLastBeamSample=(" + (scannerLastBeamSample?.x?.toFixed(4) || "?") + "," + (scannerLastBeamSample?.y?.toFixed(4) || "?") + ")" +
-    " _serverBeamPos=(" + (typeof _serverBeamPos !== "undefined" && _serverBeamPos ? _serverBeamPos.x.toFixed(4) + "," + _serverBeamPos.y.toFixed(4) + " roundId=" + _serverBeamPos.roundId : "нет") + ")" +
-    " currentMenuView=" + (typeof currentMenuView !== "undefined" ? currentMenuView : "?")
-  );
-}, 500);
 let scannerRoundFinalBeamSample = null; // позиция лазера в конце раунда — не перезаписывается
 
 const scannerGridState = {
@@ -9559,9 +9551,6 @@ function initSocketConnection() {
   _socket.on('disconnect', () => {});
   _socket.on('beam:position', (data) => {
     const now = performance.now();
-    if (data?.roundId && scannerGridState.status === "active" && !_serverBeamPos?._loggedFirst) {
-      console.log("[ТЕЛЕПОРТ-ОТЛАДКА] первый beam:position после active:", { x: data.x, y: data.y, prevServerBeamPos: _serverBeamPos });
-    }
     _serverBeamPos = {
       x: data.x,
       y: data.y,
@@ -9752,12 +9741,6 @@ function applySocketRoundPatch(patch) {
     // этот код был недостижим и никогда не выполнялся при старте active-фазы.
     const _continuityX = Number.isFinite(scannerLastBeamSample?.x) ? scannerLastBeamSample.x : patch.launchX;
     const _continuityY = Number.isFinite(scannerLastBeamSample?.y) ? scannerLastBeamSample.y : patch.launchY;
-    console.log("[ТЕЛЕПОРТ-ОТЛАДКА] patch active получен:", {
-      "scannerLastBeamSample (что было на экране)": scannerLastBeamSample,
-      "patch.launchX/Y (от сервера)": { x: patch.launchX, y: patch.launchY },
-      "_continuityX/Y (что используем)": { x: _continuityX, y: _continuityY },
-      "roundData?.countdownLatchSample": scannerRealtime?.roundData?.countdownLatchSample
-    });
     _serverBeamPos = {
       x: _continuityX,
       y: _continuityY,
@@ -12396,16 +12379,6 @@ function renderScannerCanvas() {
   const { ctx, size, cellSize } = metrics;
   const roundStatus = scannerGridState.status;
   const hasGrid = scannerGridState.players.length > 0;
-  if (roundStatus === "idle") {
-    window._idleBranchLogCount = (window._idleBranchLogCount || 0) + 1;
-    if (window._idleBranchLogCount % 60 === 1) {
-      console.log(
-        "[ВЕТКА-ОТЛАДКА] hasGrid=" + hasGrid +
-        " roundData=" + (scannerGridState.roundData ? "НЕ пусто (id=" + scannerGridState.roundData.id + ")" : "пусто") +
-        " playersLen=" + scannerGridState.players.length
-      );
-    }
-  }
   const now = performance.now(); // Это оставляем для плавности (fps)
   const nowMs = getNetworkTimeHighRes();
   // Раньше угол декоративного вращения луча в режиме ожидания считался абсолютной
@@ -12531,24 +12504,6 @@ function renderScannerCanvas() {
         beamRenderKey,
         now
       );
-      window._idleTransitionLog = window._idleTransitionLog || [];
-      window._idleTransitionLog.push({
-        t: Math.round(now),
-        key: beamRenderKey,
-        rawX: Number(idleUnifiedSample.x.toFixed(5)),
-        rawY: Number(idleUnifiedSample.y.toFixed(5)),
-        targetX: Number(_idleTargetForLog.x.toFixed(5)),
-        targetY: Number(_idleTargetForLog.y.toFixed(5)),
-        smoothX: Number((idleVisualBeamSample?.x || 0).toFixed(5)),
-        smoothY: Number((idleVisualBeamSample?.y || 0).toFixed(5))
-      });
-      if (window._idleTransitionLog.length > 40) window._idleTransitionLog.shift();
-      if (!window._idleLogPrintedOnce) {
-        window._idleLogPrintedOnce = true;
-        setTimeout(() => {
-          console.log("[ПОЗИЦИЯ-ПЕРЕХОД-ОТЛАДКА]", JSON.stringify(window._idleTransitionLog));
-        }, 400);
-      }
       if (idleVisualBeamSample) scannerLastBeamSample = idleVisualBeamSample;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
@@ -12556,17 +12511,6 @@ function renderScannerCanvas() {
         reticleWobble: SCANNER_RETICLE_IDLE_WOBBLE,
         nowMs: now
       });
-      // ВРЕМЕННО: рисуем прямо на канвасе реальные x,y координаты, которые используются
-      // для отрисовки прицела ПРЯМО СЕЙЧАС — чтобы на скриншоте было видно одновременно
-      // и картинку, и точные цифры, и можно было раз и навсегда понять, врёт код
-      // (данные говорят одно, а рисует в другом месте) или нет.
-      ctx.save();
-      ctx.font = "bold 20px monospace";
-      ctx.fillStyle = "#ff0000";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      ctx.fillText("x=" + idleVisualBeamSample.x.toFixed(4) + " y=" + idleVisualBeamSample.y.toFixed(4), 10, 10);
-      ctx.restore();
     }
     return;
   }
@@ -12627,65 +12571,8 @@ function renderScannerCanvas() {
     beamRenderKey,
     now
   );
-  if (roundStatus === "countdown") {
-    window._angleDiagLog = window._angleDiagLog || [];
-    window._angleDiagLog.push({
-      t: Math.round(now),
-      rawAngle: Number((_rawTargetForLog.angle || 0).toFixed(4)),
-      smoothAngle: Number((beamSample?.angle || beamSample?.renderAngle || 0).toFixed(4)),
-      rawVx: Number((_rawTargetForLog.vx || 0).toFixed(4)),
-      rawVy: Number((_rawTargetForLog.vy || 0).toFixed(4))
-    });
-    if (window._angleDiagLog.length > 150) window._angleDiagLog.shift();
-    if (!window._angleDiagPrinted) {
-      window._angleDiagPrinted = true;
-      setTimeout(() => {
-        console.log("[УГОЛ-ДИАГ]", JSON.stringify(window._angleDiagLog));
-      }, 2500);
-    }
-  }
-  if (roundStatus !== "countdown") window._angleDiagPrinted = false;
-
   const visualBeamSample = beamSample || null;
   if (visualBeamSample) {
-    if (roundStatus === "idle" || roundStatus === "countdown" || roundStatus === "shuffling") {
-      window._beamFrameLog2 = window._beamFrameLog2 || [];
-      window._beamFrameLog2.push({
-        t: Math.round(now),
-        status: roundStatus,
-        x: Number(visualBeamSample.x.toFixed(6)),
-        y: Number(visualBeamSample.y.toFixed(6)),
-        vx: Number((visualBeamSample.vx || 0).toFixed(6)),
-        vy: Number((visualBeamSample.vy || 0).toFixed(6))
-      });
-      if (window._beamFrameLog2.length > 200) window._beamFrameLog2.shift();
-      if (roundStatus === "countdown" && !window._countdownLogPrinted) {
-        window._countdownLogPrinted = true;
-        console.log("[ВХОД-ОТЛАДКА]", JSON.stringify(window._beamFrameLog2));
-      }
-      if (roundStatus === "idle" && !window._idleResetLogPrinted) {
-        window._idleResetLogPrinted = true;
-        console.log("[СБРОС-ОТЛАДКА]", JSON.stringify(window._beamFrameLog2));
-      }
-      if (roundStatus === "idle") window._countdownLogPrinted = false;
-      if (roundStatus === "countdown" || roundStatus === "shuffling") window._idleLogPrintedOnce = false;
-      if (roundStatus === "countdown" || roundStatus === "shuffling") window._idleResetLogPrinted = false;
-    }
-    if (roundStatus === "countdown" || roundStatus === "shuffling") {
-      window._beamFrameLog = window._beamFrameLog || [];
-      window._beamFrameLog.push({
-        t: Math.round(now),
-        status: roundStatus,
-        x: Number(visualBeamSample.x.toFixed(6)),
-        y: Number(visualBeamSample.y.toFixed(6))
-      });
-      if (window._beamFrameLog.length > 120) window._beamFrameLog.shift();
-      if (roundStatus === "shuffling" && !window._shufflingLogPrinted) {
-        window._shufflingLogPrinted = true;
-        console.log("[КАДРЫ-ОТЛАДКА]", JSON.stringify(window._beamFrameLog));
-      }
-      if (roundStatus === "countdown") window._shufflingLogPrinted = false;
-    }
     scannerLastBeamSample = visualBeamSample;
   }
   if (visualBeamSample && (roundStatus === "finished" || roundStatus === "preparing_next_round")) {
@@ -12750,16 +12637,6 @@ function renderScannerCanvas() {
       const spinEase = 1 - Math.pow(1 - easedProgress, 2); // ease-out: быстро в начале, плавно тормозит
       const baseRotation = EXTRA_SPINS * Math.PI * 2 * spinEase;
       const triangleAngle = baseRotation + finalSpinAngle * easedProgress;
-      if (easedProgress > 0.98 && !window._angleLoggedForRound) {
-        window._angleLoggedForRound = _roundIdForAngle;
-        console.log("[УГОЛ-ОТЛАДКА] треугольник почти финиш:", {
-          "finalSpinAngle (куда должен указать)": finalSpinAngle,
-          "shuffleStartMs": shuffleStartMs,
-          "roundAngleOffset": roundAngleOffset,
-          "roundId": _roundIdForAngle
-        });
-      }
-      if (easedProgress <= 0.98) window._angleLoggedForRound = null;
       const orbitR = reticleRadius * 2.8;
 
       // Сброс кэша если начался новый shuffling
@@ -13000,6 +12877,15 @@ function subscribeScannerRound(roundId) {
       firestoreData.activeEndsAt = preserveTimingField(tsToMs(rd?.activeEndsAt), firestoreData.activeEndsAt);
       firestoreData.preparingStartedAt = preserveTimingField(tsToMs(rd?.preparingStartedAt), firestoreData.preparingStartedAt);
       firestoreData.preparingEndsAt = preserveTimingField(tsToMs(rd?.preparingEndsAt), firestoreData.preparingEndsAt);
+      // lobbyStartSample сервер вообще никогда не пишет в Firestore-документ раунда
+      // (сохраняется только в памяти сервера и передаётся клиенту через сокет-патч) —
+      // поэтому firestoreData.lobbyStartSample всегда undefined. Без этой защиты
+      // каждый снэпшот из Firestore стирал уже правильно полученное от сокета
+      // значение, от которого зависит вся физика countdown/active — тот же класс
+      // бага, что уже чинили в applySocketRoundState, только в другом месте.
+      if (!firestoreData.lobbyStartSample && rd?.lobbyStartSample) {
+        firestoreData.lobbyStartSample = rd.lobbyStartSample;
+      }
       const existingVersion = Number(scannerRealtime.roundData?.version || 0);
       const incomingVersion = Number(firestoreData.version || 0);
       if (incomingVersion < existingVersion) {
