@@ -25,7 +25,7 @@
   --shadow-glow: 0 0 32px rgba(83, 159, 255, 0.16);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --bottom-nav-height: 96px;
+  --bottom-nav-height: 56px;
   --bottom-nav-offset: 16px;
   --bottom-stack-gap: 16px;
 }
@@ -3047,7 +3047,7 @@ button {
 
 @media (max-width: 420px) {
   :root {
-    --bottom-nav-height: 72px;
+    --bottom-nav-height: 62px;
     --bottom-nav-offset: 16px;
     --bottom-stack-gap: 16px;
   }
@@ -11227,6 +11227,21 @@ function updateScannerBetBarVisibility() {
   const shouldShow = getScannerArenaFocusState();
   bar.classList.toggle("is-visible", shouldShow);
   const bottomBar = document.querySelector(".bottom-bar");
+  // Раньше сдвиг бара ставок вверх считался через CSS-переменную
+  // --bottom-nav-height, которую нужно было вручную синхронизировать с
+  // реальной высотой нижнего меню (и она регулярно рассинхронизировалась
+  // при любом изменении размера кнопок, вызывая то нахлёст, то зазор между
+  // барами). Теперь просто измеряем РЕАЛЬНУЮ высоту нижнего меню в моменте
+  // и выставляем сдвиг напрямую — это никогда не разъедется, даже если
+  // размеры кнопок изменятся в будущем.
+  if (shouldShow && bottomBar) {
+    const realHeight = bottomBar.getBoundingClientRect().height;
+    if (realHeight > 0) {
+      bar.style.transform = `translate(-50%, -${realHeight}px) scale(1)`;
+    }
+  } else {
+    bar.style.transform = "";
+  }
   const floatBtn = document.getElementById("navProfileFloat");
   if (bottomBar) bottomBar.classList.toggle("profile-float-active", shouldShow);
   if (floatBtn) {
