@@ -9593,6 +9593,15 @@ function applySocketRoundPatch(patch) {
   if (patch.lobbyStartSample) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
     scannerRealtime.roundData.lobbyStartSample = patch.lobbyStartSample;
+    // Сбрасываем отслеживание смены знака скорости для свечения бортиков —
+    // эта же пара переменных (_borderGlowActiveLastVx/Vy) используется на всём
+    // протяжении countdown/shuffling/active/finished, но раньше сбрасывалась
+    // только при переходе shuffling → active. При старте НОВОГО раунда
+    // (появление lobbyStartSample означает именно это) направление скорости
+    // могло отличаться по знаку от того, что осталось от предыдущего раунда —
+    // и первый же кадр countdown ложно показывал отскок от стены.
+    _borderGlowActiveLastVx = 0;
+    _borderGlowActiveLastVy = 0;
   }
   if (patch.status !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
@@ -9770,6 +9779,13 @@ function applySocketRoundPatch(patch) {
     scannerRealtime.roundReady = true;
     scannerRealtime.participantsReady = true;
     scannerRealtime.participantsError = false;
+    // Сбрасываем отслеживание смены знака скорости для свечения бортиков в
+    // режиме ожидания — та же причина, что и для _borderGlowActiveLastVx/Vy
+    // выше: иначе новое направление сравнивается со старым значением от
+    // предыдущего пребывания в idle (возможно, совсем другого раунда) и
+    // ложно засчитывается как отскок на первом же кадре после сброса.
+    _borderGlowLobbyLastVx = 0;
+    _borderGlowLobbyLastVy = 0;
   }
   syncScannerDerivedState();
   renderScannerRound();
