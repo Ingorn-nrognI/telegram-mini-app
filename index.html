@@ -11301,9 +11301,12 @@ function updateScannerBetBarVisibility() {
     bar.style.transform = "";
   }
   const floatBtn = document.getElementById("navProfileFloat");
-  if (bottomBar) bottomBar.classList.toggle("profile-float-active", shouldShow);
+  // Временно отключено — профиль-аватар в углу больше не перепрыгивает в
+  // нижнее меню, остаётся на месте всегда. Чтобы вернуть как было, замени
+  // оба "false" ниже обратно на "shouldShow".
+  if (bottomBar) bottomBar.classList.toggle("profile-float-active", false);
   if (floatBtn) {
-    floatBtn.classList.toggle("visible", shouldShow);
+    floatBtn.classList.toggle("visible", false);
     if (shouldShow) {
       const avatarEl = document.getElementById("profileAvatar");
       floatBtn.style.backgroundImage = avatarEl?.style.backgroundImage || "";
