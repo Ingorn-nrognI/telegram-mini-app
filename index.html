@@ -1300,12 +1300,16 @@ button {
   overflow: visible;
 }
 
+#scannerScreen.menu-screen {
+  padding-top: calc(var(--safe-top) + 50px);
+}
+
 .scanner-panel-top {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 4px;
 }
 
 .scanner-panel-chip {
@@ -1546,7 +1550,7 @@ button {
 .scanner-rounds-btn-row {
   display: flex;
   justify-content: flex-start;
-  margin-bottom: 10px;
+  margin-bottom: 2px;
 }
 
 .scanner-rounds-btn {
