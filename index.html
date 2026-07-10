@@ -2311,7 +2311,7 @@ button {
   bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px));
   width: calc(100vw - 24px);
   min-height: 54px;
-  padding: 9px 9px 33px 9px;
+  padding: 9px 9px 45px 9px;
   display: grid;
   grid-template-columns: 46px repeat(3, minmax(54px, 1fr)) 72px;
   gap: 7px;
@@ -11237,7 +11237,7 @@ function updateScannerBetBarVisibility() {
   if (shouldShow && bottomBar) {
     const realHeight = bottomBar.getBoundingClientRect().height;
     if (realHeight > 0) {
-      bar.style.transform = `translate(-50%, -${realHeight - 24}px) scale(1)`;
+      bar.style.transform = `translate(-50%, -${realHeight - 36}px) scale(1)`;
     }
   } else {
     bar.style.transform = "";
