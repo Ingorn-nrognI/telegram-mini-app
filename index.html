@@ -766,10 +766,8 @@ button {
 }
 
 .history-panel {
-  display: none;
   position: fixed;
   left: 50%;
-  transform: translateX(-50%);
   bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 12px);
   width: min(calc(100vw - 24px), 480px);
   max-height: min(56vh, 520px);
@@ -780,10 +778,28 @@ button {
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 26px 44px rgba(0, 0, 0, 0.52);
   z-index: 72;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -32px);
+  transition: opacity 0.24s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .history-panel.open {
-  display: block;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+/* Только окно "История раундов" — держим у верха экрана вместо низа,
+   выезжает сверху вниз. Обычная "История игр" (#historyPanel) не
+   трогается, остаётся снизу как было. */
+#scannerRoundsPanel {
+  top: calc(var(--safe-top) + 70px);
+  bottom: auto;
+  transform: translate(-50%, -32px);
+}
+#scannerRoundsPanel.open {
+  transform: translate(-50%, 0);
 }
 
 .history-panel-header {
