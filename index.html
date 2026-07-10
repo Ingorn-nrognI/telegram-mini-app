@@ -1543,6 +1543,26 @@ button {
   font-weight: 700;
 }
 
+.scanner-rounds-btn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(227, 235, 255, 0.85);
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.scanner-rounds-btn:active {
+  transform: scale(0.92);
+  background: rgba(255,255,255,0.12);
+}
+
 .scanner-player-list,
 .scanner-recent-list {
   display: flex;
@@ -3734,11 +3754,28 @@ button {
         <div class="history-panel-empty">История пуста.</div>
       </div>
     </div>
+
+    <div id="scannerRoundsPanel" class="history-panel" onclick="event.stopPropagation()">
+      <div class="history-panel-header">
+        <div class="history-panel-title">Последние раунды</div>
+        <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeScannerRoundsPanel()">✕</button>
+      </div>
+      <div class="history-scroll-area">
+        <div id="scannerRecentRounds" class="scanner-recent-list"></div>
+      </div>
+    </div>
   </div>
 
   <div id="scannerScreen" class="menu-screen">
     <div class="screen-inner" id="scannerScreenContent">
       <div class="scanner-panel-top">
+        <button type="button" id="scannerRoundsPanelBtn" class="scanner-rounds-btn" onclick="toggleScannerRoundsPanel(event)" aria-label="Последние раунды">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="4" y1="6" x2="20" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="4" y1="18" x2="20" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
         <div id="scannerScreenPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
         <div id="scannerScreenCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:20</div>
         <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
@@ -3776,13 +3813,6 @@ button {
       <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
       <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
       <div class="scanner-control-divider"></div>
-      <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-recent-heading-row">
-        <div class="scanner-inline-section-title scanner-recent-heading-title">Последние раунды</div>
-        <button type="button" id="scannerRecentToggle" class="scanner-recent-toggle" onclick="toggleScannerRecentRounds(event)" aria-label="Показать последние раунды" aria-expanded="false">
-          <span id="scannerRecentToggleIcon" class="scanner-recent-toggle-icon">▾</span>
-        </button>
-      </div>
-      <div id="scannerRecentRounds" class="scanner-recent-list"></div>
     </div>
   </div>
 
@@ -5388,6 +5418,30 @@ function openRecentHistory() {
     setActiveBottomNav("history");
     loadGameHistory();
   });
+}
+
+function toggleScannerRoundsPanel(event) {
+  if (event) event.stopPropagation();
+
+  closeModePopup();
+  closeHistoryPanel({ preserveNav: true });
+  closeLeaderboard();
+
+  const panel = document.getElementById("scannerRoundsPanel");
+  if (!panel) return;
+
+  const willOpen = !panel.classList.contains("open");
+  panel.classList.toggle("open");
+
+  if (willOpen) {
+    scannerGridState.recentRoundsExpanded = true;
+    renderScannerRecentList();
+  }
+}
+
+function closeScannerRoundsPanel() {
+  const panel = document.getElementById("scannerRoundsPanel");
+  if (panel) panel.classList.remove("open");
 }
 
 function toggleHistoryPanel(event) {
