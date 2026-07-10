@@ -11274,10 +11274,11 @@ function getScannerArenaFocusState() {
 function updateScannerTopUiForArenaFocus(shouldHide = null) {
   const topBar = document.querySelector(".top-bar");
   if (!topBar) return;
-  // Временно отключено — раньше эта функция плавно прятала оригинальный
-  // профиль в углу (opacity:0) при фокусе на арене сканера, в паре с
-  // "перепрыгиванием" в нижнее меню, которое тоже отключено отдельно.
-  // Чтобы вернуть как было, убери "false &&" из строки ниже.
+  // [ОТКЛЮЧЕНО-ПРОФИЛЬ] Часть 1 из 2: раньше эта функция плавно прятала
+  // оригинальный профиль в углу (opacity:0) при фокусе на арене сканера.
+  // Работает в паре с частью 2 (см. поиск по тегу [ОТКЛЮЧЕНО-ПРОФИЛЬ] ниже
+  // по файлу, функция updateScannerBetBarVisibility).
+  // ЧТОБЫ ВЕРНУТЬ: убрать "false &&" из строки ниже.
   const focused = false && (shouldHide === null ? getScannerArenaFocusState() : !!shouldHide);
   topBar.classList.toggle("scanner-focus-ui", focused);
 }
@@ -11305,9 +11306,11 @@ function updateScannerBetBarVisibility() {
     bar.style.transform = "";
   }
   const floatBtn = document.getElementById("navProfileFloat");
-  // Временно отключено — профиль-аватар в углу больше не перепрыгивает в
-  // нижнее меню, остаётся на месте всегда. Чтобы вернуть как было, замени
-  // оба "false" ниже обратно на "shouldShow".
+  // [ОТКЛЮЧЕНО-ПРОФИЛЬ] Часть 2 из 2: раньше профиль-аватар в углу
+  // перепрыгивал в нижнее меню (показывался там вместо оригинала) при
+  // фокусе на арене сканера. Работает в паре с частью 1 выше по файлу
+  // (функция updateScannerTopUiForArenaFocus).
+  // ЧТОБЫ ВЕРНУТЬ: заменить оба "false" ниже обратно на "shouldShow".
   if (bottomBar) bottomBar.classList.toggle("profile-float-active", false);
   if (floatBtn) {
     floatBtn.classList.toggle("visible", false);
