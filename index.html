@@ -790,12 +790,14 @@ button {
   transform: translate(-50%, 0);
 }
 
-/* Только окно "История раундов" — держим у верха экрана вместо низа,
-   выезжает сверху вниз. Обычная "История игр" (#historyPanel) не
-   трогается, остаётся снизу как было. */
+/* Только окно "История раундов" — держим у самого верха экрана вместо
+   низа, выезжает сверху вниз, и оно выше обычного окна истории.
+   Обычная "История игр" (#historyPanel) не трогается, остаётся снизу
+   как было. */
 #scannerRoundsPanel {
-  top: calc(var(--safe-top) + 70px);
+  top: var(--safe-top);
   bottom: auto;
+  max-height: min(78vh, 720px);
   transform: translate(-50%, -32px);
 }
 #scannerRoundsPanel.open {
@@ -3787,7 +3789,7 @@ button {
 
   <div id="scannerRoundsPanel" class="history-panel" onclick="event.stopPropagation()">
     <div class="history-panel-header">
-      <div class="history-panel-title">Последние раунды</div>
+      <div class="history-panel-title">История раундов</div>
       <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeScannerRoundsPanel()">✕</button>
     </div>
     <div class="history-scroll-area">
