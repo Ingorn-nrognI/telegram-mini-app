@@ -3802,7 +3802,7 @@ button {
 
   <div id="scannerRoundsPanel" class="history-panel" onclick="event.stopPropagation()">
     <div class="history-panel-header">
-      <div class="history-panel-title">История раундов</div>
+      <div class="history-panel-title scanner-rounds-panel-title">История раундов</div>
       <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeScannerRoundsPanel()">✕</button>
     </div>
     <div class="history-scroll-area">
@@ -6289,7 +6289,7 @@ const APP_TRANSLATIONS = {
     recentRounds: "Последние раунды", scanner: "Сканер",
     bank: "Банк", myChance: "Мои шансы", allIn: "Ва-банк",
     play: "Играть", history: "История", leaderboard: "Таблица лидеров",
-    gameHistory: "История игр", modeScanner: "Режим: Сканер",
+    gameHistory: "История игр", roundsHistory: "История раундов", modeScanner: "Режим: Сканер",
     won: "Выиграл", lost: "Проиграл", yourColor: "Твой цвет в арене этого раунда",
     playersInRound: "Игроки в раунде", myStake: "Моя ставка",
     totalBank: "Общий банк", myResult: "Мой результат",
@@ -6314,7 +6314,7 @@ const APP_TRANSLATIONS = {
     recentRounds: "Recent rounds", scanner: "Scanner",
     bank: "Bank", myChance: "My chance", allIn: "All-in",
     play: "Play", history: "History", leaderboard: "Leaderboard",
-    gameHistory: "Game history", modeScanner: "Mode: Scanner",
+    gameHistory: "Game history", roundsHistory: "Rounds history", modeScanner: "Mode: Scanner",
     won: "Won", lost: "Lost", yourColor: "Your color in this round's arena",
     playersInRound: "Players in round", myStake: "My stake",
     totalBank: "Total bank", myResult: "My result",
@@ -6455,6 +6455,7 @@ function applyAppLanguage(lang) {
 
   // History panel title
   set(".history-panel-title", t.gameHistory);
+  set(".scanner-rounds-panel-title", t.roundsHistory);
 
   // Scanner result title (only if not showing winner)
   const resultTitle = document.getElementById("scannerResultTitle");
