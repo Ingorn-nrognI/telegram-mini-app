@@ -3724,6 +3724,9 @@ button {
         <div id="balanceValue" class="balance-value">0.00 TON</div>
         <button type="button" class="balance-add-btn" onclick="openWallet()" aria-label="Пополнить баланс / подключить кошелёк">+</button>
       </div>
+      <button type="button" id="scannerRoundsPanelBtn" class="scanner-rounds-btn" style="display:none;" onclick="toggleScannerRoundsPanel(event)" aria-label="История раундов">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M13 5h8"/><path d="M13 9h5"/><path d="M13 15h8"/><path d="M13 19h5"/><path d="M3 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/><path d="M3 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/></svg>
+      </button>
     </div>
 
     <div class="top-bar-right">
@@ -3809,11 +3812,6 @@ button {
 
   <div id="scannerScreen" class="menu-screen">
     <div class="screen-inner" id="scannerScreenContent">
-      <div class="scanner-rounds-btn-row">
-        <button type="button" id="scannerRoundsPanelBtn" class="scanner-rounds-btn" onclick="toggleScannerRoundsPanel(event)" aria-label="Последние раунды">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M13 5h8"/><path d="M13 9h5"/><path d="M13 15h8"/><path d="M13 19h5"/><path d="M3 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/><path d="M3 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/></svg>
-        </button>
-      </div>
       <div class="scanner-panel-top">
         <div id="scannerScreenPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
         <div id="scannerScreenCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:20</div>
@@ -5358,6 +5356,8 @@ function setMenuView(view, options = {}) {
   if (bobrRunScreen) bobrRunScreen.classList.toggle("active", view === "bobrRun");
   const scannerScreen = document.getElementById("scannerScreen");
   if (scannerScreen) scannerScreen.classList.toggle("active", view === "scannerScreen");
+  const roundsBtn = document.getElementById("scannerRoundsPanelBtn");
+  if (roundsBtn) roundsBtn.style.display = view === "scannerScreen" ? "flex" : "none";
   if (profileScreen) profileScreen.classList.toggle("active", view === "profile");
   const inventoryScreen = document.getElementById("inventoryScreen");
   if (inventoryScreen) inventoryScreen.classList.toggle("active", view === "inventory");
