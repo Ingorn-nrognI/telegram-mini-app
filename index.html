@@ -3812,6 +3812,7 @@ button {
       <section class="section-card scanner-arena-card">
         <div class="scanner-canvas-shell" id="scannerScreenCanvasShell"></div>
       </section>
+      <div id="scannerRoundNumberDisplay" class="scanner-round-number-display">Раунд №: —</div>
       <div id="scannerResultOverlay" class="scanner-result-overlay" onclick="handleScannerResultOverlayClick(event)">
         <div class="scanner-result-banner" onclick="event.stopPropagation()">
           <button class="scanner-result-close-btn" onclick="closeScannerResultOverlay()" aria-label="Закрыть">
@@ -11186,11 +11187,13 @@ function renderScannerRecentList() {
         : "")
     ).trim() || "Победитель";
 
+    const roundNumberText = item.roundNumber ? `Раунд №: ${item.roundNumber}` : "";
     return `
       <div class="scanner-recent-card">
         <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
         <div class="scanner-recent-copy">
           <div class="scanner-recent-title">Победитель: ${escapeHtml(winnerNickname)}</div>
+          ${roundNumberText ? `<div class="scanner-recent-round-number">${roundNumberText}</div>` : ""}
           <div class="scanner-recent-meta">Дата и время: ${finishedAtText} · Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText}</div>
         </div>
         <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
@@ -11533,6 +11536,11 @@ function renderScannerRound(options = {}) {
   if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(_displayPot)}`);
   const screenPoolChip = document.getElementById("scannerScreenPoolChip");
   if (screenPoolChip) setTextContentIfChanged(screenPoolChip, `Банк: ${formatTon(_displayPot)}`);
+  const roundNumberDisplay = document.getElementById("scannerRoundNumberDisplay");
+  if (roundNumberDisplay) {
+    const _roundNum = scannerRealtime.roundData?.roundNumber;
+    setTextContentIfChanged(roundNumberDisplay, `Раунд №: ${_roundNum ? _roundNum : "—"}`);
+  }
   if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${isArenaResetPhase ? "0%" : myChanceValue}`);
   if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
   if (selectedPopulation) setTextContentIfChanged(selectedPopulation, scannerGridState.roundData ? formatCompactNumber(scannerGridState.maxPlayers || 0) : formatCompactNumber(scannerGridState.selectedPopulation));
