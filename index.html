@@ -1333,8 +1333,8 @@ button {
 }
 
 .scanner-panel-chip {
-  min-height: 38px;
-  padding: 0 14px;
+  min-height: 28px;
+  padding: 0 12px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -1357,7 +1357,7 @@ button {
 
 .scanner-countdown-chip {
   justify-content: center;
-  min-width: 86px;
+  min-width: 64px;
   justify-self: center;
   letter-spacing: 0.08em;
 }
@@ -1565,6 +1565,45 @@ button {
   color: #dce7ff;
   font-size: 12px;
   font-weight: 700;
+}
+
+.scanner-highlight-banners {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.scanner-highlight-card {
+  border-radius: 16px;
+  padding: 8px 10px;
+  background: linear-gradient(180deg, rgba(13, 21, 46, 0.9), rgba(7, 10, 24, 0.9));
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.scanner-highlight-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 3px;
+}
+.scanner-highlight-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #eaf4ff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scanner-highlight-amount {
+  font-size: 14px;
+  font-weight: 800;
+  color: #5fe3c0;
+}
+.scanner-highlight-multiplier {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.5);
 }
 
 .scanner-rounds-btn-row {
@@ -3816,6 +3855,20 @@ button {
         <div id="scannerScreenPoolChip" class="scanner-panel-chip scanner-pool-chip">Банк: 0.00 TON</div>
         <div id="scannerScreenCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:20</div>
         <div id="scannerChanceChip" class="scanner-panel-chip scanner-chance-chip">Мои шансы: 0%</div>
+      </div>
+      <div class="scanner-highlight-banners">
+        <div class="scanner-highlight-card">
+          <div class="scanner-highlight-label">Топ дня</div>
+          <div id="scannerTopDayName" class="scanner-highlight-name">—</div>
+          <div id="scannerTopDayAmount" class="scanner-highlight-amount">—</div>
+          <div id="scannerTopDayMultiplier" class="scanner-highlight-multiplier">—</div>
+        </div>
+        <div class="scanner-highlight-card">
+          <div class="scanner-highlight-label">Последний раунд</div>
+          <div id="scannerLastRoundName" class="scanner-highlight-name">—</div>
+          <div id="scannerLastRoundAmount" class="scanner-highlight-amount">—</div>
+          <div id="scannerLastRoundMultiplier" class="scanner-highlight-multiplier">—</div>
+        </div>
       </div>
       <section class="section-card scanner-arena-card">
         <div class="scanner-canvas-shell" id="scannerScreenCanvasShell"></div>
@@ -10011,6 +10064,13 @@ function applySocketRoundResult(data) {
     scannerRealtime.roundData.winnerName = data.winnerName;
     scannerRealtime.roundData.winnerPayout = data.winnerPayout;
     scannerRealtime.roundData.winnerStake = data.winnerStake;
+
+    const lastRoundNameEl = document.getElementById("scannerLastRoundName");
+    const lastRoundAmountEl = document.getElementById("scannerLastRoundAmount");
+    const lastRoundMultiplierEl = document.getElementById("scannerLastRoundMultiplier");
+    if (lastRoundNameEl) setTextContentIfChanged(lastRoundNameEl, data.winnerName || "—");
+    if (lastRoundAmountEl) setTextContentIfChanged(lastRoundAmountEl, formatTon(data.winnerPayout || 0));
+    if (lastRoundMultiplierEl) setTextContentIfChanged(lastRoundMultiplierEl, formatScannerMultiplier(data.winnerPayout, data.winnerStake));
 
     if (String(data.winnerPlayerId) === String(getCurrentPlayer().id)) {
       loadProfileBestRoundWin();
