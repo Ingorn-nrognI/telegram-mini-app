@@ -1605,6 +1605,7 @@ button {
 .scanner-players-heading-row {
   align-items: center;
   justify-content: space-between;
+  margin-top: -8px;
 }
 
 .scanner-round-number-muted {
@@ -3839,7 +3840,6 @@ button {
           <div id="scannerResultText" class="scanner-result-text"></div>
         </div>
       </div>
-      <div class="scanner-control-divider"></div>
       <div class="scanner-home-heading-row scanner-home-heading-row-bottom scanner-players-heading-row">
         <div class="scanner-inline-section-title scanner-players-heading-title">
           Игроки <span id="scannerPlayersCount" class="scanner-players-count">0</span>
@@ -3851,7 +3851,6 @@ button {
       </div>
       <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
       <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
-      <div class="scanner-control-divider"></div>
     </div>
   </div>
 
@@ -6399,8 +6398,14 @@ function applyAppLanguage(lang) {
   const playersTitle = document.querySelector(".scanner-players-heading-title");
   if (playersTitle) {
     const countSpan = playersTitle.querySelector(".scanner-players-count");
+    let _firstTextNodeSet = false;
     playersTitle.childNodes.forEach(node => {
-      if (node.nodeType === Node.TEXT_NODE) node.textContent = t.players + " ";
+      if (node.nodeType === Node.TEXT_NODE && !_firstTextNodeSet) {
+        node.textContent = t.players + " ";
+        _firstTextNodeSet = true;
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        node.textContent = "";
+      }
     });
     if (countSpan && !playersTitle.contains(countSpan)) playersTitle.appendChild(countSpan);
   }
