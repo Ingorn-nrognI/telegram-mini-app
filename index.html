@@ -6994,6 +6994,19 @@ function formatCompactNumber(value) {
   return new Intl.NumberFormat("ru-RU").format(number);
 }
 
+function applyScannerDailyTop(data) {
+  if (!data) return;
+  const nameEl = document.getElementById("scannerTopDayName");
+  const amountEl = document.getElementById("scannerTopDayAmount");
+  const multiplierEl = document.getElementById("scannerTopDayMultiplier");
+  if (nameEl) setTextContentIfChanged(nameEl, data.dailyTopWinnerName || "—");
+  if (amountEl) setTextContentIfChanged(amountEl, data.dailyTopPayout ? formatTon(data.dailyTopPayout) : "—");
+  if (multiplierEl) {
+    const _mult = Number(data.dailyTopMultiplier || 0);
+    setTextContentIfChanged(multiplierEl, _mult > 0 ? `x${_mult.toFixed(2)}` : "—");
+  }
+}
+
 function formatScannerMultiplier(payout, stake) {
   const safePayout = Number(payout || 0);
   const safeStake = Number(stake || 0);
@@ -9778,7 +9791,11 @@ function initSocketConnection() {
   });
   _socket.on('round:state', (data) => { applySocketRoundState(data); });
   _socket.on('round:patch', (patch) => { applySocketRoundPatch(patch); });
-  _socket.on('round:result', (data) => { applySocketRoundResult(data); });
+  _socket.on('round:result', (data) => {
+    applySocketRoundResult(data);
+    if (data?.dailyTop) applyScannerDailyTop(data.dailyTop);
+  });
+  _socket.on('daily:top', (data) => { applyScannerDailyTop(data); });
 }
 
 function applySocketRoundPatch(patch) {
@@ -13338,7 +13355,7 @@ async function loadScannerHistory() {
   try {
     const snapshot = await scannerHistoryCollection()
       .orderBy("finishedAt", "desc")
-      .limit(5)
+      .limit(100)
       .get();
     const items = [];
     snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
@@ -13357,7 +13374,7 @@ function subscribeScannerHistory() {
 
   scannerRealtime.unsubHistory = scannerHistoryCollection()
     .orderBy("finishedAt", "desc")
-    .limit(5)
+    .limit(100)
     .onSnapshot((snapshot) => {
       const items = [];
       snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
