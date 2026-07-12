@@ -9901,6 +9901,10 @@ function applySocketRoundPatch(patch) {
       scannerRealtime.roundData.countdownEndsAt = patch.countdownEndsAt;
     }
   }
+  if (patch.roundNumber !== undefined) {
+    if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
+    scannerRealtime.roundData.roundNumber = patch.roundNumber;
+  }
   if (patch.idleBeamMotion !== undefined) {
     if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
     scannerRealtime.runtimeData.idleBeamMotion = patch.idleBeamMotion;
