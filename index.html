@@ -1847,6 +1847,20 @@ button {
   text-align: right;
 }
 
+.scanner-recent-result-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.scanner-recent-round-number {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
 .scanner-empty {
   padding: 14px;
   border-radius: 18px;
@@ -11288,7 +11302,7 @@ function renderScannerRecentList() {
   const items = scannerGridState.recentRounds || [];
   const expanded = !!scannerGridState.recentRoundsExpanded;
   const canExpand = items.length > 1;
-  const visibleItems = items.slice(0, expanded ? 5 : 1);
+  const visibleItems = items.slice(0, expanded ? 100 : 1);
   const itemsSignature = visibleItems.map((item) => [
     String(item.roundId || item.id || item.finishedAt || ""),
     String(item.winnerPlayerId || item.winnerName || ""),
@@ -11340,10 +11354,12 @@ function renderScannerRecentList() {
         <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
         <div class="scanner-recent-copy">
           <div class="scanner-recent-title">Победитель: ${escapeHtml(winnerNickname)}</div>
-          ${roundNumberText ? `<div class="scanner-recent-round-number">${roundNumberText}</div>` : ""}
-          <div class="scanner-recent-meta">Дата и время: ${finishedAtText} · Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText}</div>
+          <div class="scanner-recent-meta">Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText}</div>
         </div>
-        <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
+        <div class="scanner-recent-result-col">
+          ${roundNumberText ? `<div class="scanner-recent-round-number">${roundNumberText}</div>` : ""}
+          <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
+        </div>
       </div>
     `;
   }).join(""));
