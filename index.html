@@ -11549,6 +11549,24 @@ function setupScannerBetBarVisibilityTracking() {
   }
   window.addEventListener("resize", forceScannerBetBarVisibilityRefresh, { passive: true });
   window.addEventListener("orientationchange", forceScannerBetBarVisibilityRefresh, { passive: true });
+  // На части устройств (телефоны с safe-area отступами, Telegram WebView,
+  // десктоп-приложение) реальная высота .bottom-bar устанавливается позже,
+  // чем срабатывают фиксированные таймеры ниже (догрузка шрифтов, применение
+  // safe-area, смена видимой области при сворачивании адресной строки) —
+  // из-за этого сдвиг бара ставок вверх считался по устаревшей, заниженной
+  // высоте, и бар оставался наполовину перекрыт нижним меню. ResizeObserver
+  // ловит ЛЮБОЕ реальное изменение высоты .bottom-bar, когда бы оно ни
+  // произошло, и всегда пересчитывает позицию по актуальному значению.
+  const bottomBarForObserver = document.querySelector(".bottom-bar");
+  if (bottomBarForObserver && window.ResizeObserver) {
+    const betBarResizeObserver = new ResizeObserver(() => {
+      requestScannerBetBarVisibilityUpdate();
+    });
+    betBarResizeObserver.observe(bottomBarForObserver);
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", forceScannerBetBarVisibilityRefresh, { passive: true });
+  }
   scannerBetBarScrollAttached = true;
   forceScannerBetBarVisibilityRefresh();
 }
