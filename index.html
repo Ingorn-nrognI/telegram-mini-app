@@ -9748,6 +9748,7 @@ let _lobbyJumpPrevSample = null;
 let _lobbyJumpPrevTime = null;
 let _scannerRoundFinishedAtMs = null;
 let scannerDisplayRoundNumber = null;
+let scannerLastKnownRoundNumber = null;
 let _scannerZoomOutStartMs = null;
 let _scannerResultShownForRound = null;
 let _lastFrozenResultPos = null;
@@ -9902,12 +9903,13 @@ function applySocketRoundPatch(patch) {
       scannerRealtime.roundData.countdownEndsAt = patch.countdownEndsAt;
     }
   }
-  if (patch.roundNumber !== undefined) {
+  if (patch.roundNumber) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
     scannerRealtime.roundData.roundNumber = patch.roundNumber;
     scannerDisplayRoundNumber = patch.roundNumber;
+    scannerLastKnownRoundNumber = patch.roundNumber;
   }
-  if (patch.nextRoundNumber !== undefined) {
+  if (patch.nextRoundNumber) {
     scannerDisplayRoundNumber = patch.nextRoundNumber;
   }
   if (patch.idleBeamMotion !== undefined) {
@@ -9960,8 +9962,9 @@ function applySocketRoundPatch(patch) {
         // состояние сглаживания на правильную точку, не трогая _serverBeamPos.
         resetScannerBeamRenderState(_idleSample, "idle_reset");
       }
-      if (scannerRealtime.roundData?.roundNumber) {
-        scannerDisplayRoundNumber = scannerRealtime.roundData.roundNumber + 1;
+      if (scannerLastKnownRoundNumber) {
+        scannerDisplayRoundNumber = scannerLastKnownRoundNumber + 1;
+        scannerLastKnownRoundNumber = null;
       }
       scannerRealtime.roundData = null;
       scannerRealtime.activeRoundId = null;
@@ -10108,6 +10111,7 @@ function applySocketRoundState(data) {
     }
     if (scannerRealtime.roundData.roundNumber) {
       scannerDisplayRoundNumber = scannerRealtime.roundData.roundNumber;
+      scannerLastKnownRoundNumber = scannerRealtime.roundData.roundNumber;
     } else if (data.nextRoundNumber) {
       scannerDisplayRoundNumber = data.nextRoundNumber;
     }
@@ -13155,6 +13159,10 @@ function subscribeScannerRound(roundId) {
   }
 
   if (!roundId) {
+    if (scannerLastKnownRoundNumber) {
+      scannerDisplayRoundNumber = scannerLastKnownRoundNumber + 1;
+      scannerLastKnownRoundNumber = null;
+    }
     scannerRealtime.roundData = null;
   } else if (String(scannerRealtime.roundData?.id || "") !== String(roundId)) {
     // Новый раунд — обязательно сбрасываем старые данные (включая version).
@@ -13227,6 +13235,10 @@ function subscribeScannerRound(roundId) {
         }
       } else {
         scannerRealtime.roundData = firestoreData;
+        if (firestoreData.roundNumber) {
+          scannerLastKnownRoundNumber = firestoreData.roundNumber;
+          scannerDisplayRoundNumber = firestoreData.roundNumber;
+        }
       }
     } else {
       scannerRealtime.roundData = null;
