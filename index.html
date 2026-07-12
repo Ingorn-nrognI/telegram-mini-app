@@ -1578,6 +1578,9 @@ button {
   padding: 8px 10px;
   background: linear-gradient(180deg, rgba(13, 21, 46, 0.9), rgba(7, 10, 24, 0.9));
   border: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  min-height: 62px;
 }
 .scanner-highlight-label {
   font-size: 10px;
@@ -1587,6 +1590,14 @@ button {
   color: rgba(255,255,255,0.4);
   margin-bottom: 3px;
 }
+.scanner-highlight-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
 .scanner-highlight-name {
   font-size: 13px;
   font-weight: 800;
@@ -1594,6 +1605,15 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.scanner-highlight-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  flex-shrink: 0;
 }
 .scanner-highlight-amount {
   font-size: 14px;
@@ -3859,15 +3879,23 @@ button {
       <div class="scanner-highlight-banners">
         <div class="scanner-highlight-card">
           <div class="scanner-highlight-label">Топ дня</div>
-          <div id="scannerTopDayName" class="scanner-highlight-name">—</div>
-          <div id="scannerTopDayAmount" class="scanner-highlight-amount">—</div>
-          <div id="scannerTopDayMultiplier" class="scanner-highlight-multiplier">—</div>
+          <div class="scanner-highlight-body">
+            <div id="scannerTopDayName" class="scanner-highlight-name">—</div>
+            <div class="scanner-highlight-right">
+              <div id="scannerTopDayAmount" class="scanner-highlight-amount">—</div>
+              <div id="scannerTopDayMultiplier" class="scanner-highlight-multiplier">—</div>
+            </div>
+          </div>
         </div>
         <div class="scanner-highlight-card">
           <div class="scanner-highlight-label">Последний раунд</div>
-          <div id="scannerLastRoundName" class="scanner-highlight-name">—</div>
-          <div id="scannerLastRoundAmount" class="scanner-highlight-amount">—</div>
-          <div id="scannerLastRoundMultiplier" class="scanner-highlight-multiplier">—</div>
+          <div class="scanner-highlight-body">
+            <div id="scannerLastRoundName" class="scanner-highlight-name">—</div>
+            <div class="scanner-highlight-right">
+              <div id="scannerLastRoundAmount" class="scanner-highlight-amount">—</div>
+              <div id="scannerLastRoundMultiplier" class="scanner-highlight-multiplier">—</div>
+            </div>
+          </div>
         </div>
       </div>
       <section class="section-card scanner-arena-card">
