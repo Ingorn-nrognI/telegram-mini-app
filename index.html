@@ -2440,9 +2440,9 @@ button {
 }
 
 .scanner-bet-bar {
-  position: fixed;
+  position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: calc(max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px)) + var(--bottom-nav-height) + 8px);
   width: calc(100vw - 24px);
   min-height: 54px;
   padding: 9px 9px 45px 9px;
@@ -2471,7 +2471,7 @@ button {
 .scanner-bet-bar.is-visible {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, calc(-1 * var(--bottom-nav-height))) scale(1);
+  transform: translate(-50%, 0) scale(1);
 }
 
 .scanner-bet-btn {
@@ -2857,7 +2857,6 @@ button {
     gap: 6px;
     padding: 8px;
     border-radius: 22px 22px 0 0;
-    bottom: 0;
   }
 
   .scanner-bet-btn {
@@ -11480,27 +11479,15 @@ function updateScannerBetBarVisibility() {
 
   const shouldShow = getScannerArenaFocusState();
   bar.classList.toggle("is-visible", shouldShow);
-  const bottomBar = document.querySelector(".bottom-bar");
-  // .bottom-bar стоит на position:absolute, а .scanner-bet-bar — на
-  // position:fixed. Это разные системы координат: раньше обе позиционировались
-  // одной и той же CSS-формулой (--bottom-nav-offset / --safe-bottom), и это
-  // совпадало только если контейнер .bottom-bar по высоте равен настоящему
-  // вьюпорту — верно в браузере на десктопе, но не на мобильных устройствах и
-  // в Telegram WebView, где видимая область меняется динамически. Из-за этого
-  // бар ставок оставался наполовину перекрыт нижним меню на телефонах.
-  // Теперь считаем позицию через настоящие экранные координаты нижнего меню
-  // (getBoundingClientRect().top относительно окна) — это работает одинаково
-  // независимо от того, как именно спозиционирован сам .bottom-bar.
-  if (shouldShow && bottomBar) {
-    const navRect = bottomBar.getBoundingClientRect();
-    const gapAboveNav = 8;
-    const liftFromViewportBottom = Math.max(0, window.innerHeight - navRect.top + gapAboveNav);
-    bar.style.bottom = `${liftFromViewportBottom}px`;
-    bar.style.transform = "translate(-50%, 0) scale(1)";
-  } else {
-    bar.style.bottom = "";
-    bar.style.transform = "";
-  }
+  // Позиция бара ставок теперь полностью задаётся в CSS (.scanner-bet-bar и
+  // .scanner-bet-bar.is-visible): та же формула и те же CSS-переменные
+  // (--bottom-nav-offset, --safe-bottom, --bottom-nav-height) и тот же
+  // position:absolute, что и у самого нижнего меню .bottom-bar — то есть
+  // единая система координат без расхождений между платформами. JS больше
+  // не измеряет и не выставляет позицию вручную — только очищаем возможные
+  // инлайн-стили, оставшиеся от старой версии кода (в кэше у пользователей).
+  bar.style.bottom = "";
+  bar.style.transform = "";
   const floatBtn = document.getElementById("navProfileFloat");
   // [ОТКЛЮЧЕНО-ПРОФИЛЬ] Часть 2 из 2: раньше профиль-аватар в углу
   // перепрыгивал в нижнее меню (показывался там вместо оригинала) при
