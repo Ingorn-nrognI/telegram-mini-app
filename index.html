@@ -10068,6 +10068,7 @@ function applySocketRoundState(data) {
     const _prevLobbyStart = _isSameRound ? scannerRealtime.roundData?.lobbyStartSample : null;
     const _prevActiveStartedAt = _isSameRound ? scannerRealtime.roundData?.activeStartedAt : null;
     const _prevShuffleStartedAt = _isSameRound ? scannerRealtime.roundData?.shuffleStartedAt : null;
+    const _prevRoundNumber = _isSameRound ? scannerRealtime.roundData?.roundNumber : null;
     scannerRealtime.roundData = {
       id: roundId,
       status: data.status || 'waiting',
@@ -10075,7 +10076,8 @@ function applySocketRoundState(data) {
       participantCount: data.participantCount || 0,
       countdownEndsAt: data.countdownEndsAt || null,
       activeEndsAt: data.activeEndsAt || null,
-      version: data.version || 0
+      version: data.version || 0,
+      roundNumber: data.roundNumber || null
     };
     if (_prevLatch) {
       scannerRealtime.roundData.countdownLatchSample = _prevLatch;
@@ -10088,6 +10090,9 @@ function applySocketRoundState(data) {
     }
     if (_prevShuffleStartedAt) {
       scannerRealtime.roundData.shuffleStartedAt = _prevShuffleStartedAt;
+    }
+    if (!scannerRealtime.roundData.roundNumber && _prevRoundNumber) {
+      scannerRealtime.roundData.roundNumber = _prevRoundNumber;
     }
   }
 
