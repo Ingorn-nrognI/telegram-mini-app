@@ -9747,6 +9747,7 @@ function requestScannerCellOwnersAsync(players, totalCells, versionSeed, version
 let _lobbyJumpPrevSample = null;
 let _lobbyJumpPrevTime = null;
 let _scannerRoundFinishedAtMs = null;
+let scannerDisplayRoundNumber = null;
 let _scannerZoomOutStartMs = null;
 let _scannerResultShownForRound = null;
 let _lastFrozenResultPos = null;
@@ -9904,6 +9905,10 @@ function applySocketRoundPatch(patch) {
   if (patch.roundNumber !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
     scannerRealtime.roundData.roundNumber = patch.roundNumber;
+    scannerDisplayRoundNumber = patch.roundNumber;
+  }
+  if (patch.nextRoundNumber !== undefined) {
+    scannerDisplayRoundNumber = patch.nextRoundNumber;
   }
   if (patch.idleBeamMotion !== undefined) {
     if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
@@ -9954,6 +9959,9 @@ function applySocketRoundPatch(patch) {
         // один кадр — то самое "тепехнулся и сразу вернулся". Просто сбрасываем
         // состояние сглаживания на правильную точку, не трогая _serverBeamPos.
         resetScannerBeamRenderState(_idleSample, "idle_reset");
+      }
+      if (scannerRealtime.roundData?.roundNumber) {
+        scannerDisplayRoundNumber = scannerRealtime.roundData.roundNumber + 1;
       }
       scannerRealtime.roundData = null;
       scannerRealtime.activeRoundId = null;
@@ -10097,6 +10105,11 @@ function applySocketRoundState(data) {
     }
     if (!scannerRealtime.roundData.roundNumber && _prevRoundNumber) {
       scannerRealtime.roundData.roundNumber = _prevRoundNumber;
+    }
+    if (scannerRealtime.roundData.roundNumber) {
+      scannerDisplayRoundNumber = scannerRealtime.roundData.roundNumber;
+    } else if (data.nextRoundNumber) {
+      scannerDisplayRoundNumber = data.nextRoundNumber;
     }
   }
 
@@ -11668,7 +11681,7 @@ function renderScannerRound(options = {}) {
   if (screenPoolChip) setTextContentIfChanged(screenPoolChip, `Банк: ${formatTon(_displayPot)}`);
   const roundNumberDisplay = document.getElementById("scannerRoundNumberDisplay");
   if (roundNumberDisplay) {
-    const _roundNum = scannerRealtime.roundData?.roundNumber;
+    const _roundNum = scannerRealtime.roundData?.roundNumber || scannerDisplayRoundNumber;
     setTextContentIfChanged(roundNumberDisplay, `Раунд №: ${_roundNum ? _roundNum : "—"}`);
   }
   if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${isArenaResetPhase ? "0%" : myChanceValue}`);
