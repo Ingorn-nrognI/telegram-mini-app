@@ -2855,7 +2855,7 @@ button {
     width: calc(100vw - 24px);
     grid-template-columns: 44px repeat(3, minmax(46px, 1fr)) 66px;
     gap: 6px;
-    padding: 8px;
+    padding: 8px 8px 40px 8px;
     border-radius: 22px 22px 0 0;
   }
 
@@ -11488,6 +11488,7 @@ function updateScannerBetBarVisibility() {
   // инлайн-стили, оставшиеся от старой версии кода (в кэше у пользователей).
   bar.style.bottom = "";
   bar.style.transform = "";
+  const bottomBar = document.querySelector(".bottom-bar");
   const floatBtn = document.getElementById("navProfileFloat");
   // [ОТКЛЮЧЕНО-ПРОФИЛЬ] Часть 2 из 2: раньше профиль-аватар в углу
   // перепрыгивал в нижнее меню (показывался там вместо оригинала) при
