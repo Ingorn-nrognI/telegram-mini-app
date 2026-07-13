@@ -8055,12 +8055,38 @@ function buildScannerPlayersFromFirestore(round, participants) {
     color
   }));
 
-  // Throttle применяется всегда, при ЛЮБОМ статусе раунда (waiting/countdown/shuffling/active/finished),
-  // а не только в лобби — раньше тяжёлый пересчёт 10 000 клеток гонялся без throttle
-  // на каждый джойн/ставку/смену статуса, отсюда и жёсткие лаги.
-  const allocated = allocateCells(normalized, SCANNER_GRID_TOTAL_CELLS);
+  // Арена больше НЕ рассчитывается на клиенте — сервер присылает готовую карту
+  // клеток (событие grid:state) и по ней же определяет победителя, поэтому
+  // картинка и результат раунда физически не могут разойтись.
+  //
+  // Индексы владельцев клеток относятся к СЕРВЕРНОМУ порядку игроков (сортировка
+  // по playerId). Раньше клиент строил игроков в порядке присоединения — из-за
+  // этого cellOwners[i] на клиенте и на сервере указывали на разных людей.
+  // Сортируем ровно так же, как сервер.
+  const canonical = normalized.slice().sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  const allocated = allocateCells(canonical, SCANNER_GRID_TOTAL_CELLS);
   const totalPot = allocated.reduce((sum, p) => sum + Number(p.stake || 0), 0);
   const versionKey = `${round?.id || "round"}_${round?.status || "idle"}_${allocated.length}_${totalPot.toFixed(2)}`;
+
+  const _srvGrid = scannerServerGrid;
+  const _srvGridMatches = _srvGrid
+    && String(_srvGrid.roundId) === String(round?.id || "")
+    && Array.isArray(_srvGrid.cellOwners)
+    && _srvGrid.cellOwners.length === SCANNER_GRID_TOTAL_CELLS;
+
+  if (_srvGridMatches) {
+    return {
+      players: allocated,
+      totalPot,
+      cellOwners: _srvGrid.cellOwners,
+      totalPlayers: allocated.length,
+      gridVersion: `srv_${round?.id || "round"}_${versionKey}`
+    };
+  }
+
+  // Резерв на первые миллисекунды, пока карта с сервера ещё не долетела —
+  // временно считаем локально, чтобы арена не была пустой. Как только придёт
+  // grid:state, картинка заменится на серверную.
   const now = Date.now();
   const throttleMs = 700;
 
@@ -9823,6 +9849,36 @@ const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
 let scannerLobbyGridThrottleState = { lastComputeAt: 0, lastVersionKey: null, cellOwners: null, lastRequestAt: 0, workerBusy: false, pendingRequest: null, pendingVersionKeyResolved: null };
 
+// Арена приходит готовой с сервера — клиент её больше не рассчитывает.
+// Сервер шлёт карту владельцев клеток в упакованном виде (пары
+// [владелец, сколько_клеток_подряд]) и канонический порядок игроков.
+let scannerServerGrid = null;
+
+function decodeScannerOwnersRle(rle) {
+  if (!Array.isArray(rle) || rle.length === 0) return [];
+  const out = [];
+  for (let i = 0; i + 1 < rle.length; i += 2) {
+    const owner = Number(rle[i]);
+    const run = Number(rle[i + 1]);
+    for (let k = 0; k < run; k += 1) out.push(owner);
+  }
+  return out;
+}
+
+function applyScannerServerGrid(data) {
+  if (!data || !data.roundId || !Array.isArray(data.cellsRle) || data.cellsRle.length === 0) {
+    scannerServerGrid = null;
+  } else {
+    scannerServerGrid = {
+      roundId: String(data.roundId),
+      cellOwners: decodeScannerOwnersRle(data.cellsRle),
+      players: Array.isArray(data.players) ? data.players : []
+    };
+  }
+  resetScannerDerivedVisualCache();
+  renderScannerRound();
+}
+
 let _scannerGridWorker = null;
 let _scannerGridWorkerRequestId = 0;
 
@@ -9963,6 +10019,7 @@ function initSocketConnection() {
   });
   _socket.on('daily:top', (data) => { applyScannerDailyTop(data); });
   _socket.on('last:round', (data) => { applyScannerLastRound(data); });
+  _socket.on('grid:state', (data) => { applyScannerServerGrid(data); });
 }
 
 function applySocketRoundPatch(patch) {
