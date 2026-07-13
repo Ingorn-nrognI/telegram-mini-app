@@ -7863,21 +7863,22 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed, roundId
     const boxWidth = Math.max(1, maxCol - minCol + 1);
     const boxHeight = Math.max(1, maxRow - minRow + 1);
 
-    const dirRoll = Math.floor(rnd() * 4);
+    // Только ДИАГОНАЛЬНЫЕ срезы (2 = col+row, 3 = col-row), как и задумано по
+    // дизайну арены: параллельные линии наискосок через всю арену.
+    // Варианты 0 (вертикальный) и 1 (горизонтальный) убраны: при малой доле
+    // игрока они давали полосу толщиной в несколько клеток во всю высоту/ширину
+    // арены — ту самую тонкую линию у стенки. Диагональный срез при той же доле
+    // даёт аккуратный треугольник в углу, а при многих игроках — параллельные
+    // диагональные полосы. Количество вызовов rnd() не изменилось, поэтому
+    // остальная раскладка не сдвигается.
+    const dirRoll = 2 + Math.floor(rnd() * 2);
     const flip = rnd() < 0.5;
 
     let perpDim;
     if (dirRoll === 0) perpDim = boxHeight;
     else if (dirRoll === 1) perpDim = boxWidth;
     else perpDim = Math.min(boxWidth, boxHeight);
-    // Толщина будущей полосы = сколько клеток / длина стороны разреза.
-    // Раньше здесь сравнивали targetCount с perpDim напрямую (386 < 100 = false),
-    // поэтому защита не срабатывала, и игрок с малой долей получал полосу
-    // толщиной 386/100 ≈ 4 клетки во всю высоту арены — ту самую тонкую линию
-    // у стенки. Ветка с компактным блоком в углу ниже существовала, но никогда
-    // не запускалась. Теперь считаем именно толщину.
-    const stripThickness = targetCount / Math.max(1, perpDim);
-    const wouldBeTooThin = stripThickness < MIN_STRIP_THICKNESS;
+    const wouldBeTooThin = targetCount < perpDim && perpDim >= MIN_STRIP_THICKNESS;
 
     if (wouldBeTooThin) {
       const aspect = boxWidth / boxHeight;
