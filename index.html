@@ -11459,11 +11459,7 @@ function renderScannerParticipants() {
   }
 
   if (!scannerGridState.players.length) {
-    if (scannerGridState.roundData && hasScannerRoundVisibleState(scannerGridState.roundData)) {
-      setInnerHtmlIfChanged(list, `<div class="scanner-empty">Подгружаем текущее состояние игроков этого раунда...</div>`);
-    } else {
-      setInnerHtmlIfChanged(list, "");
-    }
+    setInnerHtmlIfChanged(list, "");
     return;
   }
 
