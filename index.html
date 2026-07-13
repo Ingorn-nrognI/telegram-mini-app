@@ -7080,6 +7080,19 @@ function applyScannerDailyTop(data) {
   }
 }
 
+function applyScannerLastRound(data) {
+  if (!data) return;
+  const nameEl = document.getElementById("scannerLastRoundName");
+  const amountEl = document.getElementById("scannerLastRoundAmount");
+  const multiplierEl = document.getElementById("scannerLastRoundMultiplier");
+  if (nameEl) setTextContentIfChanged(nameEl, data.lastRoundWinnerName || "—");
+  if (amountEl) setTextContentIfChanged(amountEl, data.lastRoundPayout ? formatTon(data.lastRoundPayout) : "—");
+  if (multiplierEl) {
+    const _mult = Number(data.lastRoundMultiplier || 0);
+    setTextContentIfChanged(multiplierEl, _mult > 0 ? `x${_mult.toFixed(2)}` : "—");
+  }
+}
+
 function formatScannerMultiplier(payout, stake) {
   const safePayout = Number(payout || 0);
   const safeStake = Number(stake || 0);
@@ -9871,6 +9884,7 @@ function initSocketConnection() {
     if (data?.dailyTop) applyScannerDailyTop(data.dailyTop);
   });
   _socket.on('daily:top', (data) => { applyScannerDailyTop(data); });
+  _socket.on('last:round', (data) => { applyScannerLastRound(data); });
 }
 
 function applySocketRoundPatch(patch) {
