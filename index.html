@@ -1961,14 +1961,76 @@ button {
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: #dff9ff;
-  margin-bottom: 10px;
-  padding-right: 28px;
+  margin-bottom: 12px;
+  padding: 0 28px;
+  text-align: center;
 }
 
 .scanner-result-text {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.scanner-result-winner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+}
+
+.scanner-result-winner .scanner-player-avatar {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  font-size: 22px;
+}
+
+.scanner-result-nick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #f6fbff;
+}
+
+.scanner-result-nick span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scanner-result-chance {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.scanner-result-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
   gap: 8px;
+}
+
+.scanner-result-payout {
+  font-size: 20px;
+  font-weight: 900;
+  color: #5fe3c0;
+}
+
+.scanner-result-mult {
+  font-size: 14px;
+  font-weight: 800;
+  color: #f6fbff;
 }
 
 .scanner-result-item {
@@ -11831,6 +11893,11 @@ function renderScannerRound(options = {}) {
       const winnerStake = Number(winnerPlayer.stake || scannerGridState.roundData?.winnerStake || 0);
       const multiplier = formatScannerMultiplier(payout, winnerStake);
       const winnerColor = escapeHtml(winnerPlayer.color || getScannerColorById(winnerPlayer.id, scannerGridState.roundId || scannerGridState.renderSeed || "winner"));
+      // Шанс победителя в раунде = его ставка / сумма ставок всех участников.
+      const _winnerPot = Number(scannerGridState.totalPot || 0);
+      const winnerChanceText = (_winnerPot > 0 && winnerStake > 0)
+        ? `${((winnerStake / _winnerPot) * 100).toFixed(2)}%`
+        : "—";
       // Показываем окно один раз за раунд. Если пользователь закрыл его крестиком —
       // не открываем повторно на следующих кадрах того же раунда.
       if (resultOverlay && !resultOverlay.classList.contains("open") && _scannerResultShownForRound !== _resultRoundId) {
@@ -11840,21 +11907,17 @@ function renderScannerRound(options = {}) {
       }
       setTextContentIfChanged(resultTitle, "Победитель");
       setInnerHtmlIfChanged(resultText, `
-        <div class="scanner-result-item">
-          <span class="scanner-result-label">Цвет</span>
-          <div class="scanner-result-value"><span class="scanner-result-color-swatch" style="background:${winnerColor};"></span><span>Цвет арены</span></div>
-        </div>
-        <div class="scanner-result-item">
-          <span class="scanner-result-label">Ник</span>
-          <div class="scanner-result-value"><span>${escapeHtml(winnerPlayer.name)}</span></div>
-        </div>
-        <div class="scanner-result-item">
-          <span class="scanner-result-label">Выигрыш</span>
-          <div class="scanner-result-value"><span>${formatTon(payout)}</span></div>
-        </div>
-        <div class="scanner-result-item">
-          <span class="scanner-result-label">Множитель</span>
-          <div class="scanner-result-value"><span>${multiplier}</span></div>
+        <div class="scanner-result-winner">
+          ${getScannerPlayerAvatarHtml(winnerPlayer)}
+          <div class="scanner-result-nick">
+            <span class="scanner-result-color-swatch" style="background:${winnerColor};"></span>
+            <span>${escapeHtml(winnerPlayer.name)}</span>
+          </div>
+          <div class="scanner-result-chance">Шансы: ${winnerChanceText}</div>
+          <div class="scanner-result-summary">
+            <span class="scanner-result-payout">${formatTon(payout)}</span>
+            <span class="scanner-result-mult">${multiplier}</span>
+          </div>
         </div>
       `);
     }
