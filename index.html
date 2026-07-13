@@ -7067,6 +7067,20 @@ function formatCompactNumber(value) {
   return new Intl.NumberFormat("ru-RU").format(number);
 }
 
+// Шанс победителя = его ставка / банк раунда * 100. Банк (pot) приходит с
+// сервера в полях dailyTopPot / lastRoundPot — вычислить его на клиенте из
+// выплаты нельзя, потому что комиссия сама зависит от размера банка.
+function formatScannerChanceWithMultiplier(multiplier, stake, pot) {
+  const _mult = Number(multiplier || 0);
+  const _stake = Number(stake || 0);
+  const _pot = Number(pot || 0);
+  if (!(_mult > 0)) return "—";
+  const _multText = `x${_mult.toFixed(2)}`;
+  if (!(_pot > 0) || !(_stake > 0)) return _multText;
+  const _chance = (_stake / _pot) * 100;
+  return `Шансы: ${_chance.toFixed(2)}% · ${_multText}`;
+}
+
 function applyScannerDailyTop(data) {
   if (!data) return;
   const nameEl = document.getElementById("scannerTopDayName");
@@ -7075,8 +7089,9 @@ function applyScannerDailyTop(data) {
   if (nameEl) setTextContentIfChanged(nameEl, data.dailyTopWinnerName || "—");
   if (amountEl) setTextContentIfChanged(amountEl, data.dailyTopPayout ? formatTon(data.dailyTopPayout) : "—");
   if (multiplierEl) {
-    const _mult = Number(data.dailyTopMultiplier || 0);
-    setTextContentIfChanged(multiplierEl, _mult > 0 ? `x${_mult.toFixed(2)}` : "—");
+    setTextContentIfChanged(multiplierEl, formatScannerChanceWithMultiplier(
+      data.dailyTopMultiplier, data.dailyTopStake, data.dailyTopPot
+    ));
   }
 }
 
@@ -7088,8 +7103,9 @@ function applyScannerLastRound(data) {
   if (nameEl) setTextContentIfChanged(nameEl, data.lastRoundWinnerName || "—");
   if (amountEl) setTextContentIfChanged(amountEl, data.lastRoundPayout ? formatTon(data.lastRoundPayout) : "—");
   if (multiplierEl) {
-    const _mult = Number(data.lastRoundMultiplier || 0);
-    setTextContentIfChanged(multiplierEl, _mult > 0 ? `x${_mult.toFixed(2)}` : "—");
+    setTextContentIfChanged(multiplierEl, formatScannerChanceWithMultiplier(
+      data.lastRoundMultiplier, data.lastRoundStake, data.lastRoundPot
+    ));
   }
 }
 
@@ -10200,7 +10216,14 @@ function applySocketRoundResult(data) {
     const lastRoundMultiplierEl = document.getElementById("scannerLastRoundMultiplier");
     if (lastRoundNameEl) setTextContentIfChanged(lastRoundNameEl, data.winnerName || "—");
     if (lastRoundAmountEl) setTextContentIfChanged(lastRoundAmountEl, formatTon(data.winnerPayout || 0));
-    if (lastRoundMultiplierEl) setTextContentIfChanged(lastRoundMultiplierEl, formatScannerMultiplier(data.winnerPayout, data.winnerStake));
+    if (lastRoundMultiplierEl) {
+      const _liveMult = Number(data.winnerStake || 0) > 0
+        ? Number(data.winnerPayout || 0) / Number(data.winnerStake || 0)
+        : 0;
+      setTextContentIfChanged(lastRoundMultiplierEl, formatScannerChanceWithMultiplier(
+        _liveMult, data.winnerStake, data.totalPot
+      ));
+    }
 
     if (String(data.winnerPlayerId) === String(getCurrentPlayer().id)) {
       loadProfileBestRoundWin();
