@@ -7863,22 +7863,21 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed, roundId
     const boxWidth = Math.max(1, maxCol - minCol + 1);
     const boxHeight = Math.max(1, maxRow - minRow + 1);
 
-    // Только ДИАГОНАЛЬНЫЕ срезы (2 = col+row, 3 = col-row), как и задумано по
-    // дизайну арены: параллельные линии наискосок через всю арену.
-    // Варианты 0 (вертикальный) и 1 (горизонтальный) убраны: при малой доле
-    // игрока они давали полосу толщиной в несколько клеток во всю высоту/ширину
-    // арены — ту самую тонкую линию у стенки. Диагональный срез при той же доле
-    // даёт аккуратный треугольник в углу, а при многих игроках — параллельные
-    // диагональные полосы. Количество вызовов rnd() не изменилось, поэтому
-    // остальная раскладка не сдвигается.
-    const dirRoll = 2 + Math.floor(rnd() * 2);
-    const flip = rnd() < 0.5;
+    // Угол среза берём СВОБОДНЫЙ, а не один из четырёх фиксированных.
+    // Раньше было два диагональных направления и отражение — итого всего
+    // 4 возможные картинки. При двух игроках делается один срез, поэтому
+    // раскладка повторялась из раунда в раунд: те же места, тот же вид.
+    // Теперь линия среза идёт под любым углом, и поля каждый раунд выходят
+    // другой формы — длиннее, уже, развёрнуты иначе. Площади не меняются:
+    // они и дальше строго равны долям игроков.
+    const cutAngle = rnd() * Math.PI * 2;
+    const cutCos = Math.cos(cutAngle);
+    const cutSin = Math.sin(cutAngle);
 
-    let perpDim;
-    if (dirRoll === 0) perpDim = boxHeight;
-    else if (dirRoll === 1) perpDim = boxWidth;
-    else perpDim = Math.min(boxWidth, boxHeight);
-    const wouldBeTooThin = targetCount < perpDim && perpDim >= MIN_STRIP_THICKNESS;
+    // Срез под свободным углом всегда даёт клин или треугольник в углу, а не
+    // тонкую полосу во всю стену. Поэтому запасная ветка с компактным блоком
+    // (она рисовала тот самый квадрат) больше не нужна и не запускается.
+    const wouldBeTooThin = false;
 
     if (wouldBeTooThin) {
       const aspect = boxWidth / boxHeight;
@@ -7916,17 +7915,9 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed, roundId
       continue;
     }
 
-    let metricFn;
-    if (dirRoll === 0) metricFn = (idx) => idx % COLS;
-    else if (dirRoll === 1) metricFn = (idx) => Math.floor(idx / COLS);
-    else if (dirRoll === 2) metricFn = (idx) => (idx % COLS) + Math.floor(idx / COLS);
-    else metricFn = (idx) => (idx % COLS) - Math.floor(idx / COLS);
+    const metricFn = (idx) => (idx % COLS) * cutCos + Math.floor(idx / COLS) * cutSin;
 
-    const sorted = remainingIdx.slice().sort((a, b) => {
-      const ma = flip ? -metricFn(a) : metricFn(a);
-      const mb = flip ? -metricFn(b) : metricFn(b);
-      return ma - mb;
-    });
+    const sorted = remainingIdx.slice().sort((a, b) => metricFn(a) - metricFn(b));
     for (let i = 0; i < targetCount; i += 1) owners[sorted[i]] = p;
     remainingIdx = sorted.slice(targetCount);
   }
