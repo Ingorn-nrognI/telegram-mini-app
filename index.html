@@ -7870,7 +7870,14 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed, roundId
     if (dirRoll === 0) perpDim = boxHeight;
     else if (dirRoll === 1) perpDim = boxWidth;
     else perpDim = Math.min(boxWidth, boxHeight);
-    const wouldBeTooThin = targetCount < perpDim && perpDim >= MIN_STRIP_THICKNESS;
+    // Толщина будущей полосы = сколько клеток / длина стороны разреза.
+    // Раньше здесь сравнивали targetCount с perpDim напрямую (386 < 100 = false),
+    // поэтому защита не срабатывала, и игрок с малой долей получал полосу
+    // толщиной 386/100 ≈ 4 клетки во всю высоту арены — ту самую тонкую линию
+    // у стенки. Ветка с компактным блоком в углу ниже существовала, но никогда
+    // не запускалась. Теперь считаем именно толщину.
+    const stripThickness = targetCount / Math.max(1, perpDim);
+    const wouldBeTooThin = stripThickness < MIN_STRIP_THICKNESS;
 
     if (wouldBeTooThin) {
       const aspect = boxWidth / boxHeight;
@@ -7924,9 +7931,6 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed, roundId
   }
   remainingIdx.forEach((idx) => { owners[idx] = players.length - 1; });
 
-  const _debugCounts = {};
-  owners.forEach((o) => { _debugCounts[o] = (_debugCounts[o] || 0) + 1; });
-  console.log("[ПРЕВЬЮ-ОТЛАДКА] Распределение клеток превью:", _debugCounts, "| игроков:", players.length, "| доли:", players.map(p => ({ id: p.id, cellCount: p.cellCount })));
   return owners;
 }
 
