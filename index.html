@@ -2534,6 +2534,24 @@ button {
   box-shadow: inset 0 0 0 1px rgba(45, 225, 255, 0.08);
 }
 
+/* Подсветка "кнопку нажали": загорается мгновенно и плавно гаснет за ~1.2с.
+   Медленный transition висит на самой кнопке (это гашение), быстрый — внутри
+   .is-pressed (это зажигание). Поэтому снятие класса даёт плавное затухание. */
+.scanner-bet-quick {
+  transition: transform 0.16s ease, opacity 0.16s ease,
+    background 1.2s ease-out, border-color 1.2s ease-out,
+    box-shadow 1.2s ease-out, color 1.2s ease-out;
+}
+
+.scanner-bet-quick.is-pressed {
+  background: rgba(45, 225, 255, 0.16);
+  border-color: rgba(45, 225, 255, 0.38);
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(45, 225, 255, 0.08);
+  transition: background 0.08s ease-out, border-color 0.08s ease-out,
+    box-shadow 0.08s ease-out, color 0.08s ease-out, transform 0.16s ease;
+}
+
 .scanner-bet-allin {
   font-size: 12px;
   letter-spacing: -0.02em;
@@ -2853,20 +2871,23 @@ button {
 @media (max-width: 420px) {
   .scanner-bet-bar {
     width: calc(100vw - 24px);
-    grid-template-columns: 44px repeat(3, minmax(46px, 1fr)) 66px;
+    grid-template-columns: 46px repeat(3, minmax(46px, 1fr)) 66px;
     gap: 6px;
     padding: 8px 8px 40px 8px;
     border-radius: 22px 22px 18px 18px;
   }
 
+  /* Раньше на телефонах кнопки были 44px против 38px в браузере — поэтому
+     они выглядели почти такими же крупными, как кнопки главного меню.
+     Теперь пропорции совпадают с браузерной версией на всех платформах. */
   .scanner-bet-btn {
-    height: 44px;
-    border-radius: 15px;
+    height: 38px;
+    border-radius: 16px;
     font-size: 13px;
   }
 
   .scanner-bet-edit {
-    width: 44px;
+    width: 46px;
     font-size: 17px;
   }
 
@@ -10996,7 +11017,19 @@ async function setScannerQuickStakeByIndex(index, event) {
   if (event) event.stopPropagation();
   const safeIndex = Math.max(0, Math.min(2, Number(index) || 0));
   const value = scannerQuickStakeValues[safeIndex] || SCANNER_DEFAULT_QUICK_STAKES[safeIndex] || 1;
+  flashScannerQuickButton(safeIndex);
   await setScannerQuickStake(value, event);
+}
+
+function flashScannerQuickButton(index) {
+  const button = document.getElementById(`scannerBetBarQuick${index}`);
+  if (!button) return;
+  if (button._flashTimer) clearTimeout(button._flashTimer);
+  button.classList.add("is-pressed");
+  button._flashTimer = setTimeout(() => {
+    button.classList.remove("is-pressed");
+    button._flashTimer = null;
+  }, 180);
 }
 
 async function setScannerQuickStake(value, event) {
@@ -11398,7 +11431,11 @@ function renderScannerBetBar() {
     if (!button) return;
     const normalizedValue = normalizeStakeValue(value);
     button.textContent = formatScannerStakeButtonValue(normalizedValue);
-    button.classList.toggle("active", Number(selectedStake) === Number(normalizedValue) && !bettingLocked);
+    // Раньше кнопка подсвечивалась постоянно, если её номинал совпадал с
+    // scannerGridState.selectedStake (а он по умолчанию равен 25) — поэтому
+    // кнопка "25" выглядела нажатой сразу при появлении бара, хотя её никто
+    // не трогал. Теперь подсветка только временная, по факту нажатия.
+    button.classList.remove("active");
     button.classList.toggle("is-locked", bettingLocked);
     button.disabled = shouldDisable;
     button.setAttribute("aria-label", bettingLocked ? "Ставки заблокированы до окончания раунда" : `Поставить ${formatTon(normalizedValue)}`);
