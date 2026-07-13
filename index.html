@@ -11479,16 +11479,28 @@ function updateScannerBetBarVisibility() {
 
   const shouldShow = getScannerArenaFocusState();
   bar.classList.toggle("is-visible", shouldShow);
-  // Позиция бара ставок теперь полностью задаётся в CSS (.scanner-bet-bar и
-  // .scanner-bet-bar.is-visible): та же формула и те же CSS-переменные
-  // (--bottom-nav-offset, --safe-bottom, --bottom-nav-height) и тот же
-  // position:absolute, что и у самого нижнего меню .bottom-bar — то есть
-  // единая система координат без расхождений между платформами. JS больше
-  // не измеряет и не выставляет позицию вручную — только очищаем возможные
-  // инлайн-стили, оставшиеся от старой версии кода (в кэше у пользователей).
-  bar.style.bottom = "";
-  bar.style.transform = "";
   const bottomBar = document.querySelector(".bottom-bar");
+  // CSS-переменная --bottom-nav-height (56px десктоп / 62px моб.) НЕ равна
+  // реальной высоте нижнего меню: ниже по файлу есть перекрывающее правило
+  // .bottom-btn 56x56 (моб. 58x58) плюс .bottom-bar padding 8px 7px, то есть
+  // реально меню ~72px (десктоп) и ~74px (моб.). Любая формула через эту
+  // переменную промахивается на 12-16px, причём по-разному на разных
+  // платформах — отсюда бар то висел высоко, то заезжал под меню.
+  // Поэтому меряем реальную верхнюю границу меню и ставим бар так, чтобы
+  // КНОПКИ ставок оказались вплотную над рамкой меню. Карточка сохраняет свою
+  // полную высоту, её нижняя часть штатно уходит за меню (z-index 70 < 80).
+  if (shouldShow && bottomBar) {
+    const navRect = bottomBar.getBoundingClientRect();
+    const menuEl = document.getElementById("menu");
+    const containerBottom = menuEl ? menuEl.getBoundingClientRect().bottom : window.innerHeight;
+    const padBottom = parseFloat(getComputedStyle(bar).paddingBottom) || 0;
+    const gapAboveNav = 4;
+    const barBottom = Math.max(0, (containerBottom - navRect.top) + gapAboveNav - padBottom);
+    bar.style.bottom = `${barBottom}px`;
+  } else {
+    bar.style.bottom = "";
+  }
+  bar.style.transform = "";
   const floatBtn = document.getElementById("navProfileFloat");
   // [ОТКЛЮЧЕНО-ПРОФИЛЬ] Часть 2 из 2: раньше профиль-аватар в углу
   // перепрыгивал в нижнее меню (показывался там вместо оригинала) при
