@@ -1080,23 +1080,28 @@ button {
   z-index: 74;
   /* flex-start + нижний паддинг держали карточку выше нижнего меню.
      Теперь карточка тянется до самого низа и уходит за меню. */
+  /* Боковой паддинг убран (был 12px): из-за него карточка не совпадала по
+     ширине с нижним меню, которое считает 100vw-12px от самого края экрана. */
   align-items: stretch;
   justify-content: center;
   padding:
     calc(var(--safe-top) + 78px)
-    12px
+    0
     0;
   background: rgba(3, 7, 18, 0.58);
   backdrop-filter: blur(10px);
 }
 
 .app-modal-card {
-  /* Ширина ровно как у нижнего меню (.bottom-bar тоже calc(100vw - 12px)). */
+  /* Ровно ширина нижнего меню: 100vw - 12px от края экрана (контейнер уже без
+     бокового паддинга), центрируется flex-ом родителя. */
   width: calc(100vw - 12px);
-  /* Карточка опускается вниз и нижней частью уходит ЗА нижнее меню, как история игр. */
+  /* Низ карточки опущен ровно до ВЕРХНЕЙ кромки нижнего меню, а не до края
+     экрана — иначе фон карточки торчал в зазоре под приподнятым меню.
+     Содержимое отодвигает большой padding-bottom, чтобы его не резало меню. */
   margin-top: auto;
-  margin-bottom: 0;
-  padding-bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 18px);
+  margin-bottom: calc(max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px)) + var(--bottom-nav-height) - 20px);
+  padding-bottom: 26px;
   max-height: 100%;
   overflow: hidden;
   display: flex;
