@@ -8139,7 +8139,20 @@ function getScannerDerivedVisualState(round, participants) {
 
   const finalized = buildScannerPlayersFromFirestore(round, participants);
   const previewVersion = `${round?.id || "round"}_${round?.entropySeed || "seed"}_${finalized.totalPlayers}_${finalized.totalPot.toFixed(2)}_preview`;
-  const previewCellOwners = buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
+
+  // Превью тоже приходит готовым с сервера — клиент его больше не считает.
+  // Раньше здесь на каждый вход игрока шла полная сортировка 10 000 клеток на
+  // каждого участника, прямо в основном потоке. Локальный расчёт остаётся
+  // только резервом на те миллисекунды, пока карта с сервера ещё не долетела.
+  const _srvPreview = (scannerServerGrid
+    && String(scannerServerGrid.roundId) === String(round?.id || "")
+    && Array.isArray(scannerServerGrid.previewCellOwners)
+    && scannerServerGrid.previewCellOwners.length === SCANNER_GRID_TOTAL_CELLS)
+    ? scannerServerGrid.previewCellOwners
+    : null;
+
+  const previewCellOwners = _srvPreview
+    || buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
   const previewZones = buildScannerPreviewZones(previewCellOwners, finalized.players);
   const nextValue = {
     key: cacheKey,
@@ -9868,6 +9881,9 @@ function applyScannerServerGrid(data) {
     scannerServerGrid = {
       roundId: String(data.roundId),
       cellOwners: decodeScannerOwnersRle(data.cellsRle),
+      previewCellOwners: Array.isArray(data.previewCellsRle) && data.previewCellsRle.length
+        ? decodeScannerOwnersRle(data.previewCellsRle)
+        : null,
       players: Array.isArray(data.players) ? data.players : []
     };
   }
