@@ -11025,9 +11025,15 @@ async function ensureScannerRoundHistoryPersisted() {
   const winnerPlayer = scannerGridState.winningPlayer;
   const winnerPayout = Number(round.winnerPayout || 0);
 
+  const _histRoundNumber = round.roundNumber
+    || scannerRealtime.roundData?.roundNumber
+    || scannerDisplayRoundNumber
+    || null;
+
   const summary = {
     roomId: round.id,
     roundId: round.id,
+    roundNumber: _histRoundNumber,
     playedAt: new Date(tsToMs(round.finishedAt) || Date.now()).toISOString(),
     finishedAt: new Date(tsToMs(round.finishedAt) || Date.now()).toISOString(),
     savedAt: Date.now(),
@@ -11070,6 +11076,7 @@ async function ensureScannerRoundHistoryPersisted() {
     getHistoryCollectionRef(currentPlayer.id).doc(round.id).set(summary, { merge: true }),
     scannerHistoryCollection().doc(round.id).set({
       roundId: round.id,
+      roundNumber: _histRoundNumber,
       mode: "Сканер-сетка",
       status: round.status,
       finishedAt: round.finishedAt || createTimestampFromNow(0),
