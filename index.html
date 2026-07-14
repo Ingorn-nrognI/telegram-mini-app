@@ -768,10 +768,14 @@ button {
 .history-panel {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 12px);
+  /* Раньше панель заканчивалась ВЫШЕ нижнего меню. Теперь она опускается
+     под него и нижней частью уходит за меню — как бар ставок. Нижний паддинг
+     отодвигает содержимое, чтобы его не перекрывало. */
+  bottom: 0;
+  padding-bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 18px);
   width: min(calc(100vw - 12px), 480px);
-  max-height: min(56vh, 520px);
-  border-radius: 26px;
+  max-height: min(72vh, 640px);
+  border-radius: 26px 26px 0 0;
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(12, 17, 39, 0.98), rgba(7, 9, 19, 0.98));
@@ -1068,7 +1072,10 @@ button {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 120;
+  /* Было 120 — выше нижнего меню (80), поэтому таблица накрывала его целиком.
+     Теперь ниже меню: окно уезжает ЗА него, как бар ставок, и меню остаётся
+     видимым поверх окна. */
+  z-index: 74;
   align-items: flex-start;
   justify-content: center;
   padding:
