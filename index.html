@@ -7289,30 +7289,25 @@ function assignScannerRoundColors(round, participants) {
     String(a.playerId || a.id || "").localeCompare(String(b.playerId || b.id || ""))
   );
 
-  const slotOwner = new Map();
+  // Раньше цвет брался из 12 фиксированных слотов через 30 градусов, а при
+  // столкновении слот сдвигался ТОЛЬКО если playerHash >= otherHash — иначе
+  // игрок оставался в занятом слоте, и два человека получали ОДИН цвет.
+  // Плюс соседние слоты отличались на 30 градусов (300 и 330 — это розовый и
+  // малиновый), поэтому оттенки выходили похожими даже без столкновений.
+  //
+  // Теперь оттенки раскидываются РАВНОМЕРНО по всему кругу на число игроков в
+  // раунде: при двух игроках это 180 градусов (противоположные цвета), при трёх
+  // — 120 и так далее. Плюс чередуется светлота, чтобы поля различались ещё и
+  // по тону. Совпадение цветов невозможно в принципе.
   const colorByPid = new Map();
+  const playerCount = Math.max(1, ordered.length);
+  const hueSpread = 360 / playerCount;
 
-  ordered.forEach((participant) => {
+  ordered.forEach((participant, index) => {
     const pid = String(participant.playerId || participant.id || "");
-    const playerHash = hashString(`${roundSeed}::${pid}`);
-    let slot = playerHash % HUE_SLOTS.length;
-
-    if (slotOwner.has(slot)) {
-      const otherPid = slotOwner.get(slot);
-      const otherHash = hashString(`${roundSeed}::${otherPid}`);
-      if (playerHash >= otherHash) {
-        let attempts = 0;
-        while (slotOwner.has(slot) && attempts < HUE_SLOTS.length) {
-          slot = (slot + 1) % HUE_SLOTS.length;
-          attempts += 1;
-        }
-      }
-    }
-    slotOwner.set(slot, pid);
-
-    const hue = (HUE_SLOTS[slot] + hueRotation) % 360;
-    const saturation = saturationCycle[slot % saturationCycle.length];
-    const lightness = lightnessCycle[slot % lightnessCycle.length];
+    const hue = (hueRotation + index * hueSpread) % 360;
+    const saturation = saturationCycle[index % saturationCycle.length];
+    const lightness = lightnessCycle[index % lightnessCycle.length];
     colorByPid.set(pid, getScannerColorHsl(hue, saturation, lightness));
   });
 
