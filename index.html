@@ -784,6 +784,25 @@ button {
   transition: opacity 0.24s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Размытая подложка под окнами истории игр, истории раундов и меню игр.
+   Показывается вместе с панелью и гасит фон под ней. */
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 71;
+  background: rgba(3, 7, 18, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.24s ease;
+}
+
+.panel-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .history-panel.open {
   opacity: 1;
   pointer-events: auto;
@@ -3899,6 +3918,7 @@ button {
 </head>
 <body>
 <div id="menu" onclick="handleMenuBackgroundClick(event)">
+  <div id="panelBackdrop" class="panel-backdrop"></div>
   <div class="app-bg">
     <div class="bg-orb orb-4"></div>
     <div class="bg-orb orb-5"></div>
@@ -5628,6 +5648,7 @@ function toggleModePopup(event) {
 function closeModePopup() {
   const modePopup = document.getElementById("modePopup");
   if (modePopup) modePopup.classList.remove("open");
+  syncPanelBackdrop();
   if (currentBottomNav === "games") {
     currentBottomNav = "";
     document.querySelectorAll("[data-nav]").forEach(btn => btn.classList.remove("is-active"));
@@ -5654,7 +5675,9 @@ function exitGameMode() {
 function openGamesMenu() {
   closeLeaderboard();
   closeBobrRunRooms();
-  setMenuView("home", { preserveNav: true });
+  // setMenuView("home") убран: раньше меню игр сначала выкидывало пользователя
+  // на главный экран и только потом открывало окно. Теперь окно просто
+  // всплывает поверх текущего экрана, как и таблица лидеров.
   homeScreenContext = "games";
   setActiveBottomNav("games");
   closeHistoryPanel({ preserveNav: true });
@@ -5662,6 +5685,7 @@ function openGamesMenu() {
   requestAnimationFrame(() => {
     const modePopup = document.getElementById("modePopup");
     if (modePopup) modePopup.classList.add("open");
+    syncPanelBackdrop();
   });
 }
 
@@ -5669,13 +5693,15 @@ function openRecentHistory() {
   closeLeaderboard();
   closeBobrRunRooms();
   closeModePopup();
-  setMenuView("home", { preserveNav: true, keepHistory: true });
+  // setMenuView("home") и scrollHomeToTop() убраны: раньше история сначала
+  // возвращала пользователя на главный экран и прокручивала его вверх, и лишь
+  // потом открывала окно. Теперь окно всплывает поверх текущего экрана.
 
   requestAnimationFrame(() => {
-    scrollHomeToTop();
     const historyPanel = document.getElementById("historyPanel");
     if (!historyPanel) return;
     historyPanel.classList.add("open");
+    syncPanelBackdrop();
     setActiveBottomNav("history");
     loadGameHistory();
   });
@@ -5698,11 +5724,13 @@ function toggleScannerRoundsPanel(event) {
     scannerGridState.recentRoundsExpanded = true;
     renderScannerRecentList();
   }
+  syncPanelBackdrop();
 }
 
 function closeScannerRoundsPanel() {
   const panel = document.getElementById("scannerRoundsPanel");
   if (panel) panel.classList.remove("open");
+  syncPanelBackdrop();
 }
 
 function toggleHistoryPanel(event) {
@@ -5735,6 +5763,7 @@ function closeHistoryPanel(options = {}) {
 
   const wasOpen = historyPanel.classList.contains("open");
   historyPanel.classList.remove("open");
+  syncPanelBackdrop();
 
   if (wasOpen && !preserveNav && currentBottomNav === "history") {
     setActiveBottomNav(currentMenuView === "home" ? getPreferredHomeNav() : "pvp");
@@ -7067,6 +7096,16 @@ function handleBottomNav(action, event) {
     default:
       break;
   }
+}
+
+// Подложка видна, пока открыта хотя бы одна из панелей. Вызывается после
+// каждого открытия/закрытия, чтобы состояние фона всегда совпадало с панелями.
+function syncPanelBackdrop() {
+  const backdrop = document.getElementById("panelBackdrop");
+  if (!backdrop) return;
+  const anyOpen = ["historyPanel", "scannerRoundsPanel", "modePopup"]
+    .some((id) => document.getElementById(id)?.classList.contains("open"));
+  backdrop.classList.toggle("open", anyOpen);
 }
 
 function handleMenuBackgroundClick(event) {
