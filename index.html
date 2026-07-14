@@ -824,6 +824,12 @@ button {
   bottom: auto;
   max-height: min(78vh, 720px);
   transform: translate(-50%, -32px);
+  /* Это окно закреплено СВЕРХУ и за нижнее меню не заезжает, поэтому убираем
+     унаследованные от .history-panel вещи, рассчитанные на нижнее положение:
+     нижний паддинг (давал пустоту под списком) и острые нижние углы (они
+     предполагались спрятанными за меню). Скругляем все четыре угла. */
+  padding-bottom: 0;
+  border-radius: 26px;
 }
 #scannerRoundsPanel.open {
   transform: translate(-50%, 0);
