@@ -1078,12 +1078,14 @@ button {
      Теперь ниже меню: окно уезжает ЗА него, как бар ставок, и меню остаётся
      видимым поверх окна. */
   z-index: 74;
-  align-items: flex-start;
+  /* flex-start + нижний паддинг держали карточку выше нижнего меню.
+     Теперь карточка тянется до самого низа и уходит за меню. */
+  align-items: stretch;
   justify-content: center;
   padding:
     calc(var(--safe-top) + 78px)
     12px
-    calc(var(--safe-bottom) + 104px);
+    0;
   background: rgba(3, 7, 18, 0.58);
   backdrop-filter: blur(10px);
 }
@@ -3929,6 +3931,17 @@ button {
 <div id="menu" onclick="handleMenuBackgroundClick(event)">
   <div id="panelBackdrop" class="panel-backdrop"></div>
 
+  <div id="modePopup" class="mode-popup" onclick="event.stopPropagation()">
+    <div class="mode-popup-inner">
+      <button type="button" class="mode-popup-btn primary" onclick="enterScannerGridMode(event)">
+        🧬 Сканер
+      </button>
+      <button type="button" class="mode-popup-btn" onclick="showBobrRunComingSoon(event)">
+        ⚔️ Bobr Run
+      </button>
+    </div>
+  </div>
+
   <!-- Модалка таблицы лидеров ДОЛЖНА лежать внутри #menu. Раньше она была
        снаружи, а #menu — это position:fixed, то есть отдельный слой отрисовки.
        Из-за этого z-index нижнего меню (80) был заперт внутри #menu, и модалка
@@ -4021,17 +4034,6 @@ button {
           <div id="scannerHomeRoundNumber" class="scanner-home-round-number">Раунд №: —</div>
         </div>
       </section>
-
-      <div id="modePopup" class="mode-popup" onclick="event.stopPropagation()">
-        <div class="mode-popup-inner">
-          <button type="button" class="mode-popup-btn primary" onclick="enterScannerGridMode(event)">
-            🧬 Сканер
-          </button>
-          <button type="button" class="mode-popup-btn" onclick="showBobrRunComingSoon(event)">
-            ⚔️ Bobr Run
-          </button>
-        </div>
-      </div>
     </div>
 
   </div>
