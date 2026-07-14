@@ -8437,9 +8437,11 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     0,
     1
   );
-  const desiredTravelAngle = hardDistance > SCANNER_BEAM_DIRECTION_EPSILON
-    ? lerpScannerAngle(targetAngles.travelAngle, motionAngleFromStep, stepAngleInfluence)
-    : targetAngles.travelAngle;
+  // Раньше целевой угол подмешивался с motionAngleFromStep — углом, выведенным
+  // из СОБСТВЕННОГО смещения клиента за кадр. На 60 и на 120 fps это разные
+  // величины, поэтому каждый клиент рисовал луч под своим углом. Теперь угол
+  // берётся только тот, что прислал сервер, — он у всех одинаковый.
+  const desiredTravelAngle = targetAngles.travelAngle;
   const renderAngleOffset = getScannerAngleDelta(targetAngles.travelAngle, targetAngles.renderAngle);
   // smoothedTravelAngle first — desiredRenderAngle is based on it so the render
   // target changes gradually instead of snapping to the new direction instantly.
@@ -9868,9 +9870,11 @@ function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestam
   const explicitBeamAngle = Number.isFinite(Number(safeSample.renderAngle))
     ? Number(safeSample.renderAngle)
     : (Number.isFinite(Number(safeSample.angle)) ? Number(safeSample.angle) : baseAngle);
-  const scanOffset = shouldApplyScannerBeamScanOffset(safeSample, roundStatus)
-    ? getScannerBeamScanOffset(roundStatus, renderKey, timestampMs)
-    : 0;
+  // scanOffset — синусоидальное подрагивание угла, которое клиент считал САМ
+  // от своего локального времени. У разных людей время чуть разное, фаза синуса
+  // разная — и луч рисовался под разными углами. Угол должен приходить только
+  // с сервера, поэтому клиентская добавка отключена.
+  const scanOffset = 0;
 
   const renderAngle = explicitBeamAngle + scanOffset + SCANNER_BEAM_RENDER_ANGLE_OFFSET;
 
