@@ -3832,8 +3832,29 @@ button {
 
 
 /* === Scanner Preview Home === */
+/* Арена теперь лежит в своей колонке вместе с заголовком над ней, поэтому
+   ширину задаёт колонка, а канвас занимает её целиком. Сама арена уменьшена
+   с 65% до 58%, освободившееся место отдано правой колонке. */
+.scanner-home-arena-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 58%;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.scanner-home-arena-title {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #dff9ff;
+}
+
 .scanner-home-main-block .scanner-canvas-shell {
-  width: 65% !important;
+  width: 100% !important;
   flex-shrink: 0 !important;
   aspect-ratio: 1/1 !important;
   border-radius: 24px !important;
@@ -3849,7 +3870,17 @@ button {
   gap: 8px;
   flex: 1;
   min-width: 0;
-  max-width: 33%;
+  max-width: 40%;
+}
+
+/* Номер раунда прижат к самому низу колонки (margin-top:auto) и центрирован. */
+.scanner-home-round-number {
+  margin-top: auto;
+  padding-top: 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
 }
 
 .scanner-preview-enter-btn {
@@ -3929,16 +3960,20 @@ button {
       </div>
 
       <section id="scannerHomeBlock" class="section-card scanner-arena-card scanner-unified-card scanner-home-main-block">
-        <div class="scanner-canvas-shell" id="scannerHomeCanvasShell">
-          <canvas id="scannerGridCanvas"></canvas>
-          <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
-            <span class="scanner-connecting-text">Подключение...</span>
+        <div class="scanner-home-arena-col">
+          <div class="scanner-home-arena-title">Scaner</div>
+          <div class="scanner-canvas-shell" id="scannerHomeCanvasShell">
+            <canvas id="scannerGridCanvas"></canvas>
+            <div id="scannerConnectingOverlay" class="scanner-connecting-overlay">
+              <span class="scanner-connecting-text">Подключение...</span>
+            </div>
           </div>
         </div>
         <div class="scanner-preview-bottom-row">
           <div id="scannerCountdownChip" class="scanner-panel-chip scanner-countdown-chip">00:20</div>
           <div id="scannerPoolChip" class="scanner-panel-chip scanner-pool-chip">0.00 TON</div>
           <button type="button" class="scanner-preview-enter-btn" onclick="enterScannerGridMode(event)">Зайти в Сканер</button>
+          <div id="scannerHomeRoundNumber" class="scanner-home-round-number">Раунд №: —</div>
         </div>
       </section>
 
@@ -11934,9 +11969,13 @@ function renderScannerRound(options = {}) {
   const screenPoolChip = document.getElementById("scannerScreenPoolChip");
   if (screenPoolChip) setTextContentIfChanged(screenPoolChip, `Банк: ${formatTon(_displayPot)}`);
   const roundNumberDisplay = document.getElementById("scannerRoundNumberDisplay");
+  const homeRoundNumberDisplay = document.getElementById("scannerHomeRoundNumber");
+  const _roundNumText = `Раунд №: ${(scannerRealtime.roundData?.roundNumber || scannerDisplayRoundNumber) || "—"}`;
   if (roundNumberDisplay) {
-    const _roundNum = scannerRealtime.roundData?.roundNumber || scannerDisplayRoundNumber;
-    setTextContentIfChanged(roundNumberDisplay, `Раунд №: ${_roundNum ? _roundNum : "—"}`);
+    setTextContentIfChanged(roundNumberDisplay, _roundNumText);
+  }
+  if (homeRoundNumberDisplay) {
+    setTextContentIfChanged(homeRoundNumberDisplay, _roundNumText);
   }
   if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${isArenaResetPhase ? "0%" : myChanceValue}`);
   if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
