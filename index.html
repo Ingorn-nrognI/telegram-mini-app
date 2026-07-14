@@ -822,7 +822,7 @@ button {
 #scannerRoundsPanel {
   top: var(--safe-top);
   bottom: auto;
-  max-height: min(78vh, 720px);
+  max-height: min(72vh, 640px);
   transform: translate(-50%, -32px);
   /* Это окно закреплено СВЕРХУ и за нижнее меню не заезжает, поэтому убираем
      унаследованные от .history-panel вещи, рассчитанные на нижнее положение:
@@ -1901,6 +1901,19 @@ button {
 }
 
 .scanner-recent-round-number {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+.scanner-history-amount-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.scanner-history-round-number {
   font-size: 11px;
   font-weight: 700;
   color: var(--text-dim);
@@ -5995,7 +6008,10 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
       <div class="scanner-history-topline">Режим: Сканер</div>
       <div class="scanner-history-result-line">
         <div class="scanner-history-result-word ${resultClass}">${resultWord}</div>
-        <div class="scanner-history-amount ${resultClass}">${amountText}</div>
+        <div class="scanner-history-amount-col">
+          ${item?.roundNumber ? `<div class="scanner-history-round-number">Раунд №: ${item.roundNumber}</div>` : ""}
+          <div class="scanner-history-amount ${resultClass}">${amountText}</div>
+        </div>
       </div>
       <div class="scanner-history-date">${playedAtText}</div>
 
