@@ -8472,6 +8472,11 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const hardDistance = getScannerBeamSampleDistance(previous, target);
   const hardAngle = Math.abs(getScannerAngleDelta(previousTravelAngle, targetAngles.travelAngle));
 
+  if (window._beamDistLogEnabled === undefined) window._beamDistLogEnabled = true;
+  if (window._beamDistLogEnabled && (!window._beamDistLoggedAt || performance.now() - window._beamDistLoggedAt > 200)) {
+    window._beamDistLoggedAt = performance.now();
+    console.warn('[BeamDist] hardDistance=' + hardDistance.toFixed(4) + ' порог=' + SCANNER_BEAM_HARD_RESET_DISTANCE + ' keyChanged=' + (scannerBeamRenderState.key !== safeKey));
+  }
   if (scannerBeamRenderState.key !== safeKey) {
     // Сброс позиции — только при реальном скачке РАССТОЯНИЯ. Смена угла сама по себе
     // не должна дёргать позицию: ключ рендера может смениться несколько раз подряд
@@ -8479,9 +8484,13 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     // и раньше каждая такая смена ключа при большой разнице углов сбрасывала позицию
     // на текущую цель — из-за чего лазер "телепортировался" при старте движения.
     if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
+      console.warn('[BeamDist] TELEPORT! hardDistance=' + hardDistance.toFixed(4) + ' >= порог ' + SCANNER_BEAM_HARD_RESET_DISTANCE);
       return resetScannerBeamRenderState(target, safeKey);
     }
     scannerBeamRenderState.key = safeKey;
+  }
+  if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
+    console.warn('[BeamDist] TELEPORT (без смены key)! hardDistance=' + hardDistance.toFixed(4));
   }
 
   const rawDeltaMs = scannerBeamRenderState.lastFrameAt > 0
