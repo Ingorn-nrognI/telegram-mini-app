@@ -1367,7 +1367,11 @@ button {
 }
 
 #scannerScreen.menu-screen {
-  padding-top: calc(var(--safe-top) + 60px);
+  /* Точный расчёт: баланс (.top-bar) стоит на safe-top+12px, высота .balance-card
+     ровно 44px → низ баланса = safe-top+56px. Нижний зазор карточек до чипов
+     равен margin-bottom: 10px. Значит верх карточек = 56+10 = safe-top+66px,
+     и тогда верхний зазор точно равен нижнему. */
+  padding-top: calc(var(--safe-top) + 66px);
 }
 
 .scanner-panel-top {
