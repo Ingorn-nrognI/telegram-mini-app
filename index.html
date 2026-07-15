@@ -13346,6 +13346,18 @@ function renderScannerCanvas() {
     beamRenderKey,
     now
   );
+  if (_rawTargetForLog && beamSample) {
+    const _dTarget = Math.abs((_rawTargetForLog.x || 0) - (window._prevTargetX ?? _rawTargetForLog.x));
+    const _dDrawn = Math.abs((beamSample.x || 0) - (window._prevDrawnX ?? beamSample.x));
+    window._prevTargetX = _rawTargetForLog.x;
+    window._prevDrawnX = beamSample.x;
+    if (_dTarget > 0.002 && _dDrawn < 0.0003) {
+      if (!window._smoothFreezeLoggedAt || Date.now() - window._smoothFreezeLoggedAt > 400) {
+        window._smoothFreezeLoggedAt = Date.now();
+        console.warn('[SmoothFreeze] target ДВИЖЕТСЯ (d=' + _dTarget.toFixed(4) + '), но нарисованное СТОИТ (d=' + _dDrawn.toFixed(4) + ') — виновато сглаживание, key=' + beamRenderKey);
+      }
+    }
+  }
   const visualBeamSample = beamSample || null;
   if (visualBeamSample) {
     scannerLastBeamSample = visualBeamSample;
