@@ -9804,10 +9804,16 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
     // (она "свежая" по времени, но принадлежит другому состоянию), а через мгновение
     // картинка дёргается на правильную позицию когда придёт настоящая трансляция.
     const _serverFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
+    const _roundIdMatches = String(_serverBeamPos?.roundId || "") === String(roundData?.id || "");
+    if (window._beamBranchLog !== undefined && (!window._beamBranchLoggedAt || Date.now() - window._beamBranchLoggedAt > 250)) {
+      window._beamBranchLoggedAt = Date.now();
+      console.warn('[BeamBranch] countdown | hasServer=' + !!_serverBeamPos + ' roundIdMatch=' + _roundIdMatches + ' freshMs=' + _serverFreshMs + ' serverRid=' + (_serverBeamPos?.roundId || 'нет') + ' localRid=' + (roundData?.id || 'нет'));
+    }
+    window._beamBranchLog = true;
     if (_serverBeamPos &&
         Number.isFinite(_serverBeamPos.x) &&
         Number.isFinite(_serverBeamPos.y) &&
-        String(_serverBeamPos.roundId || "") === String(roundData?.id || "") &&
+        _roundIdMatches &&
         _serverFreshMs < 500) {
       return {
         x: _serverBeamPos.x,
