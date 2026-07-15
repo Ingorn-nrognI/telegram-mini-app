@@ -9822,23 +9822,18 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
         vy: _serverBeamPos.vy || 0
       };
     }
-    // Настоящая трансляция для ЭТОГО раунда ещё не пришла (окно до ~50мс сразу после
-    // создания раунда). Раньше здесь запускался независимый локальный расчёт — та самая
-    // хаотичная физика, которую мы убрали отовсюду — и хотя он работал доли секунды,
-    // он мог чуть разойтись с сервером и дать видимый скачок в момент прихода настоящих
-    // данных. Правильно — просто держать последнюю известную точку неподвижно эти
-    // несколько кадров, а не считать что-то заново на клиенте.
-    if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
-      if (!getScannerUnifiedBeamSample._loggedFreezeAt || Date.now() - getScannerUnifiedBeamSample._loggedFreezeAt > 300) {
-        getScannerUnifiedBeamSample._loggedFreezeAt = Date.now();
-        console.warn('[BeamFreeze-Logic] Заморозка в countdown. serverRoundId:', _serverBeamPos?.roundId, 'roundData.id:', roundData?.id, 'freshMs:', _serverFreshMs);
-      }
-      return scannerLastBeamSample;
-    }
+    // Сетевые данные устарели (freshMs >= 500) или ещё не пришли для этого раунда.
+    // Раньше здесь бралась замороженная scannerLastBeamSample — луч визуально
+    // останавливался, пока не придёт следующий свежий beam:position. Но сама
+    // траектория countdown полностью детерминирована и известна клиенту заранее
+    // (countdownLatchSample/lobbyStartSample уже в патче) — считаем её по
+    // времени устройства, без сети, луч продолжает двигаться без остановки.
     return getScannerCountdownBeamSampleAtTime(
       roundData,
       safeTimestamp,
-      getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
+      (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x))
+        ? scannerLastBeamSample
+        : getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
     );
   }
 
