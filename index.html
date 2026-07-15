@@ -12230,6 +12230,10 @@ function getScannerCanvasMetrics() {
   const _zoomStep = Math.min(_zoomBufferCap, Math.ceil(_zoomNow * 2) / 2);
   const dpr = Math.max(1, Math.min(4, baseDpr * _zoomStep));
   let size = scannerCanvasMetricsState.size;
+  if (!window._sizeLoggedAt || performance.now() - window._sizeLoggedAt > 200) {
+    window._sizeLoggedAt = performance.now();
+    console.warn('[CanvasSize] size=' + size + ' dirty=' + scannerCanvasMetricsState.dirty);
+  }
   if (scannerCanvasMetricsState.dirty || !size) {
     const measuredWidth = canvas.clientWidth || canvas.getBoundingClientRect().width || 320;
     // Абсолютный потолок — ловит только катастрофические измерения (как баг на Telegram
