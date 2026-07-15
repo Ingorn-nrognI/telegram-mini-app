@@ -10531,10 +10531,16 @@ function applySocketRoundResult(data) {
   renderScannerRound();
 }
 
+let _scannerLastTickAt = 0;
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
   const tick = (now) => {
     if (!scannerGridVisualFrame) return;
+    if (_scannerLastTickAt > 0) {
+      const _gap = now - _scannerLastTickAt;
+      if (_gap > 100) console.warn('[BeamFreeze] Пропуск кадра:', Math.round(_gap), 'мс');
+    }
+    _scannerLastTickAt = now;
     if (!shouldRenderScannerCanvasLive()) {
       scannerGridVisualFrame = null;
       return;
