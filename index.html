@@ -1621,13 +1621,18 @@ button {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  /* Отступ сверху (баланс → карточки) такой же, как снизу (карточки → чипы). */
+  margin-top: 10px;
   margin-bottom: 10px;
 }
 .scanner-highlight-card {
   border-radius: 16px;
   padding: 8px 10px;
-  background: linear-gradient(180deg, rgba(13, 21, 46, 0.9), rgba(7, 10, 24, 0.9));
-  border: 1px solid rgba(255,255,255,0.06);
+  /* Цвет как у чипов банк/таймер/шансы (.scanner-panel-chip). */
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   min-height: 62px;
