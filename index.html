@@ -3920,6 +3920,10 @@ button {
   overflow: hidden !important;
   background: #050816 !important;
   position: relative !important;
+  /* Изолирует зум канваса внутри рамки арены: увеличенное поле обрезается
+     границей и физически не может наехать на баланс, карточки или меню. */
+  isolation: isolate !important;
+  z-index: 0 !important;
 }
 .scanner-home-main-block canvas { width: 100% !important; height: 100% !important; display: block; }
 .scanner-preview-bottom-row {
@@ -13161,24 +13165,27 @@ function renderScannerCanvas() {
     _scannerZoomOutStartMs = null;
   }
 
-  // Зум через CSS на GPU — плавно без перерисовки канваса
+  // Зумим САМ КАНВАС внутри рамки арены, а не рамку-обёртку целиком. Раньше
+  // scale применялся к shell (у него был z-index:10 и transform-origin в точке
+  // луча) — при большом зуме и точке луча у края рамка выпихивалась за свои
+  // границы и наезжала на баланс, карточки и меню. Теперь рамка стоит на месте
+  // с overflow:hidden, а увеличивается только канвас внутри неё, поэтому всё,
+  // что вылезает за арену, обрезается её границей.
   {
-    const _shells = [
-      document.getElementById("scannerHomeCanvasShell"),
-      document.getElementById("scannerScreenCanvasShell")
+    const _canvases = [
+      document.getElementById("scannerGridCanvas"),
+      document.getElementById("scannerScreenGridCanvas")
     ];
-    for (const _shell of _shells) {
-      if (!_shell) continue;
+    for (const _cnv of _canvases) {
+      if (!_cnv) continue;
       if (scannerEndZoom > 1.001) {
         const _fx = ((scannerLastBeamSample?.x ?? 0.5) * 100).toFixed(1);
         const _fy = ((scannerLastBeamSample?.y ?? 0.5) * 100).toFixed(1);
-        _shell.style.transformOrigin = `${_fx}% ${_fy}%`;
-        _shell.style.transform = `scale(${scannerEndZoom.toFixed(4)})`;
-        _shell.style.zIndex = "10";
+        _cnv.style.transformOrigin = `${_fx}% ${_fy}%`;
+        _cnv.style.transform = `scale(${scannerEndZoom.toFixed(4)})`;
       } else {
-        _shell.style.transform = "";
-        _shell.style.transformOrigin = "";
-        _shell.style.zIndex = "";
+        _cnv.style.transform = "";
+        _cnv.style.transformOrigin = "";
       }
     }
   }
