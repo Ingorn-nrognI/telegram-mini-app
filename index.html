@@ -9799,11 +9799,31 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "countdown") {
-    // Один источник, без переключений между сетью и формулой — раньше при частой
-    // доставке пакетов (несколько ставок подряд) картинка каждый кадр прыгала между
-    // "чуть-чуть другая точка от сервера" и "чуть-чуть другая точка по формуле" (они
-    // немного не совпадают из-за рассинхрона часов), это и давало быстрые дёрганья
-    // туда-обратно. Формула сама по себе точна и не нуждается в сети как подстройке.
+    // ВАЖНО: getScannerCountdownBeamSampleAtTime строит ГРУБУЮ прямую линию с
+    // постоянной скоростью (старт → точка прилипания) — это заведомо неточная
+    // заглушка для случая "от сервера вообще ничего не приходило", а не замена
+    // настоящей кривой. Настоящая (с торможением) кривая существует только в
+    // реальных данных сервера (_serverBeamPos). Поэтому основа — сервер, с
+    // плавной довязкой по последней скорости между пакетами (как в active),
+    // а грубая прямая линия — только если по ЭТОМУ раунду ещё не было вообще
+    // ни одного пакета.
+    const _roundIdMatches = String(_serverBeamPos?.roundId || "") === String(roundData?.id || "");
+    if (_serverBeamPos &&
+        Number.isFinite(_serverBeamPos.x) &&
+        Number.isFinite(_serverBeamPos.y) &&
+        _roundIdMatches) {
+      const elapsed = Math.max(0, (performance.now() - (_serverBeamPos._receiveTime || performance.now())) / 1000);
+      const PAD = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
+      const xr = _clientReflectedAxis(_serverBeamPos.x, _serverBeamPos.vx || 0, elapsed, PAD, 1 - PAD);
+      const yr = _clientReflectedAxis(_serverBeamPos.y, _serverBeamPos.vy || 0, elapsed, PAD, 1 - PAD);
+      return {
+        x: xr.position,
+        y: yr.position,
+        angle: _serverBeamPos.angle || Math.atan2(yr.velocity, xr.velocity),
+        vx: xr.velocity,
+        vy: yr.velocity
+      };
+    }
     return getScannerCountdownBeamSampleAtTime(
       roundData,
       safeTimestamp,
