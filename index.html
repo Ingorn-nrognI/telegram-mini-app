@@ -13640,6 +13640,15 @@ function subscribeScannerRound(roundId) {
       if (!firestoreData.lobbyStartSample && rd?.lobbyStartSample) {
         firestoreData.lobbyStartSample = rd.lobbyStartSample;
       }
+      // Та же история с countdownLatchSample: если в этом конкретном снэпшоте его нет
+      // (не успело записаться / не пишется вовсе), а у нас уже есть правильное значение
+      // из более раннего сокет-патча — не даём его стереть. Раньше это стирание
+      // происходило на КАЖДОЕ добавление ставки (новый снэпшот участников), из-за чего
+      // ключ кэша траектории countdown переключался с "latched" на "nolatch" и луч
+      // резко прыгал на другую, посчитанную заново случайную траекторию.
+      if (!firestoreData.countdownLatchSample && rd?.countdownLatchSample) {
+        firestoreData.countdownLatchSample = rd.countdownLatchSample;
+      }
       const existingVersion = Number(scannerRealtime.roundData?.version || 0);
       const incomingVersion = Number(firestoreData.version || 0);
       if (incomingVersion < existingVersion) {
