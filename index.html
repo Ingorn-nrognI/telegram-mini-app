@@ -10004,6 +10004,12 @@ function decodeScannerOwnersRle(rle) {
 }
 
 function applyScannerServerGrid(data) {
+  const _gridApplyStart = performance.now();
+  const _gridApplyDone = () => {
+    const _ms = performance.now() - _gridApplyStart;
+    if (_ms > 30) console.warn('[GridApply] Перерисовка арены заняла', Math.round(_ms), 'мс');
+  };
+  setTimeout(_gridApplyDone, 0);
   if (!data || !data.roundId || !Array.isArray(data.cellsRle) || data.cellsRle.length === 0) {
     scannerServerGrid = null;
   } else {
