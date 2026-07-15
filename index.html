@@ -10304,6 +10304,18 @@ function applySocketRoundPatch(patch) {
           vy: patch.idleBeamMotion.vy,
           angle: Math.atan2(patch.idleBeamMotion.vy || 0, patch.idleBeamMotion.vx || 0)
         };
+        if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
+          const _dx = _idleSample.x - scannerLastBeamSample.x;
+          const _dy = _idleSample.y - scannerLastBeamSample.y;
+          const _jump = Math.sqrt(_dx * _dx + _dy * _dy);
+          console.warn(
+            "[СТЫК ТАЙМЕР->ОЖИДАНИЕ] было_x=" + scannerLastBeamSample.x.toFixed(4) +
+            " было_y=" + scannerLastBeamSample.y.toFixed(4) +
+            " | стало_x=" + _idleSample.x.toFixed(4) +
+            " стало_y=" + _idleSample.y.toFixed(4) +
+            " | РАЗНИЦА=" + _jump.toFixed(4)
+          );
+        }
         scannerLastBeamSample = _idleSample;
         // Раньше здесь стоял "_serverBeamPos = null" — оставшийся от раннего этапа
         // разработки, до того как idle стал полностью серверным. Теперь это активно
