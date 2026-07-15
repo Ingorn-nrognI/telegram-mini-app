@@ -1434,7 +1434,11 @@ button {
 .scanner-canvas-shell {
   position: relative;
   border-radius: 24px;
-  overflow: visible;
+  /* Было overflow: visible — из-за этого увеличенный при зуме канвас вылезал
+     за рамку арены на весь экран (в полноэкранном режиме сканера, где канвас
+     лежит в этом шелле). Теперь зум обрезается границей арены. */
+  overflow: hidden;
+  isolation: isolate;
   padding: 0;
   background:
     linear-gradient(180deg, rgba(14, 21, 48, 0.95), rgba(7, 10, 22, 0.98)),
