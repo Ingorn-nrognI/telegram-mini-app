@@ -10090,6 +10090,9 @@ let _scannerResultFinishedAtMs = null;
 let scannerDisplayRoundNumber = null;
 let scannerLastKnownRoundNumber = null;
 let _scannerZoomOutStartMs = null;
+// Текущий уровень зума арены — читается при расчёте разрешения канваса, чтобы
+// при зуме буфер увеличивался и картинка не мылилась.
+let scannerCurrentZoomLevel = 1;
 let _scannerResultShownForRound = null;
 let _lastFrozenResultPos = null;
 let _beamTransitionEndMs = 0;
@@ -12195,7 +12198,17 @@ function getScannerCanvasMetrics() {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const tier = getEffectiveQualityTier();
   const dprCap = tier === "low" ? 1 : tier === "mid" ? (isMobile ? 1 : 1.5) : (window.devicePixelRatio > 2 ? 1.5 : 2);
-  const dpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1));
+  const baseDpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1));
+
+  // При зуме канвас растягивается CSS-ом, и без запаса пикселей картинка мылится.
+  // Чтобы чёткость была как без зума, увеличиваем буфер на коэффициент зума.
+  // Но буфер нельзя менять плавно на каждом кадре (это убивает fps), поэтому
+  // множитель округляем СТУПЕНЯМИ (0.5), а сам зум ограничиваем потолком 2.5x —
+  // выше него буфер уже очень тяжёлый для телефона, а разница на глаз мала.
+  const _zoomNow = Math.max(1, Number(scannerCurrentZoomLevel) || 1);
+  const _zoomBufferCap = 2.5;
+  const _zoomStep = Math.min(_zoomBufferCap, Math.ceil(_zoomNow * 2) / 2);
+  const dpr = Math.max(1, Math.min(4, baseDpr * _zoomStep));
   let size = scannerCanvasMetricsState.size;
   if (scannerCanvasMetricsState.dirty || !size) {
     const measuredWidth = canvas.clientWidth || canvas.getBoundingClientRect().width || 320;
@@ -13167,6 +13180,19 @@ function renderScannerCanvas() {
     if (scannerEndZoom < 1) scannerEndZoom = 1;
   } else {
     _scannerZoomOutStartMs = null;
+  }
+
+  // Запоминаем текущий зум для расчёта разрешения канваса. Если ступень зума
+  // (с шагом 0.5) сменилась — помечаем метрики канваса dirty, чтобы буфер
+  // перестроился под новую чёткость. Ступени, а не плавно — иначе канвас
+  // пересоздавался бы каждый кадр и просаживал fps.
+  {
+    const _prevStep = Math.min(2.5, Math.ceil(Math.max(1, scannerCurrentZoomLevel) * 2) / 2);
+    scannerCurrentZoomLevel = scannerEndZoom;
+    const _newStep = Math.min(2.5, Math.ceil(Math.max(1, scannerEndZoom) * 2) / 2);
+    if (_newStep !== _prevStep) {
+      scannerCanvasMetricsState.dirty = true;
+    }
   }
 
   // Зумим САМ КАНВАС внутри рамки арены, а не рамку-обёртку целиком. Раньше
