@@ -8479,13 +8479,9 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     // и раньше каждая такая смена ключа при большой разнице углов сбрасывала позицию
     // на текущую цель — из-за чего лазер "телепортировался" при старте движения.
     if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
-      console.warn('[BeamDist] TELEPORT! hardDistance=' + hardDistance.toFixed(4) + ' >= порог ' + SCANNER_BEAM_HARD_RESET_DISTANCE);
       return resetScannerBeamRenderState(target, safeKey);
     }
     scannerBeamRenderState.key = safeKey;
-  }
-  if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
-    console.warn('[BeamDist] TELEPORT (без смены key)! hardDistance=' + hardDistance.toFixed(4));
   }
 
   const rawDeltaMs = scannerBeamRenderState.lastFrameAt > 0
@@ -9803,39 +9799,18 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "countdown") {
-    // Траектория countdown не прямолинейна и не с постоянной скоростью — луч
-    // специально притормаживает, чтобы точно прилипнуть к концу отсчёта в заданной
-    // точке. Из-за этого ни "довериться сети напрямую", ни "додумать движение по
-    // последней скорости" не работает надёжно при задержках сети — расчёт по
-    // прямой/постоянной скорости расходится с реальной кривой торможения сервера.
-    // Правильно — всегда считать позицию по времени устройства через готовую,
-    // точно повторяющую кривую сервера функцию (она не зависит от сети вообще),
-    // а живую трансляцию сервера использовать только как лёгкую подстройку.
-    const timeBasedSample = getScannerCountdownBeamSampleAtTime(
+    // Один источник, без переключений между сетью и формулой — раньше при частой
+    // доставке пакетов (несколько ставок подряд) картинка каждый кадр прыгала между
+    // "чуть-чуть другая точка от сервера" и "чуть-чуть другая точка по формуле" (они
+    // немного не совпадают из-за рассинхрона часов), это и давало быстрые дёрганья
+    // туда-обратно. Формула сама по себе точна и не нуждается в сети как подстройке.
+    return getScannerCountdownBeamSampleAtTime(
       roundData,
       safeTimestamp,
       (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x))
         ? scannerLastBeamSample
         : getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
     );
-    const _serverFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
-    const _roundIdMatches = String(_serverBeamPos?.roundId || "") === String(roundData?.id || "");
-    if (_serverBeamPos &&
-        Number.isFinite(_serverBeamPos.x) &&
-        Number.isFinite(_serverBeamPos.y) &&
-        _roundIdMatches &&
-        _serverFreshMs < 150) {
-      // Сеть прямо сейчас свежая (пакет пришёл только что) — берём её как самую
-      // точную подстройку курса, не теряя расчёт по времени как основу.
-      return {
-        x: _serverBeamPos.x,
-        y: _serverBeamPos.y,
-        angle: _serverBeamPos.angle || timeBasedSample.angle || 0,
-        vx: _serverBeamPos.vx || timeBasedSample.vx || 0,
-        vy: _serverBeamPos.vy || timeBasedSample.vy || 0
-      };
-    }
-    return timeBasedSample;
   }
 
   if (safeStatus === "shuffling") {
@@ -10537,16 +10512,10 @@ function applySocketRoundResult(data) {
   renderScannerRound();
 }
 
-let _scannerLastTickAt = 0;
 function ensureScannerVisualLoop() {
   if (scannerGridVisualFrame) return;
   const tick = (now) => {
     if (!scannerGridVisualFrame) return;
-    if (_scannerLastTickAt > 0) {
-      const _gap = now - _scannerLastTickAt;
-      if (_gap > 100) console.warn('[BeamFreeze] Пропуск кадра:', Math.round(_gap), 'мс');
-    }
-    _scannerLastTickAt = now;
     if (!shouldRenderScannerCanvasLive()) {
       scannerGridVisualFrame = null;
       return;
@@ -13352,18 +13321,6 @@ function renderScannerCanvas() {
     beamRenderKey,
     now
   );
-  if (_rawTargetForLog && beamSample) {
-    const _dTarget = Math.abs((_rawTargetForLog.x || 0) - (window._prevTargetX ?? _rawTargetForLog.x));
-    const _dDrawn = Math.abs((beamSample.x || 0) - (window._prevDrawnX ?? beamSample.x));
-    window._prevTargetX = _rawTargetForLog.x;
-    window._prevDrawnX = beamSample.x;
-    if (_dTarget > 0.002 && _dDrawn < 0.0003) {
-      if (!window._smoothFreezeLoggedAt || Date.now() - window._smoothFreezeLoggedAt > 400) {
-        window._smoothFreezeLoggedAt = Date.now();
-        console.warn('[SmoothFreeze] target ДВИЖЕТСЯ (d=' + _dTarget.toFixed(4) + '), но нарисованное СТОИТ (d=' + _dDrawn.toFixed(4) + ') — виновато сглаживание, key=' + beamRenderKey);
-      }
-    }
-  }
   const visualBeamSample = beamSample || null;
   if (visualBeamSample) {
     scannerLastBeamSample = visualBeamSample;
