@@ -9829,6 +9829,10 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
     // данных. Правильно — просто держать последнюю известную точку неподвижно эти
     // несколько кадров, а не считать что-то заново на клиенте.
     if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
+      if (!getScannerUnifiedBeamSample._loggedFreezeAt || Date.now() - getScannerUnifiedBeamSample._loggedFreezeAt > 300) {
+        getScannerUnifiedBeamSample._loggedFreezeAt = Date.now();
+        console.warn('[BeamFreeze-Logic] Заморозка в countdown. serverRoundId:', _serverBeamPos?.roundId, 'roundData.id:', roundData?.id, 'freshMs:', _serverFreshMs);
+      }
       return scannerLastBeamSample;
     }
     return getScannerCountdownBeamSampleAtTime(
