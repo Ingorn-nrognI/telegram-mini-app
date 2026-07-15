@@ -9803,64 +9803,39 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "countdown") {
-    // Проверяем не только свежесть, но и что позиция реально относится к ЭТОМУ раунду —
-    // иначе в первый момент countdown можно показать последнюю трансляцию idle-режима
-    // (она "свежая" по времени, но принадлежит другому состоянию), а через мгновение
-    // картинка дёргается на правильную позицию когда придёт настоящая трансляция.
-    const _serverFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
-    const _roundIdMatches = String(_serverBeamPos?.roundId || "") === String(roundData?.id || "");
-    if (window._beamBranchLog !== undefined && (!window._beamBranchLoggedAt || Date.now() - window._beamBranchLoggedAt > 250)) {
-      window._beamBranchLoggedAt = Date.now();
-      console.warn('[BeamBranch] countdown | hasServer=' + !!_serverBeamPos + ' roundIdMatch=' + _roundIdMatches + ' freshMs=' + _serverFreshMs + ' serverRid=' + (_serverBeamPos?.roundId || 'нет') + ' localRid=' + (roundData?.id || 'нет'));
-    }
-    window._beamBranchLog = true;
-    if (_serverBeamPos &&
-        Number.isFinite(_serverBeamPos.x) &&
-        Number.isFinite(_serverBeamPos.y) &&
-        _roundIdMatches &&
-        _serverFreshMs < 500) {
-      return {
-        x: _serverBeamPos.x,
-        y: _serverBeamPos.y,
-        angle: _serverBeamPos.angle || 0,
-        vx: _serverBeamPos.vx || 0,
-        vy: _serverBeamPos.vy || 0
-      };
-    }
-    // Данные чуть устарели (обычная сетевая задержка в доли секунды), но мы уже
-    // получали настоящую трансляцию именно для ЭТОГО раунда — вместо прыжка на
-    // грубую запасную прямую линию честно доводим точку по её последней известной
-    // скорости. Раньше здесь был скачок на getScannerCountdownBeamSampleAtTime
-    // (прямая линия старт→финиш), которая не совпадает с реальной кривой сервера —
-    // из-за этого при малейшей сетевой заминке луч на один кадр "телепортировался"
-    // в другое место и тут же прыгал обратно.
-    if (_serverBeamPos &&
-        Number.isFinite(_serverBeamPos.x) &&
-        Number.isFinite(_serverBeamPos.y) &&
-        _roundIdMatches &&
-        _serverFreshMs < 2000) {
-      const elapsed = Math.max(0, (performance.now() - (_serverBeamPos._receiveTime || performance.now())) / 1000);
-      const PAD = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
-      const xr = _clientReflectedAxis(_serverBeamPos.x, _serverBeamPos.vx || 0, elapsed, PAD, 1 - PAD);
-      const yr = _clientReflectedAxis(_serverBeamPos.y, _serverBeamPos.vy || 0, elapsed, PAD, 1 - PAD);
-      return {
-        x: xr.position,
-        y: yr.position,
-        angle: _serverBeamPos.angle || Math.atan2(yr.velocity, xr.velocity),
-        vx: xr.velocity,
-        vy: yr.velocity
-      };
-    }
-    // Данных вообще никогда не было для этого раунда (более 2 секунд без единого
-    // пакета, или он ещё ни разу не приходил) — только теперь честный запасной
-    // расчёт по времени устройства.
-    return getScannerCountdownBeamSampleAtTime(
+    // Траектория countdown не прямолинейна и не с постоянной скоростью — луч
+    // специально притормаживает, чтобы точно прилипнуть к концу отсчёта в заданной
+    // точке. Из-за этого ни "довериться сети напрямую", ни "додумать движение по
+    // последней скорости" не работает надёжно при задержках сети — расчёт по
+    // прямой/постоянной скорости расходится с реальной кривой торможения сервера.
+    // Правильно — всегда считать позицию по времени устройства через готовую,
+    // точно повторяющую кривую сервера функцию (она не зависит от сети вообще),
+    // а живую трансляцию сервера использовать только как лёгкую подстройку.
+    const timeBasedSample = getScannerCountdownBeamSampleAtTime(
       roundData,
       safeTimestamp,
       (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x))
         ? scannerLastBeamSample
         : getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
     );
+    const _serverFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
+    const _roundIdMatches = String(_serverBeamPos?.roundId || "") === String(roundData?.id || "");
+    if (_serverBeamPos &&
+        Number.isFinite(_serverBeamPos.x) &&
+        Number.isFinite(_serverBeamPos.y) &&
+        _roundIdMatches &&
+        _serverFreshMs < 150) {
+      // Сеть прямо сейчас свежая (пакет пришёл только что) — берём её как самую
+      // точную подстройку курса, не теряя расчёт по времени как основу.
+      return {
+        x: _serverBeamPos.x,
+        y: _serverBeamPos.y,
+        angle: _serverBeamPos.angle || timeBasedSample.angle || 0,
+        vx: _serverBeamPos.vx || timeBasedSample.vx || 0,
+        vy: _serverBeamPos.vy || timeBasedSample.vy || 0
+      };
+    }
+    return timeBasedSample;
   }
 
   if (safeStatus === "shuffling") {
