@@ -10588,6 +10588,23 @@ function ensureScannerVisualLoop() {
     if (fpsInterval > 0) ensureScannerVisualLoop._lastFrame = now;
     try {
       renderScannerCanvas();
+      if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
+        const _px = ensureScannerVisualLoop._prevX;
+        const _py = ensureScannerVisualLoop._prevY;
+        if (typeof _px === "number") {
+          const _moved = Math.abs(scannerLastBeamSample.x - _px) + Math.abs(scannerLastBeamSample.y - _py);
+          if (_moved < 0.00001) {
+            ensureScannerVisualLoop._frozenCount = (ensureScannerVisualLoop._frozenCount || 0) + 1;
+            if (ensureScannerVisualLoop._frozenCount === 3) {
+              console.warn("[Frozen] луч стоит на месте " + ensureScannerVisualLoop._frozenCount + " кадров подряд, x=" + scannerLastBeamSample.x.toFixed(4) + " y=" + scannerLastBeamSample.y.toFixed(4) + " status=" + scannerGridState.status);
+            }
+          } else {
+            ensureScannerVisualLoop._frozenCount = 0;
+          }
+        }
+        ensureScannerVisualLoop._prevX = scannerLastBeamSample.x;
+        ensureScannerVisualLoop._prevY = scannerLastBeamSample.y;
+      }
       const _status = scannerGridState.status;
       {
         // Обновляем таймер только раз в секунду — текст меняется не чаще
