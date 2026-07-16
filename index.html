@@ -9887,8 +9887,12 @@ function getScannerBeamRenderKey(roundStatus, roundData, variant = "grid") {
   const roundId = roundData?.id || "none";
 
   if (!roundData) {
-    const idleMotion = getScannerRuntimeIdleBeamState(scannerRealtime.runtimeData);
-    return `${safeStatus}::${safeVariant}::idle`;
+    // variant (grid/empty) убран и здесь — при сбросе раунда сетка исчезает не
+    // мгновенно, variant менялся grid→empty, ключ менялся, сглаживание
+    // сбрасывалось и луч замирал на пару кадров (лог [Frozen] status=idle),
+    // а сервер в это время уезжал — отсюда прыжок при сбросе. Движение луча в
+    // idle от наличия сетки не зависит, значит и ключ от variant зависеть не должен.
+    return `${safeStatus}::idle`;
   }
 
   // ВАЖНО: variant (grid/empty) убран из ключа для countdown/shuffling/active.
