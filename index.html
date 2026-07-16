@@ -9773,6 +9773,12 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
     // любая свежая трансляция лучше локального пересчёта, вне зависимости от roundId.
     const _idleServerFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
     const _serverBeamPosIsAfterReset = !_lastBeamContextResetAt || (_serverBeamPos?._receiveTime || 0) >= _lastBeamContextResetAt;
+    if (_lastBeamContextResetAt && performance.now() - _lastBeamContextResetAt < 2000) {
+      if (!window._idleBranchLoggedAt || performance.now() - window._idleBranchLoggedAt > 80) {
+        window._idleBranchLoggedAt = performance.now();
+        console.warn('[IdleBranch] fresh=' + _idleServerFreshMs + ' afterReset=' + _serverBeamPosIsAfterReset + ' willUseServer=' + !!(_serverBeamPos && _idleServerFreshMs < 500 && _serverBeamPosIsAfterReset) + ' serverXY=' + (_serverBeamPos ? _serverBeamPos.x.toFixed(3)+','+_serverBeamPos.y.toFixed(3) : 'нет'));
+      }
+    }
     if (_serverBeamPos &&
         Number.isFinite(_serverBeamPos.x) &&
         Number.isFinite(_serverBeamPos.y) &&
