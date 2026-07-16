@@ -9779,6 +9779,7 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
     if (_serverBeamPos &&
         Number.isFinite(_serverBeamPos.x) &&
         Number.isFinite(_serverBeamPos.y) &&
+        _serverBeamPos.roundId &&
         _idleServerFreshMs < 500 &&
         _serverBeamPosIsAfterReset) {
       return {
@@ -10180,10 +10181,11 @@ function initSocketConnection() {
       _loggedFirst: true
     };
     _serverBeamPosLastUpdate = Date.now();
-    if (data?.idleBeamMotion) {
-      if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
-      scannerRealtime.runtimeData.idleBeamMotion = data.idleBeamMotion;
-    }
+    // idleBeamMotion теперь обновляется ТОЛЬКО через round:patch (там сделано
+    // аккуратное продолжение луча с текущей нарисованной точки при сбросе раунда).
+    // Этот же beam:position прилетает каждые ~50мс и раньше перетирал
+    // runtimeData.idleBeamMotion сырыми серверными координатами поверх той
+    // аккуратной точки — луч на кадр прыгал в сторону, а потом обратно.
     if (data?.timestamp) {
       const newOffset = data.timestamp - Date.now();
       if (Math.abs(newOffset - _serverTimeOffsetSmoothed) > 10000) {
