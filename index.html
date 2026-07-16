@@ -8497,11 +8497,15 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const _justBouncedX = _prevTargetVx !== 0 && _targetVx !== 0 && Math.sign(_targetVx) !== Math.sign(_prevTargetVx);
   const _justBouncedY = _prevTargetVy !== 0 && _targetVy !== 0 && Math.sign(_targetVy) !== Math.sign(_prevTargetVy);
   const _rawBaseTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
-  // Чем больше расхождение — тем короче тау (быстрее доезжает), чтобы даже
-  // крупная поправка (0.5+) укладывалась в доли секунды, а не тянулась
-  // как обычное мелкое сглаживание несколько секунд подряд.
-  const _fastCatchupFactor = hardDistance > 0.15 ? Math.min(1, hardDistance / 0.15) : 1;
-  const basePositionTauMs = _rawBaseTauMs / (1 + (_fastCatchupFactor - 1) * 3);
+  // Обычный тау (50мс) настроен для мелких, постоянных поправок каждый кадр —
+  // на глаз это идеально гладкое движение. Но при КРУПНОМ расхождении (0.15+)
+  // те же 50мс доезжают почти мгновенно — с точки зрения глаза это неотличимо
+  // от телепорта, хоть технически это и "плавное сглаживание". Поэтому для
+  // крупных расхождений тау, наоборот, УВЕЛИЧИВАЕМ — чтобы доезжание растянулось
+  // на видимые ~400-500мс и глаз успевал заметить именно движение, а не скачок.
+  const basePositionTauMs = hardDistance > 0.15
+    ? Math.min(500, _rawBaseTauMs + (hardDistance - 0.15) * 900)
+    : _rawBaseTauMs;
   // В момент реального отскока (смена знака скорости) снимаем инерцию позиции,
   // чтобы визуальная точка не "доезжала" вдоль бортика по старой траектории
   const positionTauMs = (_justBouncedX || _justBouncedY) ? Math.min(22, basePositionTauMs) : basePositionTauMs;
