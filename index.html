@@ -8479,7 +8479,6 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     // и раньше каждая такая смена ключа при большой разнице углов сбрасывала позицию
     // на текущую цель — из-за чего лазер "телепортировался" при старте движения.
     if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
-      console.warn('[HardReset] телепорт (смена key)! было=' + previous.x.toFixed(4)+','+previous.y.toFixed(4) + ' стало=' + target.x.toFixed(4)+','+target.y.toFixed(4) + ' дистанция=' + hardDistance.toFixed(4) + ' oldKey=' + scannerBeamRenderState.key + ' newKey=' + safeKey);
       return resetScannerBeamRenderState(target, safeKey);
     }
     scannerBeamRenderState.key = safeKey;
