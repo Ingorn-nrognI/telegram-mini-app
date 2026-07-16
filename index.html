@@ -10303,6 +10303,12 @@ function applySocketRoundPatch(patch) {
       // Это гарантирует что ВСЕ клиенты получат одну и ту же стартовую позицию лазера
       // Локальный пересчёт удалён — он был причиной рассинхрона между клиентами
       if (patch.idleBeamMotion) {
+        if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
+          const _dx = patch.idleBeamMotion.x - scannerLastBeamSample.x;
+          const _dy = patch.idleBeamMotion.y - scannerLastBeamSample.y;
+          const _drift = Math.sqrt(_dx * _dx + _dy * _dy);
+          console.warn('[Drift] клиент_x=' + scannerLastBeamSample.x.toFixed(4) + ' клиент_y=' + scannerLastBeamSample.y.toFixed(4) + ' | сервер_x=' + patch.idleBeamMotion.x.toFixed(4) + ' сервер_y=' + patch.idleBeamMotion.y.toFixed(4) + ' | РАСХОЖДЕНИЕ=' + _drift.toFixed(4));
+        }
         // Не подстраиваем позицию под точку от сервера — берём у него только
         // направление/скорость, а саму точку оставляем той, где луч реально
         // нарисован на экране прямо сейчас. Это полностью убирает скачок:
