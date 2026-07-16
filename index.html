@@ -9804,24 +9804,28 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "countdown") {
-    // ВАЖНО (пересмотрено): "домысливание по последней скорости" между пакетами
-    // сервера предполагает ПОСТОЯННУЮ скорость — а countdown специально тормозит
-    // к концу, чтобы точно прилипнуть к финишной точке. При каждой сетевой
-    // заминке (а они бывают регулярно) домысливание чуть обгоняет реальность,
-    // и за 20 секунд отсчёта это накапливается в заметный дрейф (подтверждено
-    // логами — расхождение доходило до 0.58). Формула по времени —
-    // ДЕТЕРМИНИРОВАННАЯ и ТОЧНАЯ (та же кривая торможения, что и на сервере),
-    // не зависит от сети вообще и не накапливает ошибку. Раньше её не
-    // использовали как основную из-за отдельного бага (Firestore стирал
-    // countdownLatchSample на каждой ставке) — этот баг с тех пор устранён
-    // отдельно, так что теперь формула — снова основной и единственный источник.
-    return getScannerCountdownBeamSampleAtTime(
-      roundData,
-      safeTimestamp,
-      (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x))
-        ? scannerLastBeamSample
-        : getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
-    );
+    // Просто берём то, что прислал сервер — без формул, без досчитывания по
+    // скорости, без предсказаний. Сервер шлёт позицию каждые ~50мс, обычное
+    // сглаживание (getSmoothedScannerBeamSample, оно и так уже есть) сделает
+    // переход между полученными точками плавным. Если пакет ещё не пришёл —
+    // держим последнюю ПОЛУЧЕННУЮ точку как есть, ничего не додумывая.
+    const _roundIdMatches = String(_serverBeamPos?.roundId || "") === String(roundData?.id || "");
+    if (_serverBeamPos &&
+        Number.isFinite(_serverBeamPos.x) &&
+        Number.isFinite(_serverBeamPos.y) &&
+        _roundIdMatches) {
+      return {
+        x: _serverBeamPos.x,
+        y: _serverBeamPos.y,
+        angle: _serverBeamPos.angle || 0,
+        vx: _serverBeamPos.vx || 0,
+        vy: _serverBeamPos.vy || 0
+      };
+    }
+    if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
+      return scannerLastBeamSample;
+    }
+    return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
   }
 
   if (safeStatus === "shuffling") {
