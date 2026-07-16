@@ -10126,7 +10126,20 @@ function initSocketConnection() {
   });
   _socket.on('pong_time', (data) => {
     if (data?.serverTime) {
-      const newOffset = data.serverTime - Date.now();
+      // Учитываем время полёта пакета по сети. Раньше offset считался как
+      // (serverTime - Date.now()) — но serverTime было снято на сервере в момент
+      // отправки, а Date.now() снимается на клиенте в момент получения, между
+      // ними прошло время полёта пакета (на мобильной сети 100-300мс, и оно
+      // гуляет). Из-за этого offset всегда был неверным на величину задержки,
+      // клиентское время не сходилось с серверным (таймер обрывался на 00:01),
+      // и позиция луча по времени считалась для чуть другого момента, чем на
+      // сервере — расхождение копилось к концу отсчёта. Теперь: полный путь
+      // туда-обратно (сейчас минус время, когда мы отправили ping) делим пополам —
+      // это задержка в одну сторону, и на неё корректируем серверное время.
+      const _oneWayDelay = (typeof data.clientTime === 'number')
+        ? Math.max(0, (Date.now() - data.clientTime) / 2)
+        : 0;
+      const newOffset = (data.serverTime + _oneWayDelay) - Date.now();
       if (_serverTimeOffset === 0) {
         _serverTimeOffset = newOffset;
         _serverTimeOffsetSmoothed = newOffset;
