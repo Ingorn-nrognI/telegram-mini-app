@@ -9804,11 +9804,12 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "countdown") {
-    // Просто берём то, что прислал сервер — без формул, без досчитывания по
-    // скорости, без предсказаний. Сервер шлёт позицию каждые ~50мс, обычное
-    // сглаживание (getSmoothedScannerBeamSample, оно и так уже есть) сделает
-    // переход между полученными точками плавным. Если пакет ещё не пришёл —
-    // держим последнюю ПОЛУЧЕННУЮ точку как есть, ничего не додумывая.
+    // Если есть свежий пакет для ЭТОГО раунда — берём его как есть, без всякой
+    // математики. Если пакета ещё нет (сетевая пауза) — не стоим на месте
+    // (это и давало эффект "замер, потом появился игрок, потом поехал") — вместо
+    // этого точно досчитываем по формуле, которая знает всю кривую торможения
+    // без всякой сети и не накапливает ошибку (в отличие от домысливания по
+    // постоянной скорости, которое пробовали раньше).
     const _roundIdMatches = String(_serverBeamPos?.roundId || "") === String(roundData?.id || "");
     if (_serverBeamPos &&
         Number.isFinite(_serverBeamPos.x) &&
@@ -9822,10 +9823,13 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
         vy: _serverBeamPos.vy || 0
       };
     }
-    if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
-      return scannerLastBeamSample;
-    }
-    return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
+    return getScannerCountdownBeamSampleAtTime(
+      roundData,
+      safeTimestamp,
+      (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x))
+        ? scannerLastBeamSample
+        : getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData)
+    );
   }
 
   if (safeStatus === "shuffling") {
