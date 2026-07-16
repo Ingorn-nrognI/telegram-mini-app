@@ -13264,7 +13264,10 @@ function renderScannerCanvas() {
       // и живой трансляцией сервера — из-за этого scannerLastBeamSample никогда не
       // обновлялся в режиме ожидания, шарик визуально стоял неподвижно в центре, а при
       // входе в раунд резко "телепортировался" туда, где он на самом деле уже был.
+      if (window._idleDrawLogUntil === undefined) window._idleDrawLogUntil = 0;
       if (_wasHasGridLastFrame) {
+        window._idleDrawLogUntil = performance.now() + 2000;
+        console.warn('[IdleDraw] переход из hasGrid=true, scannerLastBeamSample до сброса=' + (scannerLastBeamSample ? scannerLastBeamSample.x.toFixed(4)+','+scannerLastBeamSample.y.toFixed(4) : 'нет'));
         // Гарантируем, что сброс состояния сглаживания на настоящую idle-точку —
         // это ПОСЛЕДНЕЕ, что происходит перед первым реальным блендом в этой ветке,
         // а не более раннее (в обработчике патча), которое мог перезаписать ещё один
@@ -13284,6 +13287,9 @@ function renderScannerCanvas() {
         beamRenderKey,
         now
       );
+      if (performance.now() < window._idleDrawLogUntil) {
+        console.warn('[IdleDraw] target=' + _idleTargetForLog.x.toFixed(4)+','+_idleTargetForLog.y.toFixed(4) + ' нарисовано=' + (idleVisualBeamSample ? idleVisualBeamSample.x.toFixed(4)+','+idleVisualBeamSample.y.toFixed(4) : 'нет') + ' key=' + beamRenderKey);
+      }
       if (idleVisualBeamSample) scannerLastBeamSample = idleVisualBeamSample;
       drawScannerEmptyArenaState(ctx, size, idleVisualBeamSample, {
         waitingTextAlpha: 1,
