@@ -8472,15 +8472,13 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const hardDistance = getScannerBeamSampleDistance(previous, target);
   const hardAngle = Math.abs(getScannerAngleDelta(previousTravelAngle, targetAngles.travelAngle));
 
+  // Убрали мгновенный "телепорт" по порогу расстояния целиком — при любом
+  // рассинхроне между кусками состояния (а они, как выяснилось, бывают) он
+  // просто мгновенно дёргал луч в неверную промежуточную точку на один кадр,
+  // а не решал проблему. Теперь ЛЮБОЕ расхождение, большое или маленькое,
+  // всегда доезжает обычным плавным сглаживанием — просто быстрее, если
+  // разница больше (см. компенсацию по hardDistance чуть ниже).
   if (scannerBeamRenderState.key !== safeKey) {
-    // Сброс позиции — только при реальном скачке РАССТОЯНИЯ. Смена угла сама по себе
-    // не должна дёргать позицию: ключ рендера может смениться несколько раз подряд
-    // при переходе shuffling → active (сокет-патч и Firestore приходят не одновременно),
-    // и раньше каждая такая смена ключа при большой разнице углов сбрасывала позицию
-    // на текущую цель — из-за чего лазер "телепортировался" при старте движения.
-    if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
-      return resetScannerBeamRenderState(target, safeKey);
-    }
     scannerBeamRenderState.key = safeKey;
   }
 
@@ -8488,10 +8486,6 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
     ? Math.max(0, safeFrameTime - scannerBeamRenderState.lastFrameAt)
     : 0;
   const deltaMs = Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, rawDeltaMs);
-
-  if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
-    return resetScannerBeamRenderState(target, safeKey);
-  }
   // Диагностика подтвердила: редкие микро-рывки — это единичные пропуски кадра на
   // уровне видеодрайвера/композитора ОС (один длинный кадр + один короткий сразу же
   // компенсирующий его), не баг в этой математике. Убрана как избыточная и шумная.
@@ -8502,7 +8496,12 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const _prevTargetVy = Number(scannerBeamRenderState.lastTargetVy) || 0;
   const _justBouncedX = _prevTargetVx !== 0 && _targetVx !== 0 && Math.sign(_targetVx) !== Math.sign(_prevTargetVx);
   const _justBouncedY = _prevTargetVy !== 0 && _targetVy !== 0 && Math.sign(_targetVy) !== Math.sign(_prevTargetVy);
-  const basePositionTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
+  const _rawBaseTauMs = Math.max(1, Number(options.positionTauMs) || SCANNER_BEAM_SMOOTH_TAU_MS);
+  // Чем больше расхождение — тем короче тау (быстрее доезжает), чтобы даже
+  // крупная поправка (0.5+) укладывалась в доли секунды, а не тянулась
+  // как обычное мелкое сглаживание несколько секунд подряд.
+  const _fastCatchupFactor = hardDistance > 0.15 ? Math.min(1, hardDistance / 0.15) : 1;
+  const basePositionTauMs = _rawBaseTauMs / (1 + (_fastCatchupFactor - 1) * 3);
   // В момент реального отскока (смена знака скорости) снимаем инерцию позиции,
   // чтобы визуальная точка не "доезжала" вдоль бортика по старой траектории
   const positionTauMs = (_justBouncedX || _justBouncedY) ? Math.min(22, basePositionTauMs) : basePositionTauMs;
