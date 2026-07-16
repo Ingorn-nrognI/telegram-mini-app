@@ -10317,12 +10317,19 @@ function applySocketRoundPatch(patch) {
         const _continueFrom = (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x))
           ? scannerLastBeamSample
           : patch.idleBeamMotion;
+        // Угол/направление тоже не дёргаем на новое значение мгновенно — берём
+        // угол, который уже реально нарисован (как и позицию), а скорость от
+        // сервера используем только чтобы дальше плавно доворачивать в её
+        // сторону обычным угловым сглаживанием, а не скачком.
+        const _continueAngle = Number.isFinite(scannerLastBeamSample?.angle)
+          ? scannerLastBeamSample.angle
+          : Math.atan2(patch.idleBeamMotion.vy || 0, patch.idleBeamMotion.vx || 0);
         const _idleSample = {
           x: _continueFrom.x,
           y: _continueFrom.y,
           vx: patch.idleBeamMotion.vx,
           vy: patch.idleBeamMotion.vy,
-          angle: Math.atan2(patch.idleBeamMotion.vy || 0, patch.idleBeamMotion.vx || 0)
+          angle: _continueAngle
         };
         // Отмечаем момент перехода в ожидание — до этого момента _serverBeamPos
         // ещё хранит позицию из ТОЛЬКО ЧТО закончившегося раунда (её обновляли
