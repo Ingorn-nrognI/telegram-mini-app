@@ -9891,16 +9891,22 @@ function getScannerBeamRenderKey(roundStatus, roundData, variant = "grid") {
     return `${safeStatus}::${safeVariant}::idle`;
   }
 
+  // ВАЖНО: variant (grid/empty) убран из ключа для countdown/shuffling/active.
+  // Раньше при появлении первого игрока сетка возникала, variant менялся
+  // empty→grid, ключ рендера менялся, сглаживание сбрасывалось на текущую точку
+  // и луч замирал на 2-3 кадра (подтверждено логом [Frozen] status=countdown).
+  // Траектория луча в этих фазах от наличия сетки не зависит вообще — значит и
+  // ключ от variant зависеть не должен.
   if (safeStatus === "countdown") {
-    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.countdownEndsAt || 0) / 100)}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}::${safeVariant}`;
+    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.countdownEndsAt || 0) / 100)}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}`;
   }
 
   if (safeStatus === "shuffling") {
-    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.shuffleStartedAt || 0) / 100)}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}::${safeVariant}`;
+    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.shuffleStartedAt || 0) / 100)}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}`;
   }
 
   if (safeStatus === "active") {
-    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.activeStartedAt || 0) / 100)}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}::${safeVariant}`;
+    return `${safeStatus}::${roundId}::${Math.round(tsToMs(roundData.activeStartedAt || 0) / 100)}::${getScannerBeamMotionSignature(getScannerRoundCountdownBeamState(roundData))}`;
   }
 
   if (safeStatus === "finished") {
