@@ -13239,7 +13239,13 @@ function renderScannerCanvas() {
 
   const beamRenderKey = getScannerBeamRenderKey(roundStatus, roundData, hasGrid ? "grid" : "empty");
 
-  if (!hasGrid) {
+  if (!hasGrid || roundStatus === "idle") {
+    // Статус меняется на idle сразу, а карта арены (scannerGridState.players,
+    // приходит отдельным сообщением grid:state) может обнулиться на несколько
+    // кадров позже. Всё это время "основная" ветка ниже считала бы позицию через
+    // немного другой путь, чем эта — и на стыке, когда карта наконец обнулялась,
+    // получался заметный скачок. Теперь как только статус стал idle — сразу сюда,
+    // не дожидаясь карты.
     if (roundStatus === "preparing_next_round" && roundData) {
       const preparingBeamSample = getSmoothedScannerBeamSample(
         getScannerBeamTargetSample(
