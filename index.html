@@ -8490,7 +8490,6 @@ function getSmoothedScannerBeamSample(targetSample, renderKey, frameTime = perfo
   const deltaMs = Math.min(SCANNER_BEAM_MAX_FRAME_DELTA_MS, rawDeltaMs);
 
   if (hardDistance >= SCANNER_BEAM_HARD_RESET_DISTANCE) {
-    console.warn('[HardReset] телепорт! было=' + previous.x.toFixed(4)+','+previous.y.toFixed(4) + ' стало=' + target.x.toFixed(4)+','+target.y.toFixed(4) + ' дистанция=' + hardDistance.toFixed(4) + ' key=' + safeKey + ' keyChanged=' + (scannerBeamRenderState.key !== safeKey));
     return resetScannerBeamRenderState(target, safeKey);
   }
   // Диагностика подтвердила: редкие микро-рывки — это единичные пропуски кадра на
