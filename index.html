@@ -9772,10 +9772,12 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
     // что и давало скачок. Раз мы всё равно ничего не знаем локально о раунде —
     // любая свежая трансляция лучше локального пересчёта, вне зависимости от roundId.
     const _idleServerFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
+    const _serverBeamPosIsAfterReset = !_lastBeamContextResetAt || (_serverBeamPos?._receiveTime || 0) >= _lastBeamContextResetAt;
     if (_serverBeamPos &&
         Number.isFinite(_serverBeamPos.x) &&
         Number.isFinite(_serverBeamPos.y) &&
-        _idleServerFreshMs < 500) {
+        _idleServerFreshMs < 500 &&
+        _serverBeamPosIsAfterReset) {
       return {
         x: _serverBeamPos.x,
         y: _serverBeamPos.y,
@@ -9986,6 +9988,7 @@ function stopScannerVisualAnimation() {
 
 const SOCKET_SERVER = 'https://bobrworld.com';
 let _serverBeamPos = null;
+let _lastBeamContextResetAt = 0;
 let scannerLobbyGridThrottleState = { lastComputeAt: 0, lastVersionKey: null, cellOwners: null, lastRequestAt: 0, workerBusy: false, pendingRequest: null, pendingVersionKeyResolved: null };
 
 // Арена приходит готовой с сервера — клиент её больше не рассчитывает.
@@ -10304,18 +10307,13 @@ function applySocketRoundPatch(patch) {
           vy: patch.idleBeamMotion.vy,
           angle: Math.atan2(patch.idleBeamMotion.vy || 0, patch.idleBeamMotion.vx || 0)
         };
-        if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
-          const _dx = _idleSample.x - scannerLastBeamSample.x;
-          const _dy = _idleSample.y - scannerLastBeamSample.y;
-          const _jump = Math.sqrt(_dx * _dx + _dy * _dy);
-          console.warn(
-            "[СТЫК ТАЙМЕР->ОЖИДАНИЕ] было_x=" + scannerLastBeamSample.x.toFixed(4) +
-            " было_y=" + scannerLastBeamSample.y.toFixed(4) +
-            " | стало_x=" + _idleSample.x.toFixed(4) +
-            " стало_y=" + _idleSample.y.toFixed(4) +
-            " | РАЗНИЦА=" + _jump.toFixed(4)
-          );
-        }
+        // Отмечаем момент перехода в ожидание — до этого момента _serverBeamPos
+        // ещё хранит позицию из ТОЛЬКО ЧТО закончившегося раунда (её обновляли
+        // каждые ~50мс всё время, пока раунд шёл, так что по времени она всегда
+        // "свежая", хотя относится к другому состоянию). Раньше это давало один
+        // кадр со старой точкой перед тем как придёт первая трансляция уже про
+        // idle — то самое "прыгнул в другое место и сразу обратно".
+        _lastBeamContextResetAt = performance.now();
         scannerLastBeamSample = _idleSample;
         // Раньше здесь стоял "_serverBeamPos = null" — оставшийся от раннего этапа
         // разработки, до того как idle стал полностью серверным. Теперь это активно
