@@ -3975,11 +3975,6 @@ button {
   position: fixed;
   inset: 0;
   z-index: 999999;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 22px;
   background: radial-gradient(circle at 50% 40%, #10262b 0%, #050816 70%);
   transition: opacity 0.45s ease;
 }
@@ -3988,6 +3983,10 @@ button {
   pointer-events: none;
 }
 .boot-loader-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -3996,6 +3995,32 @@ button {
   animation: bootLoaderSpin 0.9s linear infinite;
   box-shadow: 0 0 24px rgba(45, 225, 255, 0.35);
 }
+.boot-loader-title {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  font-style: italic;
+  background: linear-gradient(90deg, #6ff0ff, #b9a3ff, #6ff0ff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 20px rgba(45, 225, 255, 0.4);
+  animation: bootLoaderTextShine 2.6s linear infinite;
+}
+.boot-loader-textwrap {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  white-space: nowrap;
+}
 .boot-loader-text {
   font-size: 14px;
   font-weight: 600;
@@ -4003,15 +4028,33 @@ button {
   color: rgba(210, 245, 255, 0.85);
   text-shadow: 0 0 12px rgba(45, 225, 255, 0.4);
 }
+.boot-dot {
+  display: inline-block;
+  opacity: 0;
+  animation: bootDotFade 2.2s ease-in-out infinite;
+}
+.boot-dot:nth-child(2) { animation-delay: -1.87s; }
+.boot-dot:nth-child(3) { animation-delay: -1.65s; }
 @keyframes bootLoaderSpin {
   to { transform: rotate(360deg); }
+}
+@keyframes bootLoaderTextShine {
+  to { background-position: 200% center; }
+}
+@keyframes bootDotFade {
+  0%, 10% { opacity: 0; }
+  15%, 75% { opacity: 1; }
+  80%, 100% { opacity: 0; }
 }
 </style>
 </head>
 <body>
 <div id="appBootLoader">
   <div class="boot-loader-ring"></div>
-  <div class="boot-loader-text">Загрузка Bobr World...</div>
+  <div class="boot-loader-title">Bobr World</div>
+  <div class="boot-loader-textwrap">
+    <span class="boot-loader-text">Загрузка<span class="boot-dot">.</span><span class="boot-dot">.</span><span class="boot-dot">.</span></span>
+  </div>
 </div>
 <div id="menu" onclick="handleMenuBackgroundClick(event)">
   <div id="panelBackdrop" class="panel-backdrop"></div>
