@@ -9844,12 +9844,23 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
         Number.isFinite(_serverBeamPos.x) &&
         Number.isFinite(_serverBeamPos.y) &&
         _roundIdMatches) {
+      // Раньше позиция из пакета возвращалась КАК ЕСТЬ, без досчёта времени с
+      // момента прихода пакета. Пакеты идут раз в ~50мс, а при входе игрока или
+      // ставке сервер на 300-500мс занят обработкой и пакеты запаздывают — всё
+      // это время цель стояла на месте, и луч ВИДИМО замирал (лог [Frozen]
+      // status=countdown ровно в моменты join). Теперь, как и в active-фазе,
+      // честно досчитываем полёт от последнего пакета по его скорости с
+      // отскоками от стен — пробелы между пакетами больше не видны.
+      const _cdElapsed = Math.max(0, (performance.now() - (_serverBeamPos._receiveTime || performance.now())) / 1000);
+      const _cdPad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
+      const _cdXr = _clientReflectedAxis(_serverBeamPos.x, _serverBeamPos.vx || 0, _cdElapsed, _cdPad, 1 - _cdPad);
+      const _cdYr = _clientReflectedAxis(_serverBeamPos.y, _serverBeamPos.vy || 0, _cdElapsed, _cdPad, 1 - _cdPad);
       return {
-        x: _serverBeamPos.x,
-        y: _serverBeamPos.y,
-        angle: _serverBeamPos.angle || 0,
-        vx: _serverBeamPos.vx || 0,
-        vy: _serverBeamPos.vy || 0
+        x: _cdXr.position,
+        y: _cdYr.position,
+        angle: _serverBeamPos.angle || Math.atan2(_cdYr.velocity, _cdXr.velocity),
+        vx: _cdXr.velocity,
+        vy: _cdYr.velocity
       };
     }
     return getScannerCountdownBeamSampleAtTime(
