@@ -3982,11 +3982,15 @@ button {
   opacity: 0;
   pointer-events: none;
 }
-.boot-loader-ring {
+.boot-loader-ring-wrap {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+}
+.boot-loader-ring {
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -4001,17 +4005,15 @@ button {
   left: 50%;
   transform: translate(-50%, -100%);
   white-space: nowrap;
-  font-size: 22px;
+  font-size: 44px;
   font-weight: 800;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  font-style: italic;
+  letter-spacing: 1.5px;
   background: linear-gradient(90deg, #6ff0ff, #b9a3ff, #6ff0ff);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  text-shadow: 0 0 20px rgba(45, 225, 255, 0.4);
+  text-shadow: 0 0 24px rgba(45, 225, 255, 0.45);
   animation: bootLoaderTextShine 2.6s linear infinite;
 }
 .boot-loader-textwrap {
@@ -4050,7 +4052,7 @@ button {
 </head>
 <body>
 <div id="appBootLoader">
-  <div class="boot-loader-ring"></div>
+  <div class="boot-loader-ring-wrap"><div class="boot-loader-ring"></div></div>
   <div class="boot-loader-title">Bobr World</div>
   <div class="boot-loader-textwrap">
     <span class="boot-loader-text">Загрузка<span class="boot-dot">.</span><span class="boot-dot">.</span><span class="boot-dot">.</span></span>
