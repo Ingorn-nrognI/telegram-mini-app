@@ -8826,6 +8826,34 @@ function createScannerIdleBeamMotionFromSample(sample, timestampMs = getNetworkT
   };
 }
 
+function ensureScannerIdleMotionMatchesRenderedBeam() {
+  // Вызывается в момент перехода клиента в режим ожидания (раунд пропал).
+  // Чинит гонку: сигнал "раунд кончился" может прийти ПЕРВЫМ из Firestore
+  // (снэпшот runtime / удаление документа раунда), на 100-300мс РАНЬШЕ
+  // сокет-патча с настоящим idleBeamMotion. В этом окне в runtimeData лежит
+  // СТАРЫЙ якорь движения (от предыдущего простоя, десятки секунд назад) —
+  // формула ожидания считает по нему позицию где угодно на арене, луч резко
+  // уезжает туда, а после прихода патча — обратно ("телепается туда-обратно").
+  // Лечение: если якорь старый И его расчётная точка далеко от места, где луч
+  // реально нарисован сейчас — переякориваем движение с текущей точки луча.
+  // Если якорь свежий (только что от сервера) или расчётная точка совпадает
+  // с нарисованной (обычный простой) — ничего не трогаем, общий для всех
+  // клиентов серверный якорь сохраняется и синхронизация не ломается.
+  if (!scannerLastBeamSample || !Number.isFinite(scannerLastBeamSample.x)) return;
+  const _nowMs = getNetworkTime();
+  const _motion = scannerRealtime.runtimeData?.idleBeamMotion;
+  if (_motion && Number.isFinite(_motion.x) && Number.isFinite(_motion.anchorAt)) {
+    const _anchorAgeMs = _nowMs - tsToMs(_motion.anchorAt);
+    if (_anchorAgeMs < 5000) return;
+    const _formulaSample = getScannerSharedLobbyBeamSampleAt(_nowMs, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
+    const _dx = _formulaSample.x - scannerLastBeamSample.x;
+    const _dy = _formulaSample.y - scannerLastBeamSample.y;
+    if (Math.sqrt(_dx * _dx + _dy * _dy) < 0.05) return;
+  }
+  if (!scannerRealtime.runtimeData) scannerRealtime.runtimeData = {};
+  scannerRealtime.runtimeData.idleBeamMotion = createScannerIdleBeamMotionFromSample(scannerLastBeamSample, _nowMs);
+}
+
 function getScannerBeamMotionSignature(motionState) {
   const state = normalizeScannerBeamMotionState(motionState);
   return [
@@ -10812,6 +10840,7 @@ function syncScannerDerivedState() {
   scannerGridState.myJoinedRoundId = currentParticipant ? round?.id || null : null;
 
   if (!round) {
+    ensureScannerIdleMotionMatchesRenderedBeam();
     scannerGridState.roundStatus = "idle";
     scannerGridState.roundData = null;
     scannerGridState.roundId = null;
@@ -10869,6 +10898,7 @@ function syncScannerDerivedState() {
 
   if (participantsReady && realParticipantCount === 0) {
     if (!roundHasVisibleState && !scannerRealtime.activeRoundId) {
+      ensureScannerIdleMotionMatchesRenderedBeam();
       scannerGridState.roundData = null;
       scannerGridState.roundId = null;
       scannerGridState.roundStatus = "idle";
