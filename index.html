@@ -3971,9 +3971,48 @@ button {
   text-align: center;
   width: 100%;
 }
+#appBootLoader {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: radial-gradient(circle at 50% 40%, #10262b 0%, #050816 70%);
+  transition: opacity 0.45s ease;
+}
+#appBootLoader.boot-loader-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.boot-loader-ring {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid rgba(45, 225, 255, 0.18);
+  border-top-color: rgba(45, 225, 255, 0.95);
+  animation: bootLoaderSpin 0.9s linear infinite;
+  box-shadow: 0 0 24px rgba(45, 225, 255, 0.35);
+}
+.boot-loader-text {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: rgba(210, 245, 255, 0.85);
+  text-shadow: 0 0 12px rgba(45, 225, 255, 0.4);
+}
+@keyframes bootLoaderSpin {
+  to { transform: rotate(360deg); }
+}
 </style>
 </head>
 <body>
+<div id="appBootLoader">
+  <div class="boot-loader-ring"></div>
+  <div class="boot-loader-text">Загрузка Bobr World...</div>
+</div>
 <div id="menu" onclick="handleMenuBackgroundClick(event)">
   <div id="panelBackdrop" class="panel-backdrop"></div>
 
@@ -10244,6 +10283,38 @@ let _scannerPingIntervalId = null;
 
 function initSocketConnection() {
   _socket = io(SOCKET_SERVER, { transports: ['websocket'], reconnection: true });
+  // Экран загрузки: скрываем только когда пришли РЕАЛЬНЫЕ данные (сокет
+  // подключился и получено первое состояние арены/раунда), а не сразу после
+  // отрисовки HTML — раньше именно в этом окне пользователь видел "Подключение..."
+  // и рывок луча один раз на превью-баннере. Минимум 500мс показа против
+  // мигания на быстром интернете, максимум 3 сек защиты от зависания.
+  (function setupBootLoaderHide() {
+    const _bootStart = performance.now();
+    let _bootHidden = false;
+    function hideBootLoader() {
+      if (_bootHidden) return;
+      _bootHidden = true;
+      const el = document.getElementById('appBootLoader');
+      if (el) {
+        el.classList.add('boot-loader-hidden');
+        setTimeout(() => { el.remove(); }, 500);
+      }
+    }
+    function tryHide() {
+      const elapsed = performance.now() - _bootStart;
+      if (elapsed < 500) { setTimeout(tryHide, 500 - elapsed); return; }
+      hideBootLoader();
+    }
+    let _gotGrid = false;
+    let _gotConnect = false;
+    function checkReady() {
+      if (_gotGrid && _gotConnect) tryHide();
+    }
+    _socket.on('connect', () => { _gotConnect = true; checkReady(); });
+    _socket.on('grid:state', () => { _gotGrid = true; checkReady(); });
+    _socket.on('round:state', () => { _gotGrid = true; checkReady(); });
+    setTimeout(tryHide, 3000);
+  })();
   _socket.on('connect', () => {
     _socket.emit('ping_time', { clientTime: Date.now() });
     // Раньше setInterval создавался заново при каждом reconnect и никогда не
