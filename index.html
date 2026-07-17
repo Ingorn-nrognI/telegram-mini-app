@@ -9830,6 +9830,25 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
         vy: _idVy
       };
     }
+    // Короткое окно сразу после сброса: старые пакеты уже отсечены, первый пакет
+    // нового простоя ещё летит. Формула якоря в этом окне ВРЁТ: якорь записан с
+    // полной скоростью, а настоящий луч на сервере разгоняется С НУЛЯ
+    // (precomputeIdleRampSamples в beamEngine.js). Формула убегала вперёд на
+    // время полёта патча (~0.06-0.17 по арене) — луч дёргался вперёд и тут же
+    // возвращался с приходом первого пакета разгона. Пока пакета нет — держим
+    // луч на точке продолжения (она уже выставлена обработчиком патча), первый
+    // пакет придёт через ~50-150мс и поведёт луч по серверному разгону.
+    // Ограничение 1.5 сек: при обрыве сети формула включится как раньше.
+    const _sinceResetMs = _lastBeamContextResetAt ? (performance.now() - _lastBeamContextResetAt) : Infinity;
+    if (_sinceResetMs < 1500 && scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
+      return {
+        x: scannerLastBeamSample.x,
+        y: scannerLastBeamSample.y,
+        angle: scannerLastBeamSample.angle || 0,
+        vx: 0,
+        vy: 0
+      };
+    }
     const _hasIdleMotion = scannerRealtime.runtimeData?.idleBeamMotion &&
       Number.isFinite(scannerRealtime.runtimeData.idleBeamMotion.x);
     if (!_hasIdleMotion && !_serverBeamPos) {
