@@ -4014,17 +4014,31 @@ button {
   background-clip: text;
   color: transparent;
   text-shadow: 0 0 24px rgba(45, 225, 255, 0.45);
-  animation: bootLoaderTextShine 2.6s linear infinite, bootLoaderStroke 2.6s linear infinite;
-  /* Обводка каждой буквы — та же толщина (1px), что и у активной кнопки
-     нижнего меню (.bottom-btn.is-active box-shadow 0 0 0 1px). Цвет обводки
-     переливается отдельной анимацией по тем же двум оттенкам, что и заливка. */
-  -webkit-text-stroke: 1px rgba(45, 225, 255, 0.6);
+  animation: bootLoaderTextShine 2.6s linear infinite;
+}
+.boot-loader-title::before {
+  /* Обводка отдельным слоем ПОД заливкой текста — раньше сплошная градиентная
+     заливка (-webkit-background-clip: text) рисовалась ПОВЕРХ обводки и почти
+     полностью её перекрывала, была видна только тонкая полоска на краю букв.
+     Тот же текст дублируется через content: attr(data-text) позади оригинала
+     и показывает ТОЛЬКО обводку (заливка здесь прозрачная, без background-clip),
+     поэтому она больше ничем не перекрывается и видна по всему контуру букв.
+     Толщина 1px — как у .bottom-btn.is-active (box-shadow 0 0 0 1px). */
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: -1;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(45, 225, 255, 0.75);
+  animation: bootLoaderStroke 2.6s linear infinite;
 }
 
 @keyframes bootLoaderStroke {
-  0% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.6); }
-  50% { -webkit-text-stroke-color: rgba(185, 163, 255, 0.6); }
-  100% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.6); }
+  0% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.75); }
+  50% { -webkit-text-stroke-color: rgba(185, 163, 255, 0.75); }
+  100% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.75); }
 }
 .boot-loader-textwrap {
   position: absolute;
@@ -4063,7 +4077,7 @@ button {
 <body>
 <div id="appBootLoader">
   <div class="boot-loader-ring-wrap"><div class="boot-loader-ring"></div></div>
-  <div class="boot-loader-title">Bobr World</div>
+  <div class="boot-loader-title" data-text="Bobr World">Bobr World</div>
   <div class="boot-loader-textwrap">
     <span class="boot-loader-text">Загрузка<span class="boot-dot">.</span><span class="boot-dot">.</span><span class="boot-dot">.</span></span>
   </div>
