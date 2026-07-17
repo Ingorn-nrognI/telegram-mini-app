@@ -9832,17 +9832,43 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
       // status=countdown ровно в моменты join). Теперь, как и в active-фазе,
       // честно досчитываем полёт от последнего пакета по его скорости с
       // отскоками от стен — пробелы между пакетами больше не видны.
-      const _cdElapsed = Math.max(0, (performance.now() - (_serverBeamPos._receiveTime || performance.now())) / 1000);
+      // Досчёт БЕЗ математического отскока от стен. Настоящий луч в countdown
+      // тормозит и до стены обычно не долетает — а досчёт с отражением "отражал"
+      // его от стены, менял знак скорости, и детектор свечения бортиков ложно
+      // вспыхивал ("свечения сами по себе"). Теперь при долгой паузе пакетов луч
+      // просто мягко останавливается у края (скорость в ноль, без смены знака),
+      // а настоящие отскоки приходят из пакетов сервера и подсвечиваются честно.
+      // Досчёт ограничен 0.6 сек — дальше домысливание по устаревшей скорости
+      // делает только хуже.
+      const _cdElapsed = Math.min(0.6, Math.max(0, (performance.now() - (_serverBeamPos._receiveTime || performance.now())) / 1000));
       const _cdPad = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
-      const _cdXr = _clientReflectedAxis(_serverBeamPos.x, _serverBeamPos.vx || 0, _cdElapsed, _cdPad, 1 - _cdPad);
-      const _cdYr = _clientReflectedAxis(_serverBeamPos.y, _serverBeamPos.vy || 0, _cdElapsed, _cdPad, 1 - _cdPad);
+      let _cdX = _serverBeamPos.x + (_serverBeamPos.vx || 0) * _cdElapsed;
+      let _cdY = _serverBeamPos.y + (_serverBeamPos.vy || 0) * _cdElapsed;
+      let _cdVx = _serverBeamPos.vx || 0;
+      let _cdVy = _serverBeamPos.vy || 0;
+      if (_cdX < _cdPad) { _cdX = _cdPad; _cdVx = 0; }
+      else if (_cdX > 1 - _cdPad) { _cdX = 1 - _cdPad; _cdVx = 0; }
+      if (_cdY < _cdPad) { _cdY = _cdPad; _cdVy = 0; }
+      else if (_cdY > 1 - _cdPad) { _cdY = 1 - _cdPad; _cdVy = 0; }
       return {
-        x: _cdXr.position,
-        y: _cdYr.position,
-        angle: _serverBeamPos.angle || Math.atan2(_cdYr.velocity, _cdXr.velocity),
-        vx: _cdXr.velocity,
-        vy: _cdYr.velocity
+        x: _cdX,
+        y: _cdY,
+        angle: _serverBeamPos.angle || Math.atan2(_serverBeamPos.vy || 0, _serverBeamPos.vx || 0.0001),
+        vx: _cdVx,
+        vy: _cdVy
       };
+    }
+    // Самое начало раунда: пакетов про этот раунд ещё нет (сервер занят его
+    // созданием). Раньше здесь сразу включалась запасная прямая "старт → точка
+    // прилипания" — цель резко переключалась на точку старта, где луч был
+    // 200-300мс назад, луч дёргался назад, а с приходом первых пакетов — обратно
+    // ("при входе в раунд двигается в другое место и быстро возвращается").
+    // Точка старта раунда — это продолжение траектории ожидания, поэтому первые
+    // 1.5 секунды честно продолжаем рисовать траекторию ожидания: никаких
+    // переключений цели, луч не дёргается вообще.
+    const _cdStartMs = tsToMs(roundData?.countdownEndsAt) - SCANNER_COUNTDOWN_MS;
+    if (Number.isFinite(_cdStartMs) && (safeTimestamp - _cdStartMs) < 1500) {
+      return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
     }
     return getScannerCountdownBeamSampleAtTime(
       roundData,
