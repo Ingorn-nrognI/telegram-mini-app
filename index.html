@@ -4000,6 +4000,12 @@ button {
   box-shadow: 0 0 24px rgba(45, 225, 255, 0.35);
 }
 .boot-loader-title {
+  /* Обводка и переливающаяся заливка — на ОДНОМ элементе, без дублирования
+     текста через ::before (тот приём оказался ненадёжен в вебвью Telegram —
+     два независимых слоя текста плохо гарантированно совпадают пиксель в
+     пиксель). -webkit-text-stroke рисуется вокруг контура глифов, а заливка
+     внутри контура идёт через background-clip:text — оба работают вместе на
+     одном и том же тексте без рассинхрона. */
   position: absolute;
   top: 40%;
   left: 50%;
@@ -4013,30 +4019,15 @@ button {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  -webkit-text-stroke: 1px rgba(45, 225, 255, 0.9);
   text-shadow: 0 0 24px rgba(45, 225, 255, 0.45);
-  animation: bootLoaderTextShine 2.6s linear infinite;
-}
-.boot-loader-title::before {
-  /* Обводка отдельным слоем ПОД заливкой текста. z-index:-1 раньше уводил этот
-     слой не просто под текст, а под ВЕСЬ фон экрана загрузки (#appBootLoader) —
-     обводка была полностью невидима, а не просто перекрыта. Убрали z-index:
-     порядок в HTML (::before идёт раньше основного текста) сам по себе рисует
-     обводку позади заливки, без ухода под фон. Толщина и непрозрачность подняты,
-     чтобы обводка читалась так же чётко, как у активной кнопки нижнего меню. */
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  color: transparent;
-  -webkit-text-stroke: 1.5px rgba(45, 225, 255, 0.95);
-  animation: bootLoaderStroke 2.6s linear infinite;
+  animation: bootLoaderTextShine 2.6s linear infinite, bootLoaderStroke 2.6s linear infinite;
 }
 
 @keyframes bootLoaderStroke {
-  0% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.75); }
-  50% { -webkit-text-stroke-color: rgba(185, 163, 255, 0.75); }
-  100% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.75); }
+  0% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.9); }
+  50% { -webkit-text-stroke-color: rgba(185, 163, 255, 0.9); }
+  100% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.9); }
 }
 .boot-loader-textwrap {
   position: absolute;
@@ -4075,7 +4066,7 @@ button {
 <body>
 <div id="appBootLoader">
   <div class="boot-loader-ring-wrap"><div class="boot-loader-ring"></div></div>
-  <div class="boot-loader-title" data-text="Bobr World">Bobr World</div>
+  <div class="boot-loader-title">Bobr World</div>
   <div class="boot-loader-textwrap">
     <span class="boot-loader-text">Загрузка<span class="boot-dot">.</span><span class="boot-dot">.</span><span class="boot-dot">.</span></span>
   </div>
