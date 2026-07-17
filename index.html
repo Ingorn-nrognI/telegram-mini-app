@@ -9796,39 +9796,20 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   const safePlayers = Array.isArray(players) ? players : [];
 
   if (!roundData) {
-    // Убрана проверка "roundId должен быть пустым" — в момент создания нового раунда
-    // сервер уже шлёт трансляцию с настоящим roundId чуть РАНЬШЕ, чем локальное
-    // состояние (roundData/status) успевает обновиться. Раньше в этом узком окне
-    // проверка проваливалась и код откатывался на старый локальный резервный расчёт,
-    // что и давало скачок. Раз мы всё равно ничего не знаем локально о раунде —
-    // любая свежая трансляция лучше локального пересчёта, вне зависимости от roundId.
-    const _idleServerFreshMs = Date.now() - (_serverBeamPosLastUpdate || 0);
-    const _serverBeamPosIsAfterReset = !_lastBeamContextResetAt || (_serverBeamPos?._receiveTime || 0) >= _lastBeamContextResetAt;
-    if (_serverBeamPos &&
-        Number.isFinite(_serverBeamPos.x) &&
-        Number.isFinite(_serverBeamPos.y) &&
-        _serverBeamPos.roundId &&
-        _idleServerFreshMs < 500 &&
-        _serverBeamPosIsAfterReset) {
-      return {
-        x: _serverBeamPos.x,
-        y: _serverBeamPos.y,
-        angle: _serverBeamPos.angle || 0,
-        vx: _serverBeamPos.vx || 0,
-        vy: _serverBeamPos.vy || 0
-      };
-    }
-    // Если от сервера ещё вообще ничего не приходило (первое подключение, доля секунды
-    // после захода на сайт) — держим точку неподвижно в дефолтном центре, данных для
-    // расчёта пока просто нет вообще.
-    if (!_serverBeamPos) {
+    // Раньше здесь был приоритетный путь через сырые пакеты _serverBeamPos.
+    // Он же был источником целого класса прыжков: в режим ожидания просачивались
+    // пакеты не про ожидание (хвост только что умершего раунда, пакеты про
+    // следующий готовящийся раунд) — и луч дёргался на их координаты и обратно.
+    // Теперь ожидание рисуется ТОЛЬКО по формуле от общего якоря idleBeamMotion:
+    // якорь приходит в сокет-патче при каждом сбросе и защищён от устаревания
+    // (ensureScannerIdleMotionMatchesRenderedBeam). Формула детерминирована,
+    // одинакова у всех клиентов и не может "прыгнуть".
+    const _hasIdleMotion = scannerRealtime.runtimeData?.idleBeamMotion &&
+      Number.isFinite(scannerRealtime.runtimeData.idleBeamMotion.x);
+    if (!_hasIdleMotion && !_serverBeamPos) {
+      // Первое подключение, данных ещё нет вообще — держим точку в центре.
       return { x: 0.5, y: 0.5, angle: 0, vx: 0, vy: 0 };
     }
-    // Сетевые данные устарели — вместо заморозки на scannerLastBeamSample считаем
-    // позицию по времени устройства через getScannerSharedLobbyBeamSampleAt. Она
-    // получает idleBeamMotion из свежего патча (сервер шлёт его при каждом переходе
-    // в idle), поэтому не "телепортирует" луч, а честно продолжает его движение из
-    // точки, где раунд реально закончился.
     return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
   }
 
@@ -9918,6 +9899,27 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
     return getScannerPreparingBeamSample(roundData, safePlayers);
   }
 
+  if (safeStatus === "waiting") {
+    return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
+  }
+
+  // НЕИЗВЕСТНЫЙ статус. Такое бывает при сбросе раунда: эхо записи о возврате
+  // ставки из Firestore прилетает на доли секунды РАНЬШЕ сокет-патча, и у раунда
+  // в этот момент статус, которого клиент не знает. Раньше такой статус
+  // проваливался сюда в формулу ожидания со СТАРЫМ якорем — луч резко уезжал в
+  // случайную точку арены, а после прихода патча ехал обратно (тот самый
+  // "телепается туда-обратно" при сбросе). Пока статус непонятен — просто держим
+  // луч там, где он нарисован сейчас: через мгновение придёт патч и продолжит
+  // движение с этого же места без разрыва.
+  if (scannerLastBeamSample && Number.isFinite(scannerLastBeamSample.x)) {
+    return {
+      x: scannerLastBeamSample.x,
+      y: scannerLastBeamSample.y,
+      angle: scannerLastBeamSample.angle || 0,
+      vx: 0,
+      vy: 0
+    };
+  }
   return getScannerSharedLobbyBeamSampleAt(safeTimestamp, "scanner_shared_lobby_motion_v2", scannerRealtime.runtimeData);
 }
 
@@ -13760,6 +13762,14 @@ function subscribeScannerRound(roundId) {
 
   const roundRef = scannerRoundRef(roundId);
   scannerRealtime.unsubRound = roundRef.onSnapshot((snapshot) => {
+    // Защита от "эха мёртвого раунда": сокет-патч о сбросе обнуляет activeRoundId
+    // сразу, а Firestore-подписка на документ старого раунда живёт ещё 1-2 секунды.
+    // За это время прилетает запоздалый снэпшот старого раунда (например эхо
+    // записи о возврате ставки) — он воскрешал roundData уже сброшенного раунда,
+    // статус откатывался, и луч на кадры дёргался к точке мёртвого раунда и
+    // обратно ("через секунду-две после сброса тепехается назад и возвращается").
+    // Снэпшоты раунда, который больше не активен, просто игнорируем.
+    if (String(scannerRealtime.activeRoundId || "") !== String(roundId)) return;
     scannerRealtime.roundReady = true;
     if (snapshot.exists) {
       const firestoreData = { id: snapshot.id, ...(snapshot.data() || {}) };
