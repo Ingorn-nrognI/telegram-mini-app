@@ -28,7 +28,10 @@
   --bottom-nav-height: 56px;
   --bottom-nav-offset: 4px;
   --bottom-stack-gap: 16px;
-  --market-fab-size: 96px;
+  /* Реальная высота бара = кнопка 74px + отступы (12+10) + рамка (1+1) = 98px.
+     Раньше здесь стояло 96 (без рамки) — из-за этого круг был на 2px меньше
+     бара. Теперь совпадает точно. */
+  --market-fab-size: 98px;
   --market-fab-gap: 14px;
 }
 
@@ -968,12 +971,6 @@ button {
      место садится ОТДЕЛЬНЫЙ круглый элемент (см. .bottom-market-fab),
      а не пятая кнопка внутри этого же бара. */
   width: calc(100vw - 12px - var(--market-fab-size) - var(--market-fab-gap));
-  /* Раньше высота бара складывалась из отступов + высоты кнопки, а высота
-     круга Market была отдельным числом — из-за рамки (border: 1px сверху и
-     снизу) они расходились на пару пикселей, и круг визуально выглядел
-     заметно крупнее. Теперь высота бара ЖЁСТКО равна той же переменной,
-     что и у круга — совпадение гарантировано, а не приблизительно. */
-  height: var(--market-fab-size);
   min-height: var(--bottom-nav-height);
   padding: 12px 8px 10px;
   display: flex;
@@ -3406,7 +3403,6 @@ button {
 .bottom-bar {
   bottom: 0px;
   width: calc(100vw - 12px - var(--market-fab-size) - var(--market-fab-gap));
-  height: var(--market-fab-size);
   min-height: var(--bottom-nav-height);
   padding: 8px 7px;
   align-items: center;
@@ -3460,7 +3456,7 @@ button {
     --bottom-nav-height: 62px;
     --bottom-nav-offset: 0px;
     --bottom-stack-gap: 16px;
-    --market-fab-size: 72px;
+    --market-fab-size: 74px;
     --market-fab-gap: 10px;
   }
 
