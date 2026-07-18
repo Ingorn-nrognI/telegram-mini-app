@@ -12426,6 +12426,36 @@ function forceScannerBetBarVisibilityRefresh() {
   setTimeout(requestScannerBetBarVisibilityUpdate, 520);
 }
 
+// Раньше размер круга Market подбирался числом в CSS (98px/74px), которое
+// ДОЛЖНО было совпадать с реальной высотой .bottom-bar по расчёту — но в файле
+// оказалось несколько старых правил для разных ширин экрана, которые меняли
+// отступы/размер кнопок бара и постоянно сбивали этот расчёт. Вместо того
+// чтобы гоняться за очередным старым правилом, меряем РЕАЛЬНУЮ высоту бара
+// в момент показа и жёстко ставим кругу точно такой же размер — совпадение
+// гарантировано на любом экране, независимо от CSS-каскада.
+function syncMarketFabSize() {
+  const bar = document.querySelector(".bottom-bar");
+  const fab = document.getElementById("navMarket");
+  if (!bar || !fab) return;
+  const rect = bar.getBoundingClientRect();
+  if (rect.height > 0) {
+    fab.style.width = `${rect.height}px`;
+    fab.style.height = `${rect.height}px`;
+  }
+}
+
+function forceMarketFabSizeRefresh() {
+  syncMarketFabSize();
+  setTimeout(syncMarketFabSize, 80);
+  setTimeout(syncMarketFabSize, 220);
+  setTimeout(syncMarketFabSize, 520);
+}
+
+window.addEventListener("resize", forceMarketFabSizeRefresh, { passive: true });
+window.addEventListener("orientationchange", forceMarketFabSizeRefresh, { passive: true });
+document.addEventListener("DOMContentLoaded", forceMarketFabSizeRefresh);
+forceMarketFabSizeRefresh();
+
 function setupScannerBetBarVisibilityTracking() {
   if (scannerBetBarScrollAttached) return;
   const homeScreen = document.getElementById("homeScreen");
