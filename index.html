@@ -7475,45 +7475,74 @@ function getScannerUniqueRoundColor(roundSeed, playerIndex) {
   return getScannerColorHsl(parts.hue, parts.saturation, parts.lightness);
 }
 
+// Кэш закреплённых цветов на текущий раунд. Раньше цвет пересчитывался
+// заново на КАЖДЫЙ вызов по позиции игрока в отсортированном списке — при
+// входе нового участника список пересортировывался, чужие позиции сдвигались,
+// и цвета "перескакивали" с игрока на игрока ("мой цвет передался ему, а я
+// стал другим"). Теперь цвет выдаётся игроку ОДИН РАЗ при первом появлении в
+// раунде и больше никогда не пересчитывается, пока раунд не сменится.
+let _scannerRoundColorCache = { roundSeed: null, byPid: new Map(), hueRotation: 0 };
+
 function assignScannerRoundColors(round, participants) {
   const roundSeed = getScannerRoundColorSeed(round);
-  const roundHash = hashString(roundSeed);
-  const hueRotation = roundHash % 30;
-  const HUE_SLOTS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
+  if (_scannerRoundColorCache.roundSeed !== roundSeed) {
+    const roundHash = hashString(roundSeed);
+    _scannerRoundColorCache = {
+      roundSeed,
+      byPid: new Map(),
+      hueRotation: roundHash % 30
+    };
+  }
   const saturationCycle = [72, 76, 80, 84, 88, 70, 74, 78, 82, 86];
   const lightnessCycle = [58, 62, 54, 66, 50, 60, 56, 64, 52, 68];
+  const colorByPid = _scannerRoundColorCache.byPid;
+  const hueRotation = _scannerRoundColorCache.hueRotation;
 
+  // Новым игрокам (без закреплённого цвета) подбираем оттенок с максимальным
+  // отступом от уже ЗАНЯТЫХ оттенков — уже присвоенные цвета при этом не трогаем.
   const ordered = (participants || []).slice().sort((a, b) =>
     String(a.playerId || a.id || "").localeCompare(String(b.playerId || b.id || ""))
   );
 
-  // Раньше цвет брался из 12 фиксированных слотов через 30 градусов, а при
-  // столкновении слот сдвигался ТОЛЬКО если playerHash >= otherHash — иначе
-  // игрок оставался в занятом слоте, и два человека получали ОДИН цвет.
-  // Плюс соседние слоты отличались на 30 градусов (300 и 330 — это розовый и
-  // малиновый), поэтому оттенки выходили похожими даже без столкновений.
-  //
-  // Теперь оттенки раскидываются РАВНОМЕРНО по всему кругу на число игроков в
-  // раунде: при двух игроках это 180 градусов (противоположные цвета), при трёх
-  // — 120 и так далее. Плюс чередуется светлота, чтобы поля различались ещё и
-  // по тону. Совпадение цветов невозможно в принципе.
-  const colorByPid = new Map();
-  const playerCount = Math.max(1, ordered.length);
-  const hueSpread = 360 / playerCount;
-
-  ordered.forEach((participant, index) => {
+  ordered.forEach((participant) => {
     const pid = String(participant.playerId || participant.id || "");
-    const hue = (hueRotation + index * hueSpread) % 360;
-    const saturation = saturationCycle[index % saturationCycle.length];
-    const lightness = lightnessCycle[index % lightnessCycle.length];
-    colorByPid.set(pid, getScannerColorHsl(hue, saturation, lightness));
+    if (colorByPid.has(pid)) return;
+
+    const usedHues = Array.from(colorByPid.values())
+      .map((entry) => entry.hue)
+      .sort((a, b) => a - b);
+
+    let hue;
+    if (usedHues.length === 0) {
+      hue = hueRotation;
+    } else {
+      // Ищем самый большой зазор между соседними занятыми оттенками по кругу
+      // и ставим новый цвет ровно в его середину — это даёт максимальную
+      // отдалённость от всех уже присвоенных цветов.
+      let bestGapStart = usedHues[usedHues.length - 1];
+      let bestGapSize = (360 - usedHues[usedHues.length - 1]) + usedHues[0];
+      for (let i = 0; i < usedHues.length - 1; i += 1) {
+        const gap = usedHues[i + 1] - usedHues[i];
+        if (gap > bestGapSize) {
+          bestGapSize = gap;
+          bestGapStart = usedHues[i];
+        }
+      }
+      hue = (bestGapStart + bestGapSize / 2) % 360;
+    }
+
+    const slotIndex = colorByPid.size;
+    const saturation = saturationCycle[slotIndex % saturationCycle.length];
+    const lightness = lightnessCycle[slotIndex % lightnessCycle.length];
+    colorByPid.set(pid, { hue, saturation, lightness, color: getScannerColorHsl(hue, saturation, lightness) });
   });
 
   return (participants || []).map((participant) => {
     const pid = String(participant.playerId || participant.id || "");
+    const entry = colorByPid.get(pid);
     return {
       participant,
-      color: colorByPid.get(pid) || getScannerColorHsl(hueRotation, 78, 58)
+      color: entry ? entry.color : getScannerColorHsl(hueRotation, 78, 58)
     };
   });
 }
