@@ -960,7 +960,7 @@ button {
 .bottom-bar {
   position: absolute;
   left: 6px;
-  bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) - 14px));
+  bottom: 0px;
   width: calc(100vw - 12px);
   min-height: var(--bottom-nav-height);
   padding: 12px 8px 10px;
@@ -3299,7 +3299,7 @@ button {
 }
 
 .bottom-bar {
-  bottom: max(var(--bottom-nav-offset), calc(var(--safe-bottom) - 14px));
+  bottom: 0px;
   min-height: var(--bottom-nav-height);
   padding: 8px 7px;
   align-items: center;
@@ -3346,7 +3346,7 @@ button {
 @media (max-width: 420px) {
   :root {
     --bottom-nav-height: 62px;
-    --bottom-nav-offset: 4px;
+    --bottom-nav-offset: 0px;
     --bottom-stack-gap: 16px;
   }
 
