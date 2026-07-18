@@ -968,6 +968,12 @@ button {
      место садится ОТДЕЛЬНЫЙ круглый элемент (см. .bottom-market-fab),
      а не пятая кнопка внутри этого же бара. */
   width: calc(100vw - 12px - var(--market-fab-size) - var(--market-fab-gap));
+  /* Раньше высота бара складывалась из отступов + высоты кнопки, а высота
+     круга Market была отдельным числом — из-за рамки (border: 1px сверху и
+     снизу) они расходились на пару пикселей, и круг визуально выглядел
+     заметно крупнее. Теперь высота бара ЖЁСТКО равна той же переменной,
+     что и у круга — совпадение гарантировано, а не приблизительно. */
+  height: var(--market-fab-size);
   min-height: var(--bottom-nav-height);
   padding: 12px 8px 10px;
   display: flex;
@@ -3400,6 +3406,7 @@ button {
 .bottom-bar {
   bottom: 0px;
   width: calc(100vw - 12px - var(--market-fab-size) - var(--market-fab-gap));
+  height: var(--market-fab-size);
   min-height: var(--bottom-nav-height);
   padding: 8px 7px;
   align-items: center;
@@ -4480,6 +4487,23 @@ button {
         </span>
         <div style="color:var(--text-soft); font-size:14px; line-height:1.5;">
           Пока пусто.<br>Подключение кошелька и добавление подарков появится позже.
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="marketScreen" class="menu-screen">
+    <div class="screen-inner">
+      <section class="section-card">
+        <h1 class="section-title">Market</h1>
+        <p class="section-subtitle">Здесь можно будет продавать и покупать NFT-подарки у других игроков Bobr World.</p>
+      </section>
+      <section class="section-card" style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:36px 20px; text-align:center;">
+        <span style="width:56px; height:56px; display:flex; align-items:center; justify-content:center; border-radius:16px; background:rgba(255,255,255,0.06); color:var(--text-soft);">
+          <svg width="28" height="28" fill="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h12V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5m2 .5a.5.5 0 0 1 .5.5V13h8V9.5a.5.5 0 0 1 1 0V13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a.5.5 0 0 1 .5-.5"/></svg>
+        </span>
+        <div style="color:var(--text-soft); font-size:14px; line-height:1.5;">
+          Пока пусто.<br>Продажа и покупка подарков появится здесь позже.
         </div>
       </section>
     </div>
@@ -5878,6 +5902,8 @@ function setMenuView(view, options = {}) {
   if (profileScreen) profileScreen.classList.toggle("active", view === "profile");
   const inventoryScreen = document.getElementById("inventoryScreen");
   if (inventoryScreen) inventoryScreen.classList.toggle("active", view === "inventory");
+  const marketScreen = document.getElementById("marketScreen");
+  if (marketScreen) marketScreen.classList.toggle("active", view === "market");
   if (modePopup) modePopup.classList.remove("open");
   if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
 
@@ -5887,7 +5913,7 @@ function setMenuView(view, options = {}) {
     // из-за этого при открытии Инвентаря (и потенциально Bobr Run) в баре
     // ошибочно загоралась кнопка PvP вместо той, что реально соответствует
     // открытому экрану.
-    const navForView = { scannerScreen: "pvp", inventory: "skins", bobrRun: "games" };
+    const navForView = { scannerScreen: "pvp", inventory: "skins", bobrRun: "games", market: "market" };
     setActiveBottomNav(view === "home" ? getPreferredHomeNav() : (navForView[view] || ""));
   }
 
@@ -7369,22 +7395,14 @@ function handleBottomNav(action, event) {
     case "market": {
       closeModePopup();
       closeHistoryPanel({ preserveNav: true });
-      setActiveBottomNav("market");
-      const modal = document.getElementById("marketModal");
-      if (modal) modal.style.display = "flex";
+      closeLeaderboard();
+      closeBobrRunRooms();
+      setMenuView("market");
       break;
     }
 
     default:
       break;
-  }
-}
-
-function closeMarket() {
-  const modal = document.getElementById("marketModal");
-  if (modal) modal.style.display = "none";
-  if (currentBottomNav === "market") {
-    setActiveBottomNav(currentMenuView === "home" ? getPreferredHomeNav() : "pvp");
   }
 }
 
