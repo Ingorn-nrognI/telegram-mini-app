@@ -4667,10 +4667,29 @@ button {
   </div>
 
   <button type="button" id="navMarket" class="bottom-market-fab" data-nav="market" onclick="handleBottomNav('market', event)" aria-label="Market">
-    <span class="nav-icon nav-icon-svg">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h12V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5m2 .5a.5.5 0 0 1 .5.5V13h8V9.5a.5.5 0 0 1 1 0V13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a.5.5 0 0 1 .5-.5"/></svg>
+    <span id="navMarketStateMarket" style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+      <span class="nav-icon nav-icon-svg">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h12V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5m2 .5a.5.5 0 0 1 .5.5V13h8V9.5a.5.5 0 0 1 1 0V13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a.5.5 0 0 1 .5-.5"/></svg>
+      </span>
+      <span class="nav-label">Market</span>
     </span>
-    <span class="nav-label">Market</span>
+    <span id="navMarketStateArena" style="display:none; flex-direction:column; align-items:center; gap:3px;">
+      <span class="nav-icon nav-icon-svg">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="3" width="19" height="19" rx="6" transform="rotate(-45 18.5 12.5)"/>
+          <path d="M12 19l9 -9" opacity="0.85"/>
+          <path d="M24 15c0.5 2.5 3 4 5.5 3.5"/>
+          <rect x="36" y="3" width="19" height="19" rx="6" transform="rotate(45 45.5 12.5)"/>
+          <path d="M52 19l-9 -9" opacity="0.85"/>
+          <path d="M40 15c-0.5 2.5 -3 4 -5.5 3.5"/>
+          <rect x="15" y="33" width="7" height="17"/>
+          <rect x="42" y="33" width="7" height="17"/>
+          <path d="M22 38h20M22 43.5h20M22 49h20"/>
+          <rect x="10" y="50" width="44" height="8" rx="2"/>
+        </svg>
+      </span>
+      <span class="nav-label">Arena</span>
+    </span>
   </button>
 
   <div
@@ -5921,6 +5940,15 @@ function setMenuView(view, options = {}) {
   if (inventoryScreen) inventoryScreen.classList.toggle("active", view === "inventory");
   const marketScreen = document.getElementById("marketScreen");
   if (marketScreen) marketScreen.classList.toggle("active", view === "market");
+  // На экране Market кнопка в круге меняется на "Arena" (возврат к арене),
+  // на всех остальных экранах — обратно на "Market".
+  const navMarketStateMarket = document.getElementById("navMarketStateMarket");
+  const navMarketStateArena = document.getElementById("navMarketStateArena");
+  if (navMarketStateMarket && navMarketStateArena) {
+    const onMarket = view === "market";
+    navMarketStateMarket.style.display = onMarket ? "none" : "flex";
+    navMarketStateArena.style.display = onMarket ? "flex" : "none";
+  }
   if (modePopup) modePopup.classList.remove("open");
   if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
 
@@ -7414,7 +7442,13 @@ function handleBottomNav(action, event) {
       closeHistoryPanel({ preserveNav: true });
       closeLeaderboard();
       closeBobrRunRooms();
-      setMenuView("market");
+      if (currentMenuView === "market") {
+        // Уже на экране Market — кнопка сейчас в состоянии "Arena",
+        // нажатие возвращает на главный экран с ареной.
+        setMenuView("home");
+      } else {
+        setMenuView("market");
+      }
       break;
     }
 
