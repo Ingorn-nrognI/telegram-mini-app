@@ -2673,25 +2673,26 @@ button {
 }
 
 .scanner-bet-edit-fab {
-  /* Отдельный круг с карандашом — те же пропорции и позиция, что у Market
-     снизу, только для настройки ставок и с той же анимацией появления. */
+  /* Раньше это была "вкладка" со скруглёнными только верхними углами и
+     невидимым хвостом снизу (как у бара ставок) — форма принципиально другая,
+     чем у идеально круглого Market, поэтому размеры визуально не совпадали.
+     Теперь это настоящий круг ТОЧНО того же размера (width И height равны
+     var(--market-fab-size)), что и Market — форма и размер совпадают полностью. */
   position: absolute;
   right: 6px;
   bottom: calc(max(var(--bottom-nav-offset), calc(var(--safe-bottom) - 14px)) + var(--bottom-nav-height) + 2px);
   width: var(--market-fab-size);
-  min-height: 54px;
-  padding: 9px 9px 45px 9px;
+  height: var(--market-fab-size);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 26px 26px 20px 20px;
+  border-radius: 50%;
   background:
     radial-gradient(circle at 50% 0%, rgba(45, 225, 255, 0.16), transparent 56%),
     linear-gradient(180deg, rgba(12, 20, 47, 0.94), rgba(6, 10, 24, 0.97));
   border: 1px solid rgba(255,255,255,0.08);
-  border-bottom: none;
   box-shadow:
-    0 -10px 24px rgba(0, 0, 0, 0.32),
+    0 20px 38px rgba(0, 0, 0, 0.42),
     0 0 28px rgba(45, 225, 255, 0.1),
     inset 0 1px 0 rgba(255,255,255,0.1);
   backdrop-filter: blur(18px);
@@ -2742,7 +2743,8 @@ button {
 }
 
 .scanner-bet-edit {
-  width: 46px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   font-size: 18px;
   background:
@@ -3130,8 +3132,8 @@ button {
 
   .scanner-bet-edit-fab {
     width: var(--market-fab-size);
-    padding: 8px 8px 40px 8px;
-    border-radius: 22px 22px 18px 18px;
+    height: var(--market-fab-size);
+    border-radius: 50%;
   }
 
   /* Раньше на телефонах кнопки были 44px против 38px в браузере — поэтому
@@ -3144,7 +3146,8 @@ button {
   }
 
   .scanner-bet-edit {
-    width: 46px;
+    width: 100%;
+    height: 100%;
     font-size: 17px;
   }
 
