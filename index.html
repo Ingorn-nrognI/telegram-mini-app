@@ -32,7 +32,9 @@
      Раньше здесь стояло 96 (без рамки) — из-за этого круг был на 2px меньше
      бара. Теперь совпадает точно. */
   --market-fab-size: 98px;
-  --market-fab-gap: 14px;
+  /* Зазор перед Market уменьшен — освободившееся место отходит бару, отступы
+     между кнопками (space-evenly) становятся немного просторнее. */
+  --market-fab-gap: 8px;
 }
 
 * {
@@ -3466,7 +3468,7 @@ button {
     --bottom-nav-offset: 0px;
     --bottom-stack-gap: 16px;
     --market-fab-size: 74px;
-    --market-fab-gap: 10px;
+    --market-fab-gap: 6px;
   }
 
   .top-bar {
