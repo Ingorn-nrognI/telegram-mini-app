@@ -34,7 +34,7 @@
   --market-fab-size: 98px;
   /* Зазор перед Market уменьшен — освободившееся место отходит бару, отступы
      между кнопками (space-evenly) становятся немного просторнее. */
-  --market-fab-gap: 8px;
+  --market-fab-gap: 4px;
 }
 
 * {
@@ -4007,8 +4007,12 @@ button {
   transform: none;
 }
 .bottom-bar .bottom-btn {
-  flex: 1;
-  min-width: 0;
+  /* Раньше здесь стояло flex: 1 — кнопки растягивались и съедали ВСЁ свободное
+     место бара. Из-за этого justify-content (space-evenly) не имел что
+     распределять, и любые правки промежутков не давали видимого эффекта.
+     Теперь кнопки фиксированного размера, а свободное место бара space-evenly
+     раскидывает РАВНЫМИ промежутками между всеми кнопками и краями. */
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
