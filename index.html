@@ -787,7 +787,10 @@ button {
   bottom: 0;
   padding-bottom: 18px;
   width: min(calc(100vw - 12px), 480px);
-  border-radius: 26px 26px 0 0;
+  /* Раньше низ был плоским (0 0), потому что окно упиралось в край экрана
+     и пряталось за нижним меню. Теперь оно плавает поверх всего и до края
+     не касается впритык — скругляем и нижние углы тоже. */
+  border-radius: 26px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -832,17 +835,15 @@ button {
    Обычная "История игр" (#historyPanel) не трогается, остаётся снизу
    как было. */
 #scannerRoundsPanel {
-  top: var(--safe-top);
-  bottom: auto;
-  max-height: min(72vh, 640px);
+  /* То же положение и размер, что и у обычной "Истории игр": верх почти у
+     баланса/профиля, низ до самого края экрана, поверх нижнего меню. */
+  top: calc(var(--safe-top) + 76px);
+  bottom: 0;
   transform: translate(-50%, -32px);
-  /* Это окно закреплено СВЕРХУ и за нижнее меню не заезжает, поэтому убираем
-     унаследованные от .history-panel вещи, рассчитанные на нижнее положение:
-     нижний паддинг (давал пустоту под списком) и острые нижние углы (они
-     предполагались спрятанными за меню). Скругляем все четыре угла. */
-  padding-bottom: 0;
+  padding-bottom: 18px;
   border-radius: 26px;
 }
+
 #scannerRoundsPanel.open {
   transform: translate(-50%, 0);
 }
