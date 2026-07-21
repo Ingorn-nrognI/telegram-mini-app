@@ -777,20 +777,23 @@ button {
 .history-panel {
   position: fixed;
   left: 50%;
-  /* Раньше панель заканчивалась ВЫШЕ нижнего меню. Теперь она опускается
-     под него и нижней частью уходит за меню — как бар ставок. Нижний паддинг
-     отодвигает содержимое, чтобы его не перекрывало. */
+  /* Раньше панель начиналась низко и заканчивалась ВЫШЕ нижнего меню (её
+     z-index 72 был меньше, чем у .bottom-bar — 80), поэтому визуально уходила
+     ЗА меню. Теперь верх поднят почти до баланса/профиля (тот же отступ,
+     что и у обычного контента экранов — calc(safe-top + 92px)), низ доходит
+     до самого края экрана, а z-index выше нижнего меню — окно открывается
+     ПОВЕРХ него, полностью его закрывая, а не пряча свою нижнюю часть сзади. */
+  top: calc(var(--safe-top) + 92px);
   bottom: 0;
-  padding-bottom: calc(var(--safe-bottom) + var(--bottom-nav-height) + 18px);
+  padding-bottom: 18px;
   width: min(calc(100vw - 12px), 480px);
-  max-height: min(72vh, 640px);
   border-radius: 26px 26px 0 0;
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(12, 17, 39, 0.98), rgba(7, 9, 19, 0.98));
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 26px 44px rgba(0, 0, 0, 0.52);
-  z-index: 72;
+  z-index: 82;
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -32px);
