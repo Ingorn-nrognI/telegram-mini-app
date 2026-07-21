@@ -12482,11 +12482,27 @@ function syncMarketFabSize() {
   }
 }
 
+// Окно карандаша над баром ставок визуально было шире Market — вместо того
+// чтобы полагаться на CSS-переменную (в ней могла закрасться неточность),
+// меряем РЕАЛЬНУЮ ширину уже отрисованной кнопки Market и жёстко ставим её
+// окну карандаша. Совпадение гарантировано, т.к. число берётся напрямую у
+// самого Market.
+function syncEditFabWidth() {
+  const marketBtn = document.getElementById("navMarket");
+  const editFab = document.getElementById("scannerBetBarEditFab");
+  if (!marketBtn || !editFab) return;
+  const rect = marketBtn.getBoundingClientRect();
+  if (rect.width > 0) {
+    editFab.style.width = `${rect.width}px`;
+  }
+}
+
 function forceMarketFabSizeRefresh() {
   syncMarketFabSize();
-  setTimeout(syncMarketFabSize, 80);
-  setTimeout(syncMarketFabSize, 220);
-  setTimeout(syncMarketFabSize, 520);
+  syncEditFabWidth();
+  setTimeout(() => { syncMarketFabSize(); syncEditFabWidth(); }, 80);
+  setTimeout(() => { syncMarketFabSize(); syncEditFabWidth(); }, 220);
+  setTimeout(() => { syncMarketFabSize(); syncEditFabWidth(); }, 520);
 }
 
 window.addEventListener("resize", forceMarketFabSizeRefresh, { passive: true });
