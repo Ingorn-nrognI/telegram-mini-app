@@ -783,12 +783,14 @@ button {
      что и у обычного контента экранов — calc(safe-top + 92px)), низ доходит
      до самого края экрана, а z-index выше нижнего меню — окно открывается
      ПОВЕРХ него, полностью его закрывая, а не пряча свою нижнюю часть сзади. */
-  top: calc(var(--safe-top) + 92px);
+  top: calc(var(--safe-top) + 76px);
   bottom: 0;
   padding-bottom: 18px;
   width: min(calc(100vw - 12px), 480px);
   border-radius: 26px 26px 0 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background:
     linear-gradient(180deg, rgba(12, 17, 39, 0.98), rgba(7, 9, 19, 0.98));
   border: 1px solid rgba(255,255,255,0.08);
@@ -875,7 +877,13 @@ button {
 }
 
 .history-scroll-area {
-  max-height: calc(min(56vh, 520px) - 62px);
+  /* Раньше здесь была фиксированная высота, подобранная под старый, более
+     низкий размер окна. Когда окно стало намного выше (открывается почти от
+     баланса до самого низа), список раундов остался той же маленькой высоты
+     — отсюда пустое место под карточками. Теперь список растягивается на всё
+     оставшееся место внутри окна, какой бы высоты оно ни было. */
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 12px;
   scrollbar-width: thin;
