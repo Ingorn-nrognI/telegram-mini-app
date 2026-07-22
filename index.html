@@ -784,9 +784,9 @@ button {
      до самого края экрана, а z-index выше нижнего меню — окно открывается
      ПОВЕРХ него, полностью его закрывая, а не пряча свою нижнюю часть сзади. */
   top: calc(var(--safe-top) + 76px);
-  /* 6px оказались визуально незаметны из-за сильной тени окна (она тёмная и
-     сливается с фоном) — увеличили отступ, чтобы зазор точно был виден. */
-  bottom: 14px;
+  /* Ровно 6px — то же значение, что и боковой отступ (100vw - 12px = по 6px
+     с каждой стороны при центрировании), теперь совпадает один в один. */
+  bottom: 6px;
   padding-bottom: 18px;
   width: min(calc(100vw - 12px), 480px);
   border-radius: 26px;
@@ -835,7 +835,7 @@ button {
    как было. */
 #scannerRoundsPanel {
   top: calc(var(--safe-top) + 76px);
-  bottom: 14px;
+  bottom: 6px;
   transform: translate(-50%, -32px);
   padding-bottom: 18px;
   border-radius: 26px;
