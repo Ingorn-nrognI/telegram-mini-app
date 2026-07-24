@@ -1812,6 +1812,12 @@ button {
   white-space: nowrap;
 }
 
+.scanner-round-number-under-arena {
+  display: block;
+  text-align: center;
+  margin-top: -6px;
+}
+
 .scanner-players-heading-title {
   flex: 1 1 auto;
   min-width: 0;
@@ -4396,6 +4402,7 @@ button {
       <section class="section-card scanner-arena-card">
         <div class="scanner-canvas-shell" id="scannerScreenCanvasShell"></div>
       </section>
+      <div id="scannerRoundNumberDisplay" class="scanner-round-number-muted scanner-round-number-under-arena">Раунд №: —</div>
       <div id="scannerResultOverlay" class="scanner-result-overlay" onclick="handleScannerResultOverlayClick(event)">
         <div class="scanner-result-banner" onclick="event.stopPropagation()">
           <button class="scanner-result-close-btn" onclick="closeScannerResultOverlay()" aria-label="Закрыть">
@@ -4418,7 +4425,6 @@ button {
         <div class="scanner-inline-section-title scanner-players-heading-title">
           Игроки <span id="scannerPlayersCount" class="scanner-players-count">0</span>
         </div>
-        <div id="scannerRoundNumberDisplay" class="scanner-round-number-muted">Раунд №: —</div>
         <button type="button" id="scannerParticipantsToggle" class="scanner-recent-toggle scanner-participants-toggle" onclick="toggleScannerParticipants(event)" aria-label="Показать игроков" aria-expanded="false">
           <span class="scanner-recent-toggle-icon">▾</span>
         </button>
