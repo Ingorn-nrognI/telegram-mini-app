@@ -976,7 +976,12 @@ button {
 .bottom-bar {
   position: absolute;
   left: 6px;
-  bottom: 0px;
+  /* Раньше здесь стояло 0px — бар вплотную к краю на всех платформах.
+     Теперь фиксированный подъём в 18px, ОДИНАКОВЫЙ на всех платформах
+     (не завязан на safe-area, чтобы не отличалось между Android/десктопом,
+     где safe-area = 0, и iPhone, где она есть) — этого хватает, чтобы бар
+     не соприкасался с полоской свайпа снизу на айфонах. */
+  bottom: 18px;
   /* Ширина уменьшена ровно на размер круга Market + зазор между ними —
      История переехала на главный экран (к балансу), а на освободившееся
      место садится ОТДЕЛЬНЫЙ круглый элемент (см. .bottom-market-fab),
@@ -1010,7 +1015,7 @@ button {
      тот же принцип высоты/фона/тени, что и у .bottom-bar, только круглый. */
   position: absolute;
   right: 6px;
-  bottom: 0px;
+  bottom: 18px;
   width: var(--market-fab-size);
   height: var(--market-fab-size);
   border-radius: 50%;
@@ -3427,7 +3432,7 @@ button {
 }
 
 .bottom-bar {
-  bottom: 0px;
+  bottom: 18px;
   width: calc(100vw - 12px - var(--market-fab-size) - var(--market-fab-gap));
   min-height: var(--bottom-nav-height);
   padding: 8px 7px;
