@@ -1816,10 +1816,10 @@ button {
   display: block;
   text-align: center;
   margin-top: -6px;
-  /* Общий отступ между всеми секциями экрана — 14px (задан на .screen-inner).
-     Отрицательный нижний отступ здесь сокращает именно ЭТОТ промежуток вдвое,
-     не трогая расстояния между остальными блоками экрана. */
-  margin-bottom: -7px;
+  /* Максимально сжали промежуток именно между "Раунд №" и "Игроки", не трогая
+     расстояния между остальными блоками экрана (у них общий gap 14px
+     на .screen-inner). */
+  margin-bottom: -13px;
 }
 
 .scanner-players-heading-title {
@@ -4429,9 +4429,6 @@ button {
         <div class="scanner-inline-section-title scanner-players-heading-title">
           Игроки <span id="scannerPlayersCount" class="scanner-players-count">0</span>
         </div>
-        <button type="button" id="scannerParticipantsToggle" class="scanner-recent-toggle scanner-participants-toggle" onclick="toggleScannerParticipants(event)" aria-label="Показать игроков" aria-expanded="false">
-          <span class="scanner-recent-toggle-icon">▾</span>
-        </button>
       </div>
       <div id="scannerParticipantsMeta" class="scanner-live-meta"></div>
       <div id="scannerParticipantsList" class="scanner-player-list is-collapsed"></div>
@@ -5035,7 +5032,7 @@ const scannerGridState = {
   previewZones: [],
   recentRounds: [],
   recentRoundsExpanded: false,
-  playersExpanded: false,
+  playersExpanded: true,
   myPlayerId: null,
   myJoinedRoundId: null,
   myParticipationStatus: "none",
