@@ -1964,6 +1964,80 @@ button {
   color: transparent;
 }
 
+.scanner-player-row {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.scanner-player-row .scanner-player-swatch {
+  width: 28px;
+  height: 28px;
+}
+
+.scanner-player-top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scanner-player-identity {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.scanner-player-row .scanner-player-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.scanner-player-percent {
+  font-size: 12px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.scanner-player-stakes-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid;
+  border-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.18) 50%, transparent) 1;
+}
+
+.scanner-stake-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.scanner-stake-chip-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.scanner-stake-chip-amount {
+  font-size: 9px;
+  font-weight: 800;
+  color: #eaf5ff;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .scanner-player-copy,
 .scanner-recent-copy {
   min-width: 0;
@@ -8518,6 +8592,7 @@ function buildScannerPlayersFromFirestore(round, participants) {
       ? (getCurrentPlayer().avatar || participant.avatar || null)
       : (participant.avatar || null),
     stake: normalizeStakeValue(participant.stake),
+    stakeHistory: Array.isArray(participant.stakeHistory) ? participant.stakeHistory : [],
     joinedAt: tsToMs(participant.joinedAt || participant.createdAt || participant.updatedAt || Date.now()),
     isMe: String(participant.playerId || participant.id) === currentPlayer.id,
     left: participant.status === "left",
@@ -12130,19 +12205,38 @@ function getScannerPlayerAvatarHtml(player) {
   return `<div class="scanner-player-avatar has-photo" style="background-image:url(&quot;${escapeCssUrl(avatarUrl)}&quot;);">${initial}</div>`;
 }
 
+function getScannerPlayerStakeChipsHtml(player) {
+  const history = Array.isArray(player.stakeHistory) && player.stakeHistory.length
+    ? player.stakeHistory
+    : (Number(player.stake) > 0 ? [{ amount: player.stake }] : []);
+
+  if (!history.length) return "";
+
+  return history.map((entry) => `
+    <div class="scanner-stake-chip">
+      <svg class="scanner-stake-chip-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="#30A1F5"/><path d="M60.41 26.75H39.59c-2.772 0-4.159 0-5.413.388a8.691 8.691 0 0 0-3.028 1.653c-1.005.846-1.754 2.012-3.254 4.344L21.277 43.43c-.99 1.54-1.486 2.311-1.62 3.122-.119.715-.04 1.45.228 2.123.304.764.951 1.411 2.247 2.707l24.59 24.59c1.148 1.148 1.721 1.722 2.383 1.936.582.19 1.208.19 1.79 0 .661-.214 1.235-.788 2.382-1.935l24.591-24.591c1.296-1.296 1.943-1.943 2.247-2.707a3.982 3.982 0 0 0 .228-2.123c-.134-.81-.63-1.581-1.62-3.122l-6.618-10.295c-1.5-2.332-2.25-3.498-3.254-4.344a8.692 8.692 0 0 0-3.028-1.653c-1.255-.388-2.64-.388-5.414-.388z" fill="#fff"/></svg>
+      <span class="scanner-stake-chip-amount">${formatTon(entry.amount)}</span>
+    </div>
+  `).join("");
+}
+
 function getScannerPlayerRowHtml(player, options = {}) {
   const arenaPercent = formatPercent((Number(player.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
   const pinnedClass = options.pinned ? " scanner-pinned-player" : "";
+  const chipsHtml = getScannerPlayerStakeChipsHtml(player);
 
   return `
     <div class="scanner-player-row${player.isMe ? " me" : ""}${pinnedClass}">
-      <div class="scanner-player-swatch" style="background:${player.color};"></div>
-      ${getScannerPlayerAvatarHtml(player)}
-      <div class="scanner-player-copy">
+      <div class="scanner-player-top-row">
+        <div class="scanner-player-identity">
+          <div class="scanner-player-swatch" style="background:${player.color};"></div>
+          ${getScannerPlayerAvatarHtml(player)}
+        </div>
         <div class="scanner-player-name">${escapeHtml(player.name)}</div>
-        <div class="scanner-player-meta">${arenaPercent}</div>
+        <div class="scanner-player-percent">${arenaPercent}</div>
+        <div class="scanner-player-stake">${formatTon(player.stake)}</div>
       </div>
-      <div class="scanner-player-stake">${formatTon(player.stake)}</div>
+      ${chipsHtml ? `<div class="scanner-player-stakes-row">${chipsHtml}</div>` : ""}
     </div>
   `;
 }
@@ -12161,7 +12255,8 @@ function renderScannerParticipants() {
     normalizeStakeValue(player.stake).toFixed(2),
     String(player.cellCount || 0),
     String(player.color || ""),
-    player.isMe ? "1" : "0"
+    player.isMe ? "1" : "0",
+    Array.isArray(player.stakeHistory) ? player.stakeHistory.length : 0
   ].join("~")).join("||");
   const renderSignature = [
     scannerGridState.status,
