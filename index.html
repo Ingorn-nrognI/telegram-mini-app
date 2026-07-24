@@ -1816,6 +1816,10 @@ button {
   display: block;
   text-align: center;
   margin-top: -6px;
+  /* Общий отступ между всеми секциями экрана — 14px (задан на .screen-inner).
+     Отрицательный нижний отступ здесь сокращает именно ЭТОТ промежуток вдвое,
+     не трогая расстояния между остальными блоками экрана. */
+  margin-bottom: -7px;
 }
 
 .scanner-players-heading-title {
