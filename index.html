@@ -1968,7 +1968,8 @@ button {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 8px;
+  padding: 8px 14px;
 }
 
 .scanner-player-row .scanner-player-swatch {
@@ -1979,7 +1980,7 @@ button {
 .scanner-player-top-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .scanner-player-identity {
@@ -1990,8 +1991,11 @@ button {
 }
 
 .scanner-player-row .scanner-player-name {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .scanner-player-percent {
@@ -2001,18 +2005,78 @@ button {
   white-space: nowrap;
 }
 
-.scanner-player-stakes-row {
+.scanner-player-row .scanner-player-stake {
+  margin-left: auto;
+}
+
+.scanner-player-stakes-wrap {
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 6px;
-  padding-top: 10px;
+  padding-top: 8px;
   border-top: 1px solid;
   border-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.18) 50%, transparent) 1;
 }
 
+.scanner-player-stakes-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(109, 154, 255, 0.55) transparent;
+  cursor: grab;
+}
+
+.scanner-player-stakes-row::-webkit-scrollbar {
+  height: 4px;
+}
+
+.scanner-player-stakes-row::-webkit-scrollbar-thumb {
+  background: rgba(109, 154, 255, 0.55);
+  border-radius: 999px;
+}
+
+.scanner-player-stakes-row.is-expanded {
+  flex-wrap: wrap;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 156px;
+  cursor: default;
+}
+
+.scanner-stake-toggle {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e7efff;
+  flex-shrink: 0;
+}
+
+.scanner-stake-toggle svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.scanner-stake-toggle.is-open svg {
+  transform: rotate(180deg);
+}
+
 .scanner-stake-chip {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -2025,13 +2089,13 @@ button {
 }
 
 .scanner-stake-chip-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   display: block;
 }
 
 .scanner-stake-chip-amount {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   color: #eaf5ff;
   line-height: 1;
@@ -12195,6 +12259,62 @@ function getOrderedScannerPlayersForList() {
   return nextValue;
 }
 
+const scannerExpandedStakeRows = new Set();
+
+function initScannerStakesRowInteractions(list) {
+  if (!list || list._scannerStakesInit) return;
+  list._scannerStakesInit = true;
+
+  let dragRow = null;
+  let startX = 0;
+  let scrollStart = 0;
+
+  list.addEventListener("mousedown", (event) => {
+    const row = event.target.closest(".scanner-player-stakes-row");
+    if (!row || row.classList.contains("is-expanded")) return;
+    dragRow = row;
+    startX = event.pageX;
+    scrollStart = row.scrollLeft;
+  });
+
+  window.addEventListener("mousemove", (event) => {
+    if (!dragRow) return;
+    dragRow.scrollLeft = scrollStart - (event.pageX - startX);
+  });
+
+  window.addEventListener("mouseup", () => {
+    dragRow = null;
+  });
+
+  list.addEventListener("wheel", (event) => {
+    const row = event.target.closest(".scanner-player-stakes-row");
+    if (!row || row.classList.contains("is-expanded")) return;
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      row.scrollLeft += event.deltaY;
+      event.preventDefault();
+    }
+  }, { passive: false });
+}
+
+function toggleScannerPlayerStakesExpand(event) {
+  if (event) event.stopPropagation();
+  const button = event.currentTarget;
+  const wrap = button.closest(".scanner-player-stakes-wrap");
+  const row = wrap ? wrap.querySelector(".scanner-player-stakes-row") : null;
+  if (!row) return;
+
+  const playerId = row.dataset.playerId || "";
+  const isExpanded = row.classList.toggle("is-expanded");
+  button.classList.toggle("is-open", isExpanded);
+  button.setAttribute("aria-expanded", String(isExpanded));
+
+  if (isExpanded) {
+    scannerExpandedStakeRows.add(playerId);
+  } else {
+    scannerExpandedStakeRows.delete(playerId);
+  }
+}
+
 function getScannerPlayerAvatarHtml(player) {
   const initial = escapeHtml(getPlayerInitial(player?.name));
   const avatarUrl = String(player?.avatar || "").trim();
@@ -12215,7 +12335,7 @@ function getScannerPlayerStakeChipsHtml(player) {
   return history.map((entry) => `
     <div class="scanner-stake-chip">
       <svg class="scanner-stake-chip-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="#30A1F5"/><path d="M60.41 26.75H39.59c-2.772 0-4.159 0-5.413.388a8.691 8.691 0 0 0-3.028 1.653c-1.005.846-1.754 2.012-3.254 4.344L21.277 43.43c-.99 1.54-1.486 2.311-1.62 3.122-.119.715-.04 1.45.228 2.123.304.764.951 1.411 2.247 2.707l24.59 24.59c1.148 1.148 1.721 1.722 2.383 1.936.582.19 1.208.19 1.79 0 .661-.214 1.235-.788 2.382-1.935l24.591-24.591c1.296-1.296 1.943-1.943 2.247-2.707a3.982 3.982 0 0 0 .228-2.123c-.134-.81-.63-1.581-1.62-3.122l-6.618-10.295c-1.5-2.332-2.25-3.498-3.254-4.344a8.692 8.692 0 0 0-3.028-1.653c-1.255-.388-2.64-.388-5.414-.388z" fill="#fff"/></svg>
-      <span class="scanner-stake-chip-amount">${formatTon(entry.amount)}</span>
+      <span class="scanner-stake-chip-amount">${Number(entry.amount).toFixed(2)}</span>
     </div>
   `).join("");
 }
@@ -12224,6 +12344,16 @@ function getScannerPlayerRowHtml(player, options = {}) {
   const arenaPercent = formatPercent((Number(player.cellCount || 0) / SCANNER_GRID_TOTAL_CELLS) * 100);
   const pinnedClass = options.pinned ? " scanner-pinned-player" : "";
   const chipsHtml = getScannerPlayerStakeChipsHtml(player);
+  const isRowExpanded = scannerExpandedStakeRows.has(String(player.id));
+
+  const stakesBlockHtml = chipsHtml ? `
+      <div class="scanner-player-stakes-wrap">
+        <div class="scanner-player-stakes-row${isRowExpanded ? " is-expanded" : ""}" data-player-id="${escapeHtml(String(player.id))}">${chipsHtml}</div>
+        <button type="button" class="scanner-stake-toggle${isRowExpanded ? " is-open" : ""}" onclick="toggleScannerPlayerStakesExpand(event)" aria-expanded="${isRowExpanded ? "true" : "false"}" aria-label="Показать все ставки">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+    ` : "";
 
   return `
     <div class="scanner-player-row${player.isMe ? " me" : ""}${pinnedClass}">
@@ -12236,7 +12366,7 @@ function getScannerPlayerRowHtml(player, options = {}) {
         <div class="scanner-player-percent">${arenaPercent}</div>
         <div class="scanner-player-stake">${formatTon(player.stake)}</div>
       </div>
-      ${chipsHtml ? `<div class="scanner-player-stakes-row">${chipsHtml}</div>` : ""}
+      ${stakesBlockHtml}
     </div>
   `;
 }
