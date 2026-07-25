@@ -12289,11 +12289,11 @@ function getScannerPlayerRowHtml(player, options = {}) {
     <div class="scanner-player-row${player.isMe ? " me" : ""}${pinnedClass}">
       <div class="scanner-player-top-row">
         <div class="scanner-player-identity">
-          <div class="scanner-player-swatch" style="background:${player.color};"></div>
           ${getScannerPlayerAvatarHtml(player)}
         </div>
         <div class="scanner-player-name">${escapeHtml(player.name)}</div>
-        <div class="scanner-player-percent">${arenaPercent}</div>
+        <div class="scanner-player-percent"><span class="scanner-player-percent-label">Шансы</span> ${arenaPercent}</div>
+        <div class="scanner-player-swatch" style="background:${player.color};"></div>
         <div class="scanner-player-stake">${formatTon(player.stake)}</div>
       </div>
       ${stakesBlockHtml}
