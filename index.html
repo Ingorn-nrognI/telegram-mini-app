@@ -6916,7 +6916,7 @@ function stepLiveBgPhysics(dt, bounds) {
 function liveBgPhysicsLoop(now) {
   const appBg = document.querySelector(".app-bg");
   const tierActive = _liveBgTierCache === "mid" || _liveBgTierCache === "high";
-  if (appBg && _liveBgOrbs && tierActive && !isScannerScreenActive()) {
+  if (appBg && _liveBgOrbs && tierActive) {
     const dt = Math.min(0.05, _liveBgLastFrameTime ? (now - _liveBgLastFrameTime) / 1000 : 0.016);
     const rect = appBg.getBoundingClientRect();
     stepLiveBgPhysics(dt, { width: rect.width, height: rect.height });
