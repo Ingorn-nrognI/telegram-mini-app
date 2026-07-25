@@ -1927,22 +1927,33 @@ button {
 .scanner-player-identity {
   display: flex;
   align-items: center;
-  gap: 4px;
   flex-shrink: 0;
 }
 
-.scanner-player-row .scanner-player-name {
-  flex: 0 1 auto;
+.scanner-player-row .scanner-player-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 40%;
+}
+
+.scanner-player-row .scanner-player-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scanner-player-percent-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .scanner-player-percent {
   font-size: 12px;
   color: var(--text-dim);
-  flex-shrink: 0;
   white-space: nowrap;
 }
 
