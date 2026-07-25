@@ -13289,37 +13289,18 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   const safeRadius = Math.max(4, Number(radius) || 0);
   const alpha = Math.max(0, Math.min(1, Number(options.alpha) || 1));
   const plusScale = Math.max(0.2, Number(options.plusScale) || 0.72);
-  const plusColor = options.plusColor || "rgba(7, 11, 18, 0.96)";
+  const plusColor = options.plusColor || "rgba(255,255,255,0.92)";
   const rotation = Number.isFinite(Number(options.rotation)) ? Number(options.rotation) : 0;
-  const wobble = Math.max(0, Number(options.wobble) || 0);
-  const reticleQuality = getEffectiveQualityTier();
 
   ctx.save();
   ctx.translate(x, y);
   ctx.globalAlpha = alpha;
 
-
-  ctx.fillStyle = "rgba(255,255,255,0.86)";
-  ctx.beginPath();
-  ctx.arc(0, 0, safeRadius * 0.24, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.lineWidth = Math.max(1.4, safeRadius * 0.18);
-  ctx.strokeStyle = "rgba(255,255,255,0.94)";
-  ctx.beginPath();
-  ctx.arc(0, 0, safeRadius * 0.72, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.lineWidth = Math.max(1, safeRadius * 0.08);
+  ctx.lineWidth = Math.max(2, safeRadius * 0.18);
   ctx.strokeStyle = "rgba(45, 225, 255, 0.92)";
   ctx.beginPath();
   ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
   ctx.stroke();
-
-  const orbitRadius = safeRadius * (0.54 + wobble * 0.12);
-  const orbitX = Math.cos(rotation) * orbitRadius;
-  const orbitY = Math.sin(rotation) * orbitRadius;
-  const orbitDotRadius = Math.max(1.2, safeRadius * (0.08 + wobble * 0.03));
 
   ctx.save();
   ctx.rotate(rotation * 1.14);
@@ -13334,19 +13315,6 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.lineTo(0, plusLength);
   ctx.stroke();
   ctx.restore();
-
-  if (reticleQuality !== "low") {
-    ctx.save();
-    ctx.fillStyle = "rgba(45,225,255,0.18)";
-    ctx.beginPath();
-    ctx.arc(orbitX, orbitY, orbitDotRadius * 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.beginPath();
-    ctx.arc(orbitX, orbitY, orbitDotRadius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
 
   ctx.restore();
 }
