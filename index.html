@@ -13296,8 +13296,8 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.translate(x, y);
   ctx.globalAlpha = alpha;
 
-  ctx.lineWidth = Math.max(2, safeRadius * 0.18);
-  ctx.strokeStyle = "rgba(45, 225, 255, 0.92)";
+  ctx.lineWidth = 2.85;
+  ctx.strokeStyle = "rgba(45, 225, 255, 0.74)";
   ctx.beginPath();
   ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
   ctx.stroke();
@@ -13691,7 +13691,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     coreBlur: 14,
     beamColor: "rgba(45, 225, 255, 0.74)",
     innerColor: "rgba(255,255,255,0.88)",
-    centerGap: idleReticleRadius * 2
+    centerGap: idleReticleRadius * 2 + 24
   });
   ctx.restore();
   drawScannerArenaBorderBackground(ctx, size);
@@ -13721,7 +13721,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     wobble: options.reticleWobble || 0,
     centerGap: 0,
     plusScale: 0.22,
-    plusColor: "rgba(7, 11, 18, 0.96)"
+    plusColor: "rgba(255,255,255,0.92)"
   });
   ctx.restore();
   if (waitingTextAlpha > 0.01) {
@@ -14153,7 +14153,7 @@ function renderScannerCanvas() {
       coreBlur: 14,
       beamColor: "rgba(45, 225, 255, 0.74)",
       innerColor: "rgba(255,255,255,0.88)",
-      centerGap: reticleRadius * 2
+      centerGap: reticleRadius * 2 + 24
     });
     ctx.restore();
     if (roundStatus === "shuffling") {
@@ -14294,7 +14294,7 @@ function renderScannerCanvas() {
     drawScannerReticle(ctx, 0, 0, reticleRadius, {
       alpha: 0.86,
       plusScale: 0.22,
-      plusColor: "rgba(7, 11, 18, 0.96)",
+      plusColor: "rgba(255,255,255,0.92)",
       rotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
       wobble: SCANNER_RETICLE_IDLE_WOBBLE
     });
