@@ -13777,8 +13777,8 @@ function drawScannerPlayerBadge(ctx, zone, size, alpha = 1) {
   if (!zone?.canShowBadge || !zone.player) return;
   const zoneWidthPx = Math.max(1, zone.widthNorm * size);
   const zoneHeightPx = Math.max(1, zone.heightNorm * size);
-  const radius = Math.max(16, Math.min(38, Math.min(zoneWidthPx, zoneHeightPx) * 0.18));
-  if (radius < 16) return;
+  const radius = Math.max(32, Math.min(76, Math.min(zoneWidthPx, zoneHeightPx) * 0.36));
+  if (radius < 32) return;
 
   const x = Math.max(radius + 12, Math.min(size - radius - 12, zone.centerX * size));
   const y = Math.max(radius + 12, Math.min(size - radius - 12, zone.centerY * size));
