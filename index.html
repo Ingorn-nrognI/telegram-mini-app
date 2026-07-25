@@ -7785,7 +7785,7 @@ function assignScannerRoundColors(round, participants) {
     _scannerRoundColorCache = {
       roundSeed,
       byPid: new Map(),
-      hueRotation: roundHash % 30
+      hueRotation: roundHash % 360
     };
   }
   const saturationCycle = [72, 76, 80, 84, 88, 70, 74, 78, 82, 86];
@@ -7795,9 +7795,14 @@ function assignScannerRoundColors(round, participants) {
 
   // Новым игрокам (без закреплённого цвета) подбираем оттенок с максимальным
   // отступом от уже ЗАНЯТЫХ оттенков — уже присвоенные цвета при этом не трогаем.
-  const ordered = (participants || []).slice().sort((a, b) =>
-    String(a.playerId || a.id || "").localeCompare(String(b.playerId || b.id || ""))
-  );
+  // Порядок обработки игроков зависит от seed раунда, а не только от их ID —
+  // иначе один и тот же игрок каждый раунд попадал в одну и ту же "позицию"
+  // и получал почти тот же самый цвет.
+  const ordered = (participants || []).slice().sort((a, b) => {
+    const pidA = String(a.playerId || a.id || "");
+    const pidB = String(b.playerId || b.id || "");
+    return hashString(`${roundSeed}::${pidA}`) - hashString(`${roundSeed}::${pidB}`);
+  });
 
   ordered.forEach((participant) => {
     const pid = String(participant.playerId || participant.id || "");
