@@ -13297,10 +13297,27 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.globalAlpha = alpha;
 
   ctx.save();
-  ctx.shadowBlur = 12;
-  ctx.shadowColor = "rgba(45, 225, 255, 0.75)";
+  ctx.lineCap = "round";
+  ctx.shadowBlur = 27;
+  ctx.shadowColor = "rgba(45, 225, 255, 0.74)";
+  ctx.globalAlpha = alpha * 0.38;
+  ctx.lineWidth = 10.8;
+  ctx.strokeStyle = "rgba(45, 225, 255, 0.74)";
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.shadowBlur = 14;
+  ctx.globalAlpha = alpha * 0.96;
   ctx.lineWidth = 2.85;
-  ctx.strokeStyle = "rgba(45, 225, 255, 0.9)";
+  ctx.beginPath();
+  ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = alpha * 0.98;
+  ctx.lineWidth = 0.9;
+  ctx.strokeStyle = "rgba(255,255,255,0.88)";
   ctx.beginPath();
   ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
   ctx.stroke();
@@ -13310,7 +13327,7 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.rotate(rotation * 1.14);
   const plusLength = safeRadius * plusScale;
   ctx.lineCap = "round";
-  ctx.lineWidth = Math.max(1, safeRadius * 0.08);
+  ctx.lineWidth = Math.max(0.8, safeRadius * 0.06);
   ctx.strokeStyle = plusColor;
   ctx.beginPath();
   ctx.moveTo(-plusLength, 0);
@@ -13672,7 +13689,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   const safeSample = beamSample || getScannerSharedLobbyBeamSample();
   const waitingTextAlpha = clampScannerNumber(options.waitingTextAlpha ?? 1, 0, 1);
   const beamLength = size * 4.6;
-  const idleReticleRadius = Math.max(10.5, size * 0.031);
+  const idleReticleRadius = Math.max(11, size * 0.031) - 1;
   const bwInner = Math.max(11, size * 0.031) + 1;
   const cx = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.x));
   const cy = Math.max(bwInner, Math.min(size - bwInner, size * safeSample.y));
@@ -13724,7 +13741,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     rotation: options.reticleRotation || 0,
     wobble: options.reticleWobble || 0,
     centerGap: 0,
-    plusScale: 0.22,
+    plusScale: 0.16,
     plusColor: "rgba(255,255,255,0.92)"
   });
   ctx.restore();
@@ -14138,7 +14155,7 @@ function renderScannerCanvas() {
 
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
-    const reticleRadius = Math.max(10.2, size * 0.031);
+    const reticleRadius = Math.max(11, size * 0.031) - 1;
     const px = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.x * size));
     const py = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.y * size));
     const beamLength = size * 4.6;
@@ -14290,14 +14307,14 @@ function renderScannerCanvas() {
   drawScannerArenaBorder(ctx, size);
 
   if (visualBeamSample) {
-    const reticleRadius = Math.max(10.2, size * 0.031);
+    const reticleRadius = Math.max(11, size * 0.031) - 1;
     const px = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.x * size));
     const py = Math.max(reticleRadius, Math.min(size - reticleRadius, visualBeamSample.y * size));
     ctx.save();
     ctx.translate(px, py);
     drawScannerReticle(ctx, 0, 0, reticleRadius, {
       alpha: 0.86,
-      plusScale: 0.22,
+      plusScale: 0.16,
       plusColor: "rgba(255,255,255,0.92)",
       rotation: now * SCANNER_RETICLE_IDLE_SPIN_SPEED,
       wobble: SCANNER_RETICLE_IDLE_WOBBLE
