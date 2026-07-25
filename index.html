@@ -3351,8 +3351,24 @@ button {
 .profile-hero-card {
   padding: 18px;
   display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile-hero-top-row {
+  display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.profile-hero-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid;
+  border-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.18) 50%, transparent) 1;
 }
 
 .profile-screen-avatar {
