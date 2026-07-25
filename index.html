@@ -4541,11 +4541,17 @@ button {
   <div id="profileScreen" class="menu-screen profile-screen">
     <div class="screen-inner profile-screen-inner">
       <section class="profile-hero-card">
-        <div id="profileScreenAvatar" class="profile-avatar profile-screen-avatar">И</div>
-        <div class="profile-screen-copy">
-          <div class="profile-screen-kicker">Профиль игрока</div>
-          <h1 id="profileScreenName" class="profile-screen-name">Игрок</h1>
-          <div id="profileScreenId" class="profile-screen-id">ID: —</div>
+        <div class="profile-hero-top-row">
+          <div id="profileScreenAvatar" class="profile-avatar profile-screen-avatar">И</div>
+          <div class="profile-screen-copy">
+            <div class="profile-screen-kicker">Профиль игрока</div>
+            <h1 id="profileScreenName" class="profile-screen-name">Игрок</h1>
+            <div id="profileScreenId" class="profile-screen-id">ID: —</div>
+          </div>
+        </div>
+        <div class="profile-hero-stat-row">
+          <div class="profile-stat-label">Лучший выигрыш в раунде</div>
+          <div id="profileBestWinValue" class="profile-stat-value">0.00 TON</div>
         </div>
       </section>
 
@@ -4563,11 +4569,6 @@ button {
           <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('topup')">Пополнить</button>
           <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('withdraw')">Вывести</button>
         </div>
-      </section>
-
-      <section class="profile-stat-card">
-        <div class="profile-stat-label">Лучший выигрыш в раунде</div>
-        <div id="profileBestWinValue" class="profile-stat-value">0.00 TON</div>
       </section>
 
       <section class="profile-settings-card">
@@ -5734,6 +5735,7 @@ async function loadProfileBestRoundWin() {
 
   try {
     const userHistorySnapshot = await getHistoryCollectionRef(player.id)
+      .orderBy("savedAt", "desc")
       .limit(80)
       .get();
 
