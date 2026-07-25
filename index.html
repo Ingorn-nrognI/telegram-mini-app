@@ -13296,17 +13296,21 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.translate(x, y);
   ctx.globalAlpha = alpha;
 
+  ctx.save();
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = "rgba(45, 225, 255, 0.75)";
   ctx.lineWidth = 2.85;
-  ctx.strokeStyle = "rgba(45, 225, 255, 0.74)";
+  ctx.strokeStyle = "rgba(45, 225, 255, 0.9)";
   ctx.beginPath();
   ctx.arc(0, 0, safeRadius, 0, Math.PI * 2);
   ctx.stroke();
+  ctx.restore();
 
   ctx.save();
   ctx.rotate(rotation * 1.14);
   const plusLength = safeRadius * plusScale;
   ctx.lineCap = "round";
-  ctx.lineWidth = Math.max(1.2, safeRadius * 0.16);
+  ctx.lineWidth = Math.max(1, safeRadius * 0.08);
   ctx.strokeStyle = plusColor;
   ctx.beginPath();
   ctx.moveTo(-plusLength, 0);
@@ -13691,7 +13695,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     coreBlur: 14,
     beamColor: "rgba(45, 225, 255, 0.74)",
     innerColor: "rgba(255,255,255,0.88)",
-    centerGap: idleReticleRadius * 2 + 24
+    centerGap: idleReticleRadius * 2 + 8
   });
   ctx.restore();
   drawScannerArenaBorderBackground(ctx, size);
@@ -14153,7 +14157,7 @@ function renderScannerCanvas() {
       coreBlur: 14,
       beamColor: "rgba(45, 225, 255, 0.74)",
       innerColor: "rgba(255,255,255,0.88)",
-      centerGap: reticleRadius * 2 + 24
+      centerGap: reticleRadius * 2 + 8
     });
     ctx.restore();
     if (roundStatus === "shuffling") {
