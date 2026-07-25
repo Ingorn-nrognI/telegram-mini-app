@@ -12378,6 +12378,8 @@ function renderScannerParticipants() {
   const toggleButton = document.getElementById("scannerParticipantsToggle");
   if (!meta || !list) return;
 
+  initScannerStakesRowInteractions(list);
+
   const playersCount = Number(scannerGridState.totalPlayers || scannerGridState.players.length || 0);
   const expanded = !!scannerGridState.playersExpanded;
   const playersSignature = scannerGridState.players.map((player) => [
