@@ -436,6 +436,15 @@ button {
   z-index: 10;
 }
 
+#homeScreen.menu-screen {
+  /* Точный расчёт (как и для экрана Сканера): баланс (.top-bar) стоит на
+     safe-top+12px, высота .balance-card ровно 44px → низ баланса =
+     safe-top+56px. У баннеров нет своего margin-top, поэтому весь зазор
+     задаётся здесь: +8px — столько же, сколько между балансом и кнопкой
+     История игр в шапке. */
+  padding-top: calc(var(--safe-top) + 64px);
+}
+
 .menu-screen.active {
   display: block;
 }
