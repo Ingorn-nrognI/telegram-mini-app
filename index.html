@@ -1038,24 +1038,21 @@ button {
   transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease;
 }
 
-.bottom-nav-goo-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  filter: url(#navGooFilter);
-  opacity: 0.14;
-}
-
-.goo-blob {
+.bottom-nav-indicator {
   position: absolute;
   top: 0;
   left: 0;
   width: 0px;
   height: 0px;
-  border-radius: 999px;
-  background: #ffffff;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.04);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.22);
   opacity: 0;
+  transition: left 0.3s cubic-bezier(.4,0,.2,1), top 0.3s cubic-bezier(.4,0,.2,1), width 0.3s cubic-bezier(.4,0,.2,1), height 0.3s cubic-bezier(.4,0,.2,1), opacity 0.2s ease;
 }
 
 .bottom-btn .nav-icon {
@@ -1081,9 +1078,7 @@ button {
 }
 
 .bottom-btn.is-active {
-  background: rgba(255,255,255,0.04);
   color: #ffffff;
-  box-shadow: 0 0 0 1px rgba(45, 225, 255, 0.28);
 }
 
 .center-fab {
@@ -3589,9 +3584,6 @@ button {
 
 .bottom-btn.is-active {
   color: #ffffff;
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.12),
-    inset 0 1px 0 rgba(255,255,255,0.22);
 }
 
 @media (max-width: 420px) {
@@ -4731,19 +4723,7 @@ button {
   </div>
 
   <div class="bottom-bar">
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-      <defs>
-        <filter id="navGooFilter">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
-          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo"/>
-          <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
-        </filter>
-      </defs>
-    </svg>
-    <div class="bottom-nav-goo-layer" id="bottomNavGooLayer">
-      <div class="goo-blob" id="gooBlobFrom"></div>
-      <div class="goo-blob" id="gooBlobTo"></div>
-    </div>
+    <div class="bottom-nav-indicator" id="bottomNavIndicator"></div>
     <button
       type="button"
       id="navLeaderboard"
@@ -5911,7 +5891,6 @@ function syncAppBackButton(options = {}) {
 
 function setActiveBottomNav(navName) {
   const buttons = document.querySelectorAll("[data-nav]");
-  const prevButton = Array.from(buttons).find((b) => b.classList.contains("is-active"));
   const nextButton = Array.from(buttons).find((b) => b.dataset.nav === navName);
 
   currentBottomNav = navName;
@@ -5920,61 +5899,54 @@ function setActiveBottomNav(navName) {
   });
   forceScannerBetBarVisibilityRefresh();
 
-  if (prevButton && nextButton && prevButton !== nextButton) {
-    playBottomNavGooTransition(prevButton, nextButton);
-  }
+  moveBottomNavIndicator(nextButton || null);
 }
 
-function playBottomNavGooTransition(fromEl, toEl) {
+function moveBottomNavIndicator(targetButton) {
   const bar = document.querySelector(".bottom-bar");
-  const blobFrom = document.getElementById("gooBlobFrom");
-  const blobTo = document.getElementById("gooBlobTo");
-  if (!bar || !blobFrom || !blobTo) return;
+  const indicator = document.getElementById("bottomNavIndicator");
+  if (!bar || !indicator) return;
+
+  if (!targetButton) {
+    indicator.style.opacity = "0";
+    indicator._navTarget = null;
+    return;
+  }
 
   const barRect = bar.getBoundingClientRect();
-  const fromRect = fromEl.getBoundingClientRect();
-  const toRect = toEl.getBoundingClientRect();
+  const rect = targetButton.getBoundingClientRect();
+  const wasHidden = indicator.style.opacity !== "1";
 
-  const fromSize = Math.min(fromRect.width, fromRect.height) * 0.86;
-  const toSize = Math.min(toRect.width, toRect.height) * 0.86;
-  const fromCenterX = fromRect.left - barRect.left + fromRect.width / 2;
-  const fromCenterY = fromRect.top - barRect.top + fromRect.height / 2;
-  const toCenterX = toRect.left - barRect.left + toRect.width / 2;
-  const toCenterY = toRect.top - barRect.top + toRect.height / 2;
+  if (wasHidden) {
+    indicator.style.transition = "none";
+  } else {
+    indicator.style.transition = "";
+  }
 
-  const setBlob = (el, cx, cy, size) => {
-    el.style.left = `${cx - size / 2}px`;
-    el.style.top = `${cy - size / 2}px`;
-    el.style.width = `${size}px`;
-    el.style.height = `${size}px`;
-  };
+  indicator.style.left = `${rect.left - barRect.left}px`;
+  indicator.style.top = `${rect.top - barRect.top}px`;
+  indicator.style.width = `${rect.width}px`;
+  indicator.style.height = `${rect.height}px`;
+  indicator.style.borderRadius = getComputedStyle(targetButton).borderRadius;
+  indicator._navTarget = targetButton;
 
-  blobFrom.style.transition = "none";
-  blobTo.style.transition = "none";
-  setBlob(blobFrom, fromCenterX, fromCenterY, fromSize);
-  setBlob(blobTo, fromCenterX, fromCenterY, 0);
-  blobFrom.style.opacity = "1";
-  blobTo.style.opacity = "1";
-
-  void blobFrom.offsetWidth;
-
-  requestAnimationFrame(() => {
-    blobFrom.style.transition = "left 0.38s cubic-bezier(.4,0,.2,1), top 0.38s cubic-bezier(.4,0,.2,1), width 0.38s cubic-bezier(.4,0,.2,1), height 0.38s cubic-bezier(.4,0,.2,1), opacity 0.32s ease 0.10s";
-    blobTo.style.transition = "left 0.38s cubic-bezier(.4,0,.2,1), top 0.38s cubic-bezier(.4,0,.2,1), width 0.38s cubic-bezier(.4,0,.2,1), height 0.38s cubic-bezier(.4,0,.2,1)";
-
-    setBlob(blobFrom, fromCenterX, fromCenterY, 0);
-    blobFrom.style.opacity = "0";
-    setBlob(blobTo, toCenterX, toCenterY, toSize);
-  });
-
-  clearTimeout(bar._gooCleanupTimer);
-  bar._gooCleanupTimer = setTimeout(() => {
-    blobFrom.style.opacity = "0";
-    blobTo.style.opacity = "0";
-    setBlob(blobFrom, toCenterX, toCenterY, 0);
-    setBlob(blobTo, toCenterX, toCenterY, 0);
-  }, 420);
+  if (wasHidden) {
+    void indicator.offsetWidth;
+    indicator.style.transition = "";
+  }
+  indicator.style.opacity = "1";
 }
+
+window.addEventListener("resize", () => {
+  const indicator = document.getElementById("bottomNavIndicator");
+  if (indicator && indicator._navTarget && indicator.style.opacity === "1") {
+    const prevTransition = indicator.style.transition;
+    indicator.style.transition = "none";
+    moveBottomNavIndicator(indicator._navTarget);
+    void indicator.offsetWidth;
+    indicator.style.transition = prevTransition;
+  }
+});
 
 function getPreferredHomeNav() {
   if (!userHasNavigatedManually) return "";
