@@ -7737,7 +7737,10 @@ function applyScannerDailyTop(data) {
   const nameEl = document.getElementById("scannerTopDayName");
   const amountEl = document.getElementById("scannerTopDayAmount");
   const multiplierEl = document.getElementById("scannerTopDayMultiplier");
-  if (nameEl) setTextContentIfChanged(nameEl, data.dailyTopWinnerName || "—");
+  if (nameEl) {
+    setTextContentIfChanged(nameEl, data.dailyTopWinnerName || "—");
+    nameEl.dataset.fullName = data.dailyTopWinnerName || "—";
+  }
   if (amountEl) setTextContentIfChanged(amountEl, data.dailyTopPayout ? formatTon(data.dailyTopPayout) : "—");
   if (multiplierEl) {
     setTextContentIfChanged(multiplierEl, formatScannerChanceWithMultiplier(
@@ -7751,7 +7754,10 @@ function applyScannerLastRound(data) {
   const nameEl = document.getElementById("scannerLastRoundName");
   const amountEl = document.getElementById("scannerLastRoundAmount");
   const multiplierEl = document.getElementById("scannerLastRoundMultiplier");
-  if (nameEl) setTextContentIfChanged(nameEl, data.lastRoundWinnerName || "—");
+  if (nameEl) {
+    setTextContentIfChanged(nameEl, data.lastRoundWinnerName || "—");
+    nameEl.dataset.fullName = data.lastRoundWinnerName || "—";
+  }
   if (amountEl) setTextContentIfChanged(amountEl, data.lastRoundPayout ? formatTon(data.lastRoundPayout) : "—");
   if (multiplierEl) {
     setTextContentIfChanged(multiplierEl, formatScannerChanceWithMultiplier(
@@ -11194,7 +11200,10 @@ function applySocketRoundResult(data) {
     const lastRoundNameEl = document.getElementById("scannerLastRoundName");
     const lastRoundAmountEl = document.getElementById("scannerLastRoundAmount");
     const lastRoundMultiplierEl = document.getElementById("scannerLastRoundMultiplier");
-    if (lastRoundNameEl) setTextContentIfChanged(lastRoundNameEl, data.winnerName || "—");
+    if (lastRoundNameEl) {
+      setTextContentIfChanged(lastRoundNameEl, data.winnerName || "—");
+      lastRoundNameEl.dataset.fullName = data.winnerName || "—";
+    }
     if (lastRoundAmountEl) setTextContentIfChanged(lastRoundAmountEl, formatTon(data.winnerPayout || 0));
     if (lastRoundMultiplierEl) {
       const _liveMult = Number(data.winnerStake || 0) > 0
@@ -15092,6 +15101,66 @@ window.closeScannerResultOverlay = closeScannerResultOverlay;
 window.handleScannerResultOverlayClick = handleScannerResultOverlayClick;
 
 document.querySelectorAll(".bottom-btn").forEach(btn => btn.classList.remove("is-active"));
+
+function initScannerHighlightNameInteractions() {
+  const tooltip = document.getElementById("scannerNameTooltip");
+  if (!tooltip) return;
+
+  const isTruncated = (el) => el.scrollWidth > el.clientWidth + 1;
+
+  document.addEventListener("mouseenter", (event) => {
+    const el = event.target.closest && event.target.closest(".scanner-highlight-name");
+    if (!el || !isTruncated(el)) return;
+    tooltip.textContent = el.dataset.fullName || el.textContent;
+    tooltip.style.opacity = "1";
+  }, true);
+
+  document.addEventListener("mousemove", (event) => {
+    if (tooltip.style.opacity !== "1") return;
+    const el = event.target.closest && event.target.closest(".scanner-highlight-name");
+    if (!el) { tooltip.style.opacity = "0"; return; }
+    tooltip.style.left = `${event.clientX}px`;
+    tooltip.style.top = `${event.clientY + 18}px`;
+  });
+
+  document.addEventListener("mouseleave", (event) => {
+    const el = event.target.closest && event.target.closest(".scanner-highlight-name");
+    if (el) tooltip.style.opacity = "0";
+  }, true);
+
+  document.addEventListener("click", (event) => {
+    const nameEl = event.target.closest && event.target.closest(".scanner-highlight-name");
+    const card = nameEl ? nameEl.closest(".scanner-highlight-card") : null;
+
+    document.querySelectorAll(".scanner-highlight-expand.is-open").forEach((exp) => {
+      if (!card || exp.closest(".scanner-highlight-card") !== card) {
+        exp.classList.remove("is-open");
+      }
+    });
+
+    if (!nameEl || !card || !isTruncated(nameEl)) return;
+
+    let expandEl = card.querySelector(".scanner-highlight-expand");
+    if (!expandEl) {
+      expandEl = document.createElement("div");
+      expandEl.className = "scanner-highlight-expand";
+      card.appendChild(expandEl);
+    }
+    expandEl.textContent = nameEl.dataset.fullName || nameEl.textContent;
+    const isOpen = expandEl.classList.toggle("is-open");
+    if (isOpen) {
+      clearTimeout(expandEl._hideTimer);
+      expandEl._hideTimer = setTimeout(() => expandEl.classList.remove("is-open"), 3500);
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initScannerHighlightNameInteractions);
+} else {
+  initScannerHighlightNameInteractions();
+}
 </script>
+<div id="scannerNameTooltip" class="scanner-name-tooltip"></div>
 </body>
 </html>
