@@ -1689,6 +1689,36 @@ button {
 
 .scanner-highlight-expand {
   position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border-radius: 16px;
+  background: rgba(10, 14, 30, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.12);
+  font-size: 13px;
+  font-weight: 800;
+  color: #eaf4ff;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: width 1s cubic-bezier(.2,.8,.2,1), padding 1s cubic-bezier(.2,.8,.2,1);
+  z-index: 3;
+}
+
+.scanner-highlight-expand.is-open {
+  width: 100%;
+  padding: 0 12px;
+  pointer-events: auto;
+}
+
+.scanner-highlight-expand {
+  position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
@@ -15215,26 +15245,57 @@ function initScannerHighlightNameInteractions() {
   if (!tooltip) return;
 
   const isTruncated = (el) => el.scrollWidth > el.clientWidth + 1;
+  const supportsHover = !!(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches);
 
-  document.addEventListener("mouseenter", (event) => {
-    const el = event.target.closest && event.target.closest(".scanner-highlight-name");
-    if (!el || !isTruncated(el)) return;
-    tooltip.textContent = el.dataset.fullName || el.textContent;
-    tooltip.style.opacity = "1";
-  }, true);
+  if (supportsHover) {
+    document.addEventListener("mouseenter", (event) => {
+      const el = event.target.closest && event.target.closest(".scanner-highlight-name");
+      if (!el || !isTruncated(el)) return;
+      tooltip.textContent = el.dataset.fullName || el.textContent;
+      tooltip.style.opacity = "1";
+    }, true);
 
-  document.addEventListener("mousemove", (event) => {
-    if (tooltip.style.opacity !== "1") return;
-    const el = event.target.closest && event.target.closest(".scanner-highlight-name");
-    if (!el) { tooltip.style.opacity = "0"; return; }
-    tooltip.style.left = `${event.clientX}px`;
-    tooltip.style.top = `${event.clientY + 18}px`;
+    document.addEventListener("mousemove", (event) => {
+      if (tooltip.style.opacity !== "1") return;
+      const el = event.target.closest && event.target.closest(".scanner-highlight-name");
+      if (!el) { tooltip.style.opacity = "0"; return; }
+      tooltip.style.left = `${event.clientX}px`;
+      tooltip.style.top = `${event.clientY + 18}px`;
+    });
+
+    document.addEventListener("mouseleave", (event) => {
+      const el = event.target.closest && event.target.closest(".scanner-highlight-name");
+      if (el) tooltip.style.opacity = "0";
+    }, true);
+    return;
+  }
+
+  document.addEventListener("click", (event) => {
+    const nameEl = event.target.closest && event.target.closest(".scanner-highlight-name");
+    const card = nameEl ? nameEl.closest(".scanner-highlight-card") : null;
+
+    document.querySelectorAll(".scanner-highlight-expand.is-open").forEach((exp) => {
+      if (!card || exp.closest(".scanner-highlight-card") !== card) {
+        clearTimeout(exp._hideTimer);
+        exp.classList.remove("is-open");
+      }
+    });
+
+    if (!nameEl || !card) return;
+
+    let expandEl = card.querySelector(".scanner-highlight-expand");
+    if (!expandEl) {
+      expandEl = document.createElement("div");
+      expandEl.className = "scanner-highlight-expand";
+      card.appendChild(expandEl);
+    }
+    expandEl.textContent = nameEl.dataset.fullName || nameEl.textContent;
+    const isOpen = expandEl.classList.toggle("is-open");
+    clearTimeout(expandEl._hideTimer);
+    if (isOpen) {
+      expandEl._hideTimer = setTimeout(() => expandEl.classList.remove("is-open"), 5000);
+    }
   });
-
-  document.addEventListener("mouseleave", (event) => {
-    const el = event.target.closest && event.target.closest(".scanner-highlight-name");
-    if (el) tooltip.style.opacity = "0";
-  }, true);
 }
 
 if (document.readyState === "loading") {
