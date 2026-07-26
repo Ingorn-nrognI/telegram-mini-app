@@ -6035,18 +6035,10 @@ window.addEventListener("resize", () => {
 });
 
 function getPreferredHomeNav() {
-  if (!userHasNavigatedManually) return "";
-  // homeScreenContext === "pvp" никогда не выставляется нигде в коде — вход в
-  // PvP (enterScannerGridMode) переключает экран напрямую, не трогая эту
-  // переменную. Из-за этого функция всегда откатывалась к "games", даже если
-  // пользователь только что вернулся из PvP на обычный главный экран, где
-  // никакого игрового режима сейчас не открыто. Подсвечиваем "Игры" только
-  // тогда, когда реально открыто всплывающее меню выбора игры — иначе на
-  // чистом главном экране подсветки быть не должно вообще.
   if (homeScreenContext === "pvp") return "pvp";
   const modePopup = document.getElementById("modePopup");
   const gamesMenuOpen = !!modePopup?.classList.contains("open");
-  return gamesMenuOpen ? "games" : "";
+  return gamesMenuOpen ? "games" : "arena";
 }
 
 function getActiveModeLabel() {
@@ -7710,6 +7702,22 @@ function handleBottomNav(action, event) {
 
     default:
       break;
+  }
+}
+
+function handleArenaMarketNavClick(event) {
+  if (event) event.stopPropagation();
+  userHasNavigatedManually = true;
+  closeModePopup();
+  closeHistoryPanel({ preserveNav: true });
+  closeLeaderboard();
+  closeBobrRunRooms();
+
+  const marketModeActive = (currentMenuView === "market" || currentMenuView === "inventory");
+  if (marketModeActive) {
+    setMenuView("market");
+  } else {
+    setMenuView("home");
   }
 }
 
