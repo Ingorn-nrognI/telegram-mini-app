@@ -1024,6 +1024,8 @@ button {
 }
 
 .bottom-btn {
+  position: relative;
+  z-index: 1;
   width: 74px;
   height: 74px;
   border-radius: 18px;
@@ -1034,6 +1036,25 @@ button {
   gap: 5px;
   color: rgba(227, 235, 255, 0.72);
   transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.bottom-nav-goo-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  filter: url(#navGooFilter);
+}
+
+.goo-blob {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0px;
+  height: 0px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  opacity: 0;
 }
 
 .bottom-btn .nav-icon {
@@ -4709,6 +4730,19 @@ button {
   </div>
 
   <div class="bottom-bar">
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <filter id="navGooFilter">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo"/>
+          <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+        </filter>
+      </defs>
+    </svg>
+    <div class="bottom-nav-goo-layer" id="bottomNavGooLayer">
+      <div class="goo-blob" id="gooBlobFrom"></div>
+      <div class="goo-blob" id="gooBlobTo"></div>
+    </div>
     <button
       type="button"
       id="navLeaderboard"
@@ -5875,12 +5909,70 @@ function syncAppBackButton(options = {}) {
 }
 
 function setActiveBottomNav(navName) {
-  currentBottomNav = navName;
   const buttons = document.querySelectorAll("[data-nav]");
+  const prevButton = Array.from(buttons).find((b) => b.classList.contains("is-active"));
+  const nextButton = Array.from(buttons).find((b) => b.dataset.nav === navName);
+
+  currentBottomNav = navName;
   buttons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.nav === navName);
   });
   forceScannerBetBarVisibilityRefresh();
+
+  if (prevButton && nextButton && prevButton !== nextButton) {
+    playBottomNavGooTransition(prevButton, nextButton);
+  }
+}
+
+function playBottomNavGooTransition(fromEl, toEl) {
+  const bar = document.querySelector(".bottom-bar");
+  const blobFrom = document.getElementById("gooBlobFrom");
+  const blobTo = document.getElementById("gooBlobTo");
+  if (!bar || !blobFrom || !blobTo) return;
+
+  const barRect = bar.getBoundingClientRect();
+  const fromRect = fromEl.getBoundingClientRect();
+  const toRect = toEl.getBoundingClientRect();
+
+  const fromSize = Math.min(fromRect.width, fromRect.height) * 0.86;
+  const toSize = Math.min(toRect.width, toRect.height) * 0.86;
+  const fromCenterX = fromRect.left - barRect.left + fromRect.width / 2;
+  const fromCenterY = fromRect.top - barRect.top + fromRect.height / 2;
+  const toCenterX = toRect.left - barRect.left + toRect.width / 2;
+  const toCenterY = toRect.top - barRect.top + toRect.height / 2;
+
+  const setBlob = (el, cx, cy, size) => {
+    el.style.left = `${cx - size / 2}px`;
+    el.style.top = `${cy - size / 2}px`;
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
+  };
+
+  blobFrom.style.transition = "none";
+  blobTo.style.transition = "none";
+  setBlob(blobFrom, fromCenterX, fromCenterY, fromSize);
+  setBlob(blobTo, fromCenterX, fromCenterY, 0);
+  blobFrom.style.opacity = "1";
+  blobTo.style.opacity = "1";
+
+  void blobFrom.offsetWidth;
+
+  requestAnimationFrame(() => {
+    blobFrom.style.transition = "left 0.38s cubic-bezier(.4,0,.2,1), top 0.38s cubic-bezier(.4,0,.2,1), width 0.38s cubic-bezier(.4,0,.2,1), height 0.38s cubic-bezier(.4,0,.2,1), opacity 0.32s ease 0.10s";
+    blobTo.style.transition = "left 0.38s cubic-bezier(.4,0,.2,1), top 0.38s cubic-bezier(.4,0,.2,1), width 0.38s cubic-bezier(.4,0,.2,1), height 0.38s cubic-bezier(.4,0,.2,1)";
+
+    setBlob(blobFrom, fromCenterX, fromCenterY, 0);
+    blobFrom.style.opacity = "0";
+    setBlob(blobTo, toCenterX, toCenterY, toSize);
+  });
+
+  clearTimeout(bar._gooCleanupTimer);
+  bar._gooCleanupTimer = setTimeout(() => {
+    blobFrom.style.opacity = "0";
+    blobTo.style.opacity = "0";
+    setBlob(blobFrom, toCenterX, toCenterY, 0);
+    setBlob(blobTo, toCenterX, toCenterY, 0);
+  }, 420);
 }
 
 function getPreferredHomeNav() {
