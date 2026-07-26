@@ -6191,6 +6191,20 @@ function setMenuView(view, options = {}) {
     navMarketStateMarket.style.display = onMarket ? "none" : "flex";
     navMarketStateArena.style.display = onMarket ? "flex" : "none";
   }
+
+  const marketModeActive = (view === "market" || view === "inventory");
+  const navGamesBtn = document.getElementById("navGames");
+  const navSkinsBtn = document.getElementById("navSkins");
+  if (navGamesBtn) navGamesBtn.style.display = marketModeActive ? "none" : "flex";
+  if (navSkinsBtn) navSkinsBtn.style.display = marketModeActive ? "flex" : "none";
+  const navArenaMarketBtn = document.getElementById("navArenaMarket");
+  const navArenaMarketStateArena = document.getElementById("navArenaMarketStateArena");
+  const navArenaMarketStateMarket = document.getElementById("navArenaMarketStateMarket");
+  if (navArenaMarketBtn) navArenaMarketBtn.dataset.nav = marketModeActive ? "market" : "arena";
+  if (navArenaMarketStateArena && navArenaMarketStateMarket) {
+    navArenaMarketStateArena.style.display = marketModeActive ? "none" : "flex";
+    navArenaMarketStateMarket.style.display = marketModeActive ? "flex" : "none";
+  }
   if (modePopup) modePopup.classList.remove("open");
   if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
 
