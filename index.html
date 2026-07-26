@@ -1278,7 +1278,7 @@ button {
 .home-promo-carousel {
   position: relative;
   width: 100%;
-  min-height: 143px;
+  min-height: 116px;
   border-radius: 26px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(14, 24, 54, 0.6), rgba(8, 12, 28, 0.5));
@@ -1299,7 +1299,7 @@ button {
 .home-promo-slide {
   width: 50%;
   flex-shrink: 0;
-  padding: 20px 22px 0;
+  padding: 15px 22px 0;
   box-sizing: border-box;
 }
 
@@ -1318,7 +1318,7 @@ button {
 
 .home-promo-dots {
   position: absolute;
-  bottom: 14px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -4716,15 +4716,37 @@ button {
 
   <div id="marketScreen" class="menu-screen">
     <div class="screen-inner">
-      <section class="section-card">
-        <h1 class="section-title">Market</h1>
-        <p class="section-subtitle">Здесь можно будет продавать и покупать NFT-подарки у других игроков Bobr World.</p>
+
+      <div id="marketPromoCarousel" class="home-promo-carousel" aria-label="Промо-карусель">
+        <div class="home-promo-track" id="marketPromoTrack">
+          <div class="home-promo-slide" data-slide="0">
+            <div class="home-promo-slide-title">Реферальная программа</div>
+            <div class="home-promo-slide-text">Приглашай друзей и получай бонусы за каждого приглашённого игрока.</div>
+          </div>
+          <div class="home-promo-slide" data-slide="1">
+            <div class="home-promo-slide-title">Турнир</div>
+            <div class="home-promo-slide-text">Участвуй в розыгрыше призового банка среди игроков Bobr World.</div>
+          </div>
+        </div>
+        <div class="home-promo-dots">
+          <button type="button" class="home-promo-dot active" data-dot="0" aria-label="Слайд 1">
+            <span class="home-promo-dot-fill"></span>
+          </button>
+          <button type="button" class="home-promo-dot" data-dot="1" aria-label="Слайд 2">
+            <span class="home-promo-dot-fill"></span>
+          </button>
+        </div>
+      </div>
+
+      <section class="section-card" style="padding:12px 16px;">
+        <h1 class="section-title" style="font-size:19px;">Market</h1>
+        <p class="section-subtitle" style="margin-top:4px;">Здесь можно будет продавать и покупать NFT-подарки у других игроков Bobr World.</p>
       </section>
-      <section class="section-card" style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:36px 20px; text-align:center;">
-        <span style="width:56px; height:56px; display:flex; align-items:center; justify-content:center; border-radius:16px; background:rgba(255,255,255,0.06); color:var(--text-soft);">
-          <svg width="28" height="28" fill="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h12V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5m2 .5a.5.5 0 0 1 .5.5V13h8V9.5a.5.5 0 0 1 1 0V13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a.5.5 0 0 1 .5-.5"/></svg>
+      <section class="section-card" style="display:flex; flex-direction:column; align-items:center; gap:10px; padding:22px 20px; text-align:center;">
+        <span style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; border-radius:14px; background:rgba(255,255,255,0.06); color:var(--text-soft);">
+          <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h12V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5m2 .5a.5.5 0 0 1 .5.5V13h8V9.5a.5.5 0 0 1 1 0V13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a.5.5 0 0 1 .5-.5"/></svg>
         </span>
-        <div style="color:var(--text-soft); font-size:14px; line-height:1.5;">
+        <div style="color:var(--text-soft); font-size:13px; line-height:1.5;">
           Пока пусто.<br>Продажа и покупка подарков появится здесь позже.
         </div>
       </section>
@@ -15150,10 +15172,12 @@ window.showBobrRunComingSoon = showBobrRunComingSoon;
 window.openSkins = openSkins;
 window.openProfileScreen = openProfileScreen;
 
-(function initHomePromoCarousel() {
-  const track = document.getElementById("homePromoTrack");
-  const dots = Array.from(document.querySelectorAll(".home-promo-dot"));
-  if (!track || !dots.length) return;
+function initPromoCarousel(trackId, containerId) {
+  const track = document.getElementById(trackId);
+  const container = document.getElementById(containerId);
+  if (!track || !container) return;
+  const dots = Array.from(container.querySelectorAll(".home-promo-dot"));
+  if (!dots.length) return;
   const slideCount = dots.length;
   let current = 0;
   let autoTimer = null;
@@ -15208,7 +15232,9 @@ window.openProfileScreen = openProfileScreen;
   }, { passive: true });
 
   goToSlide(0);
-})();
+}
+initPromoCarousel("homePromoTrack", "homePromoCarousel");
+initPromoCarousel("marketPromoTrack", "marketPromoCarousel");
 window.closeProfileScreen = closeProfileScreen;
 window.renderProfileScreen = renderProfileScreen;
 window.showProfilePlaceholderAction = showProfilePlaceholderAction;
