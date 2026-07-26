@@ -1654,14 +1654,15 @@ button {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  /* Отступ сверху (баланс → карточки) такой же, как снизу (карточки → чипы). */
-  margin-top: 10px;
-  margin-bottom: 10px;
+  /* Отступ сверху (баланс → карточки) такой же, как снизу (карточки → чипы),
+     и равен зазору между кнопками История игр / История раундов в шапке. */
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 .scanner-highlight-card {
   position: relative;
   border-radius: 16px;
-  padding: 3px 10px;
+  padding: 2px 10px;
   /* Цвет как у чипов банк/таймер/шансы (.scanner-panel-chip). */
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.08);
@@ -1669,7 +1670,7 @@ button {
   backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
-  min-height: 30px;
+  min-height: 26px;
 }
 
 .scanner-highlight-name {
@@ -1726,8 +1727,8 @@ button {
   text-transform: uppercase;
   color: rgba(255,255,255,0.4);
   text-align: center;
-  padding-bottom: 2px;
-  margin-bottom: 2px;
+  padding-bottom: 1px;
+  margin-bottom: 1px;
   /* Тонкая черта под заголовком, тающая к краям карточки — border-image с
      градиентом (прозрачный -> яркий по центру -> прозрачный) вместо сплошной
      линии, которая упиралась бы прямо в бортики. */
