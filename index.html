@@ -4600,11 +4600,11 @@ button {
         <div id="balanceValue" class="balance-value">0.00 TON</div>
         <button type="button" class="balance-add-btn" onclick="openWallet()" aria-label="Пополнить баланс / подключить кошелёк">+</button>
       </div>
-      <button type="button" id="scannerRoundsPanelBtn" class="scanner-rounds-btn" style="display:none;" onclick="toggleScannerRoundsPanel(event)" aria-label="История раундов">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M13 5h8"/><path d="M13 9h5"/><path d="M13 15h8"/><path d="M13 19h5"/><path d="M3 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/><path d="M3 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/></svg>
-      </button>
       <button type="button" id="navHistory" class="scanner-rounds-btn" data-nav="history" data-history-trigger="true" onclick="handleBottomNav('history', event)" aria-label="История">
         <svg viewBox="0 0 640 640" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M320 128C426 128 512 214 512 320C512 426 426 512 320 512C254.8 512 197.1 479.5 162.4 429.7C152.3 415.2 132.3 411.7 117.8 421.8C103.3 431.9 99.8 451.9 109.9 466.4C156.1 532.6 233 576 320 576C461.4 576 576 461.4 576 320C576 178.6 461.4 64 320 64C234.3 64 158.5 106.1 112 170.7L112 144C112 126.3 97.7 112 80 112C62.3 112 48 126.3 48 144L48 256C48 273.7 62.3 288 80 288L104.6 288C105.1 288 105.6 288 106.1 288L192.1 288C209.8 288 224.1 273.7 224.1 256C224.1 238.3 209.8 224 192.1 224L153.8 224C186.9 166.6 249 128 320 128zM344 216C344 202.7 333.3 192 320 192C306.7 192 296 202.7 296 216L296 320C296 326.4 298.5 332.5 303 337L375 409C384.4 418.4 399.6 418.4 408.9 409C418.2 399.6 418.3 384.4 408.9 375.1L343.9 310.1L343.9 216z"/></svg>
+      </button>
+      <button type="button" id="scannerRoundsPanelBtn" class="scanner-rounds-btn" style="display:none;" onclick="toggleScannerRoundsPanel(event)" aria-label="История раундов">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M13 5h8"/><path d="M13 9h5"/><path d="M13 15h8"/><path d="M13 19h5"/><path d="M3 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/><path d="M3 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/></svg>
       </button>
     </div>
 
@@ -7947,9 +7947,14 @@ function syncPanelBackdrop() {
 
   const navHistoryBtn = document.getElementById("navHistory");
   if (navHistoryBtn) {
-    const anyHistoryOpen = ["historyPanel", "scannerRoundsPanel"]
-      .some((id) => document.getElementById(id)?.classList.contains("open"));
-    navHistoryBtn.classList.toggle("is-active", anyHistoryOpen);
+    const gameHistoryOpen = !!document.getElementById("historyPanel")?.classList.contains("open");
+    navHistoryBtn.classList.toggle("is-active", gameHistoryOpen);
+  }
+
+  const roundsBtn = document.getElementById("scannerRoundsPanelBtn");
+  if (roundsBtn) {
+    const roundsHistoryOpen = !!document.getElementById("scannerRoundsPanel")?.classList.contains("open");
+    roundsBtn.classList.toggle("is-active", roundsHistoryOpen);
   }
 }
 
