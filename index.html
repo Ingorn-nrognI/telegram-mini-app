@@ -6183,7 +6183,7 @@ function syncAppBackButton(options = {}) {
 }
 
 function setActiveBottomNav(navName) {
-  const buttons = document.querySelectorAll("[data-nav]");
+  const buttons = document.querySelectorAll(".bottom-bar [data-nav]");
   const nextButton = Array.from(buttons).find((b) => b.dataset.nav === navName);
 
   currentBottomNav = navName;
@@ -6451,7 +6451,7 @@ function closeModePopup() {
   syncPanelBackdrop();
   if (currentBottomNav === "games") {
     currentBottomNav = "";
-    document.querySelectorAll("[data-nav]").forEach(btn => btn.classList.remove("is-active"));
+    document.querySelectorAll(".bottom-bar [data-nav]").forEach(btn => btn.classList.remove("is-active"));
   }
 }
 
