@@ -6854,35 +6854,14 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
       ${winningsChipsBlock}
 
       <div id="${detailsId}" class="scanner-history-details${detailsOpenClass}" data-scanner-history-details="true" aria-hidden="${detailsHidden}">
-        <div class="scanner-history-player-card">
-          <div class="scanner-player-swatch" style="background:${escapeHtml(myMeta.color)};"></div>
-          ${getScannerHistoryAvatarHtml(myMeta.name, myMeta.avatar)}
-          <div class="scanner-player-copy">
-            <div class="scanner-history-player-name">${escapeHtml(myMeta.name)}</div>
-            <div class="scanner-history-player-meta">Твой цвет в арене этого раунда</div>
-          </div>
+        <div class="scanner-history-detail-item">
+          <div class="scanner-history-detail-label">Игроки в раунде: ${formatCompactNumber(participantCount)}</div>
+          <div class="scanner-history-detail-value">${netBank.toFixed(2)} GRAM</div>
         </div>
 
-        <div class="scanner-history-detail-grid">
-          <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Игроки в раунде</div>
-            <div class="scanner-history-detail-value">${formatCompactNumber(participantCount)}</div>
-          </div>
-          <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Моя ставка</div>
-            <div class="scanner-history-detail-value">${formatTon(myMeta.stake)}</div>
-          </div>
-          <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Общий банк</div>
-            <div class="scanner-history-detail-value">${formatTon(totalPot)}</div>
-          </div>
-          <div class="scanner-history-detail-item">
-            <div class="scanner-history-detail-label">Мой результат</div>
-            <div class="scanner-history-detail-value ${resultClass}">${resultWord}</div>
-          </div>
+        <div class="scanner-history-players-scroll">
+          ${historyPlayersHtml}
         </div>
-
-        ${winnerBlock}
       </div>
     </div>
   `;
