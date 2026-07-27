@@ -14090,10 +14090,10 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
   ctx.translate(cx, cy);
   ctx.rotate(angle);
   drawScannerBeam(ctx, beamLength, {
-    glowWidth: 10.8,
+    glowWidth: 7.2,
     coreWidth: 2.85,
     innerWidth: 0.9,
-    glowBlur: 27,
+    glowBlur: 18,
     coreBlur: 14,
     beamColor: "rgba(45, 225, 255, 0.74)",
     innerColor: "rgba(255,255,255,0.88)",
@@ -14552,10 +14552,10 @@ function renderScannerCanvas() {
     ctx.translate(px, py);
     ctx.rotate(beamRenderAngle);
     drawScannerBeam(ctx, beamLength, {
-      glowWidth: 10.8,
+      glowWidth: 7.2,
       coreWidth: 2.85,
       innerWidth: 0.9,
-      glowBlur: 27,
+      glowBlur: 18,
       coreBlur: 14,
       beamColor: "rgba(45, 225, 255, 0.74)",
       innerColor: "rgba(255,255,255,0.88)",
