@@ -12201,6 +12201,10 @@ async function ensureScannerRoundHistoryPersisted() {
       roundColor: player.color || null,
       playerColor: player.color || null,
       color: player.color || null,
+      cellCount: Number(player.cellCount || 0),
+      stakeHistory: Array.isArray(player.stakeHistory)
+        ? player.stakeHistory.map((entry) => ({ amount: Number(entry?.amount || 0), at: entry?.at || null }))
+        : [],
       isMe: player.id === currentPlayer.id
     }))
   };
