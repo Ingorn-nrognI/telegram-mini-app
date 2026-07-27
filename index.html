@@ -6777,7 +6777,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
   const resultClass = youWon ? "win" : "lose";
   const resultWord = youWon ? "Выиграл" : "Проиграл";
   const wonAmount = getScannerHistoryMoneyValue(item?.winnerPayout, item?.payout, item?.winPayout, item?.reward, item?.prize);
-  const amountText = youWon ? `+${formatTon(wonAmount)}` : `- ${formatTon(myMeta.stake)}`;
+  const amountText = youWon ? `+${wonAmount.toFixed(2)} GRAM` : `- ${myMeta.stake.toFixed(2)} GRAM`;
   const playedAtText = formatHistoryDate(item?.playedAt || item?.finishedAt || item?.createdAt);
   const totalPot = getScannerHistoryMoneyValue(item?.totalPot, item?.bank, item?.pot);
   const participantCount = Number(item?.participantCount || item?.playersCount || getScannerHistoryResults(item).length || 0);
