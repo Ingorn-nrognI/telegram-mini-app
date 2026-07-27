@@ -1379,6 +1379,122 @@ button {
   to { width: 100%; }
 }
 
+.market-toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.market-search-shell {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.market-search-icon {
+  flex-shrink: 0;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+}
+
+.market-search-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.market-search-input::placeholder {
+  color: var(--text-dim);
+}
+
+.market-tool-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(227,235,255,0.75);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+
+.market-tool-btn:active {
+  transform: scale(0.95);
+}
+
+.market-sort-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 210px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--panel-strong);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: var(--shadow-main);
+  z-index: 40;
+}
+
+.market-sort-menu.open {
+  display: flex;
+}
+
+.market-sort-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: none;
+  border: none;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.market-sort-option:active {
+  background: rgba(255,255,255,0.06);
+}
+
+.market-sort-option.active {
+  color: #ffffff;
+  background: rgba(255,255,255,0.08);
+}
+
+.market-sort-check {
+  visibility: hidden;
+  font-size: 13px;
+}
+
+.market-sort-option.active .market-sort-check {
+  visibility: visible;
+}
+
 .scanner-feature-card {
   background: linear-gradient(135deg, rgba(9, 22, 56, 0.98), rgba(9, 14, 32, 0.96) 66%);
 }
@@ -4741,6 +4857,50 @@ button {
           </button>
           <button type="button" class="home-promo-dot" data-dot="1" aria-label="Слайд 2">
             <span class="home-promo-dot-fill"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="market-toolbar">
+        <div class="market-search-shell">
+          <span class="market-search-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 640 640"><path fill="currentColor" d="M480 272C480 342.7 456.6 408 417.1 460.6L598.6 642.1C611.1 654.6 611.1 674.9 598.6 687.4C586.1 699.9 565.8 699.9 553.3 687.4L371.9 505.9C319.3 545.5 254 568.9 183.3 568.9C183.3 568.9 183.3 568.9 183.3 568.9C183.3 568.9 183.3 568.9 183.3 568.9z" transform="scale(0.75)"/><path fill="currentColor" d="M416 208a208 208 0 1 0-416 0 208 208 0 1 0 416 0zM338.3 383.6 471 516.3c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0L304.4 417.6c-27.5 19.2-61 30.4-97.1 30.4C93.1 448 0 354.9 0 240.7" transform="translate(64 64) scale(0.78)" opacity="0"/><circle cx="264" cy="264" r="150" fill="none" stroke="currentColor" stroke-width="52"/><path fill="currentColor" d="M382 418 528 564c14 14 37 14 51 0s14-37 0-51L433 367z"/></svg>
+          </span>
+          <input
+            id="marketSearchInput"
+            class="market-search-input"
+            type="text"
+            autocomplete="off"
+            placeholder="Поиск подарков"
+            aria-label="Поиск подарков"
+          >
+        </div>
+        <button type="button" id="marketFilterBtn" class="market-tool-btn" onclick="handleMarketFilterClick(event)" aria-label="Фильтры">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 640 640"><path fill="currentColor" d="M96 128C96 110.3 110.3 96 128 96L512 96C529.7 96 544 110.3 544 128C544 135.5 541.4 142.8 536.6 148.6L384 331.7L384 496C384 508.1 377.2 519.2 366.4 524.6C355.6 530 342.6 528.9 332.8 521.6L268.8 473.6C260.7 467.6 256 458.1 256 448L256 331.7L103.4 148.6C98.6 142.8 96 135.5 96 128z"/></svg>
+        </button>
+        <button type="button" id="marketSortBtn" class="market-tool-btn" onclick="toggleMarketSortMenu(event)" aria-label="Сортировка">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 640 640"><path fill="currentColor" d="M182.6 137.4C170.1 124.9 149.8 124.9 137.3 137.4L57.3 217.4C44.8 229.9 44.8 250.2 57.3 262.7C69.8 275.2 90.1 275.2 102.6 262.7L128 237.3L128 480C128 497.7 142.3 512 160 512C177.7 512 192 497.7 192 480L192 237.3L217.4 262.7C229.9 275.2 250.2 275.2 262.7 262.7C275.2 250.2 275.2 229.9 262.7 217.4L182.7 137.4zM457.4 502.6C469.9 515.1 490.2 515.1 502.7 502.6L582.7 422.6C595.2 410.1 595.2 389.8 582.7 377.3C570.2 364.8 549.9 364.8 537.4 377.3L512 402.7L512 160C512 142.3 497.7 128 480 128C462.3 128 448 142.3 448 160L448 402.7L422.6 377.3C410.1 364.8 389.8 364.8 377.3 377.3C364.8 389.8 364.8 410.1 377.3 422.6L457.3 502.6z"/></svg>
+        </button>
+        <button type="button" id="marketViewBtn" class="market-tool-btn" onclick="toggleMarketViewMode(event)" aria-label="Вид списка">
+          <span id="marketViewIconGrid" style="display:flex;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 640 640"><path fill="currentColor" d="M128 96C110.3 96 96 110.3 96 128L96 256C96 273.7 110.3 288 128 288L256 288C273.7 288 288 273.7 288 256L288 128C288 110.3 273.7 96 256 96L128 96zM384 96C366.3 96 352 110.3 352 128L352 256C352 273.7 366.3 288 384 288L512 288C529.7 288 544 273.7 544 256L544 128C544 110.3 529.7 96 512 96L384 96zM128 352C110.3 352 96 366.3 96 384L96 512C96 529.7 110.3 544 128 544L256 544C273.7 544 288 529.7 288 512L288 384C288 366.3 273.7 352 256 352L128 352zM384 352C366.3 352 352 366.3 352 384L352 512C352 529.7 366.3 544 384 544L512 544C529.7 544 544 529.7 544 512L544 384C544 366.3 529.7 352 512 352L384 352z"/></svg>
+          </span>
+          <span id="marketViewIconList" style="display:none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 640 640"><path fill="currentColor" d="M96 144C96 117.5 117.5 96 144 96C170.5 96 192 117.5 192 144C192 170.5 170.5 192 144 192C117.5 192 96 170.5 96 144zM256 144C256 126.3 270.3 112 288 112L512 112C529.7 112 544 126.3 544 144C544 161.7 529.7 176 512 176L288 176C270.3 176 256 161.7 256 144zM96 320C96 293.5 117.5 272 144 272C170.5 272 192 293.5 192 320C192 346.5 170.5 368 144 368C117.5 368 96 346.5 96 320zM256 320C256 302.3 270.3 288 288 288L512 288C529.7 288 544 302.3 544 320C544 337.7 529.7 352 512 352L288 352C270.3 352 256 337.7 256 320zM96 496C96 469.5 117.5 448 144 448C170.5 448 192 469.5 192 496C192 522.5 170.5 544 144 544C117.5 544 96 522.5 96 496zM256 496C256 478.3 270.3 464 288 464L512 464C529.7 464 544 478.3 544 496C544 513.7 529.7 528 512 528L288 528C270.3 528 256 513.7 256 496z"/></svg>
+          </span>
+        </button>
+        <div id="marketSortMenu" class="market-sort-menu" onclick="event.stopPropagation()">
+          <button type="button" class="market-sort-option active" data-sort="price-asc" onclick="selectMarketSort('price-asc', event)">
+            <span>Цена: по возрастанию</span><span class="market-sort-check">✓</span>
+          </button>
+          <button type="button" class="market-sort-option" data-sort="price-desc" onclick="selectMarketSort('price-desc', event)">
+            <span>Цена: по убыванию</span><span class="market-sort-check">✓</span>
+          </button>
+          <button type="button" class="market-sort-option" data-sort="num-asc" onclick="selectMarketSort('num-asc', event)">
+            <span>Номер: по возрастанию</span><span class="market-sort-check">✓</span>
+          </button>
+          <button type="button" class="market-sort-option" data-sort="num-desc" onclick="selectMarketSort('num-desc', event)">
+            <span>Номер: по убыванию</span><span class="market-sort-check">✓</span>
           </button>
         </div>
       </div>
@@ -15231,6 +15391,53 @@ function initPromoCarousel(trackId, containerId) {
 }
 initPromoCarousel("homePromoTrack", "homePromoCarousel");
 initPromoCarousel("marketPromoTrack", "marketPromoCarousel");
+
+let marketSortMode = "price-asc";
+let marketViewMode = "grid";
+
+function toggleMarketSortMenu(event) {
+  if (event) event.stopPropagation();
+  const menu = document.getElementById("marketSortMenu");
+  if (!menu) return;
+  menu.classList.toggle("open");
+}
+
+function closeMarketSortMenu() {
+  const menu = document.getElementById("marketSortMenu");
+  if (menu) menu.classList.remove("open");
+}
+
+function selectMarketSort(mode, event) {
+  if (event) event.stopPropagation();
+  marketSortMode = mode;
+  const options = document.querySelectorAll(".market-sort-option");
+  options.forEach((option) => {
+    option.classList.toggle("active", option.dataset.sort === mode);
+  });
+  closeMarketSortMenu();
+}
+
+function toggleMarketViewMode(event) {
+  if (event) event.stopPropagation();
+  marketViewMode = marketViewMode === "grid" ? "list" : "grid";
+  const gridIcon = document.getElementById("marketViewIconGrid");
+  const listIcon = document.getElementById("marketViewIconList");
+  if (gridIcon) gridIcon.style.display = marketViewMode === "grid" ? "flex" : "none";
+  if (listIcon) listIcon.style.display = marketViewMode === "list" ? "flex" : "none";
+}
+
+function handleMarketFilterClick(event) {
+  if (event) event.stopPropagation();
+  closeMarketSortMenu();
+  showAppNotice("Фильтры появятся позже");
+}
+
+document.addEventListener("click", closeMarketSortMenu);
+
+window.toggleMarketSortMenu = toggleMarketSortMenu;
+window.selectMarketSort = selectMarketSort;
+window.toggleMarketViewMode = toggleMarketViewMode;
+window.handleMarketFilterClick = handleMarketFilterClick;
 window.closeProfileScreen = closeProfileScreen;
 window.renderProfileScreen = renderProfileScreen;
 window.showProfilePlaceholderAction = showProfilePlaceholderAction;
