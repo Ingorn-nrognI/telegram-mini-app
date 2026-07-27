@@ -843,6 +843,43 @@ button {
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
+#historyPanel .history-panel-header {
+  padding: 8px 14px 8px;
+  border-bottom: none;
+}
+
+.history-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+}
+
+.history-tab-btn {
+  flex: 1;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(227,235,255,0.6);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.history-tab-btn.is-active {
+  background: rgba(255,255,255,0.1);
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.16);
+}
+
+.history-scroll-area.is-hidden {
+  display: none;
+}
+
 .history-panel-title {
   font-size: 20px;
   font-weight: 800;
@@ -4125,7 +4162,7 @@ button {
 }
 
 .scanner-history-detail-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-dim);
   margin-bottom: 0;
 }
@@ -6636,10 +6673,30 @@ function closeHistoryPanel(options = {}) {
 function getHistoryPanelHeaderHtml() {
   return `
     <div class="history-panel-header">
-      <div class="history-panel-title">История игр</div>
+      <div class="history-panel-title">История</div>
       <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">✕</button>
     </div>
+    <div class="history-tabs">
+      <button type="button" class="history-tab-btn is-active" data-history-tab="arena" onclick="switchHistoryTab('arena', event)">Arena</button>
+      <button type="button" class="history-tab-btn" data-history-tab="market" onclick="switchHistoryTab('market', event)">Market</button>
+    </div>
+    <div class="history-scroll-area history-scroll-area-market is-hidden">
+      <div class="history-panel-empty">История сделок в Market появится здесь позже.</div>
+    </div>
   `;
+}
+
+function switchHistoryTab(tab, event) {
+  if (event) event.stopPropagation();
+  const panel = document.getElementById("historyPanel");
+  if (!panel) return;
+  panel.querySelectorAll(".history-tab-btn").forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.historyTab === tab);
+  });
+  const arenaArea = panel.querySelector(".history-scroll-area-arena");
+  const marketArea = panel.querySelector(".history-scroll-area-market");
+  if (arenaArea) arenaArea.classList.toggle("is-hidden", tab !== "arena");
+  if (marketArea) marketArea.classList.toggle("is-hidden", tab !== "market");
 }
 
 function formatHistoryDate(value) {
@@ -6897,7 +6954,7 @@ function renderHistoryEntries(entries) {
   const header = getHistoryPanelHeaderHtml();
 
   if (!Array.isArray(entries) || entries.length === 0) {
-    panel.innerHTML = `${header}<div class="history-scroll-area"><div class="history-panel-empty">Пока нет сыгранных матчей.</div></div>`;
+    panel.innerHTML = `${header}<div class="history-scroll-area history-scroll-area-arena"><div class="history-panel-empty">Пока нет сыгранных матчей.</div></div>`;
     return;
   }
 
@@ -6954,7 +7011,7 @@ function renderHistoryEntries(entries) {
       `;
     }).join("");
 
-  panel.innerHTML = `${header}<div class="history-scroll-area">${items || `<div class="history-panel-empty">Пока нет сыгранных матчей.</div>`}</div>`;
+  panel.innerHTML = `${header}<div class="history-scroll-area history-scroll-area-arena">${items || `<div class="history-panel-empty">Пока нет сыгранных матчей.</div>`}</div>`;
 }
 
 async function loadGameHistory() {
@@ -6964,7 +7021,7 @@ async function loadGameHistory() {
   historyLoading = true;
   panel.innerHTML = `
     ${getHistoryPanelHeaderHtml()}
-    <div class="history-scroll-area">
+    <div class="history-scroll-area history-scroll-area-arena">
       <div class="history-panel-text">Загрузка...</div>
     </div>
   `;
@@ -6983,7 +7040,7 @@ async function loadGameHistory() {
     console.error("Ошибка загрузки истории игр:", error);
     panel.innerHTML = `
       ${getHistoryPanelHeaderHtml()}
-      <div class="history-scroll-area">
+      <div class="history-scroll-area history-scroll-area-arena">
         <div class="history-panel-text">Не удалось загрузить историю игр.</div>
       </div>
     `;
