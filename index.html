@@ -445,6 +445,13 @@ button {
   padding-top: calc(var(--safe-top) + 64px);
 }
 
+#marketScreen.menu-screen {
+  /* Тот же расчёт, что и для #homeScreen: зазор между балансом и баннером
+     равен 8px — столько же, сколько между балансом и кнопкой История игр
+     в шапке. */
+  padding-top: calc(var(--safe-top) + 64px);
+}
+
 .menu-screen.active {
   display: block;
 }
