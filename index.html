@@ -6785,17 +6785,46 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
   const expandedClass = expandedHistoryMatchId === safeMatchId ? " is-expanded" : "";
   const detailsOpenClass = expandedHistoryMatchId === safeMatchId ? " open" : "";
   const detailsHidden = expandedHistoryMatchId === safeMatchId ? "false" : "true";
-  const winnerBlock = !youWon ? `
-    <div class="scanner-history-winner-card">
-      <div class="scanner-player-swatch" style="background:${escapeHtml(winnerMeta.color)};"></div>
-      ${getScannerHistoryAvatarHtml(winnerMeta.name, winnerMeta.avatar)}
-      <div class="scanner-player-copy">
-        <div class="scanner-history-player-name">${escapeHtml(winnerMeta.name)}</div>
-        <div class="scanner-history-player-meta">Победитель раунда</div>
+  const netBank = Math.max(0, totalPot - getScannerHistoryMoneyValue(item?.commissionAmount));
+  const historyRoundPlayers = getScannerHistoryResults(item).map((row) => ({
+    id: String(row.playerId || row.id || ""),
+    name: row.name || "Игрок",
+    avatar: row.avatar || null,
+    color: row.color || row.roundColor || row.playerColor || "hsl(182 88% 58%)",
+    stake: Number(row.stake || row.score || 0),
+    cellCount: Number(row.cellCount || 0),
+    stakeHistory: Array.isArray(row.stakeHistory) ? row.stakeHistory : [],
+    isMe: row.isMe === true
+  }));
+
+  const historyPlayersHtml = historyRoundPlayers.map((player) => {
+    const arenaPercent = formatPercent((player.cellCount / SCANNER_GRID_TOTAL_CELLS) * 100);
+    const chipsHtml = getScannerPlayerStakeChipsHtml(player);
+    const stakesBlockHtml = chipsHtml ? `
+      <div class="scanner-player-stakes-wrap">
+        <div class="scanner-player-stakes-row">${chipsHtml}</div>
       </div>
-      <div class="scanner-history-winner-payout">+${formatTon(winnerMeta.payout)}</div>
-    </div>
-  ` : "";
+    ` : "";
+
+    return `
+      <div class="scanner-player-row${player.isMe ? " me" : ""}">
+        <div class="scanner-player-top-row">
+          <div class="scanner-player-identity">
+            ${getScannerPlayerAvatarHtml(player)}
+          </div>
+          <div class="scanner-player-copy">
+            <div class="scanner-player-name">${escapeHtml(player.name)}</div>
+            <div class="scanner-player-percent-row">
+              <div class="scanner-player-percent"><span class="scanner-player-percent-label">Шансы</span> ${arenaPercent}</div>
+              <div class="scanner-player-swatch" style="background:${escapeHtml(player.color)};"></div>
+            </div>
+          </div>
+          <div class="scanner-player-stake">${player.stake.toFixed(2)} GRAM</div>
+        </div>
+        ${stakesBlockHtml}
+      </div>
+    `;
+  }).join("");
 
   const resultChipAmount = youWon ? wonAmount : myMeta.stake;
   const winningsChipsBlock = (resultChipAmount > 0) ? `
