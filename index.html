@@ -15126,6 +15126,7 @@ forceScannerBetBarVisibilityRefresh();
 window.addEventListener("load", () => {
   scheduleInitialHomeGameScroll();
   forceScannerBetBarVisibilityRefresh();
+  setActiveBottomNav(currentBottomNav || "arena");
 }, { once: true });
 window.addEventListener("pageshow", () => {
   if (!homeInitialGameScrollApplied && currentMenuView === "home") {
