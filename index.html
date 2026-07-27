@@ -4026,9 +4026,32 @@ button {
 
 .scanner-history-details {
   display: none;
-  margin-top: 13px;
+  margin-top: 6px;
   padding-top: 12px;
   border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.scanner-history-players-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(109, 154, 255, 0.55) transparent;
+  margin-top: 10px;
+  padding-right: 4px;
+}
+
+.scanner-history-players-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scanner-history-players-scroll::-webkit-scrollbar-thumb {
+  background: rgba(109, 154, 255, 0.55);
+  border-radius: 999px;
 }
 
 .scanner-history-details.open {
