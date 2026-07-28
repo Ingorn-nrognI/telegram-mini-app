@@ -6896,7 +6896,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
     cellCount: Number(row.cellCount || 0),
     stakeHistory: Array.isArray(row.stakeHistory) ? row.stakeHistory : [],
     isMe: row.isMe === true
-  }));
+  })).sort((a, b) => (b.isMe === true) - (a.isMe === true));
 
   const historyPlayersHtml = historyRoundPlayers.map((player) => {
     const arenaPercent = formatPercent((player.cellCount / SCANNER_GRID_TOTAL_CELLS) * 100);
