@@ -3787,7 +3787,7 @@ button {
 
 .profile-card-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
@@ -3801,12 +3801,12 @@ button {
 }
 
 .profile-balance-value {
-  padding: 8px 10px;
-  border-radius: 16px;
-  background: rgba(45, 225, 255, 0.10);
-  border: 1px solid rgba(45, 225, 255, 0.18);
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  border: none;
   color: #dff9ff;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   white-space: nowrap;
 }
@@ -4973,10 +4973,7 @@ button {
 
       <section class="profile-balance-card">
         <div class="profile-card-heading">
-          <div>
-            <div class="profile-card-kicker">Demo GRAM</div>
-            <h2 class="profile-card-title">Баланс</h2>
-          </div>
+          <h2 class="profile-card-title">Баланс</h2>
           <div id="profileScreenBalanceValue" class="profile-balance-value">0.00 GRAM</div>
         </div>
 
@@ -6285,7 +6282,7 @@ function renderProfileScreen(options = {}) {
   }
 
   if (profileBalanceEl) {
-    setBalanceTextIfChanged(profileBalanceEl, formatBalance(getCurrentBalanceRaw()));
+    setBalanceTextIfChanged(profileBalanceEl, `${formatBalance(getCurrentBalanceRaw())} GRAM`);
   }
 
   renderProfileBestWinValue();
@@ -7691,7 +7688,6 @@ function applyAppLanguage(lang) {
 
   // Profile screen
   set(".profile-screen-kicker", t.playerProfile);
-  set(".profile-card-kicker", "DEMO GRAM");
   set(".profile-card-title", t.balance);
   const profileBestWinLabel = document.querySelector(".profile-stat-label");
   if (profileBestWinLabel) profileBestWinLabel.textContent = t.bestWin;
