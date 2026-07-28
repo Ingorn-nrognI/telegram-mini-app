@@ -13829,6 +13829,12 @@ function getScannerCanvasMetrics() {
 }
 
 function buildScannerCanvasCache(size, owners, players) {
+  if (!window._scannerBorderDebugLogged) {
+    window._scannerBorderDebugLogged = true;
+    console.log('[BorderDebug] players:', players.map(p => ({ id: p?.id, isMe: p?.isMe, color: p?.color })));
+    console.log('[BorderDebug] owners length:', owners.length, 'sample:', owners.slice(0, 10));
+    console.log('[BorderDebug] owners[0] -> players[owners[0]]:', players[owners[0]]);
+  }
   const cacheCanvas = document.createElement("canvas");
   cacheCanvas.width = size;
   cacheCanvas.height = size;
