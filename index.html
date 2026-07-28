@@ -2169,6 +2169,8 @@ button {
 .scanner-player-swatch {
   width: 14px;
   height: 14px;
+  min-width: 14px;
+  flex-shrink: 0;
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
 }
@@ -4073,6 +4075,13 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 90px;
+}
+
+.scanner-history-result-chance {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-soft);
+  white-space: nowrap;
 }
 
 .scanner-history-result-word.win {
@@ -13126,7 +13135,9 @@ function getScannerRecentRoundCardHtml(item, index) {
     (resultsArr.find((row) => String(row.playerId || row.id || row.userId || "") === String(item.winnerPlayerId || ""))?.name || "")
   ).trim() || "Победитель";
   const winnerAvatar = item.winnerAvatar ||
-    (resultsArr.find((row) => String(row.playerId || row.id || "") === String(item.winnerPlayerId || ""))?.avatar || null);
+    (resultsArr.find((row) => String(row.playerId || row.id || "") === String(item.winnerPlayerId || ""))?.avatar || null) ||
+    (String(item.winnerPlayerId || "") === String(currentPlayer.id) ? currentPlayer.avatar : null) ||
+    null;
   const winnerCellCount = Number(
     resultsArr.find((row) => String(row.playerId || row.id || "") === String(item.winnerPlayerId || ""))?.cellCount || 0
   );
@@ -13190,7 +13201,7 @@ function getScannerRecentRoundCardHtml(item, index) {
           <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
           ${getScannerHistoryAvatarHtml(winnerNickname, winnerAvatar)}
           <span class="scanner-history-result-name">${escapeHtml(winnerNickname)}</span>
-          <span class="scanner-history-result-word">Шансы ${winnerChance}</span>
+          <span class="scanner-history-result-chance">Шансы ${winnerChance}</span>
         </div>
         <div class="scanner-history-amount${youWon ? " win" : ""}">${winnerPayout.toFixed(2)} GRAM · ${multiplierText}</div>
       </div>
