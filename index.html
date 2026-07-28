@@ -13846,6 +13846,38 @@ function buildScannerCanvasCache(size, owners, players) {
     ctx.fillRect(Math.floor(col * cellSize), Math.floor(row * cellSize), Math.ceil(cellSize) + 1, Math.ceil(cellSize) + 1);
   }
 
+  // Тонкая тёмная полупрозрачная граница по контуру территории каждого игрока.
+  // Рисуется поверх заливки, ровно по той же owners-карте, что и сама заливка —
+  // поэтому граница всегда точно совпадает с реальными долями/шансами игроков,
+  // какой бы сложной ни была форма поля (фигуры, мозаика, диагональные срезы).
+  // Внешний край арены не обводится — только стыки между разными игроками.
+  ctx.save();
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+  ctx.lineWidth = Math.max(1, cellSize * 0.18);
+  ctx.beginPath();
+  for (let cellIndex = 0; cellIndex < owners.length; cellIndex += 1) {
+    const ownerIndex = owners[cellIndex];
+    if (ownerIndex < 0) continue;
+    const col = cellIndex % SCANNER_GRID_COLS;
+    const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
+    const x = col * cellSize;
+    const y = row * cellSize;
+
+    const rightOwner = col < SCANNER_GRID_COLS - 1 ? owners[cellIndex + 1] : ownerIndex;
+    if (rightOwner !== ownerIndex) {
+      ctx.moveTo(x + cellSize, y);
+      ctx.lineTo(x + cellSize, y + cellSize);
+    }
+
+    const bottomOwner = row < SCANNER_GRID_ROWS - 1 ? owners[cellIndex + SCANNER_GRID_COLS] : ownerIndex;
+    if (bottomOwner !== ownerIndex) {
+      ctx.moveTo(x, y + cellSize);
+      ctx.lineTo(x + cellSize, y + cellSize);
+    }
+  }
+  ctx.stroke();
+  ctx.restore();
+
   return cacheCanvas;
 }
 
