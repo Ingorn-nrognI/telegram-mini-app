@@ -2433,6 +2433,14 @@ button {
   border: 1px solid rgba(255,255,255,0.08);
 }
 
+.scanner-history-winnings-box.is-me-won {
+  border-color: rgba(117, 245, 156, 0.55);
+}
+
+.scanner-history-winnings-box.is-me-lost {
+  border-color: rgba(255, 107, 107, 0.55);
+}
+
 .scanner-history-winnings-box .scanner-stake-chip-icon {
   width: 22px;
   height: 22px;
@@ -6911,7 +6919,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
   const expandedClass = expandedHistoryMatchId === safeMatchId ? " is-expanded" : "";
   const detailsOpenClass = expandedHistoryMatchId === safeMatchId ? " open" : "";
   const detailsHidden = expandedHistoryMatchId === safeMatchId ? "false" : "true";
-  const netBank = Math.max(0, totalPot - getScannerHistoryMoneyValue(item?.commissionAmount));
+  const netBank = totalPot;
   const historyRoundPlayers = getScannerHistoryResults(item).map((row) => ({
     id: String(row.playerId || row.id || ""),
     name: row.name || "Игрок",
@@ -12368,6 +12376,7 @@ async function ensureScannerRoundHistoryPersisted() {
       maxPlayers: Number(round.maxPlayers || 0),
       winnerPlayerId: scannerGridState.winningPlayer.id,
       winnerName: scannerGridState.winningPlayer.name,
+      winnerAvatar: scannerGridState.winningPlayer.avatar || null,
       winnerColor: scannerGridState.winningPlayer.color || getScannerColorById(scannerGridState.winningPlayer.id, round.id || round.entropySeed || "history_round"),
       winnerStake: Number(scannerGridState.winningPlayer.stake || 0),
       commissionPercent: Number(round.commissionPercent || 0),
@@ -12377,7 +12386,8 @@ async function ensureScannerRoundHistoryPersisted() {
       winnerPayout: Number(round.winnerPayout || 0),
       payoutProcessed: round.payoutProcessed === true,
       winningCellIndex: Number(scannerGridState.winningCellIndex || 0),
-      resultSource: round.resultSource || "firestore-deterministic"
+      resultSource: round.resultSource || "firestore-deterministic",
+      results: summary.results
     }, { merge: true })
   ]);
 
@@ -13050,39 +13060,161 @@ function renderScannerRecentList() {
     return;
   }
 
-  setInnerHtmlIfChanged(container, visibleItems.map((item) => {
-    const winnerStake = normalizeMoneyValue(item.winnerStake || 0);
-    const winnerPayout = normalizeMoneyValue(item.winnerPayout || winnerStake || 0);
-    const finishedAtText = formatHistoryDate(tsToMs(item.finishedAt) ? new Date(tsToMs(item.finishedAt)).toISOString() : item.finishedAt);
-    const playersCountText = formatCompactNumber(item.participantCount || 0);
-    const multiplierText = formatScannerMultiplier(winnerPayout, winnerStake);
-    const winnerColor = item.winnerColor || getScannerColorById(
-      item.winnerPlayerId || item.winnerName || "winner",
-      item.roundId || item.finishedAt || item.playedAt || item.mode || "recent_round"
-    );
-    const winnerNickname = String(
-      item.winnerName ||
-      item.winner ||
-      (Array.isArray(item.results)
-        ? (item.results.find((row) => String(row.playerId || row.id || row.userId || "") === String(item.winnerPlayerId || ""))?.name || "")
-        : "")
-    ).trim() || "Победитель";
+  setInnerHtmlIfChanged(container, visibleItems.map((item, index) => getScannerRecentRoundCardHtml(item, index)).join(""));
+}
 
-    const roundNumberText = item.roundNumber ? `Раунд №: ${item.roundNumber}` : "";
+let expandedRecentRoundId = null;
+
+function getRecentRoundDetailsDomId(id) {
+  return `scannerRecentDetails_${String(id).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+}
+
+function toggleScannerRecentRoundDetails(id, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const safeId = String(id || "");
+  const detailsId = getRecentRoundDetailsDomId(safeId);
+  const detailsEl = document.getElementById(detailsId);
+  if (!detailsEl) return;
+
+  const willOpen = !detailsEl.classList.contains("open");
+
+  document.querySelectorAll("[data-scanner-recent-details='true']").forEach((el) => {
+    el.classList.remove("open");
+    el.setAttribute("aria-hidden", "true");
+  });
+
+  document.querySelectorAll(".scanner-history-card.is-expanded").forEach((card) => {
+    card.classList.remove("is-expanded");
+  });
+
+  if (willOpen) {
+    detailsEl.classList.add("open");
+    detailsEl.setAttribute("aria-hidden", "false");
+    const card = detailsEl.closest(".scanner-history-card");
+    if (card) card.classList.add("is-expanded");
+    expandedRecentRoundId = safeId;
+  } else {
+    expandedRecentRoundId = null;
+  }
+}
+
+function getScannerRecentRoundCardHtml(item, index) {
+  const currentPlayer = getCurrentPlayer();
+  const safeId = String(item.roundId || item.id || `recent_${index}`);
+  const detailsId = getRecentRoundDetailsDomId(safeId);
+  const expandedClass = expandedRecentRoundId === safeId ? " is-expanded" : "";
+  const detailsOpenClass = expandedRecentRoundId === safeId ? " open" : "";
+  const detailsHidden = expandedRecentRoundId === safeId ? "false" : "true";
+
+  const winnerStake = normalizeMoneyValue(item.winnerStake || 0);
+  const winnerPayout = normalizeMoneyValue(item.winnerPayout || winnerStake || 0);
+  const finishedAtText = formatHistoryDate(tsToMs(item.finishedAt) ? new Date(tsToMs(item.finishedAt)).toISOString() : item.finishedAt);
+  const totalPot = normalizeMoneyValue(item.totalPot || 0);
+  const participantCount = Number(item.participantCount || 0);
+  const multiplierText = formatScannerMultiplier(winnerPayout, winnerStake);
+  const winnerColor = item.winnerColor || getScannerColorById(
+    item.winnerPlayerId || item.winnerName || "winner",
+    item.roundId || item.finishedAt || item.playedAt || item.mode || "recent_round"
+  );
+  const resultsArr = Array.isArray(item.results) ? item.results : [];
+  const winnerNickname = String(
+    item.winnerName ||
+    item.winner ||
+    (resultsArr.find((row) => String(row.playerId || row.id || row.userId || "") === String(item.winnerPlayerId || ""))?.name || "")
+  ).trim() || "Победитель";
+  const winnerAvatar = item.winnerAvatar ||
+    (resultsArr.find((row) => String(row.playerId || row.id || "") === String(item.winnerPlayerId || ""))?.avatar || null);
+  const winnerCellCount = Number(
+    resultsArr.find((row) => String(row.playerId || row.id || "") === String(item.winnerPlayerId || ""))?.cellCount || 0
+  );
+  const winnerChance = formatPercent((winnerCellCount / SCANNER_GRID_TOTAL_CELLS) * 100);
+  const roundNumberText = item.roundNumber ? `Раунд №: ${item.roundNumber}` : "";
+  const youWon = String(item.winnerPlayerId || "") === String(currentPlayer.id);
+
+  const recentRoundPlayers = resultsArr.map((row) => ({
+    id: String(row.playerId || row.id || ""),
+    name: row.name || "Игрок",
+    avatar: row.avatar || null,
+    color: row.color || row.roundColor || row.playerColor || "hsl(182 88% 58%)",
+    stake: Number(row.stake || row.score || 0),
+    cellCount: Number(row.cellCount || 0),
+    stakeHistory: Array.isArray(row.stakeHistory) ? row.stakeHistory : [],
+    isMe: String(row.playerId || row.id || "") === String(currentPlayer.id)
+  })).sort((a, b) => (b.isMe === true) - (a.isMe === true));
+
+  const recentPlayersHtml = recentRoundPlayers.map((player) => {
+    const arenaPercent = formatPercent((player.cellCount / SCANNER_GRID_TOTAL_CELLS) * 100);
+    const chipsHtml = getScannerPlayerStakeChipsHtml(player);
+    const isWinnerRow = String(player.id) === String(item.winnerPlayerId || "");
+    const meResultClass = player.isMe ? (isWinnerRow ? " is-me-won" : " is-me-lost") : "";
+    const stakesBlockHtml = chipsHtml ? `
+      <div class="scanner-history-winnings-box${meResultClass}">
+        <div class="scanner-player-stakes-row">${chipsHtml}</div>
+      </div>
+    ` : "";
+
     return `
-      <div class="scanner-recent-card">
-        <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
-        <div class="scanner-recent-copy">
-          <div class="scanner-recent-title">Победитель: ${escapeHtml(winnerNickname)}</div>
-          <div class="scanner-recent-meta">Игроков: ${playersCountText} · Ставка: ${formatTon(winnerStake)} · ${multiplierText}</div>
+      <div class="scanner-player-row${player.isMe ? " me" : ""}">
+        <div class="scanner-player-top-row">
+          <div class="scanner-player-identity">
+            ${getScannerPlayerAvatarHtml(player)}
+          </div>
+          <div class="scanner-player-copy">
+            <div class="scanner-player-name">${escapeHtml(player.name)}</div>
+            <div class="scanner-player-percent-row">
+              <div class="scanner-player-percent"><span class="scanner-player-percent-label">Шансы</span> ${arenaPercent}</div>
+              <div class="scanner-player-swatch" style="background:${escapeHtml(player.color)};"></div>
+            </div>
+          </div>
+          <div class="scanner-player-stake">${player.stake.toFixed(2)} GRAM</div>
         </div>
-        <div class="scanner-recent-result-col">
-          ${roundNumberText ? `<div class="scanner-recent-round-number">${roundNumberText}</div>` : ""}
-          <div class="scanner-recent-result">${formatTon(winnerPayout)}</div>
-        </div>
+        ${stakesBlockHtml}
       </div>
     `;
-  }).join(""));
+  }).join("");
+
+  return `
+    <div class="history-match-card scanner-history-card${expandedClass}" onclick="toggleScannerRecentRoundDetails('${safeId}', event)">
+      <div class="scanner-history-header-row">
+        <div class="scanner-history-topline">Победитель</div>
+        <div class="scanner-history-meta-col">
+          <div class="scanner-history-date">${finishedAtText}</div>
+          ${roundNumberText ? `<div class="scanner-history-round-number">· ${roundNumberText}</div>` : ""}
+        </div>
+      </div>
+      <div class="scanner-history-result-line">
+        <div class="scanner-history-result-identity">
+          <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
+          ${getScannerHistoryAvatarHtml(winnerNickname, winnerAvatar)}
+          <span class="scanner-history-result-name">${escapeHtml(winnerNickname)}</span>
+          <span class="scanner-history-result-word">Шансы ${winnerChance}</span>
+        </div>
+        <div class="scanner-history-amount${youWon ? " win" : ""}">${winnerPayout.toFixed(2)} GRAM · ${multiplierText}</div>
+      </div>
+      <div class="scanner-history-winnings-box">
+        <div class="scanner-player-stakes-row">
+          <div class="scanner-stake-chip">
+            <svg class="scanner-stake-chip-icon" fill="none" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="#30A1F5"/><rect x=".5" y=".5" width="99" height="99" rx="49.5" stroke="#000" stroke-opacity=".06"/><path d="M60.41 26.75H39.59c-2.772 0-4.159 0-5.413.388a8.691 8.691 0 0 0-3.028 1.653c-1.005.846-1.754 2.012-3.254 4.344L21.277 43.43c-.99 1.54-1.486 2.311-1.62 3.122-.119.715-.04 1.45.228 2.123.304.764.951 1.411 2.247 2.707l24.59 24.59c1.148 1.148 1.721 1.722 2.383 1.936.582.19 1.208.19 1.79 0 .661-.214 1.235-.788 2.382-1.935l24.591-24.591c1.296-1.296 1.943-1.943 2.247-2.707a3.982 3.982 0 0 0 .228-2.123c-.134-.81-.63-1.581-1.62-3.122l-6.618-10.295c-1.5-2.332-2.25-3.498-3.254-4.344a8.692 8.692 0 0 0-3.028-1.653c-1.255-.388-2.64-.388-5.414-.388z" fill="#fff"/><path d="M56.469 34.871c.338-.914 1.631-.914 1.97 0l2.337 6.317c.14.38.44.679.819.82l6.317 2.337c.914.338.914 1.63 0 1.97l-6.317 2.337c-.38.14-.679.44-.82.818l-2.337 6.317c-.338.915-1.631.915-1.97 0l-2.337-6.317c-.14-.379-.44-.678-.819-.818l-6.316-2.338c-.915-.338-.915-1.631 0-1.97l6.316-2.337c.38-.14.679-.44.82-.819l2.337-6.317z" fill="#30A1F5"/></svg>
+            <span class="scanner-stake-chip-amount">${winnerPayout.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="${detailsId}" class="scanner-history-details${detailsOpenClass}" data-scanner-recent-details="true" aria-hidden="${detailsHidden}">
+        <div class="scanner-history-detail-item">
+          <div class="scanner-history-detail-label">Игроки в раунде: ${formatCompactNumber(participantCount)}</div>
+          <div class="scanner-history-detail-value">${totalPot.toFixed(2)} GRAM</div>
+        </div>
+
+        <div class="scanner-history-players-scroll">
+          ${recentPlayersHtml}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function isScannerBettingLocked() {
