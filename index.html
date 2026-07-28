@@ -13848,31 +13848,54 @@ function buildScannerCanvasCache(size, owners, players) {
 
   // Тонкая тёмная полупрозрачная граница по контуру территории каждого игрока.
   // Рисуется поверх заливки, ровно по той же owners-карте, что и сама заливка —
-  // поэтому граница всегда точно совпадает с реальными долями/шансами игроков,
-  // какой бы сложной ни была форма поля (фигуры, мозаика, диагональные срезы).
-  // Внешний край арены не обводится — только стыки между разными игроками.
+  // Обводим ТОЛЬКО территорию текущего зрителя (players[i].isMe), не стыки
+  // между чужими игроками. Поле может быть разбито на несколько кусков
+  // (мозаика/фигуры при перемешивании) — обводится каждый кусок целиком: для
+  // каждой своей клетки проверяются все 4 соседа (включая внешний край арены).
+  // Линия сдвинута внутрь ровно на половину своей толщины (inset), поэтому
+  // обводка целиком лежит внутри собственных клеток игрока и ни на пиксель
+  // не увеличивает его поле — не бывает так, что толщина линии наполовину
+  // вылезает за реальную границу территории.
   ctx.save();
+  const borderLineWidth = Math.max(1, cellSize * 0.18);
+  const borderInset = borderLineWidth / 2;
   ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
-  ctx.lineWidth = Math.max(1, cellSize * 0.18);
+  ctx.lineWidth = borderLineWidth;
   ctx.beginPath();
   for (let cellIndex = 0; cellIndex < owners.length; cellIndex += 1) {
     const ownerIndex = owners[cellIndex];
-    if (ownerIndex < 0) continue;
+    if (ownerIndex < 0 || !players[ownerIndex]?.isMe) continue;
     const col = cellIndex % SCANNER_GRID_COLS;
     const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
     const x = col * cellSize;
     const y = row * cellSize;
 
-    const rightOwner = col < SCANNER_GRID_COLS - 1 ? owners[cellIndex + 1] : ownerIndex;
-    if (rightOwner !== ownerIndex) {
-      ctx.moveTo(x + cellSize, y);
-      ctx.lineTo(x + cellSize, y + cellSize);
+    const rightIsMine = col < SCANNER_GRID_COLS - 1 && players[owners[cellIndex + 1]]?.isMe === true;
+    if (!rightIsMine) {
+      const lx = x + cellSize - borderInset;
+      ctx.moveTo(lx, y);
+      ctx.lineTo(lx, y + cellSize);
     }
 
-    const bottomOwner = row < SCANNER_GRID_ROWS - 1 ? owners[cellIndex + SCANNER_GRID_COLS] : ownerIndex;
-    if (bottomOwner !== ownerIndex) {
-      ctx.moveTo(x, y + cellSize);
-      ctx.lineTo(x + cellSize, y + cellSize);
+    const bottomIsMine = row < SCANNER_GRID_ROWS - 1 && players[owners[cellIndex + SCANNER_GRID_COLS]]?.isMe === true;
+    if (!bottomIsMine) {
+      const ly = y + cellSize - borderInset;
+      ctx.moveTo(x, ly);
+      ctx.lineTo(x + cellSize, ly);
+    }
+
+    const leftIsMine = col > 0 && players[owners[cellIndex - 1]]?.isMe === true;
+    if (!leftIsMine) {
+      const lx = x + borderInset;
+      ctx.moveTo(lx, y);
+      ctx.lineTo(lx, y + cellSize);
+    }
+
+    const topIsMine = row > 0 && players[owners[cellIndex - SCANNER_GRID_COLS]]?.isMe === true;
+    if (!topIsMine) {
+      const ly = y + borderInset;
+      ctx.moveTo(x, ly);
+      ctx.lineTo(x + cellSize, ly);
     }
   }
   ctx.stroke();
