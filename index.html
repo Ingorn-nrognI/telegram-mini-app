@@ -14071,7 +14071,7 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.rotate(rotation * 1.14);
   const plusLength = safeRadius * plusScale;
   ctx.lineCap = "round";
-  ctx.lineWidth = Math.max(0.8, safeRadius * 0.06);
+  ctx.lineWidth = Math.max(1.6, safeRadius * 0.12);
   ctx.strokeStyle = plusColor;
   ctx.beginPath();
   ctx.moveTo(-plusLength, 0);
@@ -14508,9 +14508,15 @@ function drawScannerIdleArena(ctx, size, now) {
 
 function drawScannerPlayerBadge(ctx, zone, size, alpha = 1) {
   if (!zone?.canShowBadge || !zone.player) return;
-  const zoneWidthPx = Math.max(1, zone.widthNorm * size);
-  const zoneHeightPx = Math.max(1, zone.heightNorm * size);
-  const radius = Math.max(32, Math.min(76, Math.min(zoneWidthPx, zoneHeightPx) * 0.36));
+  // Раньше радиус считался по габаритному прямоугольнику территории игрока
+  // (maxCol-minCol / maxRow-minRow). Из-за диагонального деления арены лучом
+  // даже маленький кусочек в углу может иметь габариты почти во всю арену —
+  // кружок раздувался до максимума независимо от реальной доли поля. Теперь
+  // считаем от настоящей доли (share): полный максимум достигается уже при
+  // 50% поля (для 2 игроков это обычный случай), меньшая доля — кружок
+  // пропорционально меньше.
+  const shareT = Math.max(0, Math.min(1, (Number(zone.share) || 0) / 0.5));
+  const radius = 32 + (76 - 32) * shareT;
   if (radius < 32) return;
 
   const x = Math.max(radius + 12, Math.min(size - radius - 12, zone.centerX * size));
