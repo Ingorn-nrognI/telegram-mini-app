@@ -4042,6 +4042,31 @@ button {
   letter-spacing: -0.02em;
 }
 
+.scanner-history-result-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.scanner-history-result-identity .scanner-player-avatar {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.scanner-history-result-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+
 .scanner-history-result-word.win {
   color: var(--accent);
 }
@@ -6949,7 +6974,11 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
         </div>
       </div>
       <div class="scanner-history-result-line">
-        <div class="scanner-history-result-word ${resultClass}">${resultWord}</div>
+        <div class="scanner-history-result-identity">
+          ${getScannerHistoryAvatarHtml(myMeta.name, myMeta.avatar)}
+          <span class="scanner-history-result-name">${escapeHtml(myMeta.name)}</span>
+          <span class="scanner-history-result-word ${resultClass}">${resultWord}</span>
+        </div>
         <div class="scanner-history-amount ${resultClass}">${amountText}</div>
       </div>
       ${winningsChipsBlock}
