@@ -2381,6 +2381,25 @@ button {
   text-align: right;
 }
 
+.scanner-player-stake.is-me-won,
+.scanner-player-stake.is-me-lost {
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.scanner-player-stake.is-me-won {
+  color: #dfffe9;
+  background: rgba(117, 245, 156, 0.10);
+  border-color: rgba(117, 245, 156, 0.22);
+}
+
+.scanner-player-stake.is-me-lost {
+  color: #ffe4e7;
+  background: rgba(255, 107, 120, 0.10);
+  border-color: rgba(255, 107, 120, 0.22);
+}
+
 .scanner-recent-result-col {
   display: flex;
   flex-direction: column;
@@ -13161,7 +13180,7 @@ function getScannerRecentRoundCardHtml(item, index) {
     const isWinnerRow = String(player.id) === String(item.winnerPlayerId || "");
     const meResultClass = player.isMe ? (isWinnerRow ? " is-me-won" : " is-me-lost") : "";
     const stakesBlockHtml = chipsHtml ? `
-      <div class="scanner-history-winnings-box${meResultClass}">
+      <div class="scanner-history-winnings-box">
         <div class="scanner-player-stakes-row">${chipsHtml}</div>
       </div>
     ` : "";
@@ -13179,7 +13198,7 @@ function getScannerRecentRoundCardHtml(item, index) {
               <div class="scanner-player-swatch" style="background:${escapeHtml(player.color)};"></div>
             </div>
           </div>
-          <div class="scanner-player-stake">${player.stake.toFixed(2)} GRAM</div>
+          <div class="scanner-player-stake${meResultClass}">${player.stake.toFixed(2)} GRAM</div>
         </div>
         ${stakesBlockHtml}
       </div>
