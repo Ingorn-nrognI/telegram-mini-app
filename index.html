@@ -2005,7 +2005,7 @@ button {
   justify-content: center;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(227, 235, 255, 0.85);
+  color: rgba(227, 235, 255, 0.45);
   cursor: pointer;
   transition: background 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
 }
@@ -8163,6 +8163,14 @@ function handleMenuBackgroundClick(event) {
     const clickedHistoryTrigger = historyTriggers.some((el) => el.contains(event.target));
     if (!clickedInsideHistory && !clickedHistoryTrigger) {
       closeHistoryPanel();
+    }
+  }
+
+  const scannerRoundsPanel = document.getElementById("scannerRoundsPanel");
+  if (scannerRoundsPanel && scannerRoundsPanel.classList.contains("open")) {
+    const clickedInsideRounds = scannerRoundsPanel.contains(event.target);
+    if (!clickedInsideRounds) {
+      closeScannerRoundsPanel();
     }
   }
 }
