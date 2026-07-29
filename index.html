@@ -13828,14 +13828,17 @@ function getScannerCanvasMetrics() {
   return { canvas, ctx, size, dpr, cellSize: size / SCANNER_GRID_COLS };
 }
 
-function buildScannerCanvasCache(size, owners, players) {
-  if (!window._scannerBorderDebugLogged) {
-    window._scannerBorderDebugLogged = true;
-    players.forEach((p, i) => {
-      console.log('[BorderDebug] player[' + i + '] id=' + p?.id + ' isMe=' + p?.isMe + ' (type: ' + typeof p?.isMe + ') currentPlayer.id=' + getCurrentPlayer().id);
-    });
-    console.log('[BorderDebug] owners length:', owners.length, 'owners[0]=', owners[0]);
-    console.log('[BorderDebug] players[owners[0]]?.isMe =', players[owners[0]]?.isMe);
+function buildScannerCanvasCache(size, owners, players, debugLabel) {
+  if (debugLabel) {
+    if (!window._scannerBorderDebugLogged) window._scannerBorderDebugLogged = {};
+    if (!window._scannerBorderDebugLogged[debugLabel]) {
+      window._scannerBorderDebugLogged[debugLabel] = true;
+      console.log('[BorderDebug:' + debugLabel + '] owners.length=' + owners.length + ' players.length=' + players.length);
+      console.log('[BorderDebug:' + debugLabel + '] owners[0]=' + owners[0] + ' players[owners[0]]?.isMe=' + players[owners[0]]?.isMe);
+      let myCells = 0;
+      for (let i = 0; i < owners.length; i += 1) { if (players[owners[i]]?.isMe) myCells += 1; }
+      console.log('[BorderDebug:' + debugLabel + '] total cells belonging to me:', myCells, 'of', owners.length);
+    }
   }
   const cacheCanvas = document.createElement("canvas");
   cacheCanvas.width = size;
@@ -14661,7 +14664,7 @@ function ensureScannerSurfaceCaches(size) {
     scannerGridCache.version !== scannerGridState.gridVersion ||
     scannerGridCache.size !== size
   ) {
-    scannerGridCanvasCache = buildScannerCanvasCache(size, scannerGridState.cellOwners || [], scannerGridState.players || []);
+    scannerGridCanvasCache = buildScannerCanvasCache(size, scannerGridState.cellOwners || [], scannerGridState.players || [], "MAIN");
     scannerGridCache = { version: scannerGridState.gridVersion, size, canvas: scannerGridCanvasCache };
   }
 
@@ -14671,7 +14674,7 @@ function ensureScannerSurfaceCaches(size) {
     scannerGridPreviewCanvasCache.version !== scannerGridState.previewGridVersion ||
     scannerGridPreviewCanvasCache.size !== size
   ) {
-    const previewCanvas = buildScannerCanvasCache(size, scannerGridState.previewCellOwners || [], scannerGridState.players || []);
+    const previewCanvas = buildScannerCanvasCache(size, scannerGridState.previewCellOwners || [], scannerGridState.players || [], "PREVIEW");
     scannerGridPreviewCanvasCache = { version: scannerGridState.previewGridVersion, size, canvas: previewCanvas };
   }
 
