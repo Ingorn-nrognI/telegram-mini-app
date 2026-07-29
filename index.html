@@ -13861,7 +13861,7 @@ function buildScannerCanvasCache(size, owners, players) {
 function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players) {
   if (!Array.isArray(owners) || !owners.length || !Array.isArray(players) || !players.length) return;
   ctx.save();
-  const borderLineWidth = Math.max(2.5, cellSize * 0.55);
+  const borderLineWidth = Math.max(3.5, cellSize * 0.8);
   const borderInset = borderLineWidth / 2;
   // Бортик арены (толщина bw) непрозрачен и лежит ПОВЕРХ крайних клеток поля,
   // поэтому у краёв арены линию прижимаем к внутреннему краю стены (кламп в
@@ -14986,6 +14986,12 @@ function renderScannerCanvas() {
     _lastFrozenResultPos = { x: visualBeamSample.x, y: visualBeamSample.y };
   }
 
+  const _myBorderOwners =
+    (roundStatus === "waiting" || roundStatus === "countdown" || roundStatus === "shuffling")
+      ? (scannerGridState.previewCellOwners || [])
+      : (scannerGridState.cellOwners || []);
+  drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || []);
+
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
     const reticleRadius = Math.max(11, size * 0.031) - 1;
@@ -15138,12 +15144,6 @@ function renderScannerCanvas() {
     drawScannerWinnerHighlight(ctx, cellSize);
   }
   drawScannerArenaBorder(ctx, size);
-
-  const _myBorderOwners =
-    (roundStatus === "waiting" || roundStatus === "countdown" || roundStatus === "shuffling")
-      ? (scannerGridState.previewCellOwners || [])
-      : (scannerGridState.cellOwners || []);
-  drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || []);
 
   if (visualBeamSample) {
     const reticleRadius = Math.max(11, size * 0.031) - 1;
