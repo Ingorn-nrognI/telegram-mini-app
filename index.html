@@ -13828,18 +13828,7 @@ function getScannerCanvasMetrics() {
   return { canvas, ctx, size, dpr, cellSize: size / SCANNER_GRID_COLS };
 }
 
-function buildScannerCanvasCache(size, owners, players, debugLabel) {
-  if (debugLabel) {
-    if (!window._scannerBorderDebugLogged) window._scannerBorderDebugLogged = {};
-    if (!window._scannerBorderDebugLogged[debugLabel]) {
-      window._scannerBorderDebugLogged[debugLabel] = true;
-      console.log('[BorderDebug:' + debugLabel + '] owners.length=' + owners.length + ' players.length=' + players.length);
-      console.log('[BorderDebug:' + debugLabel + '] owners[0]=' + owners[0] + ' players[owners[0]]?.isMe=' + players[owners[0]]?.isMe);
-      let myCells = 0;
-      for (let i = 0; i < owners.length; i += 1) { if (players[owners[i]]?.isMe) myCells += 1; }
-      console.log('[BorderDebug:' + debugLabel + '] total cells belonging to me:', myCells, 'of', owners.length);
-    }
-  }
+function buildScannerCanvasCache(size, owners, players) {
   const cacheCanvas = document.createElement("canvas");
   cacheCanvas.width = size;
   cacheCanvas.height = size;
@@ -13857,20 +13846,24 @@ function buildScannerCanvasCache(size, owners, players, debugLabel) {
     ctx.fillRect(Math.floor(col * cellSize), Math.floor(row * cellSize), Math.ceil(cellSize) + 1, Math.ceil(cellSize) + 1);
   }
 
-  // Тонкая тёмная полупрозрачная граница по контуру территории каждого игрока.
-  // Рисуется поверх заливки, ровно по той же owners-карте, что и сама заливка —
-  // Обводим ТОЛЬКО территорию текущего зрителя (players[i].isMe), не стыки
-  // между чужими игроками. Поле может быть разбито на несколько кусков
-  // (мозаика/фигуры при перемешивании) — обводится каждый кусок целиком: для
-  // каждой своей клетки проверяются все 4 соседа (включая внешний край арены).
-  // Линия сдвинута внутрь ровно на половину своей толщины (inset), поэтому
-  // обводка целиком лежит внутри собственных клеток игрока и ни на пиксель
-  // не увеличивает его поле — не бывает так, что толщина линии наполовину
-  // вылезает за реальную границу территории.
+  return cacheCanvas;
+}
+
+// Обводка территории ТЕКУЩЕГО зрителя (players[i].isMe), рисуется НАПРЯМУЮ на
+// основном канвасе — отдельным проходом, а не внутри кэша заливки. Это важно:
+// декоративный бортик арены (drawScannerArenaBorderBackground) рисуется поверх
+// всего и толщиной ~19px, поэтому любая обводка, "запечённая" в кэш заливки
+// (который рисуется ДО бортика), у самого края арены гарантированно
+// закрашивается бортиком. Эта функция вызывается ПОСЛЕ бортика, поэтому её
+// линия видна всегда, в том числе когда игрок владеет 100% поля.
+// Линия сдвинута внутрь на половину своей толщины (inset) — обводка целиком
+// лежит внутри собственных клеток игрока и не увеличивает поле визуально.
+function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players) {
+  if (!Array.isArray(owners) || !owners.length || !Array.isArray(players) || !players.length) return;
   ctx.save();
   const borderLineWidth = Math.max(1, cellSize * 0.18);
   const borderInset = borderLineWidth / 2;
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
   ctx.lineWidth = borderLineWidth;
   ctx.beginPath();
   for (let cellIndex = 0; cellIndex < owners.length; cellIndex += 1) {
@@ -13911,8 +13904,6 @@ function buildScannerCanvasCache(size, owners, players, debugLabel) {
   }
   ctx.stroke();
   ctx.restore();
-
-  return cacheCanvas;
 }
 
 const _borderGlowPoints = [];
@@ -14957,6 +14948,12 @@ function renderScannerCanvas() {
     ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
   }
   drawScannerArenaBorderBackground(ctx, size);
+
+  const _myBorderOwners =
+    (roundStatus === "waiting" || roundStatus === "countdown" || roundStatus === "shuffling")
+      ? (scannerGridState.previewCellOwners || [])
+      : (scannerGridState.cellOwners || []);
+  drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || []);
 
   if (previewBadgeAlpha > 0.02) {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
