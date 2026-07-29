@@ -13873,6 +13873,8 @@ function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players) {
   const cl = (v) => Math.max(clampLo, Math.min(clampHi, v));
   ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
   ctx.lineWidth = borderLineWidth;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
   ctx.beginPath();
   for (let cellIndex = 0; cellIndex < owners.length; cellIndex += 1) {
     const ownerIndex = owners[cellIndex];
