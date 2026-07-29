@@ -8409,6 +8409,7 @@ let _scannerRoundColorCache = { roundSeed: null, byPid: new Map(), hueRotation: 
 
 function assignScannerRoundColors(round, participants) {
   const roundSeed = getScannerRoundColorSeed(round);
+  console.log('[ColorDebug] roundSeed=', roundSeed, 'cachedSeed=', _scannerRoundColorCache.roundSeed, 'willReset=', _scannerRoundColorCache.roundSeed !== roundSeed);
   if (_scannerRoundColorCache.roundSeed !== roundSeed) {
     const roundHash = hashString(roundSeed);
     _scannerRoundColorCache = {
@@ -15143,6 +15144,10 @@ function renderScannerCanvas() {
     (roundStatus === "waiting" || roundStatus === "countdown" || roundStatus === "shuffling")
       ? (scannerGridState.previewCellOwners || [])
       : (scannerGridState.cellOwners || []);
+  if (!window._myBorderFrameLogged) {
+    window._myBorderFrameLogged = true;
+    console.log('[BorderFrame] roundStatus=', roundStatus, 'ownersLen=', _myBorderOwners.length, 'playersLen=', (scannerGridState.players || []).length, 'meCount=', (scannerGridState.players || []).filter(p => p && p.isMe).length);
+  }
   drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || []);
 
   if (visualBeamSample) {
