@@ -14949,20 +14949,6 @@ function renderScannerCanvas() {
   }
   drawScannerArenaBorderBackground(ctx, size);
 
-  const _myBorderOwners =
-    (roundStatus === "waiting" || roundStatus === "countdown" || roundStatus === "shuffling")
-      ? (scannerGridState.previewCellOwners || [])
-      : (scannerGridState.cellOwners || []);
-  if (!window._myBorderCallLogged) {
-    window._myBorderCallLogged = true;
-    console.log('[MyBorderCall] roundStatus=', roundStatus, 'ownersLen=', _myBorderOwners?.length, 'playersLen=', (scannerGridState.players || []).length, 'cellSize=', cellSize, 'size=', size);
-  }
-  try {
-    drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || []);
-  } catch (borderErr) {
-    console.error('[MyBorderCall] ОШИБКА внутри drawScannerMyTerritoryBorder:', borderErr);
-  }
-
   if (previewBadgeAlpha > 0.02) {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
   }
@@ -15144,6 +15130,12 @@ function renderScannerCanvas() {
     drawScannerWinnerHighlight(ctx, cellSize);
   }
   drawScannerArenaBorder(ctx, size);
+
+  const _myBorderOwners =
+    (roundStatus === "waiting" || roundStatus === "countdown" || roundStatus === "shuffling")
+      ? (scannerGridState.previewCellOwners || [])
+      : (scannerGridState.cellOwners || []);
+  drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || []);
 
   if (visualBeamSample) {
     const reticleRadius = Math.max(11, size * 0.031) - 1;
