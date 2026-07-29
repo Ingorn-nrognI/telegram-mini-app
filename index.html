@@ -13884,32 +13884,42 @@ function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players) {
     const x = col * cellSize;
     const y = row * cellSize;
 
+    // Клампинг у краёв арены "схлопывает" несколько соседних клеток в одну и
+    // ту же точку (координата не меняется) — это нормально, но если оба конца
+    // отрезка совпали, получаем отрезок нулевой длины. С lineCap:"round" такой
+    // нулевой отрезок рисуется как ПОЛНЫЙ кружок (лишняя точка в углу) —
+    // поэтому такие вырожденные отрезки просто пропускаем.
+    const yLo = cl(y);
+    const yHi = cl(y + cellSize);
+    const xLo = cl(x);
+    const xHi = cl(x + cellSize);
+
     const rightIsMine = col < SCANNER_GRID_COLS - 1 && players[owners[cellIndex + 1]]?.isMe === true;
-    if (!rightIsMine) {
+    if (!rightIsMine && yLo !== yHi) {
       const lx = cl(x + cellSize - borderInset);
-      ctx.moveTo(lx, cl(y));
-      ctx.lineTo(lx, cl(y + cellSize));
+      ctx.moveTo(lx, yLo);
+      ctx.lineTo(lx, yHi);
     }
 
     const bottomIsMine = row < SCANNER_GRID_ROWS - 1 && players[owners[cellIndex + SCANNER_GRID_COLS]]?.isMe === true;
-    if (!bottomIsMine) {
+    if (!bottomIsMine && xLo !== xHi) {
       const ly = cl(y + cellSize - borderInset);
-      ctx.moveTo(cl(x), ly);
-      ctx.lineTo(cl(x + cellSize), ly);
+      ctx.moveTo(xLo, ly);
+      ctx.lineTo(xHi, ly);
     }
 
     const leftIsMine = col > 0 && players[owners[cellIndex - 1]]?.isMe === true;
-    if (!leftIsMine) {
+    if (!leftIsMine && yLo !== yHi) {
       const lx = cl(x + borderInset);
-      ctx.moveTo(lx, cl(y));
-      ctx.lineTo(lx, cl(y + cellSize));
+      ctx.moveTo(lx, yLo);
+      ctx.lineTo(lx, yHi);
     }
 
     const topIsMine = row > 0 && players[owners[cellIndex - SCANNER_GRID_COLS]]?.isMe === true;
-    if (!topIsMine) {
+    if (!topIsMine && xLo !== xHi) {
       const ly = cl(y + borderInset);
-      ctx.moveTo(cl(x), ly);
-      ctx.lineTo(cl(x + cellSize), ly);
+      ctx.moveTo(xLo, ly);
+      ctx.lineTo(xHi, ly);
     }
   }
   ctx.stroke();
