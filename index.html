@@ -14611,8 +14611,14 @@ function drawScannerPlayerBadge(ctx, zone, size, alpha = 1) {
   // 50% поля (для 2 игроков это обычный случай), меньшая доля — кружок
   // пропорционально меньше.
   const shareT = Math.max(0, Math.min(1, (Number(zone.share) || 0) / 0.5));
-  const radius = 32 + (76 - 32) * shareT;
-  if (radius < 32) return;
+  // Раньше радиус масштабировался линейно от доли поля — при маленькой доле
+  // (например 12.8%) кружок всё равно получался ~43px, визуально крупнее,
+  // чем сама тонкая территория. Квадратичное сжатие (shareT*shareT) даёт
+  // заметно меньший кружок именно для малых долей, а при 50%+ поля результат
+  // не меняется (там shareT уже близко к 1).
+  const eased = shareT * shareT;
+  const radius = 14 + (76 - 14) * eased;
+  if (radius < 14) return;
 
   const x = Math.max(radius + 12, Math.min(size - radius - 12, zone.centerX * size));
   const y = Math.max(radius + 12, Math.min(size - radius - 12, zone.centerY * size));
@@ -14699,6 +14705,29 @@ function ensureScannerSurfaceCaches(size) {
       thresholds: buildScannerScatterRevealThresholds(transitionVersion)
     };
   }
+}
+
+// Во время shuffling реально закрашенные на экране клетки — не статичный
+// превью-срез и не финальная мозаика целиком, а поклеточный блендинг: каждая
+// клетка переключается с preview-владельца на final-владельца в свой момент
+// (per-cell threshold, см. renderScannerActiveTransition ниже). Раньше
+// обводка территории всегда бралась из статичного previewCellOwners целиком
+// — из-за этого во время shuffling она не совпадала с реально закрашенными
+// клетками (заезжала на чужие поля, "рассыпалась" на куски, съезжала у
+// стены). Теперь для каждой клетки берём того владельца, чей цвет реально
+// преобладает на экране в данный момент (localBlend > 0.5).
+function getScannerShuffleVisualOwners(progress) {
+  const thresholds = scannerGridTransitionCache?.thresholds || [];
+  const previewOwners = scannerGridState.previewCellOwners || [];
+  const finalOwners = scannerGridState.cellOwners || [];
+  const blendWindow = 0.12;
+  const result = new Array(finalOwners.length);
+  for (let cellIndex = 0; cellIndex < finalOwners.length; cellIndex += 1) {
+    const threshold = thresholds[cellIndex] ?? 1;
+    const localBlend = Math.max(0, Math.min(1, (progress - threshold) / blendWindow));
+    result[cellIndex] = localBlend > 0.5 ? finalOwners[cellIndex] : previewOwners[cellIndex];
+  }
+  return result;
 }
 
 function renderScannerActiveTransition(ctx, size, cellSize, progress) {
@@ -14999,9 +15028,11 @@ function renderScannerCanvas() {
   }
 
   const _myBorderOwners =
-    (roundStatus === "waiting" || roundStatus === "countdown" || roundStatus === "shuffling")
+    (roundStatus === "waiting" || roundStatus === "countdown")
       ? (scannerGridState.previewCellOwners || [])
-      : (scannerGridState.cellOwners || []);
+      : roundStatus === "shuffling"
+        ? getScannerShuffleVisualOwners(getScannerShuffleTransitionProgress(roundData))
+        : (scannerGridState.cellOwners || []);
   drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || []);
 
   if (visualBeamSample) {
