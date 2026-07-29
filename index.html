@@ -6,7 +6,7 @@
 <title>Bobr World</title>
 <style>
 :root {
-  --bg-1: #050816;
+  --bg-1: #0d1530;
   --bg-2: #0a1024;
   --bg-3: #101d46;
   --panel: rgba(11, 18, 42, 0.78);
@@ -4569,7 +4569,7 @@ button {
   aspect-ratio: 1/1 !important;
   border-radius: 24px !important;
   overflow: hidden !important;
-  background: #050816 !important;
+  background: #0d1530 !important;
   position: relative !important;
   /* Изолирует зум канваса внутри рамки арены: увеличенное поле обрезается
      границей и физически не может наехать на баланс, карточки или меню. */
@@ -4613,7 +4613,7 @@ button {
   position: fixed;
   inset: 0;
   z-index: 999999;
-  background: radial-gradient(circle at 50% 40%, #10262b 0%, #050816 70%);
+  background: radial-gradient(circle at 50% 40%, #10262b 0%, #0d1530 70%);
   transition: opacity 0.45s ease;
 }
 #appBootLoader.boot-loader-hidden {
@@ -5765,8 +5765,8 @@ try {
   tgUser = tgApp?.initDataUnsafe?.user || null;
   tgApp?.ready?.();
   tgApp?.expand?.();
-  tgApp?.setBackgroundColor?.("#050816");
-  tgApp?.setHeaderColor?.("#050816");
+  tgApp?.setBackgroundColor?.("#0d1530");
+  tgApp?.setHeaderColor?.("#0d1530");
 } catch (error) {
   reportAppError("Ошибка инициализации Telegram WebApp:", error);
   tgUser = null;
@@ -13871,7 +13871,7 @@ function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players) {
   const clampLo = bw + borderInset;
   const clampHi = size - bw - borderInset;
   const cl = (v) => Math.max(clampLo, Math.min(clampHi, v));
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+  ctx.strokeStyle = "rgba(224, 220, 205, 0.85)";
   ctx.lineWidth = borderLineWidth;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
