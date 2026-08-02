@@ -14446,8 +14446,14 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
 function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
   const text = options.text || "Ожидание раунда...";
   const isHomePreview = document.getElementById('scannerGridCanvas')?.closest('#scannerHomeCanvasShell') !== null;
+  // Раньше у превью на главной странице арены был отдельный, заниженный
+  // множитель (0.048) вместо того же 0.074, что и в полной арене — из-за
+  // этого пропорция текста к размеру поля не совпадала между превью и полной
+  // ареной. Теперь коэффициент один и тот же, различается только минимальный
+  // порог (чтобы совсем маленькое превью на слабых экранах не давало
+  // нечитаемо мелкий текст).
   const fontSize = isHomePreview
-    ? Math.max(10, size * 0.048)
+    ? Math.max(9, size * 0.074)
     : Math.max(22, size * 0.074);
   const centerX = size / 2;
   const centerY = size / 2;
