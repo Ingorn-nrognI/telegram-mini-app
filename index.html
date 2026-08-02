@@ -13850,32 +13850,33 @@ function buildScannerCanvasCache(size, owners, players) {
 }
 
 // Обводка территории ТЕКУЩЕГО зрителя (players[i].isMe), рисуется НАПРЯМУЮ на
-// основном канвасе — отдельным проходом, а не внутри кэша заливки. Это важно:
-// декоративный бортик арены (drawScannerArenaBorderBackground) рисуется поверх
-// всего и толщиной ~19px, поэтому любая обводка, "запечённая" в кэш заливки
-// (который рисуется ДО бортика), у самого края арены гарантированно
-// закрашивается бортиком. Эта функция вызывается ПОСЛЕ бортика, поэтому её
-// линия видна всегда, в том числе когда игрок владеет 100% поля.
-// Линия сдвинута внутрь на половину своей толщины (inset) — обводка целиком
-// лежит внутри собственных клеток игрока и не увеличивает поле визуально.
+// основном канвасе — отдельным проходом, а не внутри кэша заливки, ПОСЛЕ
+// декоративного бортика арены (см. комментарий раньше — иначе бортик её
+// перекрывает). ВАЖНО: это больше не stroke-линия, а закрашенные прямоугольники
+// (fillRect) на каждую граничную сторону клетки, с градиентом прозрачности —
+// 100% непрозрачность ровно на истинном крае поля игрока, плавное затухание в
+// 0 вглубь клетки. Раньше здесь была линия (stroke) со смещением внутрь на
+// половину толщины и lineCap:"round" — из-за смещения между истинным краем
+// поля и самой линией оставалась видимая полоска заливки (поле видно "и до, и
+// после" обводки), а скруглённые концы на стыке каждой отдельной клетки давали
+// эффект бусин/точек, особенно заметный на одиночных клетках-огрызках мозаики
+// (там кружки на 4 сторонах крохотной клетки создавали непропорционально
+// большую кляксу). У прямоугольников нет ни смещения от центра, ни скруглённых
+// концов — они физически начинаются ровно на границе клетки, поэтому не может
+// быть ни разрыва, ни выступающих точек.
 function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players) {
   if (!Array.isArray(owners) || !owners.length || !Array.isArray(players) || !players.length) return;
   ctx.save();
-  const borderLineWidth = Math.max(3.5, cellSize * 0.8);
-  const borderInset = borderLineWidth / 2;
-  // Бортик арены (толщина bw) непрозрачен и лежит ПОВЕРХ крайних клеток поля,
-  // поэтому у краёв арены линию прижимаем к внутреннему краю стены (кламп в
-  // [bw+inset, size-bw-inset]) — иначе линия оказывается на бортике/под ним,
-  // а не на видимом поле игрока.
+  const borderThickness = Math.max(2.5, cellSize * 0.6);
+  // Бортик арены (толщина bw) непрозрачен и лежит ПОВЕРХ крайних клеток поля —
+  // у истинного края арены обрезаем (clip) выступающую под бортик часть
+  // прямоугольника, саму полосу при этом никуда не смещаем.
   const bw = Math.max(11, size * 0.031) + 1;
-  const clampLo = bw + borderInset;
-  const clampHi = size - bw - borderInset;
-  const cl = (v) => Math.max(clampLo, Math.min(clampHi, v));
-  ctx.strokeStyle = "rgba(224, 220, 205, 0.85)";
-  ctx.lineWidth = borderLineWidth;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.beginPath();
+  const playLo = bw;
+  const playHi = size - bw;
+  const clampV = (v) => Math.max(playLo, Math.min(playHi, v));
+  const colorRgb = "224, 220, 205";
+
   for (let cellIndex = 0; cellIndex < owners.length; cellIndex += 1) {
     const ownerIndex = owners[cellIndex];
     if (ownerIndex < 0 || !players[ownerIndex]?.isMe) continue;
@@ -13883,46 +13884,64 @@ function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players) {
     const row = Math.floor(cellIndex / SCANNER_GRID_COLS);
     const x = col * cellSize;
     const y = row * cellSize;
-
-    // Клампинг у краёв арены "схлопывает" несколько соседних клеток в одну и
-    // ту же точку (координата не меняется) — это нормально, но если оба конца
-    // отрезка совпали, получаем отрезок нулевой длины. С lineCap:"round" такой
-    // нулевой отрезок рисуется как ПОЛНЫЙ кружок (лишняя точка в углу) —
-    // поэтому такие вырожденные отрезки просто пропускаем.
-    const yLo = cl(y);
-    const yHi = cl(y + cellSize);
-    const xLo = cl(x);
-    const xHi = cl(x + cellSize);
+    const cellRight = x + cellSize;
+    const cellBottom = y + cellSize;
 
     const rightIsMine = col < SCANNER_GRID_COLS - 1 && players[owners[cellIndex + 1]]?.isMe === true;
-    if (!rightIsMine && yLo !== yHi) {
-      const lx = cl(x + cellSize - borderInset);
-      ctx.moveTo(lx, yLo);
-      ctx.lineTo(lx, yHi);
-    }
-
     const bottomIsMine = row < SCANNER_GRID_ROWS - 1 && players[owners[cellIndex + SCANNER_GRID_COLS]]?.isMe === true;
-    if (!bottomIsMine && xLo !== xHi) {
-      const ly = cl(y + cellSize - borderInset);
-      ctx.moveTo(xLo, ly);
-      ctx.lineTo(xHi, ly);
-    }
-
     const leftIsMine = col > 0 && players[owners[cellIndex - 1]]?.isMe === true;
-    if (!leftIsMine && yLo !== yHi) {
-      const lx = cl(x + borderInset);
-      ctx.moveTo(lx, yLo);
-      ctx.lineTo(lx, yHi);
-    }
-
     const topIsMine = row > 0 && players[owners[cellIndex - SCANNER_GRID_COLS]]?.isMe === true;
-    if (!topIsMine && xLo !== xHi) {
-      const ly = cl(y + borderInset);
-      ctx.moveTo(xLo, ly);
-      ctx.lineTo(xHi, ly);
+
+    const ry0 = clampV(y);
+    const ry1 = clampV(cellBottom);
+    const rx0 = clampV(x);
+    const rx1 = clampV(cellRight);
+
+    if (!rightIsMine) {
+      const gx0 = clampV(cellRight - borderThickness);
+      const gx1 = clampV(cellRight);
+      if (gx1 > gx0 && ry1 > ry0) {
+        const grad = ctx.createLinearGradient(gx0, 0, gx1, 0);
+        grad.addColorStop(0, `rgba(${colorRgb}, 0)`);
+        grad.addColorStop(1, `rgba(${colorRgb}, 1)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(gx0, ry0, gx1 - gx0, ry1 - ry0);
+      }
+    }
+    if (!leftIsMine) {
+      const gx0 = clampV(x);
+      const gx1 = clampV(x + borderThickness);
+      if (gx1 > gx0 && ry1 > ry0) {
+        const grad = ctx.createLinearGradient(gx0, 0, gx1, 0);
+        grad.addColorStop(0, `rgba(${colorRgb}, 1)`);
+        grad.addColorStop(1, `rgba(${colorRgb}, 0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(gx0, ry0, gx1 - gx0, ry1 - ry0);
+      }
+    }
+    if (!bottomIsMine) {
+      const gy0 = clampV(cellBottom - borderThickness);
+      const gy1 = clampV(cellBottom);
+      if (gy1 > gy0 && rx1 > rx0) {
+        const grad = ctx.createLinearGradient(0, gy0, 0, gy1);
+        grad.addColorStop(0, `rgba(${colorRgb}, 0)`);
+        grad.addColorStop(1, `rgba(${colorRgb}, 1)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(rx0, gy0, rx1 - rx0, gy1 - gy0);
+      }
+    }
+    if (!topIsMine) {
+      const gy0 = clampV(y);
+      const gy1 = clampV(y + borderThickness);
+      if (gy1 > gy0 && rx1 > rx0) {
+        const grad = ctx.createLinearGradient(0, gy0, 0, gy1);
+        grad.addColorStop(0, `rgba(${colorRgb}, 1)`);
+        grad.addColorStop(1, `rgba(${colorRgb}, 0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(rx0, gy0, rx1 - rx0, gy1 - gy0);
+      }
     }
   }
-  ctx.stroke();
   ctx.restore();
 }
 
