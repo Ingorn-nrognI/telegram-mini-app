@@ -5411,6 +5411,9 @@ let appNoticeTimer = null;
 
 let tgUser = null;
 const tgApp = window.Telegram?.WebApp || null;
+// Подписанная строка от Telegram. В отличие от initDataUnsafe её нельзя
+// подделать — сервер проверяет подпись своим токеном бота.
+const tgInitData = tgApp?.initData || "";
 let telegramBackButtonHandler = null;
 let historyLoading = false;
 let expandedHistoryMatchId = null;
@@ -11299,7 +11302,11 @@ let _socket = null;
 let _scannerPingIntervalId = null;
 
 function initSocketConnection() {
-  _socket = io(SOCKET_SERVER, { transports: ['websocket'], reconnection: true });
+  _socket = io(SOCKET_SERVER, {
+    transports: ['websocket'],
+    reconnection: true,
+    auth: { initData: tgInitData }
+  });
   // Экран загрузки: скрываем только когда пришли РЕАЛЬНЫЕ данные (сокет
   // подключился и получено первое состояние арены/раунда), а не сразу после
   // отрисовки HTML — раньше именно в этом окне пользователь видел "Подключение..."
