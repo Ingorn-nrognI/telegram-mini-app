@@ -7946,9 +7946,8 @@ function tryClaimReferralFromStartParam() {
     _socket.emit("referral:claim", { playerId: String(myId), referrerId: String(referrerId) }, (response) => {
       if (response?.ok) {
         localStorage.setItem(claimedKey, "1");
-        ensureDemoBalanceForCurrentUser().catch((e) => {
-          console.warn("Не удалось повторно проверить стартовый баланс после реферала:", e.message);
-        });
+        // Баланс после привязки реферала пересчитает сервер;
+        // подписка onSnapshot подхватит изменение сама.
       }
     });
   } catch (e) {
@@ -15807,13 +15806,9 @@ scannerStakeSettingsState.draftValues = scannerQuickStakeValues.map((value) => S
 measureRefreshRate();
 applyAppLanguage(appSettings.language);
 renderTopProfile();
-resetAllDemoTonBalancesTo1000Once()
-  .catch((error) => {
-    console.error("Не удалось выполнить миграцию demo TON-балансов до 1000:", error);
-  })
-  .then(() => ensureDemoBalanceForCurrentUser())
-  .then(() => subscribeCurrentUserBalance())
-  .catch((error) => console.error("Не удалось подготовить demo TON-баланс:", error));
+// Стартовый баланс теперь выдаёт сервер после проверки подписи Telegram.
+// Клиент в коллекцию users больше не пишет — только читает свой баланс.
+subscribeCurrentUserBalance();
 homeScreenContext = "games";
 setMenuView("home");
 setActiveBottomNav("arena");
