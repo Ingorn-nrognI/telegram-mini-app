@@ -7067,7 +7067,7 @@ function renderHistoryEntries(entries) {
             .map((row) => `
               <tr>
                 <td>${Number(row.place || 0)}</td>
-                <td>${row.name || "Игрок"}</td>
+                <td>${escapeHtml(row.name || "Игрок")}</td>
                 <td>${Number(row.score || 0)}</td>
               </tr>
             `)
