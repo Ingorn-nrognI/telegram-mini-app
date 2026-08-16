@@ -11349,6 +11349,25 @@ function initSocketConnection() {
       _socket.emit('ping_time', { clientTime: Date.now() });
     }, 10000);
   });
+  // Баланс приходит с сервера после каждой денежной операции.
+  // Пока параллельно работает и Firestore-подписка; когда сервер
+  // переедет на SQLite, останется только этот путь.
+  _socket.on('balance:update', (data) => {
+    const value = Number(data?.balance);
+    if (Number.isFinite(value)) {
+      syncLocalDemoBalance(value);
+      currentDemoTonBalanceLoaded = true;
+    }
+  });
+
+  // Полный список истории раундов, присылается сервером в ответ
+  // на history:request и после каждого завершённого раунда.
+  _socket.on('history:list', (data) => {
+    if (!Array.isArray(data?.items)) return;
+    scannerGridState.recentRounds = data.items;
+    renderScannerRecentList();
+  });
+
   _socket.on('pong_time', (data) => {
     if (data?.serverTime) {
       // Учитываем время полёта пакета по сети. Раньше offset считался как
@@ -15604,6 +15623,18 @@ async function loadScannerHistory() {
     renderScannerRecentList();
   } catch(e) {
     console.warn('История раундов не загружена:', e.message);
+  }
+}
+
+// Запрашивает историю раундов у сервера через сокет.
+// Ответ придёт событием history:list.
+function requestScannerHistoryFromServer() {
+  try {
+    if (_socket && _socket.connected) {
+      _socket.emit('history:request', { limit: 100 });
+    }
+  } catch (e) {
+    console.warn('Не удалось запросить историю раундов:', e.message);
   }
 }
 
