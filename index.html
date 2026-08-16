@@ -12414,7 +12414,11 @@ async function ensureScannerRoundHistoryPersisted() {
     }))
   };
 
-  await Promise.all([
+  // Историю раунда теперь пишет сервер в SQLite сразу после выплаты.
+  // Клиентская запись отключена: она дублировала бы серверную, тратила
+  // квоту Firestore и позволяла нарисовать себе фейковую победу из консоли.
+  const _clientHistoryWriteDisabled = true;
+  if (!_clientHistoryWriteDisabled) await Promise.all([
     getHistoryCollectionRef(currentPlayer.id).doc(round.id).set(summary, { merge: true }),
     scannerHistoryCollection().doc(round.id).set({
       roundId: round.id,
@@ -15677,7 +15681,9 @@ function initializeScannerGridFeature() {
   bootstrapScannerRoundFromRecentState({ force: true }).catch((error) => {
     console.warn("Не удалось выполнить стартовое восстановление общего раунда:", error);
   });
-  subscribeScannerHistory();
+  // История раундов приходит событием history:list по сокету.
+  // Firestore-подписка отключена по той же причине, что и для баланса.
+  requestScannerHistoryFromServer();
   syncScannerDerivedState();
   renderScannerRound();
 
@@ -15837,9 +15843,9 @@ scannerStakeSettingsState.draftValues = scannerQuickStakeValues.map((value) => S
 measureRefreshRate();
 applyAppLanguage(appSettings.language);
 renderTopProfile();
-// Стартовый баланс теперь выдаёт сервер после проверки подписи Telegram.
-// Клиент в коллекцию users больше не пишет — только читает свой баланс.
-subscribeCurrentUserBalance();
+// Баланс приходит событием balance:update по сокету (см. обработчик выше).
+// Подписка на Firestore отключена: сервер туда больше не пишет, и её
+// устаревшие данные перетирали правильное значение, пришедшее по сокету.
 homeScreenContext = "games";
 setMenuView("home");
 setActiveBottomNav("arena");
