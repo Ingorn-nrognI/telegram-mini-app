@@ -11478,11 +11478,24 @@ function applySocketRoundPatch(patch) {
     scannerRealtime.roundData.participantCount = patch.participantCount;
   }
   if (patch.participants !== undefined) {
-    // Данные от сокета НЕ используются для рендера игроков на арене —
-    // они нестабильны (приходят раньше Firestore) и вызывают скачок цвета/аватара.
-    // Рендер арены берёт игроков только из onSnapshot участников (Firestore).
-    // Сохраняем сокет-данные отдельно — на случай если понадобятся для других целей (баланс/банк).
-    scannerRealtime.socketParticipants = Array.isArray(patch.participants) ? patch.participants : [];
+    // Сокет — единственный источник участников после переезда на SQLite.
+    // Раньше данные сокета намеренно игнорировались в пользу
+    // Firestore-подписки, но сервер в Firestore больше не пишет, и арена
+    // из-за этого показывала ноль игроков при реально идущем раунде.
+    const _list = Array.isArray(patch.participants) ? patch.participants : [];
+    scannerRealtime.socketParticipants = _list;
+    scannerRealtime.participants = _list.map((p) => ({
+      id: String(p.playerId),
+      playerId: String(p.playerId),
+      name: p.name || "Игрок",
+      avatar: p.avatar || null,
+      stake: Number(p.stake || 0),
+      stakeHistory: Array.isArray(p.stakeHistory) ? p.stakeHistory : [],
+      joinedAt: p.joinedAt || null,
+      status: p.status || "joined"
+    }));
+    scannerRealtime.participantsReady = true;
+    scannerRealtime.participantsError = false;
   }
   if (patch.activeEndsAt !== undefined) {
     if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
