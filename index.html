@@ -6228,6 +6228,12 @@ function getProfileBestWinCandidate(item, playerId) {
 }
 
 async function loadProfileBestRoundWin() {
+  // Значение приходит с сервера событием history:list (см. обработчик сокета).
+  // Прежний перебор истории в Firestore отключён: сервер туда не пишет,
+  // и лучший выигрыш навсегда застывал на доперенесённом значении.
+  requestScannerHistoryFromServer();
+  return;
+
   const requestSeq = profileBestWinRequestSeq + 1;
   profileBestWinRequestSeq = requestSeq;
   const player = getCurrentPlayer();
@@ -11406,6 +11412,12 @@ function initSocketConnection() {
   // Полный список истории раундов, присылается сервером в ответ
   // на history:request и после каждого завершённого раунда.
   _socket.on('history:list', (data) => {
+    // Лучший выигрыш считает сервер по таблице round_participants —
+    // клиентский перебор истории в Firestore после переезда не работает.
+    if (Number.isFinite(Number(data?.bestWin))) {
+      currentProfileBestRoundWin = normalizeMoneyValue(Number(data.bestWin));
+      renderProfileBestWinValue();
+    }
     if (!Array.isArray(data?.items)) return;
     scannerGridState.recentRounds = data.items;
     renderScannerRecentList();
