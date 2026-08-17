@@ -4741,7 +4741,7 @@ button {
   <div id="leaderboardModal" class="app-modal" onclick="handleModalBackdropClick('leaderboardModal', event)">
     <div class="app-modal-card" onclick="event.stopPropagation()">
       <div class="leaderboardHeader">
-        <h2>🏆 Таблица лидеров</h2>
+        <h2>🏆 Рейтинг</h2>
         <span class="closeBtn" onclick="closeLeaderboard()">✕</span>
       </div>
       <div id="leaderboardContent"></div>
@@ -4923,7 +4923,7 @@ button {
 
         <div class="mode-actions">
           <button type="button" class="primary-action" onclick="openBobrRunRooms()">Комнаты Bobr Run</button>
-          <button type="button" class="secondary-action" onclick="openLeaderboard()">Таблица</button>
+          <button type="button" class="secondary-action" onclick="openLeaderboard()">Рейтинг</button>
         </div>
       </section>
 
@@ -7156,32 +7156,42 @@ async function openLeaderboard() {
   contentDiv.innerHTML = "<div class='history-panel-text'>Загрузка...</div>";
 
   try {
-    const snapshot = await db.collection("leaderboard").orderBy("score", "desc").limit(10).get();
+    // Рейтинг по ЧИСТОЙ прибыли: выплата минус собственная ставка,
+    // комиссия уже вычтена внутри выплаты. Считается на сервере по
+    // таблице round_participants. Прежняя коллекция leaderboard в
+    // Firestore была пуста — рейтинг не работал вообще.
+    const items = await new Promise((resolve) => {
+      if (!_socket || !_socket.connected) return resolve([]);
+      const _timer = setTimeout(() => resolve([]), 8000);
+      _socket.emit("rating:request", { limit: 20 }, (response) => {
+        clearTimeout(_timer);
+        resolve(Array.isArray(response?.items) ? response.items : []);
+      });
+    });
+
     contentDiv.innerHTML = "";
 
-    if (snapshot.empty) {
-      contentDiv.innerHTML = "<div class='history-panel-text'>Пока нет рекордов.</div>";
+    if (!items.length) {
+      contentDiv.innerHTML = "<div class='history-panel-text'>Пока нет результатов.</div>";
       return;
     }
 
-    let index = 1;
-    snapshot.forEach((doc) => {
-      const p = doc.data() || {};
+    items.forEach((p) => {
       const row = document.createElement("div");
       row.className = "leaderboard-row";
+      if (p.isMe) row.style.background = "rgba(0,200,255,0.10)";
 
       const name = document.createElement("div");
       name.className = "leaderboard-row-name";
-      name.textContent = `${index}. ${p.name || "Игрок"}`;
+      name.textContent = `${p.place}. ${p.name || "Игрок"}`;
 
       const score = document.createElement("div");
       score.className = "leaderboard-row-score";
-      score.textContent = `${p.score || 0}`;
+      score.textContent = `+${Number(p.netProfit || 0).toFixed(2)} GRAM`;
 
       row.appendChild(name);
       row.appendChild(score);
       contentDiv.appendChild(row);
-      index += 1;
     });
   } catch (error) {
     console.error("Ошибка загрузки таблицы:", error);
@@ -7570,13 +7580,13 @@ function isScannerScreenActive() {
 
 const APP_TRANSLATIONS = {
   ru: {
-    balance: "Баланс", wallet: "Кошелёк", tabLeaderboard: "Таблица",
+    balance: "Баланс", wallet: "Кошелёк", tabLeaderboard: "Рейтинг",
     tabGames: "Игры", tabPvp: "PvP", tabSkins: "Инвентарь", tabHistory: "История",
     settingsTitle: "Настройки", connecting: "Подключение...",
     waitingRound: "Ожидание раунда...", players: "Игроки",
     recentRounds: "Последние раунды", scanner: "Сканер",
     bank: "Банк", myChance: "Мои шансы", allIn: "Ва-банк",
-    play: "Играть", history: "История", leaderboard: "Таблица лидеров",
+    play: "Играть", history: "История", leaderboard: "Рейтинг",
     gameHistory: "История игр", roundsHistory: "История раундов", modeScanner: "Режим: Сканер",
     won: "Выиграл", lost: "Проиграл", yourColor: "Твой цвет в арене этого раунда",
     playersInRound: "Игроки в раунде", myStake: "Моя ставка",
