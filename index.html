@@ -7915,9 +7915,17 @@ async function renderReferralsScreen() {
 
   try {
     const myId = getCurrentPlayer().id;
-    const snapshot = await db.collection("users").where("referredBy", "==", String(myId)).get();
-    const items = [];
-    snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
+    // Реферальные связи после переезда лежат в SQLite на сервере.
+    // Прежний запрос в Firestore по полю referredBy находил только старые
+    // записи, а новых приглашённых не видел вообще.
+    const items = await new Promise((resolve) => {
+      if (!_socket || !_socket.connected) return resolve([]);
+      const _timer = setTimeout(() => resolve([]), 8000);
+      _socket.emit("referrals:request", {}, (response) => {
+        clearTimeout(_timer);
+        resolve(Array.isArray(response?.items) ? response.items : []);
+      });
+    });
 
     if (countEl) countEl.textContent = String(items.length);
 
