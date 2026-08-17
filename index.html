@@ -15350,6 +15350,16 @@ function preserveTimingField(existingMs, firestoreRawValue) {
   return firestoreMs || firestoreRawValue;
 }
 function subscribeScannerRound(roundId) {
+  // ОТКЛЮЧЕНО после переезда на SQLite. Сервер в Firestore больше не пишет,
+  // поэтому эта подписка отдавала протухший документ последнего раунда и
+  // затирала им живое состояние, пришедшее по сокету, а при отсутствии
+  // документа обнуляла раунд прямо посреди игры.
+  // Раунд, участники и арена теперь приходят событиями round:patch,
+  // round:state и grid:state.
+  scannerRealtime.roundReady = true;
+  scannerRealtime.participantsReady = true;
+  return;
+
   if (scannerRealtime.unsubRound) {
     scannerRealtime.unsubRound();
     scannerRealtime.unsubRound = null;
@@ -15476,6 +15486,11 @@ function subscribeScannerRound(roundId) {
   });
 }
 function subscribeScannerRuntime() {
+  // ОТКЛЮЧЕНО после переезда на SQLite — см. комментарий в subscribeScannerRound.
+  // Состояние арены целиком приходит по сокету.
+  scannerRealtime.runtimeReady = true;
+  return;
+
   if (scannerRealtime.unsubRuntime) {
     scannerRealtime.unsubRuntime();
     scannerRealtime.unsubRuntime = null;
@@ -15563,6 +15578,13 @@ function isScannerBootstrapCandidate(round) {
 }
 
 async function bootstrapScannerRoundFromRecentState(options = {}) {
+  // ОТКЛЮЧЕНО после переезда на SQLite. Резервное восстановление раунда
+  // читало последние документы из Firestore и могло подхватить давно
+  // завершённый раунд как текущий. Сервер присылает round:state сразу
+  // при подключении сокета, так что резерв больше не нужен.
+  scannerRealtime.roundReady = true;
+  return;
+
   const { force = false } = options;
   // Раньше эта функция дёргалась при каждом сворачивании/разворачивании
   // приложения (handleVisibilityChange) — включая моменты, когда раунд уже
