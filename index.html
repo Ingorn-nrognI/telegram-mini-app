@@ -14705,12 +14705,16 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     const _bw = Math.max(11, size * 0.031) + 1;
     const _vx = Number(safeSample.vx) || 0;
     const _vy = Number(safeSample.vy) || 0;
+    // Стенка определяется по ФАКТИЧЕСКОЙ позиции луча, а не по знаку старой
+    // скорости. После перехода на интерполяцию скорость в момент отскока
+    // плавно проходит через ноль, и старый знак указывал на противоположный
+    // бортик — вспышка загоралась не с той стороны.
     if (_borderGlowLobbyLastVx !== 0 && _vx !== 0 && Math.sign(_vx) !== Math.sign(_borderGlowLobbyLastVx)) {
-      const _gwx = _borderGlowLobbyLastVx > 0 ? size - _bw * 0.5 : _bw * 0.5;
+      const _gwx = safeSample.x > 0.5 ? size - _bw * 0.5 : _bw * 0.5;
       addBorderGlowPoint(size, _gwx, size * safeSample.y);
     }
     if (_borderGlowLobbyLastVy !== 0 && _vy !== 0 && Math.sign(_vy) !== Math.sign(_borderGlowLobbyLastVy)) {
-      const _gwy = _borderGlowLobbyLastVy > 0 ? size - _bw * 0.5 : _bw * 0.5;
+      const _gwy = safeSample.y > 0.5 ? size - _bw * 0.5 : _bw * 0.5;
       addBorderGlowPoint(size, size * safeSample.x, _gwy);
     }
     if (_vx !== 0) _borderGlowLobbyLastVx = _vx;
@@ -15314,12 +15318,13 @@ function renderScannerCanvas() {
       const _bw = Math.max(11, size * 0.031) + 1;
       const _vx = Number(_gs.vx) || 0;
       const _vy = Number(_gs.vy) || 0;
+      // Стенка — по фактической позиции луча (см. комментарий в лобби-версии).
       if (_borderGlowActiveLastVx !== 0 && _vx !== 0 && Math.sign(_vx) !== Math.sign(_borderGlowActiveLastVx)) {
-        const _gwx = _borderGlowActiveLastVx > 0 ? size - _bw * 0.5 : _bw * 0.5;
+        const _gwx = _gs.x > 0.5 ? size - _bw * 0.5 : _bw * 0.5;
         addBorderGlowPoint(size, _gwx, _gs.y * size);
       }
       if (_borderGlowActiveLastVy !== 0 && _vy !== 0 && Math.sign(_vy) !== Math.sign(_borderGlowActiveLastVy)) {
-        const _gwy = _borderGlowActiveLastVy > 0 ? size - _bw * 0.5 : _bw * 0.5;
+        const _gwy = _gs.y > 0.5 ? size - _bw * 0.5 : _bw * 0.5;
         addBorderGlowPoint(size, _gs.x * size, _gwy);
       }
       if (_vx !== 0) _borderGlowActiveLastVx = _vx;
