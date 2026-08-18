@@ -15407,6 +15407,14 @@ function subscribeScannerParticipants(roundId) {
     return;
   }
 
+  // ОТКЛЮЧЕНО: участники приходят по сокету событием round:patch.
+  // Эта подписка читала мёртвую коллекцию Firestore и затирала список
+  // игроков пустым массивом, обнуляя арену прямо во время раунда.
+  scannerRealtime.participantsReady = true;
+  syncScannerDerivedState();
+  renderScannerRound();
+  return;
+
   scannerRealtime.unsubParticipants = scannerParticipantsCollection(nextRoundId)
     .orderBy("joinedAt", "asc")
     .onSnapshot((snapshot) => {
@@ -15765,6 +15773,9 @@ function subscribeScannerHistory() {
     scannerRealtime.unsubHistory = null;
   }
 
+  // ОТКЛЮЧЕНО: история приходит по сокету событием history:list.
+  return;
+
   scannerRealtime.unsubHistory = scannerHistoryCollection()
     .orderBy("finishedAt", "desc")
     .limit(100)
@@ -15980,12 +15991,12 @@ window.addEventListener("pageshow", () => {
   forceScannerBetBarVisibilityRefresh();
 });
 
-const _unsubAppAuth = firebase.auth().onAuthStateChanged((user) => {
-  if (!user) return;
-  _unsubAppAuth();
-  initializeScannerGridFeature();
-  initSocketConnection();
-});
+// Запуск больше НЕ ждёт ответа Firebase. Раньше приложение стартовало только
+// после успешной анонимной авторизации, и любой сбой Google (недоступность,
+// ERR_QUIC_PROTOCOL_ERROR) полностью блокировал игру, хотя наш сервер жив.
+// Все данные идут через сокет, так что Firebase на старте не нужен.
+initializeScannerGridFeature();
+initSocketConnection();
 
 window.toggleModePopup = toggleModePopup;
 window.enterScannerGridMode = enterScannerGridMode;
