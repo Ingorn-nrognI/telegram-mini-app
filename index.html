@@ -13698,10 +13698,16 @@ function drawScannerBeam(ctx, length, options = {}) {
     }
     ctx.fillStyle = _cachedBeamHaloGradient;
 
-    if (gapHalf > 0) {
-      ctx.fillRect(-halfLength, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
-      ctx.fillRect(gapHalf, -glowWidth * 0.55, Math.max(0, halfLength - gapHalf), glowWidth * 1.1);
-    } else {
+    // Мягкое фоновое свечение теперь ОДНИМ прямоугольником на всю длину,
+    // без разрыва в середине — раньше оно рисовалось двумя кусками с
+    // жёстким прямым обрезом на границе зазора. У прямоугольника угол
+    // острый, а у кольца прицела свечение мягкое и круглое (shadowBlur) —
+    // эти два разных по форме источника света визуально "перегораживали"
+    // друг друга на стыке. Яркая чёткая линия луча (ниже, отдельным слоем)
+    // по-прежнему обрывается у зазора и в кольцо не заходит — структура
+    // "луч выходит из круга" сохраняется, сливается только мягкий ореол.
+    ctx.fillRect(-halfLength, -glowWidth * 0.55, safeLength, glowWidth * 1.1);
+    if (false) {
       ctx.fillRect(-halfLength, -glowWidth * 0.55, safeLength, glowWidth * 1.1);
     }
     ctx.restore();
@@ -14139,11 +14145,7 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     coreBlur: 14,
     beamColor: "rgba(45, 225, 255, 0.74)",
     innerColor: "rgba(255,255,255,0.88)",
-    // Зазор убран: луч теперь проходит НАСКВОЗЬ через прицел, а не
-    // обрывается до него. Кольцо прицела нарисовано только контуром (без
-    // заливки) и рисуется поверх луча — так они выглядят одной деталью
-    // (луч с прицелом на нём), а не тремя разрозненными кусками в ряд.
-    centerGap: 0
+    centerGap: idleReticleRadius * 2
   });
   ctx.restore();
   drawScannerArenaBorderBackground(ctx, size);
@@ -14647,8 +14649,7 @@ function renderScannerCanvas() {
       coreBlur: 14,
       beamColor: "rgba(45, 225, 255, 0.74)",
       innerColor: "rgba(255,255,255,0.88)",
-      // См. комментарий у аналогичной правки в idle-режиме выше.
-      centerGap: 0
+      centerGap: reticleRadius * 2
     });
     ctx.restore();
     if (roundStatus === "shuffling") {
