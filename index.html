@@ -7121,14 +7121,13 @@ async function loadGameHistory() {
   `;
 
   try {
-    const { id } = getCurrentPlayer();
-    const snapshot = await getHistoryCollectionRef(id)
-      .orderBy("playedAt", "desc")
-      .limit(20)
-      .get();
-
-    const entries = [];
-    snapshot.forEach((doc) => entries.push(doc.data() || {}));
+    // Данные приходят по сокету событием history:list и уже лежат в
+    // scannerGridState.recentRounds (см. requestScannerHistoryFromServer).
+    // Прежний запрос в Firestore читал users/{id}/history — единственным
+    // писателем туда был клиент, и мы отключили эту запись при переезде
+    // на SQLite, из-за чего вкладка навсегда замерла бы на старых записях.
+    requestScannerHistoryFromServer();
+    const entries = Array.isArray(scannerGridState.recentRounds) ? scannerGridState.recentRounds : [];
     renderHistoryEntries(entries);
   } catch (error) {
     console.error("Ошибка загрузки истории игр:", error);
