@@ -13749,25 +13749,23 @@ function drawScannerBeam(ctx, length, options = {}) {
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = color;
+    // Раньше размытие имитировалось несколькими полупрозрачными проходами
+    // разной ширины поверх друг друга. При наложении слоёв цвет визуально
+    // "съезжает" от исходного (даже при идентичном коде цвета RGBA) — из-за
+    // этого свечение луча на глаз отличалось от свечения кольца прицела,
+    // хотя цвет в коде был одинаковый. Кольцо всегда использовало нативное
+    // ctx.shadowBlur — теперь луч использует ту же технику для гарантии
+    // одинакового визуального результата. Финальный чёткий штрих поверх
+    // (ниже, вне этого if) остаётся как и был — просто без размытия под ним.
     if (blur > 0 && qualityTier !== "low") {
-      const blurPasses = qualityTier === "mid" ? 1 : 3;
-      if (blurPasses >= 3) {
-        ctx.lineWidth = width * 1.6;
-        ctx.globalAlpha = alpha / 4;
-        ctx.beginPath();
-        validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
-        ctx.stroke();
-        ctx.lineWidth = width * 1.25;
-        ctx.globalAlpha = alpha / 7;
-        ctx.beginPath();
-        validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
-        ctx.stroke();
-      }
-      ctx.lineWidth = width * 1.08;
-      ctx.globalAlpha = alpha / 12;
+      ctx.shadowBlur = blur;
+      ctx.shadowColor = color;
+      ctx.lineWidth = width;
+      ctx.globalAlpha = alpha;
       ctx.beginPath();
       validSegments.forEach((seg) => { ctx.moveTo(seg.from, 0); ctx.lineTo(seg.to, 0); });
       ctx.stroke();
+      ctx.shadowBlur = 0;
     }
     ctx.globalAlpha = alpha;
     ctx.lineWidth = width;
@@ -14156,10 +14154,10 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     coreBlur: 14,
     beamColor: "rgba(45, 225, 255, 0.74)",
     innerColor: "rgba(255,255,255,0.88)",
-    // +8 — гарантированный запас за пределы ВИДИМОГО внешнего края кольца
-    // (у обводки кольца есть толщина ~7px, чистый радиус её не учитывал,
-    // из-за чего кончик луча/свечения был виден внутри полого кольца).
-    centerGap: idleReticleRadius * 2 + 8
+    // Круглые мягкие вылеты (см. drawScannerBeam) сами создают запас —
+    // отдельная прибавка +8 больше не нужна, она просто отодвигала луч
+    // от кольца, оставляя видимый зазор между кольцом и началом линии.
+    centerGap: idleReticleRadius * 2
   });
   ctx.restore();
   drawScannerArenaBorderBackground(ctx, size);
@@ -14664,7 +14662,7 @@ function renderScannerCanvas() {
       beamColor: "rgba(45, 225, 255, 0.74)",
       innerColor: "rgba(255,255,255,0.88)",
       // См. комментарий у аналогичной правки в idle-режиме выше.
-      centerGap: reticleRadius * 2 + 8
+      centerGap: reticleRadius * 2
     });
     ctx.restore();
     if (roundStatus === "shuffling") {
