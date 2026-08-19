@@ -13454,7 +13454,12 @@ function getScannerCanvasMetrics() {
     const isMobileCtx = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     ctx = canvas.getContext("2d", {
       alpha: true,
-      desynchronized: true,
+      // desynchronized: true убран. Эта опция снижает задержку между
+      // действием и отрисовкой (полезно для рисовалок), но взамен
+      // отключает синхронизацию кадров с частотой обновления экрана —
+      // на части устройств и WebView (включая мобильный Telegram) это
+      // вызывает дрожание/разрывы у тонких анимированных линий при
+      // непрерывном движении, что и давало эффект "дребезжащих лучей".
       willReadFrequently: false,
       powerPreference: isMobileCtx ? "low-power" : "high-performance"
     });
