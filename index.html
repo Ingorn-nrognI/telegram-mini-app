@@ -7945,7 +7945,7 @@ async function renderReferralsScreen() {
     }
 
     listEl.innerHTML = items.map((item) => {
-      const name = escapeHtml(item.name || item.username || ("Игрок " + item.id));
+      const name = escapeHtml(item.name || item.username || ("Игрок " + (item.playerId || item.id || "")));
       return `<div style="display:flex; justify-content:space-between; padding:8px 10px; background:rgba(255,255,255,0.04); border-radius:8px; font-size:13px;">
         <span>${name}</span>
       </div>`;
