@@ -12109,7 +12109,13 @@ function syncScannerDerivedState() {
   const now = getNetworkTime(); // <-- Изменено для точного интерфейса
   scannerGridState.myPlayerId = currentPlayer.id;
 
-  const round = scannerRealtime.roundData || null; 
+  const round = scannerRealtime.roundData || null;
+  // winnerPlayerId раньше приходил только из Firestore-документа раунда.
+  // После переезда на сокет он лежит в winnerId (см. applySocketRoundResult) —
+  // без этой строки round.winnerPlayerId всегда undefined и затирает
+  // правильное значение сразу после того, как round:result его выставил,
+  // из-за чего окно победителя никогда не открывалось.
+  if (round && round.winnerId && !round.winnerPlayerId) round.winnerPlayerId = round.winnerId;
   const participantsSnapshot = Array.isArray(scannerRealtime.participants) ? scannerRealtime.participants.slice() : [];
   const roundStatus = String(round?.status || "idle");
   const participantsReady = !round?.id || (!!scannerRealtime.participantsReady && !scannerRealtime.participantsError);
