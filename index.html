@@ -13678,6 +13678,22 @@ function drawScannerBeam(ctx, length, options = {}) {
   const halfLength = safeLength / 2;
   const gapHalf = Math.min(halfLength - 2, centerGap / 2);
 
+  // Жёсткая вырезка вместо подбора цифр: там, где сидит кольцо прицела,
+  // лучу вообще ЗАПРЕЩЕНО что-либо рисовать — ни линию, ни ореол, ни
+  // shadowBlur, какой бы силы он ни был. Раньше shadowBlur размывал луч
+  // РАВНОМЕРНО во все стороны (включая вперёд, за кончик линии), и при
+  // радиусе размытия больше зазора свечение перепрыгивало прямо в полый
+  // центр кольца. Круглая дыра в области рисования исключает это в принципе,
+  // а не только "пока цифры совпадают".
+  if (gapHalf > 0) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-halfLength - glowWidth * 2, -glowWidth * 4, safeLength + glowWidth * 4, glowWidth * 8);
+    ctx.moveTo(gapHalf, 0);
+    ctx.arc(0, 0, gapHalf, 0, Math.PI * 2, true);
+    ctx.clip("evenodd");
+  }
+
   const segments = gapHalf > 0
     ? [
         { from: -halfLength, to: -gapHalf },
@@ -13774,6 +13790,9 @@ function drawScannerBeam(ctx, length, options = {}) {
     ctx.stroke();
     ctx.restore();
   });
+  if (gapHalf > 0) {
+    ctx.restore();
+  }
 }
 
 function drawScannerReticle(ctx, x, y, radius, options = {}) {
