@@ -10948,7 +10948,13 @@ let _serverBeamPosLastUpdate = 0;
 // сильно расходилась с реальной траекторией, отсюда микрорывки.
 // Теперь рисуем с задержкой в один пакет и интерполируем МЕЖДУ двумя
 // реально полученными точками: домысливать нечего, рывков нет.
-const SCANNER_BEAM_RENDER_DELAY_MS = 85;
+// Задержка ДОЛЖНА быть близка к интервалу пакетов с сервера (50мс, см.
+// startInterval в lifecycle.js), а не сильно больше него. При 85мс момент
+// отрисовки почти всегда оказывался РАНЬШЕ времени прихода предыдущего
+// пакета — интерполяция проваливалась в запасной путь, где luch просто
+// замирал на месте (~35мс из каждого 50мс цикла), а затем резко доезжал.
+// Именно это ощущалось как дрожь: луч не двигался плавно, а стоял и дёргался.
+const SCANNER_BEAM_RENDER_DELAY_MS = 55;
 let _serverBeamPrev = null;
 
 function getInterpolatedServerBeam(maxAgeMs) {
@@ -14133,7 +14139,11 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     coreBlur: 14,
     beamColor: "rgba(45, 225, 255, 0.74)",
     innerColor: "rgba(255,255,255,0.88)",
-    centerGap: idleReticleRadius * 2 + 8
+    // Зазор убран: луч теперь проходит НАСКВОЗЬ через прицел, а не
+    // обрывается до него. Кольцо прицела нарисовано только контуром (без
+    // заливки) и рисуется поверх луча — так они выглядят одной деталью
+    // (луч с прицелом на нём), а не тремя разрозненными кусками в ряд.
+    centerGap: 0
   });
   ctx.restore();
   drawScannerArenaBorderBackground(ctx, size);
@@ -14637,7 +14647,8 @@ function renderScannerCanvas() {
       coreBlur: 14,
       beamColor: "rgba(45, 225, 255, 0.74)",
       innerColor: "rgba(255,255,255,0.88)",
-      centerGap: reticleRadius * 2 + 8
+      // См. комментарий у аналогичной правки в idle-режиме выше.
+      centerGap: 0
     });
     ctx.restore();
     if (roundStatus === "shuffling") {
