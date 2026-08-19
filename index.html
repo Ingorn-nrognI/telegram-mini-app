@@ -5889,97 +5889,6 @@ function hasDemoTonBalanceField(data) {
   return Object.prototype.hasOwnProperty.call(data || {}, "demoTonBalance");
 }
 
-async function resetAllDemoTonBalancesTo1000Once() {
-  const migrationRef = getDemoTonResetMigrationRef();
-  const migrationSnapshot = await migrationRef.get();
-  const migrationData = migrationSnapshot.exists ? (migrationSnapshot.data() || {}) : {};
-
-  if (migrationData.completed === true) {
-    return false;
-  }
-
-  const usersSnapshot = await db.collection("users").get();
-  const userRefs = [];
-  usersSnapshot.forEach((doc) => {
-    userRefs.push(doc.ref);
-  });
-
-  for (let index = 0; index < userRefs.length; index += DEMO_TON_RESET_MIGRATION_BATCH_SIZE) {
-    const batch = db.batch();
-    userRefs
-      .slice(index, index + DEMO_TON_RESET_MIGRATION_BATCH_SIZE)
-      .forEach((userRef) => {
-        batch.set(userRef, {
-          demoTonBalance: DEMO_TON_RESET_MIGRATION_TARGET
-        }, { merge: true });
-      });
-    await batch.commit();
-  }
-
-  await migrationRef.set({
-    completed: true,
-    migrationId: DEMO_TON_RESET_MIGRATION_DOC,
-    targetBalance: DEMO_TON_RESET_MIGRATION_TARGET,
-    usersUpdated: userRefs.length,
-    completedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge: true });
-
-  return true;
-}
-
-async function ensureDemoBalanceForCurrentUser() {
-  const player = getCurrentPlayer();
-  const userRef = getUserRef(player.id);
-  let ensuredBalance = DEMO_TON_START_BALANCE;
-
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(userRef);
-    const data = snap.exists ? (snap.data() || {}) : {};
-
-    if (!snap.exists || !hasDemoTonBalanceField(data)) {
-      ensuredBalance = DEMO_TON_START_BALANCE;
-      tx.set(userRef, {
-        playerId: player.id,
-        name: player.name,
-        avatar: player.avatar || null,
-        demoTonBalance: ensuredBalance,
-        demoBalanceGranted: true,
-        demoBalanceGrantedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      return;
-    }
-
-    ensuredBalance = getUserDemoBalanceFromData(data);
-    tx.set(userRef, {
-      playerId: player.id,
-      name: player.name,
-      avatar: player.avatar || null,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-  });
-
-  syncLocalDemoBalance(ensuredBalance);
-}
-
-function subscribeCurrentUserBalance() {
-  if (currentUserBalanceUnsub) {
-    currentUserBalanceUnsub();
-    currentUserBalanceUnsub = null;
-  }
-
-  currentUserBalanceUnsub = getUserRef(getCurrentPlayer().id).onSnapshot((snapshot) => {
-    if (snapshot.exists) {
-      const data = snapshot.data() || {};
-      const balance = getUserDemoBalanceFromData(data);
-      syncLocalDemoBalance(balance);
-      currentDemoTonBalanceLoaded = true;
-    }
-  }, (e) => {
-    console.warn('Не удалось подписаться на баланс:', e.message);
-  });
-}
-
 function createInsufficientBalanceError() {
   const error = new Error(INSUFFICIENT_BALANCE_MESSAGE);
   error.code = "insufficient-balance";
@@ -6029,27 +5938,6 @@ function getScannerCommissionPercent(totalPot) {
   if (pot < 100) return 4;
   if (pot < 200) return 3;
   return 2;
-}
-
-function getScannerPayoutMeta(totalPot, winnerStake = 0) {
-  const pot = normalizeMoneyValue(totalPot);
-  const stake = normalizeMoneyValue(winnerStake);
-  const grossProfit = normalizeMoneyValue(Math.max(0, pot - stake));
-  const commissionPercent = grossProfit > 0 ? getScannerCommissionPercent(grossProfit) : 0;
-  const commissionAmount = grossProfit > 0
-    ? normalizeMoneyValue(grossProfit * commissionPercent / 100)
-    : 0;
-  const netProfit = normalizeMoneyValue(Math.max(0, grossProfit - commissionAmount));
-  const winnerPayout = normalizeMoneyValue(stake + netProfit);
-  return {
-    totalPot: pot,
-    winnerStake: stake,
-    grossProfit,
-    netProfit,
-    commissionPercent,
-    commissionAmount,
-    winnerPayout
-  };
 }
 
 function escapeCssUrl(value) {
@@ -6434,32 +6322,10 @@ function getPreferredHomeNav() {
   return gamesMenuOpen ? "games" : "arena";
 }
 
-function getActiveModeLabel() {
-  if (currentMenuView === "profile") return "Профиль";
-  if (currentMenuView === "bobrRun") return "Bobr Run";
-  if (homeScreenContext === "pvp") return "Сканер-сетка";
-  return "игровой режим";
-}
-
 function scrollHomeToTop() {
   const homeScreen = document.getElementById("homeScreen");
   if (!homeScreen) return;
   homeScreen.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-function scrollHomeToSection(sectionId) {
-  const homeScreen = document.getElementById("homeScreen");
-  const section = document.getElementById(sectionId);
-  if (!homeScreen || !section) return;
-
-  const homeRect = homeScreen.getBoundingClientRect();
-  const sectionRect = section.getBoundingClientRect();
-  const offset = sectionRect.top - homeRect.top + homeScreen.scrollTop - 10;
-
-  homeScreen.scrollTo({
-    top: Math.max(offset, 0),
-    behavior: "smooth"
-  });
 }
 
 function getHomeSectionStartScrollTop(sectionId, extraOffset = -10) {
@@ -6607,30 +6473,6 @@ function setMenuView(view, options = {}) {
   forceScannerBetBarVisibilityRefresh();
 }
 
-function toggleModePopup(event) {
-  if (event) event.stopPropagation();
-
-  if (currentMenuView !== "home") {
-    setMenuView("home", { preserveNav: true });
-  }
-
-  closeHistoryPanel({ preserveNav: true });
-
-  const modePopup = document.getElementById("modePopup");
-  if (!modePopup) return;
-
-  const willOpen = !modePopup.classList.contains("open");
-  modePopup.classList.remove("open");
-
-  if (willOpen) {
-    homeScreenContext = "games";
-    setActiveBottomNav("games");
-    requestAnimationFrame(() => {
-      modePopup.classList.add("open");
-    });
-  }
-}
-
 function closeModePopup() {
   const modePopup = document.getElementById("modePopup");
   if (modePopup) modePopup.classList.remove("open");
@@ -6718,29 +6560,6 @@ function closeScannerRoundsPanel() {
   const panel = document.getElementById("scannerRoundsPanel");
   if (panel) panel.classList.remove("open");
   syncPanelBackdrop();
-}
-
-function toggleHistoryPanel(event) {
-  if (event) event.stopPropagation();
-
-  if (currentMenuView !== "home") {
-    setMenuView("home", { preserveNav: true, keepHistory: true });
-  }
-
-  closeModePopup();
-
-  const historyPanel = document.getElementById("historyPanel");
-  if (!historyPanel) return;
-
-  const willOpen = !historyPanel.classList.contains("open");
-  historyPanel.classList.toggle("open");
-
-  if (willOpen) {
-    setActiveBottomNav("history");
-    loadGameHistory();
-  } else if (currentBottomNav === "history") {
-    setActiveBottomNav(currentMenuView === "home" ? getPreferredHomeNav() : "pvp");
-  }
 }
 
 function closeHistoryPanel(options = {}) {
@@ -8403,27 +8222,6 @@ function getScannerColorHsl(hue, saturation, lightness) {
   return `hsl(${safeHue.toFixed(3)} ${saturation}% ${lightness}%)`;
 }
 
-function getScannerUniqueRoundColorParts(roundSeed, playerIndex) {
-  const safeIndex = Math.max(0, Number(playerIndex) || 0);
-  const roundHash = hashString(`${roundSeed || "round_seed"}`);
-  const hueBase = roundHash % 360;
-  const hueStep = 137;
-  const hueBand = Math.floor(safeIndex / 360);
-  const hueIndex = safeIndex % 360;
-  const hue = (hueBase + (hueIndex * hueStep)) % 360;
-  const preciseHue = Math.min(359.999, hue + (hueBand * 0.013));
-  const saturationCycle = [72, 76, 80, 84, 88, 70, 74, 78, 82, 86];
-  const lightnessCycle = [58, 62, 54, 66, 50, 60, 56, 64, 52, 68];
-  const saturation = saturationCycle[hueBand % saturationCycle.length] + (Math.floor(hueBand / saturationCycle.length) % 3);
-  const lightness = lightnessCycle[Math.floor(hueBand / saturationCycle.length) % lightnessCycle.length];
-  return { hue: preciseHue, saturation, lightness };
-}
-
-function getScannerUniqueRoundColor(roundSeed, playerIndex) {
-  const parts = getScannerUniqueRoundColorParts(roundSeed, playerIndex);
-  return getScannerColorHsl(parts.hue, parts.saturation, parts.lightness);
-}
-
 // Кэш закреплённых цветов на текущий раунд. Раньше цвет пересчитывался
 // заново на КАЖДЫЙ вызов по позиции игрока в отсортированном списке — при
 // входе нового участника список пересортировывался, чужие позиции сдвигались,
@@ -8509,13 +8307,6 @@ function normalizeStakeValue(value) {
   const number = Number(prepared || 0);
   if (!Number.isFinite(number) || number <= 0) return 0;
   return Number(number.toFixed(2));
-}
-
-function compareJoinedAtAsc(a, b) {
-  const aJoined = tsToMs(a.joinedAt || a.createdAt || a.updatedAt || 0);
-  const bJoined = tsToMs(b.joinedAt || b.createdAt || b.updatedAt || 0);
-  if (aJoined !== bJoined) return aJoined - bJoined;
-  return String(a.playerId || a.id || "").localeCompare(String(b.playerId || b.id || ""), "ru");
 }
 
 function isScannerLobbyParticipantStale(participant, roundStatus, now = Date.now()) {
@@ -9021,19 +8812,6 @@ function buildScannerCellOwners(players, totalCells, versionSeed) {
   return owners;
 }
 
-function finalizeScannerPlayers(players, versionSeed) {
-  const allocated = allocateCells(players, SCANNER_GRID_TOTAL_CELLS);
-  const totalPot = allocated.reduce((sum, player) => sum + Number(player.stake || 0), 0);
-  const cellOwners = buildScannerCellOwners(allocated, SCANNER_GRID_TOTAL_CELLS, versionSeed);
-  return {
-    players: allocated,
-    totalPot,
-    cellOwners,
-    totalPlayers: allocated.length,
-    gridVersion: `${versionSeed}_${allocated.length}_${totalPot.toFixed(2)}`
-  };
-}
-
 function buildScannerPreviewCellOwners(players, totalCells, versionSeed, roundId) {
   const owners = new Array(totalCells).fill(-1);
   if (!players.length) return owners;
@@ -9502,21 +9280,6 @@ function getScannerBeamAngleFromDelta(dx, dy, fallbackAngle = 0) {
   return Math.atan2(Number(dy) || 0, Number(dx) || 0);
 }
 
-function shouldApplyScannerBeamScanOffset(sample, roundStatus) {
-  const safeStatus = String(roundStatus || "idle");
-  if (["countdown", "shuffling", "active", "finished", "preparing_next_round"].includes(safeStatus)) {
-    return false;
-  }
-
-  if (Number.isFinite(Number(sample?.travelAngle))) {
-    return false;
-  }
-
-  const vx = Number(sample?.vx) || 0;
-  const vy = Number(sample?.vy) || 0;
-  return Math.hypot(vx, vy) <= 0.00001;
-}
-
 function resetScannerBeamRenderState(sample = null, key = "") {
   const nextSample = sample || { x: 0.5, y: 0.5, angle: 0 };
   const resolvedAngles = getScannerBeamResolvedAngles(nextSample, 0);
@@ -9877,11 +9640,6 @@ function normalizeScannerBeamMotionState(rawState, fallbackSeed = "scanner_share
     vx,
     vy
   };
-}
-
-function getScannerRuntimeIdleBeamState(runtimeData = scannerRealtime.runtimeData) {
-  const rawMotion = runtimeData?.idleBeamMotion || runtimeData?.idleBeamState || null;
-  return normalizeScannerBeamMotionState(rawMotion, "scanner_shared_lobby_motion_v2");
 }
 
 function getScannerRoundCountdownBeamState(round) {
@@ -10245,19 +10003,6 @@ function simulateScannerBeamBounceSamples(options = {}) {
   };
 }
 
-function getScannerWallAlignedAngle(currentAngle, side) {
-  const safeAngle = Number(currentAngle) || 0;
-  const candidates = (side === "left" || side === "right")
-    ? [Math.PI / 2, -Math.PI / 2]
-    : [0, Math.PI, -Math.PI];
-
-  return candidates.reduce((best, candidate) => {
-    const bestDelta = Math.abs(getScannerAngleDelta(safeAngle, best));
-    const nextDelta = Math.abs(getScannerAngleDelta(safeAngle, candidate));
-    return nextDelta < bestDelta ? candidate : best;
-  }, candidates[0]);
-}
-
 function getScannerWallSideFromPosition(sample, pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING) {
   const x = Number(sample?.x) || 0.5;
   const y = Number(sample?.y) || 0.5;
@@ -10326,55 +10071,6 @@ function getScannerWallLatchMeta(sample, pad = SCANNER_ACTIVE_BEAM_EDGE_PADDING)
       vy: 0
     }
   };
-}
-
-function buildScannerLatchSamples(startSample, durationMs, steps) {
-  const meta = getScannerWallLatchMeta(startSample, SCANNER_ACTIVE_BEAM_EDGE_PADDING);
-  const safeSteps = Math.max(2, Math.floor(Number(steps) || 2));
-  const samples = [];
-  const latchDx = (meta.sample.x - startSample.x) || 0;
-  const latchDy = (meta.sample.y - startSample.y) || 0;
-  const latchAngle = Math.hypot(latchDx, latchDy) > 0.00001
-    ? Math.atan2(latchDy, latchDx)
-    : getScannerBeamMotionAngle(startSample);
-
-  for (let step = 0; step < safeSteps; step += 1) {
-    const progress = step / Math.max(1, safeSteps - 1);
-    const eased = smoothstep(0, 1, progress);
-    const nextX = startSample.x + (meta.sample.x - startSample.x) * eased;
-    const nextY = startSample.y + (meta.sample.y - startSample.y) * eased;
-
-    samples.push({
-      x: nextX,
-      y: nextY,
-      angle: latchAngle,
-      travelAngle: latchAngle,
-      vx: latchDx,
-      vy: latchDy,
-      progress
-    });
-  }
-
-  return {
-    side: meta.side,
-    samples,
-    targetSample: {
-      ...meta.sample,
-      angle: latchAngle,
-      travelAngle: latchAngle,
-      vx: latchDx,
-      vy: latchDy,
-      progress: 1
-    }
-  };
-}
-
-function mergeScannerSampleSequences(primary, secondary) {
-  const first = Array.isArray(primary) ? primary.slice() : [];
-  const second = Array.isArray(secondary) ? secondary.slice() : [];
-  if (!first.length) return second;
-  if (!second.length) return first;
-  return first.concat(second.slice(1));
 }
 
 function getScannerCountdownTiming(round) {
@@ -10602,17 +10298,6 @@ function getScannerCountdownBeamSampleAtTime(round, timestampMs = getNetworkTime
   return interpolateScannerSampleSequence(cache.samples, progress);
 }
 
-function getScannerCurrentLobbyOrCountdownSample(round, runtimeData = scannerRealtime.runtimeData, timestampMs = getNetworkTime()) {
-  const status = String(round?.status || "waiting");
-  if (status === "countdown") {
-    return getScannerCountdownBeamSampleAtTime(
-      round,
-      timestampMs,
-      getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", runtimeData)
-    );
-  }
-  return getScannerSharedLobbyBeamSampleAt(timestampMs, "scanner_shared_lobby_motion_v2", runtimeData);
-}
 function getScannerActiveLaunchState(round, latchSample) {
   const seedValue = `${round?.id || "round"}::${round?.entropySeed || "seed"}::active_launch`;
   const rnd = mulberry32(hashString(seedValue));
@@ -10700,24 +10385,6 @@ function getScannerActiveBeamCache(round, players) {
   return scannerActiveBeamCache;
 }
 
-function getScannerBeamMotionProgress(round, progressOverride = null) {
-  if (Number.isFinite(Number(progressOverride))) {
-    return clampScannerNumber(progressOverride, 0, 1);
-  }
-
-  const startedAt = tsToMs(round?.activeStartedAt);
-  const activeEndsAt = tsToMs(round?.activeEndsAt);
-  if (startedAt > 0 && activeEndsAt > startedAt) {
-    return clampScannerNumber((getNetworkTime() - startedAt) / Math.max(1, activeEndsAt - startedAt), 0, 1);
-  }
-
-  if (startedAt > 0) {
-    return clampScannerNumber((getNetworkTime() - startedAt) / SCANNER_ACTIVE_MS, 0, 1);
-  }
-
-  return 0;
-}
-
 function getScannerActiveBeamProgressAtTime(round, timestampMs = getNetworkTime(), progressOverride = null) {
   if (Number.isFinite(Number(progressOverride))) {
     return clampScannerNumber(progressOverride, 0, 1);
@@ -10750,31 +10417,6 @@ function getScannerActiveBeamSampleAtTime(round, players, timestampMs = getNetwo
   );
 }
 
-
-function getScannerCountdownLatchProgress(round) {
-  const cache = getScannerCountdownBeamCache(round);
-  if (!cache) return 0;
-  const total = Math.max(1, cache.timing.durationMs);
-  const latchDuration = Math.min(SCANNER_EDGE_LATCH_MS, total);
-  const elapsed = clampScannerNumber((getNetworkTime() - cache.timing.startedAt) / total, 0, 1) * total;
-  if (elapsed <= total - latchDuration) return 0;
-  return clampScannerNumber((elapsed - (total - latchDuration)) / latchDuration, 0, 1);
-}
-
-function interpolateScannerBeamState(fromSample, toSample, progress) {
-  const t = smoothstep(0, 1, progress);
-  const from = fromSample || { x: 0.5, y: 0.5, angle: 0 };
-  const to = toSample || from;
-  return {
-    x: from.x + (to.x - from.x) * t,
-    y: from.y + (to.y - from.y) * t,
-    angle: lerpScannerAngle(from.angle || 0, to.angle || 0, t)
-  };
-}
-
-function getScannerCountdownBeamSample(round, fallbackSample, players) {
-  return getScannerCountdownBeamSampleAtTime(round, getNetworkTime(), fallbackSample || getScannerSharedLobbyBeamSample());
-}
 
 let _scannerShuffleLocalStartMs = null;
 let _scannerShuffleLocalRoundId = null;
@@ -11146,24 +10788,6 @@ function getScannerBeamScanConfig(roundStatus) {
     speed: SCANNER_BEAM_SCAN_IDLE_SPEED,
     sweep: SCANNER_BEAM_SCAN_IDLE_SWEEP
   };
-}
-
-function getScannerBeamScanOffset(roundStatus, renderKey, timestampMs = getNetworkTime()) {
-  const safeStatus = String(roundStatus || "idle");
-  const safeTimestamp = Number.isFinite(Number(timestampMs)) ? Number(timestampMs) : Date.now();
-  const safeKey = String(renderKey || "idle");
-  const config = getScannerBeamScanConfig(safeStatus);
-  const seed = hashString(`scanner_beam_scan_${safeKey}`);
-  const primaryPhase = ((seed >>> 1) % 360) * (Math.PI / 180);
-  const secondaryPhase = ((seed >>> 6) % 360) * (Math.PI / 180);
-  const tertiaryPhase = ((seed >>> 11) % 360) * (Math.PI / 180);
-  const time = (safeTimestamp - SCANNER_LOBBY_BEAM_EPOCH_MS) / 1000;
-
-  return (
-    Math.sin(time * config.speed + primaryPhase) * config.sweep +
-    Math.sin(time * (config.speed * 1.67) + secondaryPhase) * (config.sweep * 0.22) +
-    Math.cos(time * (config.speed * 0.61) + tertiaryPhase) * (config.sweep * 0.08)
-  );
 }
 
 function getScannerBeamTargetSample(beamSample, roundStatus, renderKey, timestampMs = getNetworkTime()) {
@@ -12001,13 +11625,6 @@ function startScannerLifecycleTimer() {
   }, 800);
 }
 
-function stopScannerLifecycleTimer() {
-  if (scannerRealtime.lifecycleTimer) {
-    clearInterval(scannerRealtime.lifecycleTimer);
-    scannerRealtime.lifecycleTimer = null;
-  }
-}
-
 function getActiveScannerTransientMessage() {
   if (!scannerGridState.transientMessage) return "";
   if (scannerGridState.transientMessageExpiresAt && Date.now() >= scannerGridState.transientMessageExpiresAt) {
@@ -12056,30 +11673,6 @@ function setScannerTransientMessage(message, options = {}) {
 
   if (render) {
     renderScannerRound();
-  }
-}
-
-function getScannerNowMessage() {
-  return getActiveScannerTransientMessage();
-}
-
-function getScannerStatusText(round) {
-  const status = round?.status || "idle";
-  switch (status) {
-    case "waiting":
-      return "waiting / lobby";
-    case "countdown":
-      return "countdown";
-    case "shuffling":
-      return "shuffling / settling";
-    case "active":
-      return "active / running";
-    case "finished":
-      return "finished";
-    case "preparing_next_round":
-      return "preparing next round";
-    default:
-      return "idle";
   }
 }
 
@@ -12286,27 +11879,6 @@ function syncScannerDerivedState() {
   });
 }
 
-function computeDeterministicRoundResult(round, participants) {
-  const renderParticipants = getRoundParticipantsForRender(round, participants);
-  const finalized = buildScannerPlayersFromFirestore(round, renderParticipants);
-  const finalBeamSample = getScannerActiveBeamSampleAtTime(
-    round,
-    finalized.players,
-    tsToMs(round?.activeEndsAt) || Date.now(),
-    1
-  );
-  const winningCellIndex = getScannerCellIndexFromPoint(finalBeamSample.x, finalBeamSample.y);
-  const ownerIndex = finalized.cellOwners[winningCellIndex] ?? 0;
-  const winnerPlayer = finalized.players[ownerIndex] || finalized.players[0] || null;
-  return {
-    winningCellIndex,
-    winnerPlayerId: winnerPlayer?.id || null,
-    winnerName: winnerPlayer?.name || "Игрок",
-    winnerStake: Number(winnerPlayer?.stake || 0),
-    players: finalized.players
-  };
-}
-
 async function joinOrCreateScannerRound() {
   if (scannerRealtime.isJoinBusy) return;
   if (isScannerBettingLocked()) {
@@ -12409,35 +11981,9 @@ async function updateScannerHeartbeat() {
   return;
 }
 
-async function pruneStaleLobbyParticipants() {
-  if (scannerRealtime.pruneBusy) return;
-  if (!scannerGridState.roundId || !["waiting", "countdown"].includes(scannerGridState.status)) return;
-
-  const now = Date.now();
-  const stale = scannerGridState.participants.filter((item) => {
-    const updatedAt = tsToMs(item.updatedAt || item.joinedAt || item.createdAt || 0);
-    return updatedAt > 0 && now - updatedAt > SCANNER_STALE_LOBBY_MS;
-  });
-
-  if (!stale.length) return;
-  scannerRealtime.pruneBusy = true;
-  try {
-    for (const participant of stale) {
-      await removeParticipantFromRound(scannerGridState.roundId, participant.playerId, { reason: "stale" });
-    }
-  } finally {
-    scannerRealtime.pruneBusy = false;
-  }
-}
-
 async function processScannerRoundPayoutOnce(roundId, resultOverride = null) {
   // Выплаты обрабатывает сервер через payoutEngine.js — клиент не должен дублировать это
   console.log('[payout] Пропущено на клиенте — сервер обрабатывает выплаты');
-  return;
-}
-
-async function ensureScannerRoundLifecycle() {
-  // Отключено — сервер управляет жизненным циклом через lifecycle.js
   return;
 }
 
@@ -12542,11 +12088,6 @@ async function ensureScannerRoundHistoryPersisted() {
   ]);
 
   scannerRealtime.lastPersistedRoundId = round.id;
-}
-
-function setScannerStake(value) {
-  scannerGridState.selectedStake = normalizeStakeValue(value) || 25;
-  renderScannerRound();
 }
 
 function sanitizeScannerStakeInput(value) {
@@ -12869,29 +12410,6 @@ async function startOrJoinScannerRound(event) {
   }
 
   await joinOrCreateScannerRound();
-}
-
-async function resetScannerRound(event) {
-  if (event) event.stopPropagation();
-  scannerGridState.selectedStake = 25;
-  scannerGridState.selectedPopulation = 150;
-  renderScannerRound();
-
-  if (scannerGridState.roundId && ["waiting", "countdown"].includes(scannerGridState.status)) {
-    try {
-      await leaveScannerRound({ reason: "reset" });
-    } catch (error) {
-      console.warn("Не удалось выйти из lobby при сбросе:", error);
-    }
-  }
-}
-
-function toggleScannerRecentRounds(event) {
-  if (event) event.stopPropagation();
-  const totalRecent = Array.isArray(scannerGridState.recentRounds) ? scannerGridState.recentRounds.length : 0;
-  if (totalRecent <= 1) return;
-  scannerGridState.recentRoundsExpanded = !scannerGridState.recentRoundsExpanded;
-  renderScannerRecentList();
 }
 
 function setButtonState(button, { disabled = false, text = null } = {}) {
@@ -13680,11 +13198,6 @@ function renderScannerButtons() {
   setButtonState(joinButton, { disabled, text });
 }
 
-function getScannerResultRevealProgress() {
-  const status = String(scannerGridState.status || "idle");
-  return (status === "finished" || status === "preparing_next_round") ? 1 : 0;
-}
-
 function isScannerResultRevealReady() {
   const status = String(scannerGridState.status || "idle");
   if (status !== "finished" && status !== "preparing_next_round") return false;
@@ -14075,33 +13588,6 @@ let _borderGlowLobbyLastVy = 0;
 let _borderGlowActiveLastVx = 0;
 let _borderGlowActiveLastVy = 0;
 
-function drawScannerGridLines(ctx, size, cellSize) {
-  return;
-  const gridQuality = getEffectiveQualityTier();
-  const gridStep = gridQuality === "low" ? 20 : gridQuality === "mid" ? 10 : 10;
-  const gridAlpha = gridQuality === "low" ? 0.03 : 0.05;
-  ctx.save();
-  ctx.strokeStyle = `rgba(255,255,255,${gridAlpha})`;
-  ctx.lineWidth = 1;
-  for (let row = 0; row <= SCANNER_GRID_ROWS; row += gridStep) {
-    const y = row * cellSize;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(size, y);
-    ctx.stroke();
-  }
-  for (let col = 0; col <= SCANNER_GRID_COLS; col += gridStep) {
-    const x = col * cellSize;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, size);
-    ctx.stroke();
-  }
-  ctx.strokeStyle = `rgba(255,255,255,${gridAlpha})`;
-  ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
-  ctx.restore();
-}
-
 function addBorderGlowPoint(size, px, py) {
   const now = performance.now();
   _borderGlowPoints.push({ x: px, y: py, t: now });
@@ -14163,9 +13649,6 @@ function drawScannerArenaBorder(ctx, size) {
     }
   }
   ctx.restore();
-}
-function buildScannerGridLinesCache(size, cellSize) {
-  return null;
 }
 
 function drawScannerBeam(ctx, length, options = {}) {
@@ -14319,61 +13802,6 @@ function drawScannerReticle(ctx, x, y, radius, options = {}) {
   ctx.stroke();
   ctx.restore();
 
-  ctx.restore();
-}
-
-function drawScannerLens(ctx, sourceCanvas, x, y, radius, surfaceSize, options = {}) {
-  if (!sourceCanvas) return;
-
-  const safeRadius = Math.max(8, Number(radius) || 0);
-  const zoom = Math.max(1, Number(options.zoom) || 1.8);
-  const alpha = Math.max(0, Math.min(1, Number(options.alpha) || 1));
-  const size = Math.max(1, Number(surfaceSize) || sourceCanvas.width || 1);
-  const lensDiameter = safeRadius * 2;
-  const sampleSize = lensDiameter / zoom;
-  const safeX = Math.max(0, Math.min(size, Number(x) || 0));
-  const safeY = Math.max(0, Math.min(size, Number(y) || 0));
-  const sx = Math.max(0, Math.min(size - sampleSize, safeX - sampleSize / 2));
-  const sy = Math.max(0, Math.min(size - sampleSize, safeY - sampleSize / 2));
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.beginPath();
-  ctx.arc(safeX, safeY, safeRadius, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.drawImage(sourceCanvas, sx, sy, sampleSize, sampleSize, safeX - safeRadius, safeY - safeRadius, lensDiameter, lensDiameter);
-
-  const gloss = ctx.createRadialGradient(
-    safeX - safeRadius * 0.32,
-    safeY - safeRadius * 0.32,
-    safeRadius * 0.12,
-    safeX,
-    safeY,
-    safeRadius
-  );
-  gloss.addColorStop(0, "rgba(255,255,255,0.38)");
-  gloss.addColorStop(0.28, "rgba(255,255,255,0.14)");
-  gloss.addColorStop(1, "rgba(45,225,255,0.03)");
-  ctx.fillStyle = gloss;
-  ctx.fillRect(safeX - safeRadius, safeY - safeRadius, lensDiameter, lensDiameter);
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.shadowBlur = safeRadius * 0.85;
-  ctx.shadowColor = "rgba(45, 225, 255, 0.34)";
-  ctx.lineWidth = Math.max(2, safeRadius * 0.12);
-  ctx.strokeStyle = "rgba(255,255,255,0.94)";
-  ctx.beginPath();
-  ctx.arc(safeX, safeY, safeRadius, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.shadowBlur = 0;
-  ctx.lineWidth = Math.max(1, safeRadius * 0.06);
-  ctx.strokeStyle = "rgba(45,225,255,0.88)";
-  ctx.beginPath();
-  ctx.arc(safeX, safeY, Math.max(2, safeRadius - Math.max(2, safeRadius * 0.18)), 0, Math.PI * 2);
-  ctx.stroke();
   ctx.restore();
 }
 
@@ -14747,11 +14175,6 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     });
     ctx.restore();
   }
-}
-function drawScannerIdleArena(ctx, size, now) {
-  drawScannerEmptyArenaState(ctx, size, getScannerSharedLobbyBeamSample(), {
-    waitingTextAlpha: 1
-  });
 }
 
 function drawScannerPlayerBadge(ctx, zone, size, alpha = 1) {
@@ -15745,21 +15168,6 @@ async function bootstrapScannerRoundFromRecentState(options = {}) {
   }
 }
 
-async function loadScannerHistory() {
-  try {
-    const snapshot = await scannerHistoryCollection()
-      .orderBy("finishedAt", "desc")
-      .limit(100)
-      .get();
-    const items = [];
-    snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
-    scannerGridState.recentRounds = items;
-    renderScannerRecentList();
-  } catch(e) {
-    console.warn('История раундов не загружена:', e.message);
-  }
-}
-
 // Запрашивает историю раундов у сервера через сокет.
 // Ответ придёт событием history:list.
 function requestScannerHistoryFromServer() {
@@ -15770,28 +15178,6 @@ function requestScannerHistoryFromServer() {
   } catch (e) {
     console.warn('Не удалось запросить историю раундов:', e.message);
   }
-}
-
-function subscribeScannerHistory() {
-  if (scannerRealtime.unsubHistory) {
-    scannerRealtime.unsubHistory();
-    scannerRealtime.unsubHistory = null;
-  }
-
-  // ОТКЛЮЧЕНО: история приходит по сокету событием history:list.
-  return;
-
-  scannerRealtime.unsubHistory = scannerHistoryCollection()
-    .orderBy("finishedAt", "desc")
-    .limit(100)
-    .onSnapshot((snapshot) => {
-      const items = [];
-      snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
-      scannerGridState.recentRounds = items;
-      renderScannerRecentList();
-    }, (e) => {
-      console.warn('История раундов: ошибка подписки:', e.message);
-    });
 }
 
 function initializeScannerGridFeature() {
