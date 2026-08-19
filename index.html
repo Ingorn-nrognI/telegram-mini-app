@@ -15327,7 +15327,6 @@ function handleScannerResultOverlayClick(event) {
 document.addEventListener("visibilitychange", handleVisibilityChange);
 window.addEventListener("beforeunload", handleBeforeUnload);
 
-window.setScannerStake = setScannerStake;
 window.setScannerStakeAndJoin = setScannerStakeAndJoin;
 window.renderScannerBetBar = renderScannerBetBar;
 window.setScannerCustomStake = setScannerCustomStake;
@@ -15352,8 +15351,6 @@ window.processScannerRoundPayoutOnce = processScannerRoundPayoutOnce;
 window.isScannerBettingLocked = isScannerBettingLocked;
 window.setScannerPopulation = setScannerPopulation;
 window.startOrJoinScannerRound = startOrJoinScannerRound;
-window.resetScannerRound = resetScannerRound;
-window.toggleScannerRecentRounds = toggleScannerRecentRounds;
 window.enterScannerGridMode = enterScannerGridMode;
 
 scannerQuickStakeValues = loadScannerQuickStakeValues();
