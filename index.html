@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Bobr World</title>
+<title>Laser Market</title>
 <style>
 :root {
   --bg-1: #0d1530;
@@ -4613,45 +4613,86 @@ button {
   position: fixed;
   inset: 0;
   z-index: 999999;
-  background: radial-gradient(circle at 50% 40%, #10262b 0%, #0d1530 70%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: radial-gradient(circle at 50% 38%, var(--bg-3) 0%, var(--bg-2) 72%);
   transition: opacity 0.45s ease;
 }
 #appBootLoader.boot-loader-hidden {
   opacity: 0;
   pointer-events: none;
 }
-.boot-loader-ring-wrap {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 64px;
-  height: 64px;
+
+/* Мини-арена: тот же мотив, что в самой игре (сетка + вращающийся луч +
+   клетки, вспыхивающие при проходе) — вместо безликого спиннера экран
+   загрузки сам показывает, во что человек сейчас попадёт. */
+.boot-arena {
+  width: 132px;
+  height: 132px;
+  overflow: visible;
 }
-.boot-loader-ring {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: 3px solid rgba(45, 225, 255, 0.18);
-  border-top-color: rgba(45, 225, 255, 0.95);
-  animation: bootLoaderSpin 0.9s linear infinite;
-  box-shadow: 0 0 24px rgba(45, 225, 255, 0.35);
+.boot-arena-frame {
+  fill: none;
+  stroke: rgba(45, 225, 255, 0.22);
+  stroke-width: 1.5;
 }
+.boot-arena-grid {
+  stroke: rgba(45, 225, 255, 0.1);
+  stroke-width: 1;
+}
+.boot-arena-cell {
+  fill: var(--accent, #75f59c);
+  opacity: 0;
+  animation: bootCellFlash 2.4s ease-in-out infinite;
+}
+.boot-arena-cell:nth-child(1) { animation-delay: 0.1s; }
+.boot-arena-cell:nth-child(2) { animation-delay: 0.75s; }
+.boot-arena-cell:nth-child(3) { animation-delay: 1.4s; }
+.boot-arena-beam-group {
+  transform-origin: 60px 60px;
+  animation: bootBeamSpin 2.4s linear infinite;
+}
+.boot-arena-beam {
+  stroke: var(--blue-3, #2de1ff);
+  stroke-width: 2;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(45, 225, 255, 0.9)) drop-shadow(0 0 14px rgba(45, 225, 255, 0.5));
+}
+.boot-arena-core {
+  fill: rgba(10, 16, 36, 0.92);
+  stroke: rgba(45, 225, 255, 0.55);
+  stroke-width: 1.5;
+}
+.boot-arena-core-ring {
+  fill: none;
+  stroke: var(--blue-3, #2de1ff);
+  stroke-width: 1.5;
+  opacity: 0.85;
+  animation: bootCorePulse 2.4s ease-in-out infinite;
+}
+
+@keyframes bootBeamSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes bootCellFlash {
+  0%, 100% { opacity: 0; }
+  35% { opacity: 0.85; }
+  55% { opacity: 0.15; }
+}
+@keyframes bootCorePulse {
+  0%, 100% { r: 9px; opacity: 0.55; }
+  50% { r: 12px; opacity: 0.95; }
+}
+
 .boot-loader-title {
-  /* Обводка и переливающаяся заливка — на ОДНОМ элементе, без дублирования
-     текста через ::before (тот приём оказался ненадёжен в вебвью Telegram —
-     два независимых слоя текста плохо гарантированно совпадают пиксель в
-     пиксель). -webkit-text-stroke рисуется вокруг контура глифов, а заливка
-     внутри контура идёт через background-clip:text — оба работают вместе на
-     одном и том же тексте без рассинхрона. */
-  position: absolute;
-  top: 40%;
-  left: 50%;
-  transform: translate(-50%, -100%);
   white-space: nowrap;
-  font-size: 44px;
+  font-size: 32px;
   font-weight: 800;
-  letter-spacing: 1.5px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
   background: linear-gradient(90deg, #6ff0ff, #b9a3ff, #6ff0ff);
   background-size: 200% auto;
   -webkit-background-clip: text;
@@ -4667,19 +4708,12 @@ button {
   50% { -webkit-text-stroke-color: rgba(185, 163, 255, 0.9); }
   100% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.9); }
 }
-.boot-loader-textwrap {
-  position: absolute;
-  top: 58%;
-  left: 50%;
-  transform: translate(-50%, 0);
-  white-space: nowrap;
-}
 .boot-loader-text {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.4px;
-  color: rgba(210, 245, 255, 0.85);
-  text-shadow: 0 0 12px rgba(45, 225, 255, 0.4);
+  color: rgba(210, 245, 255, 0.7);
+  text-shadow: 0 0 12px rgba(45, 225, 255, 0.35);
 }
 .boot-dot {
   display: inline-block;
@@ -4688,9 +4722,6 @@ button {
 }
 .boot-dot:nth-child(2) { animation-delay: -1.87s; }
 .boot-dot:nth-child(3) { animation-delay: -1.65s; }
-@keyframes bootLoaderSpin {
-  to { transform: rotate(360deg); }
-}
 @keyframes bootLoaderTextShine {
   to { background-position: 200% center; }
 }
@@ -4703,10 +4734,25 @@ button {
 </head>
 <body>
 <div id="appBootLoader">
-  <div class="boot-loader-ring-wrap"><div class="boot-loader-ring"></div></div>
-  <div class="boot-loader-title">Bobr World</div>
+  <svg class="boot-arena" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <rect class="boot-arena-frame" x="4" y="4" width="112" height="112" rx="14" />
+    <line class="boot-arena-grid" x1="4" y1="42" x2="116" y2="42" />
+    <line class="boot-arena-grid" x1="4" y1="78" x2="116" y2="78" />
+    <line class="boot-arena-grid" x1="42" y1="4" x2="42" y2="116" />
+    <line class="boot-arena-grid" x1="78" y1="4" x2="78" y2="116" />
+    <rect class="boot-arena-cell" x="46" y="8" width="30" height="30" rx="4" />
+    <rect class="boot-arena-cell" x="8" y="82" width="30" height="30" rx="4" />
+    <rect class="boot-arena-cell" x="82" y="46" width="30" height="30" rx="4" />
+    <g class="boot-arena-beam-group">
+      <line class="boot-arena-beam" x1="60" y1="60" x2="60" y2="10" />
+      <line class="boot-arena-beam" x1="60" y1="60" x2="60" y2="110" />
+    </g>
+    <circle class="boot-arena-core" cx="60" cy="60" r="7" />
+    <circle class="boot-arena-core-ring" cx="60" cy="60" r="9" />
+  </svg>
+  <div class="boot-loader-title">Laser Market</div>
   <div class="boot-loader-textwrap">
-    <span class="boot-loader-text">Загрузка<span class="boot-dot">.</span><span class="boot-dot">.</span><span class="boot-dot">.</span></span>
+    <span class="boot-loader-text">Подключение к арене<span class="boot-dot">.</span><span class="boot-dot">.</span><span class="boot-dot">.</span></span>
   </div>
 </div>
 <div id="menu" onclick="handleMenuBackgroundClick(event)">
