@@ -4617,96 +4617,88 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 22px;
-  background: radial-gradient(circle at 50% 38%, var(--bg-3) 0%, var(--bg-2) 72%);
+  gap: 14px;
+  background: linear-gradient(160deg, #3A1170 0%, #1C1049 50%, #080622 100%);
   transition: opacity 0.45s ease;
+  overflow: hidden;
 }
 #appBootLoader.boot-loader-hidden {
   opacity: 0;
   pointer-events: none;
 }
 
-/* Мини-арена: тот же мотив, что в самой игре (сетка + вращающийся луч +
-   клетки, вспыхивающие при проходе) — вместо безликого спиннера экран
-   загрузки сам показывает, во что человек сейчас попадёт. */
-.boot-arena {
-  width: 132px;
-  height: 132px;
+/* Полноэкранная сцена: знак доллара сверху, подарок снизу — оба из
+   фирменной иллюстрации бренда. Вертикальный луч непрерывно сканирует
+   сверху вниз; каждая иконка вспыхивает полной яркостью ровно в момент,
+   когда луч проходит её уровень — тайминг вспышек рассчитан по точному
+   времени прохода луча через центр каждой иконки, не на глаз. */
+.boot-hero {
+  width: min(86vw, 375px);
+  height: min(72vh, 650px);
+  position: relative;
+}
+.boot-hero-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
   overflow: visible;
 }
-.boot-arena-frame {
-  fill: none;
-  stroke: rgba(45, 225, 255, 0.22);
-  stroke-width: 1.5;
+.boot-icon-dim {
+  opacity: 0.16;
 }
-.boot-arena-grid {
-  stroke: rgba(45, 225, 255, 0.1);
-  stroke-width: 1;
+.boot-icon-bright {
+  opacity: 0.16;
 }
-.boot-arena-cell {
-  fill: var(--accent, #75f59c);
-  opacity: 0;
-  animation: bootCellFlash 2.4s ease-in-out infinite;
+.boot-icon-bright.boot-dollar-bright {
+  animation: bootDollarReveal 4.2s ease-in-out infinite;
 }
-.boot-arena-cell:nth-child(1) { animation-delay: 0.1s; }
-.boot-arena-cell:nth-child(2) { animation-delay: 0.75s; }
-.boot-arena-cell:nth-child(3) { animation-delay: 1.4s; }
-.boot-arena-beam-group {
-  transform-origin: 60px 60px;
-  animation: bootBeamSpin 2.4s linear infinite;
+.boot-icon-bright.boot-gift-bright {
+  animation: bootGiftReveal 4.2s ease-in-out infinite;
 }
-.boot-arena-beam {
-  stroke: var(--blue-3, #2de1ff);
-  stroke-width: 2;
-  stroke-linecap: round;
-  filter: drop-shadow(0 0 6px rgba(45, 225, 255, 0.9)) drop-shadow(0 0 14px rgba(45, 225, 255, 0.5));
+@keyframes bootDollarReveal {
+  0%, 17% { opacity: 0.16; }
+  23.8% { opacity: 1; }
+  30%, 100% { opacity: 0.16; }
 }
-.boot-arena-core {
-  fill: rgba(10, 16, 36, 0.92);
-  stroke: rgba(45, 225, 255, 0.55);
-  stroke-width: 1.5;
+@keyframes bootGiftReveal {
+  0%, 70% { opacity: 0.16; }
+  76.4% { opacity: 1; }
+  83%, 100% { opacity: 0.16; }
 }
-.boot-arena-core-ring {
-  fill: none;
-  stroke: var(--blue-3, #2de1ff);
-  stroke-width: 1.5;
-  opacity: 0.85;
-  animation: bootCorePulse 2.4s ease-in-out infinite;
+.boot-scan-line {
+  animation: bootScanSweep 4.2s linear infinite;
 }
-
-@keyframes bootBeamSpin {
-  to { transform: rotate(360deg); }
-}
-@keyframes bootCellFlash {
-  0%, 100% { opacity: 0; }
-  35% { opacity: 0.85; }
-  55% { opacity: 0.15; }
-}
-@keyframes bootCorePulse {
-  0%, 100% { r: 9px; opacity: 0.55; }
-  50% { r: 12px; opacity: 0.95; }
+@keyframes bootScanSweep {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(650px); }
 }
 
 .boot-loader-title {
   white-space: nowrap;
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 800;
-  letter-spacing: 3px;
+  letter-spacing: 4px;
   text-transform: uppercase;
-  background: linear-gradient(90deg, #6ff0ff, #b9a3ff, #6ff0ff);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(45, 225, 255, 0.9);
-  text-shadow: 0 0 24px rgba(45, 225, 255, 0.45);
-  animation: bootLoaderTextShine 2.6s linear infinite, bootLoaderStroke 2.6s linear infinite;
 }
-
-@keyframes bootLoaderStroke {
-  0% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.9); }
-  50% { -webkit-text-stroke-color: rgba(185, 163, 255, 0.9); }
-  100% { -webkit-text-stroke-color: rgba(45, 225, 255, 0.9); }
+.boot-letter {
+  display: inline-block;
+  color: rgba(180, 205, 255, 0.35);
+  text-shadow: none;
+  animation: bootLetterGlow 3.6s ease-in-out infinite;
+}
+@keyframes bootLetterGlow {
+  0%, 92%, 100% {
+    color: rgba(180, 205, 255, 0.35);
+    text-shadow: none;
+  }
+  4% {
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(45, 225, 255, 0.95), 0 0 22px rgba(45, 225, 255, 0.6);
+  }
+  9% {
+    color: rgba(180, 205, 255, 0.35);
+    text-shadow: none;
+  }
 }
 .boot-loader-text {
   font-size: 13px;
@@ -4722,9 +4714,6 @@ button {
 }
 .boot-dot:nth-child(2) { animation-delay: -1.87s; }
 .boot-dot:nth-child(3) { animation-delay: -1.65s; }
-@keyframes bootLoaderTextShine {
-  to { background-position: 200% center; }
-}
 @keyframes bootDotFade {
   0%, 10% { opacity: 0; }
   15%, 75% { opacity: 1; }
@@ -4734,27 +4723,86 @@ button {
 </head>
 <body>
 <div id="appBootLoader">
-  <svg class="boot-arena" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-    <rect class="boot-arena-frame" x="4" y="4" width="112" height="112" rx="14" />
-    <line class="boot-arena-grid" x1="4" y1="42" x2="116" y2="42" />
-    <line class="boot-arena-grid" x1="4" y1="78" x2="116" y2="78" />
-    <line class="boot-arena-grid" x1="42" y1="4" x2="42" y2="116" />
-    <line class="boot-arena-grid" x1="78" y1="4" x2="78" y2="116" />
-    <rect class="boot-arena-cell" x="46" y="8" width="30" height="30" rx="4" />
-    <rect class="boot-arena-cell" x="8" y="82" width="30" height="30" rx="4" />
-    <rect class="boot-arena-cell" x="82" y="46" width="30" height="30" rx="4" />
-    <g class="boot-arena-beam-group">
-      <line class="boot-arena-beam" x1="60" y1="60" x2="60" y2="10" />
-      <line class="boot-arena-beam" x1="60" y1="60" x2="60" y2="110" />
-    </g>
-    <circle class="boot-arena-core" cx="60" cy="60" r="7" />
-    <circle class="boot-arena-core-ring" cx="60" cy="60" r="9" />
-  </svg>
-  <div class="boot-loader-title">Laser Market</div>
+  <div class="boot-hero">
+    <svg class="boot-hero-svg" viewBox="0 0 375 650" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bootGiftG" gradientUnits="userSpaceOnUse" x1="125" y1="48" x2="387" y2="331">
+          <stop offset="0" stop-color="#6FDCFF"/>
+          <stop offset="1" stop-color="#3559EE"/>
+        </linearGradient>
+        <linearGradient id="bootDollarG" gradientUnits="userSpaceOnUse" x1="141" y1="108" x2="372" y2="482">
+          <stop offset="0" stop-color="#5CEB93"/>
+          <stop offset="1" stop-color="#0F8A48"/>
+        </linearGradient>
+        <pattern id="bootMiniDollars" width="62" height="62" patternUnits="userSpaceOnUse" patternTransform="rotate(-22) scale(1.02)">
+          <g fill="none" stroke="#0A5A30" stroke-opacity="0.5" stroke-width="4.8" stroke-linecap="round">
+            <path d="M38.5 23 C38.5 18 33.5 14.8 28.3 14.8 C23.1 14.8 18.7 18 18.7 23 C18.7 28.3 23.8 30.3 28.3 31.7 C33.5 33.2 38.5 35.4 38.5 40.5 C38.5 45.8 33.5 48.9 28.3 48.9 C23.1 48.9 18.7 45.8 18.7 40.5"/>
+            <path stroke-width="3.2" d="M24.9 7.7 V55.5"/><path stroke-width="3.2" d="M31.7 7.7 V55.5"/>
+          </g>
+        </pattern>
+        <mask id="bootDollarMask">
+          <g fill="none" stroke="#FFFFFF" stroke-linecap="round" transform="matrix(1.359 0 0 1.359 -91.9 -101.7)">
+            <path stroke-width="42" d="M320 244 C320 212 294 198 256 198 C220 198 194 214 194 242 C194 272 226 282 256 290 C290 299 322 310 322 342 C322 372 292 388 256 388 C220 388 192 372 192 340"/>
+            <path stroke-width="24" d="M237 168 V416"/>
+            <path stroke-width="24" d="M275 168 V416"/>
+          </g>
+        </mask>
+        <filter id="bootBlurBig" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"/></filter>
+        <filter id="bootBlurSmall" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="5"/></filter>
+      </defs>
+
+      <!-- Знак доллара — тускло, всегда чуть виден -->
+      <g class="boot-icon-dim" transform="translate(26.56 -30.63) scale(0.625)">
+        <g mask="url(#bootDollarMask)">
+          <rect x="130" y="97" width="255" height="400" fill="url(#bootDollarG)"/>
+          <rect x="130" y="97" width="255" height="400" fill="url(#bootMiniDollars)"/>
+        </g>
+      </g>
+      <!-- Знак доллара — яркая копия, вспыхивает когда луч наверху -->
+      <g class="boot-icon-bright boot-dollar-bright" transform="translate(26.56 -30.63) scale(0.625)">
+        <g mask="url(#bootDollarMask)">
+          <rect x="130" y="97" width="255" height="400" fill="url(#bootDollarG)"/>
+          <rect x="130" y="97" width="255" height="400" fill="url(#bootMiniDollars)"/>
+        </g>
+      </g>
+
+      <!-- Подарок — тускло, всегда чуть виден -->
+      <g class="boot-icon-dim" transform="translate(-50.08 320.45) scale(0.928)">
+        <path fill="url(#bootGiftG)" fill-rule="evenodd" d="M242.5 265.9L242.7 200.0L240.6 200.0C239.5 200.0 221.2 199.8 200.1 199.6C179.0 199.4 157.1 199.4 151.3 199.7L140.9 200.2L140.9 251.7C140.9 286.5 141.1 304.6 141.7 307.3C144.1 318.8 152.9 328.1 164.4 331.2C166.9 331.9 177.6 332.1 205.1 332.0L242.3 331.9L242.5 265.9Z M349.8 330.8C359.0 327.9 365.3 322.4 369.4 313.6L371.5 309.1L371.7 254.5L371.9 200.0L350.4 199.8C313.6 199.6 271.6 199.8 271.1 200.2C270.8 200.5 270.5 325.1 270.8 331.7C270.8 332.0 287.5 332.2 308.0 332.2C342.3 332.2 345.5 332.1 349.8 330.8Z M242.5 159.9L242.7 132.4L189.1 132.4C130.5 132.4 132.4 132.2 128.5 136.8C125.4 140.6 124.9 143.7 124.9 160.5C125.0 180.3 125.8 183.2 132.9 186.4C135.8 187.7 138.9 187.8 189.1 187.6L242.3 187.5L242.5 159.9Z M379.3 187.0C380.4 186.6 382.4 185.3 383.6 184.2C387.6 180.5 387.9 178.8 387.8 159.9C387.8 140.5 387.3 138.0 382.4 134.6L379.9 132.7L325.2 132.7L270.5 132.7L270.4 148.3C270.3 156.9 270.4 169.3 270.6 175.9L271.0 187.8L324.1 187.8C359.7 187.8 377.8 187.6 379.3 187.0Z M225.2 121.5C225.2 120.5 216.2 115.9 203.9 110.6C187.9 103.7 179.0 94.2 180.8 85.7C182.8 76.3 192.1 73.1 202.5 78.2C211.9 82.8 228.9 102.2 237.7 118.5L239.9 122.5L256.1 122.5L272.2 122.5L275.1 117.7C281.6 107.0 292.0 93.7 300.0 85.8C309.6 76.5 319.7 73.3 326.4 77.5C332.3 81.1 333.4 90.0 328.8 96.8C324.7 102.6 319.7 105.8 299.3 115.2C293.4 118.0 288.6 120.7 288.4 121.3C288.2 122.3 290.3 122.5 304.8 122.5C318.8 122.5 322.4 122.2 327.8 120.9C339.6 118.1 348.1 111.5 353.2 101.2C362.5 82.3 354.4 60.6 334.7 51.1C329.3 48.6 328.4 48.4 320.2 48.1C309.7 47.8 304.6 49.2 296.5 54.6C284.6 62.5 275.5 76.1 261.3 107.5C258.9 112.8 256.5 117.2 256.0 117.2C255.4 117.2 253.4 113.3 251.4 108.6C240.0 81.2 229.3 64.2 218.8 56.4C210.3 50.1 204.0 48.0 193.5 48.0C188.1 48.0 185.4 48.4 181.6 49.8C171.3 53.5 163.9 60.2 159.2 70.0C156.5 75.7 156.4 75.9 156.4 85.3C156.4 94.8 156.5 94.9 159.3 100.6C164.6 111.3 174.2 118.7 186.5 121.3C193.4 122.8 225.2 122.9 225.2 121.5Z"/>
+      </g>
+      <!-- Подарок — яркая копия, вспыхивает когда луч внизу -->
+      <g class="boot-icon-bright boot-gift-bright" transform="translate(-50.08 320.45) scale(0.928)">
+        <path fill="url(#bootGiftG)" fill-rule="evenodd" d="M242.5 265.9L242.7 200.0L240.6 200.0C239.5 200.0 221.2 199.8 200.1 199.6C179.0 199.4 157.1 199.4 151.3 199.7L140.9 200.2L140.9 251.7C140.9 286.5 141.1 304.6 141.7 307.3C144.1 318.8 152.9 328.1 164.4 331.2C166.9 331.9 177.6 332.1 205.1 332.0L242.3 331.9L242.5 265.9Z M349.8 330.8C359.0 327.9 365.3 322.4 369.4 313.6L371.5 309.1L371.7 254.5L371.9 200.0L350.4 199.8C313.6 199.6 271.6 199.8 271.1 200.2C270.8 200.5 270.5 325.1 270.8 331.7C270.8 332.0 287.5 332.2 308.0 332.2C342.3 332.2 345.5 332.1 349.8 330.8Z M242.5 159.9L242.7 132.4L189.1 132.4C130.5 132.4 132.4 132.2 128.5 136.8C125.4 140.6 124.9 143.7 124.9 160.5C125.0 180.3 125.8 183.2 132.9 186.4C135.8 187.7 138.9 187.8 189.1 187.6L242.3 187.5L242.5 159.9Z M379.3 187.0C380.4 186.6 382.4 185.3 383.6 184.2C387.6 180.5 387.9 178.8 387.8 159.9C387.8 140.5 387.3 138.0 382.4 134.6L379.9 132.7L325.2 132.7L270.5 132.7L270.4 148.3C270.3 156.9 270.4 169.3 270.6 175.9L271.0 187.8L324.1 187.8C359.7 187.8 377.8 187.6 379.3 187.0Z M225.2 121.5C225.2 120.5 216.2 115.9 203.9 110.6C187.9 103.7 179.0 94.2 180.8 85.7C182.8 76.3 192.1 73.1 202.5 78.2C211.9 82.8 228.9 102.2 237.7 118.5L239.9 122.5L256.1 122.5L272.2 122.5L275.1 117.7C281.6 107.0 292.0 93.7 300.0 85.8C309.6 76.5 319.7 73.3 326.4 77.5C332.3 81.1 333.4 90.0 328.8 96.8C324.7 102.6 319.7 105.8 299.3 115.2C293.4 118.0 288.6 120.7 288.4 121.3C288.2 122.3 290.3 122.5 304.8 122.5C318.8 122.5 322.4 122.2 327.8 120.9C339.6 118.1 348.1 111.5 353.2 101.2C362.5 82.3 354.4 60.6 334.7 51.1C329.3 48.6 328.4 48.4 320.2 48.1C309.7 47.8 304.6 49.2 296.5 54.6C284.6 62.5 275.5 76.1 261.3 107.5C258.9 112.8 256.5 117.2 256.0 117.2C255.4 117.2 253.4 113.3 251.4 108.6C240.0 81.2 229.3 64.2 218.8 56.4C210.3 50.1 204.0 48.0 193.5 48.0C188.1 48.0 185.4 48.4 181.6 49.8C171.3 53.5 163.9 60.2 159.2 70.0C156.5 75.7 156.4 75.9 156.4 85.3C156.4 94.8 156.5 94.9 159.3 100.6C164.6 111.3 174.2 118.7 186.5 121.3C193.4 122.8 225.2 122.9 225.2 121.5Z"/>
+      </g>
+
+      <!-- Вертикальный сканирующий луч -->
+      <g class="boot-scan-line" stroke-linecap="round">
+        <line x1="0" y1="0" x2="375" y2="0" stroke="#22D3EE" stroke-width="30" opacity="0.35" filter="url(#bootBlurBig)"/>
+        <line x1="0" y1="0" x2="375" y2="0" stroke="#67E8F9" stroke-width="10" opacity="0.55" filter="url(#bootBlurSmall)"/>
+        <line x1="0" y1="0" x2="375" y2="0" stroke="#FFFFFF" stroke-width="3.5"/>
+      </g>
+    </svg>
+  </div>
+  <div class="boot-loader-title" id="bootLoaderTitleText"></div>
   <div class="boot-loader-textwrap">
     <span class="boot-loader-text">Подключение к арене<span class="boot-dot">.</span><span class="boot-dot">.</span><span class="boot-dot">.</span></span>
   </div>
 </div>
+<script>
+(function () {
+  var text = "LASER MARKET";
+  var host = document.getElementById("bootLoaderTitleText");
+  if (!host) return;
+  var step = 3.6 / text.length;
+  text.split("").forEach(function (ch, i) {
+    var span = document.createElement("span");
+    span.className = "boot-letter";
+    span.style.animationDelay = (i * step).toFixed(2) + "s";
+    span.textContent = ch === " " ? " " : ch;
+    host.appendChild(span);
+  });
+})();
+</script>
 <div id="menu" onclick="handleMenuBackgroundClick(event)">
   <div id="panelBackdrop" class="panel-backdrop"></div>
 
