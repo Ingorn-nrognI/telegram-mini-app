@@ -11177,10 +11177,13 @@ function initSocketConnection() {
     let _bootHidden = false;
 
     // Полоса отражает реальные этапы: 0% — старт, ~15% — скрипт ожил,
-    // ~55% — сокет подключился, ~92% — данные арены получены (держим чуть
-    // ниже 100%, последний маленький рывок — это подтверждение готовности
-    // показать игру). До 100% полоса не дойдёт, пока не пройдут все 3
-    // секунды минимального показа, даже если всё остальное готово раньше.
+    // ~55% — сокет подключился, ~92% — данные арены получены. Дальше, пока
+    // ждём истечения минимальных 3 секунд показа, луч НЕ стоит на месте —
+    // медленно ползёт от 92% к 99%, чтобы не выглядело зависшим. Этот
+    // ползущий креп включается ТОЛЬКО когда реальная загрузка уже точно
+    // завершена (оба флага true) — если сеть вдруг окажется медленнее
+    // и сокет/арена ещё не готовы даже после 3 секунд, полоса останется
+    // на честных 15%/55%, а не будет врать, что почти всё готово.
     function setBootProgress(pct) {
       const fill = document.getElementById('bootProgressFill');
       const dot = document.getElementById('bootProgressDot');
@@ -11189,9 +11192,25 @@ function initSocketConnection() {
     }
     setBootProgress(15);
 
+    let _creepIntervalId = null;
+    let _creepPct = 92;
+    function startProgressCreep() {
+      if (_creepIntervalId) return;
+      _creepPct = 92;
+      _creepIntervalId = setInterval(() => {
+        _creepPct = Math.min(99, _creepPct + 1);
+        setBootProgress(_creepPct);
+        if (_creepPct >= 99) { clearInterval(_creepIntervalId); _creepIntervalId = null; }
+      }, 300);
+    }
+    function stopProgressCreep() {
+      if (_creepIntervalId) { clearInterval(_creepIntervalId); _creepIntervalId = null; }
+    }
+
     function hideBootLoader() {
       if (_bootHidden) return;
       _bootHidden = true;
+      stopProgressCreep();
       setBootProgress(100);
       const el = document.getElementById('appBootLoader');
       if (el) {
@@ -11210,7 +11229,7 @@ function initSocketConnection() {
     let _gotConnect = false;
     function checkReady() {
       if (_gotConnect) setBootProgress(_gotGrid ? 92 : 55);
-      if (_gotGrid && _gotConnect) tryHide();
+      if (_gotGrid && _gotConnect) { startProgressCreep(); tryHide(); }
     }
     _socket.on('connect', () => { _gotConnect = true; checkReady(); });
     _socket.on('grid:state', () => { _gotGrid = true; checkReady(); });
