@@ -4702,28 +4702,91 @@ button {
   display: inline-block;
   color: rgba(180, 205, 255, 0.35);
   text-shadow: none;
-  animation: bootLetterGlow 3.6s ease-in-out infinite;
+  animation: bootLetterGlow 1.8s ease-out infinite;
 }
+/* Свечение гаснет ступенями, оставляя шлейф: буква вспыхивает белым,
+   затем на следующем шаге ещё заметно светится, потом — лишь слабый
+   след, и только после этого возвращается к обычному виду. Пока след
+   догорает, яркая вспышка уже ушла на следующие буквы — получается
+   волна с хвостом, а не одиночная точка. */
 @keyframes bootLetterGlow {
-  0%, 92%, 100% {
+  0% {
     color: rgba(180, 205, 255, 0.35);
     text-shadow: none;
   }
-  4% {
+  6% {
     color: #ffffff;
-    text-shadow: 0 0 10px rgba(45, 225, 255, 0.95), 0 0 22px rgba(45, 225, 255, 0.6);
+    text-shadow: 0 0 10px rgba(45, 225, 255, 0.95), 0 0 24px rgba(45, 225, 255, 0.65);
   }
-  9% {
+  16% {
+    color: rgba(225, 245, 255, 0.85);
+    text-shadow: 0 0 7px rgba(45, 225, 255, 0.5), 0 0 15px rgba(45, 225, 255, 0.3);
+  }
+  28% {
+    color: rgba(200, 225, 255, 0.6);
+    text-shadow: 0 0 4px rgba(45, 225, 255, 0.22);
+  }
+  42% {
+    color: rgba(185, 210, 255, 0.45);
+    text-shadow: 0 0 2px rgba(45, 225, 255, 0.1);
+  }
+  55%, 100% {
     color: rgba(180, 205, 255, 0.35);
     text-shadow: none;
   }
 }
-.boot-loader-text {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  color: rgba(210, 245, 255, 0.7);
-  text-shadow: 0 0 12px rgba(45, 225, 255, 0.35);
+/* Полоса загрузки: серая линия, по которой едет прицел-кольцо (как на
+   арене, только без крестика). За кольцом линия «зажигается» — серое
+   превращается в лазерный луч, ровно того же цвета, что и в игре. */
+.boot-progress {
+  position: relative;
+  width: min(70vw, 260px);
+  height: 18px;
+  display: flex;
+  align-items: center;
+}
+.boot-progress-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(150, 170, 205, 0.22);
+}
+.boot-progress-fill {
+  position: absolute;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow:
+    0 0 6px 1px rgba(103, 232, 249, 0.95),
+    0 0 16px 3px rgba(34, 211, 238, 0.6),
+    0 0 34px 8px rgba(34, 211, 238, 0.3);
+  animation: bootProgressFill 3s ease-in-out infinite;
+}
+.boot-progress-dot {
+  position: absolute;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border-radius: 50%;
+  border: 2px solid rgba(45, 225, 255, 0.9);
+  background: rgba(10, 16, 36, 0.75);
+  box-shadow:
+    0 0 8px rgba(45, 225, 255, 0.8),
+    inset 0 0 6px rgba(45, 225, 255, 0.35);
+  animation: bootProgressDot 3s ease-in-out infinite;
+}
+@keyframes bootProgressFill {
+  0%   { width: 0%; }
+  100% { width: 100%; }
+}
+@keyframes bootProgressDot {
+  0%   { left: 0%; }
+  100% { left: 100%; }
 }
 .boot-dot {
   display: inline-block;
@@ -4792,8 +4855,10 @@ button {
     <div class="boot-scanline"></div>
   </div>
   <div class="boot-loader-title" id="bootLoaderTitleText"></div>
-  <div class="boot-loader-textwrap">
-    <span class="boot-loader-text">Подключение к арене<span class="boot-dot">.</span><span class="boot-dot">.</span><span class="boot-dot">.</span></span>
+  <div class="boot-progress">
+    <div class="boot-progress-track"></div>
+    <div class="boot-progress-fill"></div>
+    <div class="boot-progress-dot"></div>
   </div>
 </div>
 <script>
@@ -4801,7 +4866,7 @@ button {
   var text = "LASER MARKET";
   var host = document.getElementById("bootLoaderTitleText");
   if (!host) return;
-  var step = 3.6 / text.length;
+  var step = 1.8 / text.length;
   text.split("").forEach(function (ch, i) {
     var span = document.createElement("span");
     span.className = "boot-letter";
@@ -11122,8 +11187,11 @@ function initSocketConnection() {
       }
     }
     function tryHide() {
+      // Минимум 3 секунды показа: экран загрузки — часть бренда, за 500мс
+      // человек не успевал ни увидеть сканирование луча, ни прочитать
+      // название. Данные к этому моменту обычно уже пришли и ждут.
       const elapsed = performance.now() - _bootStart;
-      if (elapsed < 500) { setTimeout(tryHide, 500 - elapsed); return; }
+      if (elapsed < 3000) { setTimeout(tryHide, 3000 - elapsed); return; }
       hideBootLoader();
     }
     let _gotGrid = false;
