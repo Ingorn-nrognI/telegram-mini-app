@@ -10713,7 +10713,12 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
       return {
         x: _idX,
         y: _idY,
-        angle: _serverBeamPos.angle || Math.atan2(_serverBeamPos.vy || 0, _serverBeamPos.vx || 0.0001),
+        // Угол теперь берётся из ТОЙ ЖЕ сглаженной интерполяции, что и позиция
+        // (_idSmooth), а не из сырого последнего пакета. Позиция обновлялась
+        // плавно каждый кадр, а угол раньше скакал раз в ~50мс при каждом
+        // новом пакете — линия ехала гладко, но её поворот дёргался. Это и
+        // было заметно как подёргивание при движении.
+        angle: _idSmooth.angle,
         vx: _idVx,
         vy: _idVy
       };
@@ -10794,7 +10799,8 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
       return {
         x: _cdX,
         y: _cdY,
-        angle: _serverBeamPos.angle || Math.atan2(_serverBeamPos.vy || 0, _serverBeamPos.vx || 0.0001),
+        // См. комментарий у аналогичной правки в idle-ветке выше.
+        angle: _cdSmooth.angle,
         vx: _cdVx,
         vy: _cdVy
       };
@@ -10836,20 +10842,31 @@ function getScannerUnifiedBeamSample(roundStatus, roundData, players, timestampM
   }
 
   if (safeStatus === "active") {
-    // Приоритет: реальная позиция от сервера через beam:position
-    // Локальная физика (getScannerActiveBeamSampleAtTime) использовалась как fallback,
-    // но расходится с сервером и выглядит как лазер "застрял"
+    // Раньше здесь позиция ДОСЧИТЫВАЛАСЬ ВПЕРЁД от одного последнего пакета
+    // (_clientReflectedAxis) — та же болезнь, что была в idle/countdown до
+    // фикса: пакет пришёл, позиция прыгнула на новое сырое значение, дальше
+    // экстраполируется вперёд до следующего пакета, снова прыжок. Теперь
+    // активная фаза использует ТУ ЖЕ интерполяцию МЕЖДУ двумя последними
+    // пакетами, что и остальные фазы — домысливать вперёд стало нечего,
+    // и угол наконец берётся из той же сглаженной выборки, а не из сырого
+    // пакета (см. комментарий у idle-ветки).
     if (_serverBeamPos && Number.isFinite(_serverBeamPos.x) && Number.isFinite(_serverBeamPos.y)) {
-      const elapsed = Math.max(0, (performance.now() - (_serverBeamPos._receiveTime || performance.now())) / 1000);
+      const _actSmooth = getInterpolatedServerBeam() || _serverBeamPos;
       const PAD = SCANNER_ACTIVE_BEAM_EDGE_PADDING;
-      const xr = _clientReflectedAxis(_serverBeamPos.x, _serverBeamPos.vx || 0, elapsed, PAD, 1 - PAD);
-      const yr = _clientReflectedAxis(_serverBeamPos.y, _serverBeamPos.vy || 0, elapsed, PAD, 1 - PAD);
+      let _actX = _actSmooth.x;
+      let _actY = _actSmooth.y;
+      let _actVx = _actSmooth.vx || 0;
+      let _actVy = _actSmooth.vy || 0;
+      if (_actX < PAD) { _actX = PAD; _actVx = 0; }
+      else if (_actX > 1 - PAD) { _actX = 1 - PAD; _actVx = 0; }
+      if (_actY < PAD) { _actY = PAD; _actVy = 0; }
+      else if (_actY > 1 - PAD) { _actY = 1 - PAD; _actVy = 0; }
       return {
-        x: xr.position,
-        y: yr.position,
-        angle: _serverBeamPos.angle || Math.atan2(yr.velocity, xr.velocity),
-        vx: xr.velocity,
-        vy: yr.velocity
+        x: _actX,
+        y: _actY,
+        angle: _actSmooth.angle,
+        vx: _actVx,
+        vy: _actVy
       };
     }
     // Реальных данных от сервера ещё нет — держим точку неподвижно на месте
