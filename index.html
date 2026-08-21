@@ -4753,6 +4753,12 @@ button {
   border-radius: 999px;
   background: rgba(150, 170, 205, 0.22);
 }
+/* Полоса теперь честная: положение кольца отражает РЕАЛЬНЫЕ этапы —
+   подключение сокета, получение данных арены, готовность показать игру —
+   а не крутится по кругу независимо от того, что происходит на самом деле.
+   Только последний рывок до 100% ждёт минимальные 3 секунды показа экрана,
+   если реальная загрузка прошла быстрее. Управляется через JS (см.
+   setupBootLoaderHide) простым изменением width/left с плавным переходом. */
 .boot-progress-fill {
   position: absolute;
   left: 0;
@@ -4764,11 +4770,11 @@ button {
     0 0 6px 1px rgba(103, 232, 249, 0.95),
     0 0 16px 3px rgba(34, 211, 238, 0.6),
     0 0 34px 8px rgba(34, 211, 238, 0.3);
-  animation: bootProgressFill 3s ease-in-out infinite;
+  transition: width 0.6s ease;
 }
 .boot-progress-dot {
   position: absolute;
-  left: 0;
+  left: 0%;
   width: 18px;
   height: 18px;
   margin-left: -9px;
@@ -4778,15 +4784,7 @@ button {
   box-shadow:
     0 0 8px rgba(45, 225, 255, 0.8),
     inset 0 0 6px rgba(45, 225, 255, 0.35);
-  animation: bootProgressDot 3s ease-in-out infinite;
-}
-@keyframes bootProgressFill {
-  0%   { width: 0%; }
-  100% { width: 100%; }
-}
-@keyframes bootProgressDot {
-  0%   { left: 0%; }
-  100% { left: 100%; }
+  transition: left 0.6s ease;
 }
 .boot-dot {
   display: inline-block;
@@ -4857,8 +4855,8 @@ button {
   <div class="boot-loader-title" id="bootLoaderTitleText"></div>
   <div class="boot-progress">
     <div class="boot-progress-track"></div>
-    <div class="boot-progress-fill"></div>
-    <div class="boot-progress-dot"></div>
+    <div class="boot-progress-fill" id="bootProgressFill"></div>
+    <div class="boot-progress-dot" id="bootProgressDot"></div>
   </div>
 </div>
 <script>
@@ -11177,19 +11175,33 @@ function initSocketConnection() {
   (function setupBootLoaderHide() {
     const _bootStart = performance.now();
     let _bootHidden = false;
+
+    // Полоса отражает реальные этапы: 0% — старт, ~15% — скрипт ожил,
+    // ~55% — сокет подключился, ~92% — данные арены получены (держим чуть
+    // ниже 100%, последний маленький рывок — это подтверждение готовности
+    // показать игру). До 100% полоса не дойдёт, пока не пройдут все 3
+    // секунды минимального показа, даже если всё остальное готово раньше.
+    function setBootProgress(pct) {
+      const fill = document.getElementById('bootProgressFill');
+      const dot = document.getElementById('bootProgressDot');
+      if (fill) fill.style.width = pct + '%';
+      if (dot) dot.style.left = pct + '%';
+    }
+    setBootProgress(15);
+
     function hideBootLoader() {
       if (_bootHidden) return;
       _bootHidden = true;
+      setBootProgress(100);
       const el = document.getElementById('appBootLoader');
       if (el) {
-        el.classList.add('boot-loader-hidden');
-        setTimeout(() => { el.remove(); }, 500);
+        setTimeout(() => {
+          el.classList.add('boot-loader-hidden');
+          setTimeout(() => { el.remove(); }, 500);
+        }, 250);
       }
     }
     function tryHide() {
-      // Минимум 3 секунды показа: экран загрузки — часть бренда, за 500мс
-      // человек не успевал ни увидеть сканирование луча, ни прочитать
-      // название. Данные к этому моменту обычно уже пришли и ждут.
       const elapsed = performance.now() - _bootStart;
       if (elapsed < 3000) { setTimeout(tryHide, 3000 - elapsed); return; }
       hideBootLoader();
@@ -11197,6 +11209,7 @@ function initSocketConnection() {
     let _gotGrid = false;
     let _gotConnect = false;
     function checkReady() {
+      if (_gotConnect) setBootProgress(_gotGrid ? 92 : 55);
       if (_gotGrid && _gotConnect) tryHide();
     }
     _socket.on('connect', () => { _gotConnect = true; checkReady(); });
