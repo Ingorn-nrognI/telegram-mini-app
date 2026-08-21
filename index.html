@@ -14416,13 +14416,18 @@ function drawScannerEmptyArenaState(ctx, size, beamSample, options = {}) {
     // скорости. После перехода на интерполяцию скорость в момент отскока
     // плавно проходит через ноль, и старый знак указывал на противоположный
     // бортик — вспышка загоралась не с той стороны.
+    if (safeSample.x < 0.09 || safeSample.x > 0.91 || safeSample.y < 0.09 || safeSample.y > 0.91) {
+      console.log('[GlowDiag lobby]', 'x=' + safeSample.x.toFixed(3), 'y=' + safeSample.y.toFixed(3), 'vx=' + _vx.toFixed(4), 'lastVx=' + _borderGlowLobbyLastVx.toFixed(4), 'vy=' + _vy.toFixed(4), 'lastVy=' + _borderGlowLobbyLastVy.toFixed(4));
+    }
     if (_borderGlowLobbyLastVx !== 0 && _vx !== 0 && Math.sign(_vx) !== Math.sign(_borderGlowLobbyLastVx)) {
       const _gwx = safeSample.x > 0.5 ? size - _bw * 0.5 : _bw * 0.5;
       addBorderGlowPoint(size, _gwx, size * safeSample.y);
+      console.log('[GlowDiag lobby] ВСПЫШКА X');
     }
     if (_borderGlowLobbyLastVy !== 0 && _vy !== 0 && Math.sign(_vy) !== Math.sign(_borderGlowLobbyLastVy)) {
       const _gwy = safeSample.y > 0.5 ? size - _bw * 0.5 : _bw * 0.5;
       addBorderGlowPoint(size, size * safeSample.x, _gwy);
+      console.log('[GlowDiag lobby] ВСПЫШКА Y');
     }
     if (_vx !== 0) _borderGlowLobbyLastVx = _vx;
     if (_vy !== 0) _borderGlowLobbyLastVy = _vy;
@@ -15022,13 +15027,18 @@ function renderScannerCanvas() {
       const _vx = Number(_gs.vx) || 0;
       const _vy = Number(_gs.vy) || 0;
       // Стенка — по фактической позиции луча (см. комментарий в лобби-версии).
+      if (_gs.x < 0.09 || _gs.x > 0.91 || _gs.y < 0.09 || _gs.y > 0.91) {
+        console.log('[GlowDiag active]', 'x=' + _gs.x.toFixed(3), 'y=' + _gs.y.toFixed(3), 'vx=' + _vx.toFixed(4), 'lastVx=' + _borderGlowActiveLastVx.toFixed(4), 'vy=' + _vy.toFixed(4), 'lastVy=' + _borderGlowActiveLastVy.toFixed(4));
+      }
       if (_borderGlowActiveLastVx !== 0 && _vx !== 0 && Math.sign(_vx) !== Math.sign(_borderGlowActiveLastVx)) {
         const _gwx = _gs.x > 0.5 ? size - _bw * 0.5 : _bw * 0.5;
         addBorderGlowPoint(size, _gwx, _gs.y * size);
+        console.log('[GlowDiag active] ВСПЫШКА X');
       }
       if (_borderGlowActiveLastVy !== 0 && _vy !== 0 && Math.sign(_vy) !== Math.sign(_borderGlowActiveLastVy)) {
         const _gwy = _gs.y > 0.5 ? size - _bw * 0.5 : _bw * 0.5;
         addBorderGlowPoint(size, _gs.x * size, _gwy);
+        console.log('[GlowDiag active] ВСПЫШКА Y');
       }
       if (_vx !== 0) _borderGlowActiveLastVx = _vx;
       if (_vy !== 0) _borderGlowActiveLastVy = _vy;
