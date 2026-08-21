@@ -13876,12 +13876,19 @@ function drawScannerArenaBorder(ctx, size) {
       const dMin = Math.min(dL, dR, dT, dB);
       const gx = dMin === dL ? bw * 0.5 : dMin === dR ? size - bw * 0.5 : pt.x;
       const gy = dMin === dT ? bw * 0.5 : dMin === dB ? size - bw * 0.5 : pt.y;
+      // globalCompositeOperation:'lighter' (аддитивное смешение) убран —
+      // детектор и добавление точки подтверждены рабочими логом (вспышка
+      // срабатывает точно в момент отскока), но в Telegram WebView эффект
+      // был не виден, хотя в обычном браузере работал. 'lighter' — менее
+      // универсальный режим композитинга, некоторые встроенные WebView
+      // поддерживают его нестабильно. Обычное альфа-смешение (по умолчанию)
+      // работает одинаково везде — просто берём цвет ярче и непрозрачнее,
+      // чтобы визуально компенсировать отсутствие аддитивного сложения.
       const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, radius);
-      grad.addColorStop(0, `rgba(45, 225, 255, ${alpha})`);
-      grad.addColorStop(0.45, `rgba(45, 225, 255, ${alpha * 0.5})`);
+      grad.addColorStop(0, `rgba(120, 240, 255, ${Math.min(1, alpha * 1.3)})`);
+      grad.addColorStop(0.45, `rgba(45, 225, 255, ${alpha * 0.75})`);
       grad.addColorStop(1, 'rgba(45, 225, 255, 0)');
       ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.rect(0, 0, size, size);
