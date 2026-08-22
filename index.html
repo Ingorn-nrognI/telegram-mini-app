@@ -1340,7 +1340,7 @@ button {
 .home-promo-carousel {
   position: relative;
   width: 100%;
-  min-height: 116px;
+  min-height: 0;
   border-radius: 26px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(14, 24, 54, 0.6), rgba(8, 12, 28, 0.5));
@@ -1353,7 +1353,8 @@ button {
 .home-promo-track {
   display: flex;
   width: 200%;
-  height: calc(100% - 30px);
+  height: auto;
+  margin-bottom: 30px;
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   touch-action: pan-y;
 }
@@ -1361,6 +1362,7 @@ button {
 .home-promo-slide {
   width: 50%;
   flex-shrink: 0;
+  aspect-ratio: 1200 / 300;
   padding: 15px 22px 0;
   box-sizing: border-box;
 }
