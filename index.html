@@ -1365,6 +1365,13 @@ button {
   box-sizing: border-box;
 }
 
+.home-promo-slide-referral {
+  background-image: url("banner-referral-ru.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .home-promo-slide-title {
   font-size: 18px;
   font-weight: 800;
@@ -4956,9 +4963,9 @@ button {
       
       <div id="homePromoCarousel" class="home-promo-carousel" aria-label="Промо-карусель">
         <div class="home-promo-track" id="homePromoTrack">
-          <div class="home-promo-slide" data-slide="0">
-            <div class="home-promo-slide-title">Реферальная программа</div>
-            <div class="home-promo-slide-text">Приглашай друзей и получай бонусы за каждого приглашённого игрока.</div>
+          <div class="home-promo-slide home-promo-slide-referral" data-slide="0">
+            <div class="home-promo-slide-title visually-hidden">Реферальная программа</div>
+            <div class="home-promo-slide-text visually-hidden">Приглашай друзей и получай бонусы за каждого приглашённого игрока.</div>
           </div>
           <div class="home-promo-slide" data-slide="1">
             <div class="home-promo-slide-title">Турнир</div>
@@ -5184,9 +5191,9 @@ button {
 
       <div id="marketPromoCarousel" class="home-promo-carousel" aria-label="Промо-карусель">
         <div class="home-promo-track" id="marketPromoTrack">
-          <div class="home-promo-slide" data-slide="0">
-            <div class="home-promo-slide-title">Реферальная программа</div>
-            <div class="home-promo-slide-text">Приглашай друзей и получай бонусы за каждого приглашённого игрока.</div>
+          <div class="home-promo-slide home-promo-slide-referral" data-slide="0">
+            <div class="home-promo-slide-title visually-hidden">Реферальная программа</div>
+            <div class="home-promo-slide-text visually-hidden">Приглашай друзей и получай бонусы за каждого приглашённого игрока.</div>
           </div>
           <div class="home-promo-slide" data-slide="1">
             <div class="home-promo-slide-title">Турнир</div>
@@ -7625,6 +7632,12 @@ function applyAppLanguage(lang) {
 
   // Top bar
   set(".balance-label", t.balance);
+
+  // Referral banner (image swaps by language)
+  const referralBannerFile = lang === "en" ? "banner-referral-en.jpg" : "banner-referral-ru.jpg";
+  document.querySelectorAll(".home-promo-slide-referral").forEach(el => {
+    el.style.backgroundImage = `url("${referralBannerFile}")`;
+  });
 
   // Bottom nav
   set("#navLeaderboard .nav-label", t.tabLeaderboard);
