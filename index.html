@@ -1340,7 +1340,7 @@ button {
 .home-promo-carousel {
   position: relative;
   width: 100%;
-  height: 116px;
+  aspect-ratio: 1200 / 300;
   border-radius: 26px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(14, 24, 54, 0.6), rgba(8, 12, 28, 0.5));
@@ -1348,14 +1348,6 @@ button {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.04),
     0 18px 36px rgba(0, 0, 0, 0.16);
-}
-
-@media (min-width: 600px) {
-  .home-promo-carousel { height: 150px; }
-}
-
-@media (min-width: 900px) {
-  .home-promo-carousel { height: 190px; }
 }
 
 .home-promo-track {
@@ -1374,7 +1366,7 @@ button {
 }
 
 .home-promo-slide-referral {
-  background-image: url("banner-referral-ru-v2.jpg");
+  background-image: url("banner-referral-ru.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -7642,7 +7634,7 @@ function applyAppLanguage(lang) {
   set(".balance-label", t.balance);
 
   // Referral banner (image swaps by language)
-  const referralBannerFile = lang === "en" ? "banner-referral-en-v2.jpg" : "banner-referral-ru-v2.jpg";
+  const referralBannerFile = lang === "en" ? "banner-referral-en.jpg" : "banner-referral-ru.jpg";
   document.querySelectorAll(".home-promo-slide-referral").forEach(el => {
     el.style.backgroundImage = `url("${referralBannerFile}")`;
   });
