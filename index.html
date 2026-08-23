@@ -9234,6 +9234,44 @@ function buildScannerPlayersFromFirestore(round, participants) {
     && _srvGrid.cellOwners.length === SCANNER_GRID_TOTAL_CELLS;
 
   if (_srvGridMatches) {
+    // Порядок игроков берём ИЗ САМОЙ карты (_srvGrid.players), а не из своего
+    // списка. Номер в cellOwners — это позиция в серверном массиве, и любое
+    // расхождение составов (карта пришла раньше или позже round:patch, у
+    // участника пустой playerId и он встал не туда при сортировке) сдвигало
+    // индексы — поля перекрашивались в цвета соседей, а при пустом списке
+    // вся арена красилась одним цветом.
+    const _byPid = new Map(allocated.map((p) => [String(p.id), p]));
+    const _srvPlayers = Array.isArray(_srvGrid.players) ? _srvGrid.players : [];
+    const _ordered = _srvPlayers.map((sp, i) => {
+      const pid = String(sp.playerId);
+      const mine = _byPid.get(pid);
+      if (mine) return Object.assign({}, mine, { cellCount: Number(sp.cellCount || 0) });
+      // Игрок есть на сервере, но ещё не дошёл до клиента — рисуем по
+      // серверным данным, чтобы позиция в массиве не поехала.
+      return {
+        id: pid,
+        name: sp.name || "Игрок",
+        avatar: sp.avatar || null,
+        stake: Number(sp.stake || 0),
+        stakeHistory: [],
+        joinedAt: Date.now(),
+        isMe: pid === currentPlayer.id,
+        left: false,
+        color: getScannerColorById(pid, String(round?.id || "round")),
+        cellCount: Number(sp.cellCount || 0),
+        sharePercent: Number(sp.sharePercent || 0)
+      };
+    });
+    if (_ordered.length) {
+      const _srvPot = _ordered.reduce((sum, p) => sum + Number(p.stake || 0), 0);
+      return {
+        players: _ordered,
+        totalPot: _srvPot,
+        cellOwners: _srvGrid.cellOwners,
+        totalPlayers: _ordered.length,
+        gridVersion: `srv_${round?.id || "round"}_${versionKey}`
+      };
+    }
     return {
       players: allocated,
       totalPot,
