@@ -11421,7 +11421,6 @@ function applySocketRoundPatch(patch) {
     // Firestore-подписки, но сервер в Firestore больше не пишет, и арена
     // из-за этого показывала ноль игроков при реально идущем раунде.
     const _list = Array.isArray(patch.participants) ? patch.participants : [];
-    scannerRealtime.socketParticipants = _list;
     scannerRealtime.participants = _list.map((p) => ({
       id: String(p.playerId),
       playerId: String(p.playerId),
@@ -11660,10 +11659,24 @@ function applySocketRoundState(data) {
   scannerRealtime.runtimeData.activeRoundId = roundId;
   if (data.idleBeamMotion) scannerRealtime.runtimeData.idleBeamMotion = data.idleBeamMotion;
 
-  // Используем socket-данные только как временный быстрый снимок —
-  // НЕ устанавливаем scannerRealtime.activeRoundId здесь, чтобы subscribeScannerRuntime
-  // обязательно создал настоящую Firestore-подписку на участников через subscribeScannerRound
-  scannerRealtime.socketParticipants = Array.isArray(data.participants) ? data.participants : [];
+  // Сокет — единственный источник участников после переезда на SQLite.
+  // Раньше здесь список уходил в поле socketParticipants, которое нигде не
+  // читалось (наследие Firestore-подписки), и у игрока, зашедшего посреди
+  // раунда, арена оставалась пустой до первой чужой ставки. Наполняем ровно
+  // то же, что и applySocketRoundPatch.
+  const _stateList = Array.isArray(data.participants) ? data.participants : [];
+  scannerRealtime.participants = _stateList.map((p) => ({
+    id: String(p.playerId),
+    playerId: String(p.playerId),
+    name: p.name || "Игрок",
+    avatar: p.avatar || null,
+    stake: Number(p.stake || 0),
+    stakeHistory: Array.isArray(p.stakeHistory) ? p.stakeHistory : [],
+    joinedAt: p.joinedAt || null,
+    status: p.status || "joined"
+  }));
+  scannerRealtime.participantsReady = true;
+  scannerRealtime.participantsError = false;
 
   if (roundId) {
     // Раньше сохранялся только countdownLatchSample при повторном срабатывании
