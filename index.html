@@ -77,6 +77,7 @@ button {
 }
 
 .app-bg {
+  display: none;
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -7470,7 +7471,7 @@ function startLiveBgPhysics() {
   requestAnimationFrame(liveBgPhysicsLoop);
 }
 
-startLiveBgPhysics();
+// startLiveBgPhysics(); // живой фон отключён
 
 function isScannerScreenActive() {
   const el = document.getElementById("scannerScreen");
