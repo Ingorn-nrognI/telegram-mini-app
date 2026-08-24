@@ -8280,8 +8280,12 @@ function syncPanelBackdrop() {
   if (roundsBtn) {
     const roundsHistoryOpen = !!document.getElementById("scannerRoundsPanel")?.classList.contains("open");
     roundsBtn.classList.toggle("is-active", roundsHistoryOpen);
-    if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   }
+
+  // Вызов не привязан к наличию конкретной кнопки: режим истории зависит от
+  // того, открыта ли какая-либо из панелей, а не от того, есть ли в разметке
+  // кнопка истории раундов (в Сканере она скрыта через display:none).
+  if (typeof syncHistoryModeState === "function") syncHistoryModeState();
 }
 
 function handleMenuBackgroundClick(event) {
