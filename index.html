@@ -14836,7 +14836,6 @@ function ensureScannerSurfaceCaches(size) {
     scannerGridCache.size !== size
   ) {
     scannerGridCanvasCache = buildScannerCanvasCache(size, scannerGridState.cellOwners || [], scannerGridState.players || [], scannerGridState.polys || []);
-    scannerGridCanvasCache._polys = scannerGridState.polys || [];
     scannerGridCache = { version: scannerGridState.gridVersion, size, canvas: scannerGridCanvasCache };
   }
 
@@ -14846,7 +14845,7 @@ function ensureScannerSurfaceCaches(size) {
     scannerGridPreviewCanvasCache.version !== scannerGridState.previewGridVersion ||
     scannerGridPreviewCanvasCache.size !== size
   ) {
-    const previewCanvas = buildScannerCanvasCache(size, scannerGridState.previewCellOwners || [], scannerGridState.players || [], "PREVIEW");
+    const previewCanvas = buildScannerCanvasCache(size, scannerGridState.previewCellOwners || [], scannerGridState.players || [], scannerGridState.polys || []);
     scannerGridPreviewCanvasCache = { version: scannerGridState.previewGridVersion, size, canvas: previewCanvas };
   }
 
@@ -15188,7 +15187,7 @@ function renderScannerCanvas() {
       : roundStatus === "shuffling"
         ? getScannerShuffleVisualOwners(getScannerShuffleTransitionProgress(roundData))
         : (scannerGridState.cellOwners || []);
-  drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || []);
+  drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || [], scannerGridState.polys || []);
 
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
