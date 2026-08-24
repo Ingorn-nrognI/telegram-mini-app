@@ -822,15 +822,30 @@ button {
 /* === Режим истории: панель на весь экран === */
 body.history-mode .history-panel.open,
 body.history-mode #scannerRoundsPanel.open {
-  top: calc(var(--safe-top) + 68px);
+  top: calc(var(--safe-top) + 62px);
   bottom: 0;
   width: 100vw;
-  border-radius: 22px 22px 0 0;
+  max-width: none;
+  padding-bottom: 0;
+  border-radius: 0;
   transform: translate(-50%, 0);
   box-shadow: none;
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
+  border: none;
+  background: var(--bg-1);
+}
+
+/* Шапка с крестиком — это атрибут окна. В полноэкранном режиме её нет:
+   заголовок живёт в верхней панели, а закрывают экран системной кнопкой
+   "назад" или повторным нажатием на ту же кнопку истории. */
+body.history-mode .history-panel-header {
+  display: none;
+}
+
+/* Левая колонка прижимается к краю — иначе активная кнопка оставалась
+   там, где её держал баланс из центральной колонки. */
+body.history-mode .top-bar-left {
+  justify-content: flex-start;
+  grid-column: 1;
 }
 
 /* Баланс уходит, кнопка истории плавно съезжает влево на его место. */
@@ -859,9 +874,11 @@ body.history-mode .scanner-rounds-btn:not(.is-active) {
 
 /* Заголовок по центру шапки. */
 .history-mode-title {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Обычный элемент центральной колонки сетки .top-bar, а не absolute от
+     центра экрана — иначе он прижимался к кнопке и вся пара выглядела
+     сдвинутой в середину. */
+  grid-column: 2;
+  justify-self: center;
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.01em;
