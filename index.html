@@ -888,17 +888,24 @@ body.history-mode .top-bar {
   gap: 0;
 }
 
-/* Баланс уходит, кнопка истории плавно съезжает влево на его место. */
+/* Баланс уходит, кнопка истории съезжает влево на его место.
+   min-width и flex обязательны: у флекс-элементов по умолчанию
+   min-width: auto, поэтому одного width: 0 мало — баланс оставался
+   невидимым, но продолжал занимать свою ширину и отталкивал кнопку
+   от левого края ровно на неё. */
 body.history-mode .balance-card,
 body.history-mode .mode-back-btn {
   opacity: 0;
   transform: translateX(-12px);
   pointer-events: none;
   width: 0;
+  min-width: 0;
+  flex: 0 0 0;
   margin: 0;
   padding: 0;
   border: none;
   overflow: hidden;
+  white-space: nowrap;
 }
 
 .balance-card,
