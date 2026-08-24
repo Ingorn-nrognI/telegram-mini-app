@@ -819,6 +819,68 @@ button {
   transform: translate(-50%, 0);
 }
 
+/* === Режим истории: панель на весь экран === */
+body.history-mode .history-panel.open,
+body.history-mode #scannerRoundsPanel.open {
+  top: calc(var(--safe-top) + 68px);
+  bottom: 0;
+  width: 100vw;
+  border-radius: 22px 22px 0 0;
+  transform: translate(-50%, 0);
+  box-shadow: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+}
+
+/* Баланс уходит, кнопка истории плавно съезжает влево на его место. */
+body.history-mode .balance-card,
+body.history-mode .mode-back-btn {
+  opacity: 0;
+  transform: translateX(-12px);
+  pointer-events: none;
+  width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  overflow: hidden;
+}
+
+.balance-card,
+.mode-back-btn {
+  transition: opacity 0.22s ease, transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.26s cubic-bezier(0.22, 1, 0.36, 1), margin 0.26s ease, padding 0.26s ease;
+}
+
+/* Остаётся только та кнопка, которую нажали. */
+body.history-mode .scanner-rounds-btn:not(.is-active) {
+  display: none !important;
+}
+
+/* Заголовок по центру шапки. */
+.history-mode-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #eaf3ff;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
+body.history-mode .history-mode-title {
+  opacity: 1;
+}
+
+/* Заголовок внутри самой панели дублировал бы верхний — прячем. */
+body.history-mode .history-panel-header .history-panel-title {
+  display: none;
+}
+
 /* Только окно "История раундов" — держим у самого верха экрана вместо
    низа, выезжает сверху вниз, и оно выше обычного окна истории.
    Обычная "История игр" (#historyPanel) не трогается, остаётся снизу
@@ -1046,12 +1108,10 @@ button {
      (края становятся ровными полукругами по высоте бара), чтобы скругление
      органично совпадало с формой круглой кнопки Market рядом. */
   border-radius: 999px;
-  /* Цвет как у чипов банк/таймер/шансы (.scanner-panel-chip). */
-  background: rgba(255,255,255,0.08);
+  background:
+    linear-gradient(180deg, rgba(13, 18, 40, 0.94), rgba(7, 10, 21, 0.95));
   border: 1px solid rgba(255,255,255,0.08);
-  box-shadow:
-    0 20px 38px rgba(0, 0, 0, 0.42),
-    inset 0 0 0 1px rgba(255,255,255,0.02);
+  box-shadow: 0 20px 38px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(18px);
   z-index: 80;
   transition: none;
@@ -4952,6 +5012,8 @@ button {
       </button>
     </div>
 
+    <div id="historyModeTitle" class="history-mode-title"></div>
+
     <div class="top-bar-right">
       <button type="button" class="profile-card" onclick="openProfileScreen(event)" aria-label="Открыть профиль">
         <div id="profileAvatar" class="profile-avatar">И</div>
@@ -6737,6 +6799,25 @@ function closeScannerRoundsPanel() {
   syncPanelBackdrop();
 }
 
+// Режим истории: панель разворачивается во весь экран, баланс скрывается,
+// в шапке остаётся только активная кнопка и заголовок по центру.
+function setHistoryMode(active, titleText) {
+  document.body.classList.toggle("history-mode", !!active);
+  const titleEl = document.getElementById("historyModeTitle");
+  if (titleEl) titleEl.textContent = active ? (titleText || "") : "";
+}
+
+function syncHistoryModeState() {
+  const gameOpen = !!document.getElementById("historyPanel")?.classList.contains("open");
+  const roundsOpen = !!document.getElementById("scannerRoundsPanel")?.classList.contains("open");
+  const t = (typeof APP_TRANSLATIONS === "object" && APP_TRANSLATIONS)
+    ? (APP_TRANSLATIONS[(typeof appSettings === "object" && appSettings?.language) || "ru"] || {})
+    : {};
+  if (roundsOpen) setHistoryMode(true, t.roundsHistory || "История раундов");
+  else if (gameOpen) setHistoryMode(true, t.gameHistory || "История игр");
+  else setHistoryMode(false, "");
+}
+
 function closeHistoryPanel(options = {}) {
   const { preserveNav = false } = options;
   const historyPanel = document.getElementById("historyPanel");
@@ -8199,6 +8280,7 @@ function syncPanelBackdrop() {
   if (roundsBtn) {
     const roundsHistoryOpen = !!document.getElementById("scannerRoundsPanel")?.classList.contains("open");
     roundsBtn.classList.toggle("is-active", roundsHistoryOpen);
+    if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   }
 }
 
