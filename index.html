@@ -1046,10 +1046,12 @@ button {
      (края становятся ровными полукругами по высоте бара), чтобы скругление
      органично совпадало с формой круглой кнопки Market рядом. */
   border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(13, 18, 40, 0.94), rgba(7, 10, 21, 0.95));
+  /* Цвет как у чипов банк/таймер/шансы (.scanner-panel-chip). */
+  background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 20px 38px rgba(0, 0, 0, 0.42);
+  box-shadow:
+    0 20px 38px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(255,255,255,0.02);
   backdrop-filter: blur(18px);
   z-index: 80;
   transition: none;
@@ -3132,13 +3134,13 @@ button {
   gap: 7px;
   align-items: center;
   border-radius: 26px 26px 20px 20px;
-  background: linear-gradient(180deg, rgba(12, 20, 47, 0.94), rgba(6, 10, 24, 0.97));
+  /* Цвет как у чипов банк/таймер/шансы (.scanner-panel-chip). */
+  background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.08);
   border-bottom: none;
   box-shadow:
     0 -10px 24px rgba(0, 0, 0, 0.32),
-    0 0 28px rgba(45, 225, 255, 0.1),
-    inset 0 1px 0 rgba(255,255,255,0.1);
+    inset 0 0 0 1px rgba(255,255,255,0.02);
   backdrop-filter: blur(18px);
   z-index: 70;
   opacity: 0;
@@ -3166,13 +3168,13 @@ button {
   align-items: center;
   justify-content: center;
   border-radius: 26px 26px 20px 20px;
-  background: linear-gradient(180deg, rgba(12, 20, 47, 0.94), rgba(6, 10, 24, 0.97));
+  /* Цвет как у чипов банк/таймер/шансы (.scanner-panel-chip). */
+  background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.08);
   border-bottom: none;
   box-shadow:
     0 -10px 24px rgba(0, 0, 0, 0.32),
-    0 0 28px rgba(45, 225, 255, 0.1),
-    inset 0 1px 0 rgba(255,255,255,0.1);
+    inset 0 0 0 1px rgba(255,255,255,0.02);
   backdrop-filter: blur(18px);
   z-index: 70;
   opacity: 0;
