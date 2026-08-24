@@ -844,13 +844,16 @@ body.history-mode .history-panel-header {
 /* Рейтинг сделан не панелью, а модальным окном (.app-modal) — приводим его
    к тому же полноэкранному виду: без затемнения, без скруглений и без
    собственной шапки с крестиком. */
-body.history-mode #leaderboardModal {
+body.rating-mode #leaderboardModal {
   padding-top: calc(var(--safe-top) + 62px);
   background: var(--bg-1);
 }
 
-body.history-mode #leaderboardModal .app-modal-card {
+body.rating-mode #leaderboardModal .app-modal-card {
   width: 100vw;
+  /* margin-top: auto в базовом правиле прижимал карточку к низу — из-за
+     этого список начинался у самого нижнего меню. */
+  margin-top: 0;
   margin-bottom: 0;
   border-radius: 0;
   border: none;
@@ -858,8 +861,14 @@ body.history-mode #leaderboardModal .app-modal-card {
   box-shadow: none;
 }
 
-body.history-mode #leaderboardModal .leaderboardHeader {
+body.rating-mode #leaderboardModal .leaderboardHeader {
   display: none;
+}
+
+/* В режиме турниров шапка обычная: баланс и кнопка истории на месте,
+   меняется только заголовок по центру. */
+body.rating-mode .history-mode-title {
+  opacity: 1;
 }
 
 /* Левая колонка прижимается к краю — иначе активная кнопка оставалась
@@ -5464,7 +5473,7 @@ body.history-mode .history-panel-header .history-panel-title {
       <span class="nav-icon nav-icon-svg">
         <svg viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M208.3 64L432.3 64C458.8 64 480.4 85.8 479.4 112.2C479.2 117.5 479 122.8 478.7 128L528.3 128C554.4 128 577.4 149.6 575.4 177.8C567.9 281.5 514.9 338.5 457.4 368.3C441.6 376.5 425.5 382.6 410.2 387.1C390 415.7 369 430.8 352.3 438.9L352.3 512L416.3 512C434 512 448.3 526.3 448.3 544C448.3 561.7 434 576 416.3 576L224.3 576C206.6 576 192.3 561.7 192.3 544C192.3 526.3 206.6 512 224.3 512L288.3 512L288.3 438.9C272.3 431.2 252.4 416.9 233 390.6C214.6 385.8 194.6 378.5 175.1 367.5C121 337.2 72.2 280.1 65.2 177.6C63.3 149.5 86.2 127.9 112.3 127.9L161.9 127.9C161.6 122.7 161.4 117.5 161.2 112.1C160.2 85.6 181.8 63.9 208.3 63.9zM165.5 176L113.1 176C119.3 260.7 158.2 303.1 198.3 325.6C183.9 288.3 172 239.6 165.5 176zM444 320.8C484.5 297 521.1 254.7 527.3 176L475 176C468.8 236.9 457.6 284.2 444 320.8z"/></svg>
       </span>
-      <span class="nav-label">Рейтинг</span>
+      <span class="nav-label">Турниры</span>
     </button>
 
     <button
@@ -6849,10 +6858,13 @@ function closeScannerRoundsPanel() {
 
 // Режим истории: панель разворачивается во весь экран, баланс скрывается,
 // в шапке остаётся только активная кнопка и заголовок по центру.
-function setHistoryMode(active, titleText) {
-  document.body.classList.toggle("history-mode", !!active);
+// Два разных режима: у истории шапка сворачивается (баланс уходит, остаётся
+// одна кнопка), а у турниров шапка обычная — просто экран на всю высоту.
+function setHistoryMode(mode, titleText) {
+  document.body.classList.toggle("history-mode", mode === "history");
+  document.body.classList.toggle("rating-mode", mode === "rating");
   const titleEl = document.getElementById("historyModeTitle");
-  if (titleEl) titleEl.textContent = active ? (titleText || "") : "";
+  if (titleEl) titleEl.textContent = mode ? (titleText || "") : "";
 }
 
 function syncHistoryModeState() {
@@ -6860,15 +6872,15 @@ function syncHistoryModeState() {
   const roundsOpen = !!document.getElementById("scannerRoundsPanel")?.classList.contains("open");
   const ratingOpen = document.getElementById("leaderboardModal")?.style.display === "flex";
   if (ratingOpen) {
-    setHistoryMode(true, "Рейтинг");
+    setHistoryMode("rating", "Турниры");
     return;
   }
   const t = (typeof APP_TRANSLATIONS === "object" && APP_TRANSLATIONS)
     ? (APP_TRANSLATIONS[(typeof appSettings === "object" && appSettings?.language) || "ru"] || {})
     : {};
-  if (roundsOpen) setHistoryMode(true, t.roundsHistory || "История раундов");
-  else if (gameOpen) setHistoryMode(true, t.gameHistory || "История игр");
-  else setHistoryMode(false, "");
+  if (roundsOpen) setHistoryMode("history", t.roundsHistory || "История раундов");
+  else if (gameOpen) setHistoryMode("history", t.gameHistory || "История игр");
+  else setHistoryMode(null, "");
 }
 
 function closeHistoryPanel(options = {}) {
@@ -7330,6 +7342,7 @@ async function openLeaderboard() {
 function closeLeaderboard() {
   const modal = document.getElementById("leaderboardModal");
   if (modal) modal.style.display = "none";
+  if (typeof syncHistoryModeState === "function") syncHistoryModeState();
 
   if (currentBottomNav === "leaderboard") {
     setActiveBottomNav(currentMenuView === "home" ? getPreferredHomeNav() : "pvp");
@@ -7708,7 +7721,7 @@ function isScannerScreenActive() {
 
 const APP_TRANSLATIONS = {
   ru: {
-    balance: "Баланс", wallet: "Кошелёк", tabLeaderboard: "Рейтинг",
+    balance: "Баланс", wallet: "Кошелёк", tabLeaderboard: "Турниры",
     tabGames: "Игры", tabPvp: "PvP", tabSkins: "Инвентарь", tabHistory: "История",
     settingsTitle: "Настройки", connecting: "Подключение...",
     waitingRound: "Ожидание раунда...", players: "Игроки",
