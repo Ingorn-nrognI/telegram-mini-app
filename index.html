@@ -5890,6 +5890,7 @@ const scannerGridState = {
   winningCellIndex: null,
   winningPlayer: null,
   cellOwners: [],
+  polys: [],
   gridVersion: "idle",
   previewCellOwners: [],
   previewGridVersion: "idle",
@@ -12304,6 +12305,7 @@ function syncScannerDerivedState() {
     scannerGridState.totalPot = normalizeStakeValue(round?.totalPot || 0);
     scannerGridState.countdownMs = countdownMs;
     scannerGridState.cellOwners = [];
+    scannerGridState.polys = [];
     scannerGridState.gridVersion = `pending_${round.id || "round"}_${round.status || "idle"}_${round.version || 0}`;
     scannerGridState.previewCellOwners = [];
     scannerGridState.previewGridVersion = scannerGridState.gridVersion;
@@ -12323,6 +12325,11 @@ function syncScannerDerivedState() {
   scannerGridState.totalPot = normalizeStakeValue(finalized.totalPot);
   scannerGridState.countdownMs = countdownMs;
   scannerGridState.cellOwners = finalized.cellOwners;
+  // Полигоны переносятся отдельной строкой: состояние собирается поле за
+  // полем, и без этого они терялись по дороге — отрисовка получала пустой
+  // массив и откатывалась на клетки (лесенка по краям, заливка не
+  // пересчитывалась при добавлении ставки).
+  scannerGridState.polys = Array.isArray(finalized.polys) ? finalized.polys : [];
   scannerGridState.gridVersion = `${finalized.gridVersion}_${round.status || "idle"}`;
   scannerGridState.previewCellOwners = derivedVisual.previewCellOwners;
   scannerGridState.previewGridVersion = derivedVisual.previewVersion;
