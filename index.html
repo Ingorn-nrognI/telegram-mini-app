@@ -2167,7 +2167,9 @@ body.history-mode .history-panel-header .history-panel-title {
 }
 
 .scanner-players-heading-row {
-  align-items: center;
+  /* baseline вместо center: у "Игроки" шрифт 18px, у номера раунда 12px,
+     при центрировании коробок текст вставал на разной высоте. */
+  align-items: baseline;
   justify-content: space-between;
   margin-top: -8px;
 }
@@ -2203,7 +2205,6 @@ body.history-mode .history-panel-header .history-panel-title {
    одном уровне по низу. */
 .scanner-players-heading-row .scanner-round-number-muted {
   margin: 0 2px 12px;
-  align-self: flex-end;
 }
 
 .scanner-players-count {
@@ -9441,6 +9442,7 @@ function buildScannerPlayersFromFirestore(round, participants) {
         players: _ordered,
         totalPot: _srvPot,
         cellOwners: _srvGrid.cellOwners,
+        polys: Array.isArray(_srvGrid.polys) ? _srvGrid.polys : [],
         totalPlayers: _ordered.length,
         gridVersion: `srv_${round?.id || "round"}_${versionKey}`
       };
@@ -11260,6 +11262,7 @@ function applyScannerServerGrid(data) {
       previewCellOwners: Array.isArray(data.previewCellsRle) && data.previewCellsRle.length
         ? decodeScannerOwnersRle(data.previewCellsRle)
         : null,
+      polys: Array.isArray(data.polys) ? data.polys : [],
       players: Array.isArray(data.players) ? data.players : []
     };
   }
@@ -13937,7 +13940,7 @@ function getScannerCanvasMetrics() {
   return { canvas, ctx, size, dpr, cellSize: size / SCANNER_GRID_COLS };
 }
 
-function buildScannerCanvasCache(size, owners, players) {
+function buildScannerCanvasCache(size, owners, players, polys) {
   const cacheCanvas = document.createElement("canvas");
   cacheCanvas.width = size;
   cacheCanvas.height = size;
@@ -13945,6 +13948,28 @@ function buildScannerCanvasCache(size, owners, players) {
   ctx.fillStyle = players[0]?.color || "#060b17";
   ctx.fillRect(0, 0, size, size);
   const cellSize = size / SCANNER_GRID_COLS;
+
+  // Территории приходят с сервера многоугольниками в долях от 0 до 1.
+  // Заливаем их напрямую — края получаются прямыми линиями на любом зуме,
+  // без лесенки из клеток. Клетки остаются запасным путём.
+  if (Array.isArray(polys) && polys.length) {
+    for (let i = 0; i < polys.length; i += 1) {
+      const poly = polys[i];
+      if (!Array.isArray(poly) || poly.length < 3 || !players[i]) continue;
+      ctx.beginPath();
+      ctx.moveTo(poly[0][0] * size, poly[0][1] * size);
+      for (let v = 1; v < poly.length; v += 1) ctx.lineTo(poly[v][0] * size, poly[v][1] * size);
+      ctx.closePath();
+      ctx.fillStyle = players[i].color;
+      ctx.fill();
+      // Микрошов между соседними полигонами из-за сглаживания краёв:
+      // обводим тем же цветом, чтобы стык был плотным.
+      ctx.strokeStyle = players[i].color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    return cacheCanvas;
+  }
 
   for (let cellIndex = 0; cellIndex < owners.length; cellIndex += 1) {
     const ownerIndex = owners[cellIndex];
@@ -13973,7 +13998,26 @@ function buildScannerCanvasCache(size, owners, players) {
 // большую кляксу). У прямоугольников нет ни смещения от центра, ни скруглённых
 // концов — они физически начинаются ровно на границе клетки, поэтому не может
 // быть ни разрыва, ни выступающих точек.
-function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players) {
+function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players, polys) {
+  // Есть многоугольники — обводим настоящий контур поля. Раньше рамка
+  // строилась по сторонам клеток и потому шла ступенькой и казалась
+  // смещённой внутрь.
+  if (Array.isArray(polys) && polys.length) {
+    const meIndex = players.findIndex((p) => p && p.isMe);
+    const myPoly = meIndex >= 0 ? polys[meIndex] : null;
+    if (!Array.isArray(myPoly) || myPoly.length < 3) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(myPoly[0][0] * size, myPoly[0][1] * size);
+    for (let v = 1; v < myPoly.length; v += 1) ctx.lineTo(myPoly[v][0] * size, myPoly[v][1] * size);
+    ctx.closePath();
+    ctx.strokeStyle = "rgba(255,255,255,0.92)";
+    ctx.lineWidth = Math.max(1.5, size * 0.006);
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
   if (!Array.isArray(owners) || !owners.length || !Array.isArray(players) || !players.length) return;
   ctx.save();
   const borderThickness = Math.max(2.5, cellSize * 0.6);
@@ -14791,7 +14835,8 @@ function ensureScannerSurfaceCaches(size) {
     scannerGridCache.version !== scannerGridState.gridVersion ||
     scannerGridCache.size !== size
   ) {
-    scannerGridCanvasCache = buildScannerCanvasCache(size, scannerGridState.cellOwners || [], scannerGridState.players || [], "MAIN");
+    scannerGridCanvasCache = buildScannerCanvasCache(size, scannerGridState.cellOwners || [], scannerGridState.players || [], scannerGridState.polys || []);
+    scannerGridCanvasCache._polys = scannerGridState.polys || [];
     scannerGridCache = { version: scannerGridState.gridVersion, size, canvas: scannerGridCanvasCache };
   }
 
