@@ -841,11 +841,42 @@ body.history-mode .history-panel-header {
   display: none;
 }
 
+/* Рейтинг сделан не панелью, а модальным окном (.app-modal) — приводим его
+   к тому же полноэкранному виду: без затемнения, без скруглений и без
+   собственной шапки с крестиком. */
+body.history-mode #leaderboardModal {
+  padding-top: calc(var(--safe-top) + 62px);
+  background: var(--bg-1);
+}
+
+body.history-mode #leaderboardModal .app-modal-card {
+  width: 100vw;
+  margin-bottom: 0;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.history-mode #leaderboardModal .leaderboardHeader {
+  display: none;
+}
+
 /* Левая колонка прижимается к краю — иначе активная кнопка оставалась
    там, где её держал баланс из центральной колонки. */
 body.history-mode .top-bar-left {
   justify-content: flex-start;
   grid-column: 1;
+  gap: 0;
+}
+
+/* Сама панель прижимается к краю экрана: обычно у неё left:6px и ширина
+   100vw-12px, из-за чего кнопка не доходила до угла. */
+body.history-mode .top-bar {
+  left: 0;
+  width: 100vw;
+  padding-left: 8px;
+  gap: 0;
 }
 
 /* Баланс уходит, кнопка истории плавно съезжает влево на его место. */
@@ -6827,6 +6858,11 @@ function setHistoryMode(active, titleText) {
 function syncHistoryModeState() {
   const gameOpen = !!document.getElementById("historyPanel")?.classList.contains("open");
   const roundsOpen = !!document.getElementById("scannerRoundsPanel")?.classList.contains("open");
+  const ratingOpen = document.getElementById("leaderboardModal")?.style.display === "flex";
+  if (ratingOpen) {
+    setHistoryMode(true, "Рейтинг");
+    return;
+  }
   const t = (typeof APP_TRANSLATIONS === "object" && APP_TRANSLATIONS)
     ? (APP_TRANSLATIONS[(typeof appSettings === "object" && appSettings?.language) || "ru"] || {})
     : {};
@@ -7244,6 +7280,7 @@ async function openLeaderboard() {
 
   setActiveBottomNav("leaderboard");
   modal.style.display = "flex";
+  if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   contentDiv.innerHTML = "<div class='history-panel-text'>Загрузка...</div>";
 
   try {
@@ -8234,7 +8271,10 @@ function handleBottomNav(action, event) {
     case "history": {
       const historyPanel = document.getElementById("historyPanel");
       const isOpen = !!historyPanel?.classList.contains("open");
-      if (currentMenuView === "home" && isOpen) {
+      // Условие currentMenuView === "home" не давало закрыть историю из
+      // Сканера: кнопка была активна, но повторное нажатие снова открывало
+      // уже открытый экран.
+      if (isOpen) {
         closeHistoryPanel();
       } else {
         openRecentHistory();
