@@ -891,9 +891,11 @@ body.games-mode .history-mode-title {
 
 /* Кнопка истории раундов относится к Сканеру. Её видимость переключается
    только при СМЕНЕ ЭКРАНА, а турниры и игры открываются поверх текущего
-   экрана — вид не меняется, и кнопка оставалась висеть. */
-body.rating-mode .scanner-rounds-btn,
-body.games-mode .scanner-rounds-btn {
+   экрана — вид не меняется, и кнопка оставалась висеть.
+   Целимся строго по id: класс scanner-rounds-btn носит и кнопка истории
+   ИГР (navHistory), а она общая для всех экранов и скрываться не должна. */
+body.rating-mode #scannerRoundsPanelBtn,
+body.games-mode #scannerRoundsPanelBtn {
   display: none !important;
 }
 
