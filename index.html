@@ -13957,15 +13957,20 @@ function buildScannerCanvasCache(size, owners, players, polys) {
   const cellSize = size / SCANNER_GRID_COLS;
 
   // Территории приходят с сервера многоугольниками в долях от 0 до 1.
-  // Заливаем их напрямую — края получаются прямыми линиями на любом зуме,
-  // без лесенки из клеток. Клетки остаются запасным путём.
+  // Эти доли означают ИГРОВУЮ ЗОНУ — ту, по которой летает луч (отступ
+  // PAD = 0.031 от каждого края). Раньше они растягивались на весь холст,
+  // и часть поля лежала под бортиком, куда луч попасть не может: площадь
+  // засчитывалась в долю игрока, а выиграть на ней было нельзя.
   if (Array.isArray(polys) && polys.length) {
+    const _bw = Math.max(11, size * 0.031) + 1;
+    const _inner = size - _bw * 2;
+    const _px = (u) => _bw + u * _inner;
     for (let i = 0; i < polys.length; i += 1) {
       const poly = polys[i];
       if (!Array.isArray(poly) || poly.length < 3 || !players[i]) continue;
       ctx.beginPath();
-      ctx.moveTo(poly[0][0] * size, poly[0][1] * size);
-      for (let v = 1; v < poly.length; v += 1) ctx.lineTo(poly[v][0] * size, poly[v][1] * size);
+      ctx.moveTo(_px(poly[0][0]), _px(poly[0][1]));
+      for (let v = 1; v < poly.length; v += 1) ctx.lineTo(_px(poly[v][0]), _px(poly[v][1]));
       ctx.closePath();
       ctx.fillStyle = players[i].color;
       ctx.fill();
@@ -14013,13 +14018,24 @@ function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players, poly
     const meIndex = players.findIndex((p) => p && p.isMe);
     const myPoly = meIndex >= 0 ? polys[meIndex] : null;
     if (!Array.isArray(myPoly) || myPoly.length < 3) return;
+    // Те же координаты, что и у заливки: доли 0..1 — это игровая зона внутри
+    // бортика. Обводка рисуется по центру линии, поэтому режем по контуру
+    // поля и берём двойную толщину — внутри остаётся ровно одинарная.
+    const _bw = Math.max(11, size * 0.031) + 1;
+    const _inner = size - _bw * 2;
+    const _px = (u) => _bw + u * _inner;
     ctx.save();
     ctx.beginPath();
-    ctx.moveTo(myPoly[0][0] * size, myPoly[0][1] * size);
-    for (let v = 1; v < myPoly.length; v += 1) ctx.lineTo(myPoly[v][0] * size, myPoly[v][1] * size);
+    ctx.moveTo(_px(myPoly[0][0]), _px(myPoly[0][1]));
+    for (let v = 1; v < myPoly.length; v += 1) ctx.lineTo(_px(myPoly[v][0]), _px(myPoly[v][1]));
+    ctx.closePath();
+    ctx.clip();
+    ctx.beginPath();
+    ctx.moveTo(_px(myPoly[0][0]), _px(myPoly[0][1]));
+    for (let v = 1; v < myPoly.length; v += 1) ctx.lineTo(_px(myPoly[v][0]), _px(myPoly[v][1]));
     ctx.closePath();
     ctx.strokeStyle = "rgba(255,255,255,0.92)";
-    ctx.lineWidth = Math.max(1.5, size * 0.006);
+    ctx.lineWidth = Math.max(1.5, size * 0.006) * 2;
     ctx.lineJoin = "round";
     ctx.stroke();
     ctx.restore();
