@@ -9509,7 +9509,17 @@ function getScannerDerivedVisualState(round, participants) {
   }
 
   const finalized = buildScannerPlayersFromFirestore(round, participants);
-  const previewVersion = `${round?.id || "round"}_${round?.entropySeed || "seed"}_${finalized.totalPlayers}_${finalized.totalPot.toFixed(2)}_preview`;
+  // Карта арены приходит ОТДЕЛЬНЫМ событием (grid:state) уже после round:patch
+  // со ставками. Ключи кэша строились только по составу и банку — к моменту
+  // прихода новых многоугольников они уже не менялись, холст с заливкой
+  // оставался старым, и поле не росло, хотя рамка (её рисуют каждый кадр
+  // без кэша) увеличивалась. Отпечаток многоугольников чинит это.
+  const _polySig = (Array.isArray(finalized.polys) && finalized.polys.length)
+    ? finalized.polys.map((poly) => (Array.isArray(poly) && poly.length)
+      ? `${poly.length}:${Number(poly[0][0]).toFixed(4)},${Number(poly[0][1]).toFixed(4)}`
+      : "0").join("|")
+    : "nopoly";
+  const previewVersion = `${round?.id || "round"}_${round?.entropySeed || "seed"}_${finalized.totalPlayers}_${finalized.totalPot.toFixed(2)}_${_polySig}_preview`;
 
   // Превью тоже приходит готовым с сервера — клиент его больше не считает.
   // Раньше здесь на каждый вход игрока шла полная сортировка 10 000 клеток на
@@ -12330,7 +12340,14 @@ function syncScannerDerivedState() {
   // массив и откатывалась на клетки (лесенка по краям, заливка не
   // пересчитывалась при добавлении ставки).
   scannerGridState.polys = Array.isArray(finalized.polys) ? finalized.polys : [];
-  scannerGridState.gridVersion = `${finalized.gridVersion}_${round.status || "idle"}`;
+  // Тот же отпечаток, что и у превью: без него холст основной арены тоже
+  // не перестраивался при обновлении карты с сервера.
+  const _gridPolySig = scannerGridState.polys.length
+    ? scannerGridState.polys.map((poly) => (Array.isArray(poly) && poly.length)
+      ? `${poly.length}:${Number(poly[0][0]).toFixed(4)},${Number(poly[0][1]).toFixed(4)}`
+      : "0").join("|")
+    : "nopoly";
+  scannerGridState.gridVersion = `${finalized.gridVersion}_${round.status || "idle"}_${_gridPolySig}`;
   scannerGridState.previewCellOwners = derivedVisual.previewCellOwners;
   scannerGridState.previewGridVersion = derivedVisual.previewVersion;
   scannerGridState.previewZones = derivedVisual.previewZones;
