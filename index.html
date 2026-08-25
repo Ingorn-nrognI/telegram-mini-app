@@ -5733,12 +5733,16 @@ const SCANNER_GRID_COLS = 100;
 const SCANNER_GRID_ROWS = 100;
 const SCANNER_STAKE_PRESETS = [2, 5, 10, 25, 50, 100, 250];
 const SCANNER_POPULATION_PRESETS = [2, 12, 48, 150, 400, 1000];
-const SCANNER_COUNTDOWN_MS = 20000;
-const SCANNER_ACTIVE_MS = 20000;
+const SCANNER_COUNTDOWN_MS = 15000;
+const SCANNER_ACTIVE_MS = 15000;
 const SCANNER_FINISHED_MS = 4200;
 const SCANNER_PREPARING_MS = 800;
 const SCANNER_PREVIEW_TRANSITION_MS = 1100;
-const SCANNER_SHUFFLING_MS = SCANNER_PREVIEW_TRANSITION_MS + SCANNER_PREPARING_MS;
+// Значение обязано совпадать с SCANNER_SHUFFLING_MS в lifecycle.js на сервере.
+// Раньше здесь была сумма 1100 + 800 = 1900 мс, а сервер держал фазу 4000 мс:
+// анимация перемешивания заканчивалась, и игрок больше двух секунд смотрел на
+// замерший экран, пока сервер не запускал луч.
+const SCANNER_SHUFFLING_MS = 4000;
 const SCANNER_EDGE_LATCH_MS = 3400;
 const SCANNER_ACTIVE_BEAM_STEPS = 1800;
 const SCANNER_ACTIVE_BEAM_BASE_SPEED = 2.75;
