@@ -744,6 +744,23 @@ button {
   display: block;
 }
 
+/* Полноэкранный режим игр — как у турниров: отдельный экран, а не окошко
+   над нижним меню. */
+body.games-mode .mode-popup.open {
+  top: calc(var(--safe-top) + 62px);
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  max-width: none;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background: var(--bg-1);
+  overflow-y: auto;
+  z-index: 74;
+}
+
 .mode-popup-inner {
   display: flex;
   flex-direction: column;
@@ -867,8 +884,17 @@ body.rating-mode #leaderboardModal .leaderboardHeader {
 
 /* В режиме турниров шапка обычная: баланс и кнопка истории на месте,
    меняется только заголовок по центру. */
-body.rating-mode .history-mode-title {
+body.rating-mode .history-mode-title,
+body.games-mode .history-mode-title {
   opacity: 1;
+}
+
+/* Кнопка истории раундов относится к Сканеру. Её видимость переключается
+   только при СМЕНЕ ЭКРАНА, а турниры и игры открываются поверх текущего
+   экрана — вид не меняется, и кнопка оставалась висеть. */
+body.rating-mode .scanner-rounds-btn,
+body.games-mode .scanner-rounds-btn {
+  display: none !important;
 }
 
 /* Левая колонка прижимается к краю — иначе активная кнопка оставалась
@@ -6783,6 +6809,7 @@ function setMenuView(view, options = {}) {
 function closeModePopup() {
   const modePopup = document.getElementById("modePopup");
   if (modePopup) modePopup.classList.remove("open");
+  if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   syncPanelBackdrop();
   if (currentBottomNav === "games") {
     currentBottomNav = "";
@@ -6820,6 +6847,7 @@ function openGamesMenu() {
   requestAnimationFrame(() => {
     const modePopup = document.getElementById("modePopup");
     if (modePopup) modePopup.classList.add("open");
+    if (typeof syncHistoryModeState === "function") syncHistoryModeState();
     syncPanelBackdrop();
   });
 }
@@ -6876,6 +6904,7 @@ function closeScannerRoundsPanel() {
 function setHistoryMode(mode, titleText) {
   document.body.classList.toggle("history-mode", mode === "history");
   document.body.classList.toggle("rating-mode", mode === "rating");
+  document.body.classList.toggle("games-mode", mode === "games");
   const titleEl = document.getElementById("historyModeTitle");
   if (titleEl) titleEl.textContent = mode ? (titleText || "") : "";
 }
@@ -6886,6 +6915,11 @@ function syncHistoryModeState() {
   const ratingOpen = document.getElementById("leaderboardModal")?.style.display === "flex";
   if (ratingOpen) {
     setHistoryMode("rating", "Турниры");
+    return;
+  }
+  const gamesOpen = !!document.getElementById("modePopup")?.classList.contains("open");
+  if (gamesOpen) {
+    setHistoryMode("games", "Игры");
     return;
   }
   const t = (typeof APP_TRANSLATIONS === "object" && APP_TRANSLATIONS)
@@ -14020,7 +14054,8 @@ function buildScannerCanvasCache(size, owners, players, polys) {
       ctx.moveTo(_px(poly[0][0]), _px(poly[0][1]));
       for (let v = 1; v < poly.length; v += 1) ctx.lineTo(_px(poly[v][0]), _px(poly[v][1]));
       ctx.closePath();
-      const paint = _softFill(players[i].color, minX, minY, maxX, maxY);
+      // Градиент из ЛЕВОГО НИЖНЕГО угла поля в правый верхний.
+      const paint = _softFill(players[i].color, minX, maxY, maxX, minY);
       ctx.fillStyle = paint;
       ctx.fill();
       // Микрошов между соседними полигонами из-за сглаживания краёв.
