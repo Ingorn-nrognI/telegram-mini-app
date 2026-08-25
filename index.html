@@ -13986,18 +13986,43 @@ function buildScannerCanvasCache(size, owners, players, polys) {
     const _bw = Math.max(11, size * 0.031) + 1;
     const _inner = size - _bw * 2;
     const _px = (u) => _bw + u * _inner;
+
+    // Цвет с сервера приходит как hsl(H S% L%). Приглушаем насыщенность и
+    // строим градиент из двух оттенков — поле мягко переливается, а не
+    // светится плоской заливкой.
+    const _softFill = (color, x0, y0, x1, y1) => {
+      const m = /hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)/i.exec(String(color || ""));
+      if (!m) return color;
+      const h = parseFloat(m[1]);
+      const s = Math.max(18, parseFloat(m[2]) * 0.52);
+      const l = Math.min(72, parseFloat(m[3]) * 0.86 + 6);
+      const g = ctx.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, `hsl(${(h + 10) % 360} ${s}% ${Math.min(80, l + 7)}%)`);
+      g.addColorStop(1, `hsl(${(h + 350) % 360} ${Math.max(14, s - 6)}% ${Math.max(20, l - 9)}%)`);
+      return g;
+    };
+
     for (let i = 0; i < polys.length; i += 1) {
       const poly = polys[i];
       if (!Array.isArray(poly) || poly.length < 3 || !players[i]) continue;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (let v = 0; v < poly.length; v += 1) {
+        const px = _px(poly[v][0]);
+        const py = _px(poly[v][1]);
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (py < minY) minY = py;
+        if (py > maxY) maxY = py;
+      }
       ctx.beginPath();
       ctx.moveTo(_px(poly[0][0]), _px(poly[0][1]));
       for (let v = 1; v < poly.length; v += 1) ctx.lineTo(_px(poly[v][0]), _px(poly[v][1]));
       ctx.closePath();
-      ctx.fillStyle = players[i].color;
+      const paint = _softFill(players[i].color, minX, minY, maxX, maxY);
+      ctx.fillStyle = paint;
       ctx.fill();
-      // Микрошов между соседними полигонами из-за сглаживания краёв:
-      // обводим тем же цветом, чтобы стык был плотным.
-      ctx.strokeStyle = players[i].color;
+      // Микрошов между соседними полигонами из-за сглаживания краёв.
+      ctx.strokeStyle = paint;
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -14045,20 +14070,30 @@ function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players, poly
     const _bw = Math.max(11, size * 0.031) + 1;
     const _inner = size - _bw * 2;
     const _px = (u) => _bw + u * _inner;
+    const _path = () => {
+      ctx.beginPath();
+      ctx.moveTo(_px(myPoly[0][0]), _px(myPoly[0][1]));
+      for (let v = 1; v < myPoly.length; v += 1) ctx.lineTo(_px(myPoly[v][0]), _px(myPoly[v][1]));
+      ctx.closePath();
+    };
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(_px(myPoly[0][0]), _px(myPoly[0][1]));
-    for (let v = 1; v < myPoly.length; v += 1) ctx.lineTo(_px(myPoly[v][0]), _px(myPoly[v][1]));
-    ctx.closePath();
+    _path();
+    // Режем по контуру поля: наружная половина каждой линии отсекается,
+    // внутрь уходит ровно половина её толщины.
     ctx.clip();
-    ctx.beginPath();
-    ctx.moveTo(_px(myPoly[0][0]), _px(myPoly[0][1]));
-    for (let v = 1; v < myPoly.length; v += 1) ctx.lineTo(_px(myPoly[v][0]), _px(myPoly[v][1]));
-    ctx.closePath();
-    ctx.strokeStyle = "rgba(255,255,255,0.92)";
-    ctx.lineWidth = Math.max(1.5, size * 0.006) * 2;
+    // Затухание внутрь: рисуем от самой широкой полосы к самой узкой, каждая
+    // с малой прозрачностью. У границы накладываются все полосы и линия
+    // получается плотной, а вглубь поля доходит только самая широкая —
+    // яркость плавно сходит к нулю.
+    const _edge = Math.max(3, size * 0.012);
+    const _steps = 10;
     ctx.lineJoin = "round";
-    ctx.stroke();
+    for (let s = _steps; s >= 1; s -= 1) {
+      _path();
+      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+      ctx.lineWidth = (_edge * 2) * (s / _steps);
+      ctx.stroke();
+    }
     ctx.restore();
     return;
   }
