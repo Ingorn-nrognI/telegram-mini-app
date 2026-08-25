@@ -13994,11 +13994,13 @@ function buildScannerCanvasCache(size, owners, players, polys) {
       const m = /hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)/i.exec(String(color || ""));
       if (!m) return color;
       const h = parseFloat(m[1]);
-      const s = Math.max(18, parseFloat(m[2]) * 0.52);
-      const l = Math.min(72, parseFloat(m[3]) * 0.86 + 6);
+      const s = parseFloat(m[2]);
+      const l = parseFloat(m[3]);
+      // Насыщенность и яркость оставляем как есть — только лёгкий перелив
+      // оттенка по диагонали поля.
       const g = ctx.createLinearGradient(x0, y0, x1, y1);
-      g.addColorStop(0, `hsl(${(h + 10) % 360} ${s}% ${Math.min(80, l + 7)}%)`);
-      g.addColorStop(1, `hsl(${(h + 350) % 360} ${Math.max(14, s - 6)}% ${Math.max(20, l - 9)}%)`);
+      g.addColorStop(0, `hsl(${(h + 8) % 360} ${s}% ${Math.min(78, l + 5)}%)`);
+      g.addColorStop(1, `hsl(${(h + 352) % 360} ${s}% ${Math.max(24, l - 5)}%)`);
       return g;
     };
 
@@ -14081,17 +14083,21 @@ function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players, poly
     // Режем по контуру поля: наружная половина каждой линии отсекается,
     // внутрь уходит ровно половина её толщины.
     ctx.clip();
-    // Затухание внутрь: рисуем от самой широкой полосы к самой узкой, каждая
-    // с малой прозрачностью. У границы накладываются все полосы и линия
-    // получается плотной, а вглубь поля доходит только самая широкая —
-    // яркость плавно сходит к нулю.
-    const _edge = Math.max(3, size * 0.012);
-    const _steps = 10;
+    // Прежняя толщина обводки, удвоенная. Затухание живёт ТОЛЬКО внутри этой
+    // полосы: на самой границе поля — полная видимость, у внутреннего края
+    // полосы — ноль. Глубже в поле не заходит вообще.
+    const _base = Math.max(1.5, size * 0.006);
+    const _band = _base * 2;
+    const _steps = 16;
     ctx.lineJoin = "round";
-    for (let s = _steps; s >= 1; s -= 1) {
+    // Полосы рисуются от самой глубокой к самой узкой. Прозрачность каждой
+    // подобрана так, чтобы накопление дало РОВНУЮ линейную шкалу от 0 у
+    // внутреннего края до 1 у границы: alpha = 1 / (осталось шагов).
+    for (let s = 1; s <= _steps; s += 1) {
+      const depth = _band * ((_steps - s + 1) / _steps);
       _path();
-      ctx.strokeStyle = "rgba(255,255,255,0.2)";
-      ctx.lineWidth = (_edge * 2) * (s / _steps);
+      ctx.strokeStyle = `rgba(255,255,255,${(1 / (_steps - s + 1)).toFixed(4)})`;
+      ctx.lineWidth = depth * 2;
       ctx.stroke();
     }
     ctx.restore();
