@@ -15194,19 +15194,33 @@ function getScannerMorphedPolysAt(fromPolys, toPolys, progress, shuffleMode) {
     const n = Math.max(a.length, b.length, 96);
     const ra = resampleScannerPoly(a, n);
     const rb = alignScannerPolyStart(ra, resampleScannerPoly(b, n));
-    let maxDist = 0;
-    const dists = new Array(n);
-    for (let k = 0; k < n; k += 1) {
-      const d = Math.hypot(rb[k][0] - ra[k][0], rb[k][1] - ra[k][1]);
-      dists[k] = d;
-      if (d > maxDist) maxDist = d;
-    }
-    // Чем больше LAG, тем сильнее дальние вершины отстают от ближних и тем
-    // текучее выглядит перетекание. При 0.45 форма ещё держалась целиком.
+    // Задержка вершины зависит от её положения ПО НАПРАВЛЕНИЮ движения:
+    // передний край трогается сразу, задний подтягивается последним. Раньше
+    // она считалась от длины пути, и при переезде поля целиком все вершины
+    // получали одинаковую задержку — арена стояла до 72% времени фазы,
+    // а потом всё дёргалось разом.
     const LAG = 0.72;
+    const lags = new Array(n);
+    let mx = 0, my = 0;
+    for (let k = 0; k < n; k += 1) { mx += rb[k][0] - ra[k][0]; my += rb[k][1] - ra[k][1]; }
+    const mlen = Math.hypot(mx, my);
+    if (mlen > 0.0001) {
+      const ux = mx / mlen, uy = my / mlen;
+      let pmin = Infinity, pmax = -Infinity;
+      const proj = new Array(n);
+      for (let k = 0; k < n; k += 1) {
+        proj[k] = ra[k][0] * ux + ra[k][1] * uy;
+        if (proj[k] < pmin) pmin = proj[k];
+        if (proj[k] > pmax) pmax = proj[k];
+      }
+      const span = Math.max(0.0001, pmax - pmin);
+      for (let k = 0; k < n; k += 1) lags[k] = (1 - (proj[k] - pmin) / span) * LAG;
+    } else {
+      for (let k = 0; k < n; k += 1) lags[k] = 0;
+    }
     const pts = new Array(n);
     for (let k = 0; k < n; k += 1) {
-      const lag = maxDist > 0 ? (dists[k] / maxDist) * LAG : 0;
+      const lag = lags[k];
       let tk = (t - lag) / Math.max(0.0001, 1 - lag);
       tk = Math.max(0, Math.min(1, tk));
       tk = tk * tk * (3 - 2 * tk);
@@ -15296,21 +15310,33 @@ function drawScannerMorphedTerritories(ctx, size, fromPolys, toPolys, progress, 
     const ra = resampleScannerPoly(a, n);
     const rb = alignScannerPolyStart(ra, resampleScannerPoly(b, n));
 
-    // Вершины трогаются не разом: ближние к своему новому месту идут первыми,
-    // дальние подтягиваются следом. Отсюда ощущение перетекающей жидкости,
-    // а не едущего целиком куска.
-    let maxDist = 0;
-    const dists = new Array(n);
-    for (let k = 0; k < n; k += 1) {
-      const d = Math.hypot(rb[k][0] - ra[k][0], rb[k][1] - ra[k][1]);
-      dists[k] = d;
-      if (d > maxDist) maxDist = d;
-    }
+    // Задержка вершины зависит от её положения ПО НАПРАВЛЕНИЮ движения:
+    // передний край трогается сразу, задний подтягивается последним —
+    // та же логика, что и в getScannerMorphedPolysAt (используется для рамки
+    // и значков), чтобы заливка не расходилась с обводкой территории.
     const LAG = 0.72;
+    const lags = new Array(n);
+    let mx = 0, my = 0;
+    for (let k = 0; k < n; k += 1) { mx += rb[k][0] - ra[k][0]; my += rb[k][1] - ra[k][1]; }
+    const mlen = Math.hypot(mx, my);
+    if (mlen > 0.0001) {
+      const ux = mx / mlen, uy = my / mlen;
+      let pmin = Infinity, pmax = -Infinity;
+      const proj = new Array(n);
+      for (let k = 0; k < n; k += 1) {
+        proj[k] = ra[k][0] * ux + ra[k][1] * uy;
+        if (proj[k] < pmin) pmin = proj[k];
+        if (proj[k] > pmax) pmax = proj[k];
+      }
+      const span = Math.max(0.0001, pmax - pmin);
+      for (let k = 0; k < n; k += 1) lags[k] = (1 - (proj[k] - pmin) / span) * LAG;
+    } else {
+      for (let k = 0; k < n; k += 1) lags[k] = 0;
+    }
 
     ctx.beginPath();
     for (let k = 0; k < n; k += 1) {
-      const lag = maxDist > 0 ? (dists[k] / maxDist) * LAG : 0;
+      const lag = lags[k];
       let tk = (t - lag) / Math.max(0.0001, 1 - lag);
       tk = Math.max(0, Math.min(1, tk));
       tk = tk * tk * (3 - 2 * tk);
@@ -15323,7 +15349,7 @@ function drawScannerMorphedTerritories(ctx, size, fromPolys, toPolys, progress, 
     // с полем, а не остаётся привязанным к старому месту.
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (let k = 0; k < n; k += 1) {
-      const lag = maxDist > 0 ? (dists[k] / maxDist) * LAG : 0;
+      const lag = lags[k];
       let tk = (t - lag) / Math.max(0.0001, 1 - lag);
       tk = Math.max(0, Math.min(1, tk));
       tk = tk * tk * (3 - 2 * tk);
