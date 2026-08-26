@@ -15149,22 +15149,90 @@ function resampleScannerPoly(poly, count) {
   return pts;
 }
 
+function getScannerPolyArea(poly) {
+  let a = 0;
+  for (let i = 0, n = poly.length; i < n; i += 1) {
+    const [x1, y1] = poly[i];
+    const [x2, y2] = poly[(i + 1) % n];
+    a += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(a) / 2;
+}
+
+// Сдвигает начало обхода новой фигуры так, чтобы точки шли к СВОИМ ближайшим
+// местам. Без этого обход начинался с нулевой вершины у обеих фигур, и кусок
+// уезжал по длинной дуге вместо того, чтобы перетечь ближайшим углом.
+function alignScannerPolyStart(ra, rb) {
+  const n = ra.length;
+  let bestOffset = 0;
+  let bestCost = Infinity;
+  const stride = Math.max(1, Math.floor(n / 36));
+  for (let off = 0; off < n; off += stride) {
+    let cost = 0;
+    for (let k = 0; k < n; k += stride) {
+      const p = ra[k];
+      const q = rb[(k + off) % n];
+      cost += (p[0] - q[0]) * (p[0] - q[0]) + (p[1] - q[1]) * (p[1] - q[1]);
+    }
+    if (cost < bestCost) { bestCost = cost; bestOffset = off; }
+  }
+  const out = new Array(n);
+  for (let k = 0; k < n; k += 1) out[k] = rb[(k + bestOffset) % n];
+  return out;
+}
+
 function drawScannerMorphedTerritories(ctx, size, fromPolys, toPolys, progress, players) {
   const _bw = Math.max(11, size * 0.031) + 1;
   const _inner = size - _bw * 2;
   const _px = (u) => _bw + u * _inner;
   const t = Math.max(0, Math.min(1, progress));
+
+  // Самый большой игрок не анимируется вовсе: его цветом заливается вся
+  // игровая зона, а мелкие поля перетекают поверх. Освободившееся место он
+  // занимает сам собой — сжимать и разжимать его углы, которые всё равно
+  // остаются на месте, незачем.
+  let bigIndex = -1;
+  let bigArea = -1;
   for (let i = 0; i < toPolys.length; i += 1) {
+    if (!Array.isArray(toPolys[i]) || toPolys[i].length < 3 || !players[i]) continue;
+    const area = getScannerPolyArea(toPolys[i]);
+    if (area > bigArea) { bigArea = area; bigIndex = i; }
+  }
+  if (bigIndex >= 0) {
+    ctx.fillStyle = players[bigIndex].color;
+    ctx.fillRect(_bw, _bw, _inner, _inner);
+  }
+
+  for (let i = 0; i < toPolys.length; i += 1) {
+    if (i === bigIndex) continue;
     const a = fromPolys[i];
     const b = toPolys[i];
     if (!Array.isArray(a) || !Array.isArray(b) || a.length < 3 || b.length < 3 || !players[i]) continue;
-    const n = Math.max(a.length, b.length, 24);
+
+    const n = Math.max(a.length, b.length, 48);
     const ra = resampleScannerPoly(a, n);
-    const rb = resampleScannerPoly(b, n);
+    const rb = alignScannerPolyStart(ra, resampleScannerPoly(b, n));
+
+    // Вершины трогаются не разом: ближние к своему новому месту идут первыми,
+    // дальние подтягиваются следом. Отсюда ощущение перетекающей жидкости,
+    // а не едущего целиком куска.
+    let maxDist = 0;
+    const dists = new Array(n);
+    for (let k = 0; k < n; k += 1) {
+      const d = Math.hypot(rb[k][0] - ra[k][0], rb[k][1] - ra[k][1]);
+      dists[k] = d;
+      if (d > maxDist) maxDist = d;
+    }
+    const LAG = 0.45;
+
     ctx.beginPath();
     for (let k = 0; k < n; k += 1) {
-      const x = _px(ra[k][0] + (rb[k][0] - ra[k][0]) * t);
-      const y = _px(ra[k][1] + (rb[k][1] - ra[k][1]) * t);
+      const lag = maxDist > 0 ? (dists[k] / maxDist) * LAG : 0;
+      let tk = (t - lag) / Math.max(0.0001, 1 - lag);
+      tk = Math.max(0, Math.min(1, tk));
+      tk = tk * tk * (3 - 2 * tk);
+      const x = _px(ra[k][0] + (rb[k][0] - ra[k][0]) * tk);
+      const y = _px(ra[k][1] + (rb[k][1] - ra[k][1]) * tk);
       if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.closePath();
