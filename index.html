@@ -15181,6 +15181,45 @@ function alignScannerPolyStart(ra, rb) {
   return out;
 }
 
+// Промежуточные формы полей на заданном прогрессе перемешивания. Тот же
+// расчёт, что и у заливки, — поэтому рамка не может разойтись с картинкой.
+function getScannerMorphedPolysAt(fromPolys, toPolys, progress, shuffleMode) {
+  const from = Array.isArray(fromPolys) ? fromPolys : [];
+  const to = Array.isArray(toPolys) ? toPolys : [];
+  if (shuffleMode === "keep" || !from.length || from.length !== to.length) return to;
+  const t = Math.max(0, Math.min(1, progress));
+  const out = new Array(to.length);
+  for (let i = 0; i < to.length; i += 1) {
+    const a = from[i];
+    const b = to[i];
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length < 3 || b.length < 3) { out[i] = b; continue; }
+    const n = Math.max(a.length, b.length, 48);
+    const ra = resampleScannerPoly(a, n);
+    const rb = alignScannerPolyStart(ra, resampleScannerPoly(b, n));
+    let maxDist = 0;
+    const dists = new Array(n);
+    for (let k = 0; k < n; k += 1) {
+      const d = Math.hypot(rb[k][0] - ra[k][0], rb[k][1] - ra[k][1]);
+      dists[k] = d;
+      if (d > maxDist) maxDist = d;
+    }
+    const LAG = 0.45;
+    const pts = new Array(n);
+    for (let k = 0; k < n; k += 1) {
+      const lag = maxDist > 0 ? (dists[k] / maxDist) * LAG : 0;
+      let tk = (t - lag) / Math.max(0.0001, 1 - lag);
+      tk = Math.max(0, Math.min(1, tk));
+      tk = tk * tk * (3 - 2 * tk);
+      pts[k] = [
+        ra[k][0] + (rb[k][0] - ra[k][0]) * tk,
+        ra[k][1] + (rb[k][1] - ra[k][1]) * tk
+      ];
+    }
+    out[i] = pts;
+  }
+  return out;
+}
+
 function drawScannerMorphedTerritories(ctx, size, fromPolys, toPolys, progress, players) {
   const _bw = Math.max(11, size * 0.031) + 1;
   const _inner = size - _bw * 2;
@@ -15567,7 +15606,18 @@ function renderScannerCanvas() {
       : roundStatus === "shuffling"
         ? getScannerShuffleVisualOwners(getScannerShuffleTransitionProgress(roundData))
         : (scannerGridState.cellOwners || []);
-  drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || [], scannerGridState.polys || []);
+  // Во время перемешивания рамка обязана идти по ТЕКУЩЕЙ, промежуточной форме
+  // поля. Раньше сюда всегда уходила финальная раскладка, и новый контур был
+  // виден с первого кадра, хотя заливка ещё только перетекала.
+  const _borderPolys = (roundStatus === "shuffling")
+    ? getScannerMorphedPolysAt(
+        scannerGridState.prevPolys || [],
+        scannerGridState.polys || [],
+        getScannerShuffleTransitionProgress(roundData),
+        scannerGridState.shuffleMode
+      )
+    : (scannerGridState.polys || []);
+  drawScannerMyTerritoryBorder(ctx, size, cellSize, _myBorderOwners, scannerGridState.players || [], _borderPolys);
 
   if (visualBeamSample) {
     const isHotBeam = roundStatus === "active" || roundStatus === "finished";
