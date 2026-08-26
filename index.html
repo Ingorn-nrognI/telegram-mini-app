@@ -6928,7 +6928,7 @@ function syncHistoryModeState() {
     ? (APP_TRANSLATIONS[(typeof appSettings === "object" && appSettings?.language) || "ru"] || {})
     : {};
   if (roundsOpen) setHistoryMode("history", t.roundsHistory || "История раундов");
-  else if (gameOpen) setHistoryMode("history", t.gameHistory || "История игр");
+  else if (gameOpen) setHistoryMode("history", t.gameHistory || "История");
   else setHistoryMode(null, "");
 }
 
@@ -7777,7 +7777,7 @@ const APP_TRANSLATIONS = {
     recentRounds: "Последние раунды", scanner: "Сканер",
     bank: "Банк", myChance: "Мои шансы", allIn: "Ва-банк",
     play: "Играть", history: "История", leaderboard: "Рейтинг",
-    gameHistory: "История игр", roundsHistory: "История раундов", modeScanner: "Режим: Сканер",
+    gameHistory: "История", roundsHistory: "История раундов", modeScanner: "Режим: Сканер",
     won: "Выиграл", lost: "Проиграл", yourColor: "Твой цвет в арене этого раунда",
     playersInRound: "Игроки в раунде", myStake: "Моя ставка",
     totalBank: "Общий банк", myResult: "Мой результат",
@@ -9301,7 +9301,85 @@ function buildScannerPreviewCellOwners(players, totalCells, versionSeed, roundId
   return owners;
 }
 
-function buildScannerPreviewZones(owners, players) {
+// Расстояние от точки до ближайшей стороны многоугольника.
+function getScannerPolyEdgeDistance(poly, x, y) {
+  let best = Infinity;
+  for (let i = 0, n = poly.length; i < n; i += 1) {
+    const [ax, ay] = poly[i];
+    const [bx, by] = poly[(i + 1) % n];
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 > 0 ? ((x - ax) * dx + (y - ay) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const px = ax + dx * t;
+    const py = ay + dy * t;
+    const d = Math.hypot(x - px, y - py);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+function isPointInScannerPoly(poly, x, y) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i, i += 1) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y)) {
+      const xCross = xi + ((y - yi) / (yj - yi)) * (xj - xi);
+      if (x < xCross) inside = !inside;
+    }
+  }
+  return inside;
+}
+
+// Точка внутри поля с наибольшим запасом свободного места вокруг. Центр масс
+// для этого не годится: у вытянутого клина он приходится на самое остриё,
+// где значок не помещается и залезает на край.
+function findScannerPolyAnchor(poly) {
+  if (!Array.isArray(poly) || poly.length < 3) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  poly.forEach(([px, py]) => {
+    if (px < minX) minX = px;
+    if (px > maxX) maxX = px;
+    if (py < minY) minY = py;
+    if (py > maxY) maxY = py;
+  });
+
+  let bestX = (minX + maxX) / 2;
+  let bestY = (minY + maxY) / 2;
+  let bestD = -1;
+  let stepX = (maxX - minX) / 12;
+  let stepY = (maxY - minY) / 12;
+
+  for (let x = minX; x <= maxX; x += stepX) {
+    for (let y = minY; y <= maxY; y += stepY) {
+      if (!isPointInScannerPoly(poly, x, y)) continue;
+      const d = getScannerPolyEdgeDistance(poly, x, y);
+      if (d > bestD) { bestD = d; bestX = x; bestY = y; }
+    }
+  }
+
+  // Три уточняющих прохода вокруг найденной точки — дают почти точный
+  // результат за считанные десятки проверок.
+  for (let pass = 0; pass < 3; pass += 1) {
+    stepX /= 2.5;
+    stepY /= 2.5;
+    for (let dx = -2; dx <= 2; dx += 1) {
+      for (let dy = -2; dy <= 2; dy += 1) {
+        const x = bestX + dx * stepX;
+        const y = bestY + dy * stepY;
+        if (!isPointInScannerPoly(poly, x, y)) continue;
+        const d = getScannerPolyEdgeDistance(poly, x, y);
+        if (d > bestD) { bestD = d; bestX = x; bestY = y; }
+      }
+    }
+  }
+
+  return { x: bestX, y: bestY, radius: bestD };
+}
+
+function buildScannerPreviewZones(owners, players, polys) {
   const zones = players.map((player, index) => ({
     index,
     id: player.id,
@@ -9338,14 +9416,32 @@ function buildScannerPreviewZones(owners, players) {
     const widthNorm = widthCells / SCANNER_GRID_COLS;
     const heightNorm = heightCells / SCANNER_GRID_ROWS;
 
+    let centerX = count ? ((zone.sumX / count) + 0.5) / SCANNER_GRID_COLS : 0.5;
+    let centerY = count ? ((zone.sumY / count) + 0.5) / SCANNER_GRID_ROWS : 0.5;
+    let anchorRoom = 0;
+    const poly = Array.isArray(polys) ? polys[zone.index] : null;
+    const anchor = poly ? findScannerPolyAnchor(poly) : null;
+    if (anchor) {
+      // Координаты многоугольника — доли ИГРОВОЙ ЗОНЫ внутри бортика,
+      // а значок позиционируется в долях всего холста.
+      const PAD = 0.031;
+      const SPAN = 1 - PAD * 2;
+      centerX = PAD + anchor.x * SPAN;
+      centerY = PAD + anchor.y * SPAN;
+      anchorRoom = anchor.radius * SPAN;
+    }
+
     return {
       ...zone,
       share,
-      centerX: count ? ((zone.sumX / count) + 0.5) / SCANNER_GRID_COLS : 0.5,
-      centerY: count ? ((zone.sumY / count) + 0.5) / SCANNER_GRID_ROWS : 0.5,
+      centerX,
+      centerY,
       widthNorm,
       heightNorm,
-      canShowBadge: count > 0 && share >= 0.085 && Math.min(widthCells, heightCells) >= 16
+      anchorRoom,
+      // Показываем значок, если вокруг найденной точки реально хватает места
+      // (запас от границ поля), а не по доле банка и габаритам.
+      canShowBadge: count > 0 && (anchor ? anchorRoom >= 0.045 : (share >= 0.085 && Math.min(widthCells, heightCells) >= 16))
     };
   });
 }
@@ -9583,7 +9679,7 @@ function getScannerDerivedVisualState(round, participants) {
 
   const previewCellOwners = _srvPreview
     || buildScannerPreviewCellOwners(finalized.players, SCANNER_GRID_TOTAL_CELLS, previewVersion);
-  const previewZones = buildScannerPreviewZones(previewCellOwners, finalized.players);
+  const previewZones = buildScannerPreviewZones(previewCellOwners, finalized.players, finalized.polys);
   const nextValue = {
     key: cacheKey,
     finalized,
@@ -15274,6 +15370,11 @@ function renderScannerCanvas() {
 
   if (previewBadgeAlpha > 0.02) {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
+  } else if (Array.isArray(scannerGridState.previewZones) && scannerGridState.previewZones.length) {
+    // Раньше значки жили только в ожидании и гасли к концу перемешивания:
+    // в розыгрыше, на показе результата и в подготовке следующего раунда
+    // арена оставалась без аватарок.
+    drawScannerPreviewBadges(ctx, size, 1);
   }
 
   const _rawTargetForLog = getScannerBeamTargetSample(
