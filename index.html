@@ -15191,7 +15191,7 @@ function getScannerMorphedPolysAt(fromPolys, toPolys, progress, shuffleMode) {
     const a = from[i];
     const b = to[i];
     if (!Array.isArray(a) || !Array.isArray(b) || a.length < 3 || b.length < 3) { out[i] = b; continue; }
-    const n = Math.max(a.length, b.length, 48);
+    const n = Math.max(a.length, b.length, 96);
     const ra = resampleScannerPoly(a, n);
     const rb = alignScannerPolyStart(ra, resampleScannerPoly(b, n));
     let maxDist = 0;
@@ -15201,7 +15201,9 @@ function getScannerMorphedPolysAt(fromPolys, toPolys, progress, shuffleMode) {
       dists[k] = d;
       if (d > maxDist) maxDist = d;
     }
-    const LAG = 0.45;
+    // Чем больше LAG, тем сильнее дальние вершины отстают от ближних и тем
+    // текучее выглядит перетекание. При 0.45 форма ещё держалась целиком.
+    const LAG = 0.72;
     const pts = new Array(n);
     for (let k = 0; k < n; k += 1) {
       const lag = maxDist > 0 ? (dists[k] / maxDist) * LAG : 0;
@@ -15232,6 +15234,36 @@ function getScannerFieldPaint(ctx, color, x0, y0, x1, y1) {
   return g;
 }
 
+// Значки на промежуточных формах: аватарка едет вместе со своим полем,
+// а не оказывается на новом месте с первого кадра.
+function drawScannerMorphedBadges(ctx, size, polys, players, alpha) {
+  const PAD = 0.031;
+  const SPAN = 1 - PAD * 2;
+  let total = 0;
+  const areas = new Array(polys.length).fill(0);
+  for (let i = 0; i < polys.length; i += 1) {
+    if (!Array.isArray(polys[i]) || polys[i].length < 3) continue;
+    areas[i] = getScannerPolyArea(polys[i]);
+    total += areas[i];
+  }
+  for (let i = 0; i < polys.length; i += 1) {
+    const poly = polys[i];
+    if (!Array.isArray(poly) || poly.length < 3 || !players[i]) continue;
+    const anchor = findScannerPolyAnchor(poly);
+    if (!anchor) continue;
+    const room = anchor.radius * SPAN;
+    if (room < 0.045) continue;
+    drawScannerPlayerBadge(ctx, {
+      index: i,
+      share: total > 0 ? areas[i] / total : 0,
+      centerX: PAD + anchor.x * SPAN,
+      centerY: PAD + anchor.y * SPAN,
+      anchorRoom: room,
+      canShowBadge: true
+    }, size, alpha);
+  }
+}
+
 function drawScannerMorphedTerritories(ctx, size, fromPolys, toPolys, progress, players) {
   const _bw = Math.max(11, size * 0.031) + 1;
   const _inner = size - _bw * 2;
@@ -15260,7 +15292,7 @@ function drawScannerMorphedTerritories(ctx, size, fromPolys, toPolys, progress, 
     const b = toPolys[i];
     if (!Array.isArray(a) || !Array.isArray(b) || a.length < 3 || b.length < 3 || !players[i]) continue;
 
-    const n = Math.max(a.length, b.length, 48);
+    const n = Math.max(a.length, b.length, 96);
     const ra = resampleScannerPoly(a, n);
     const rb = alignScannerPolyStart(ra, resampleScannerPoly(b, n));
 
@@ -15274,7 +15306,7 @@ function drawScannerMorphedTerritories(ctx, size, fromPolys, toPolys, progress, 
       dists[k] = d;
       if (d > maxDist) maxDist = d;
     }
-    const LAG = 0.45;
+    const LAG = 0.72;
 
     ctx.beginPath();
     for (let k = 0; k < n; k += 1) {
@@ -15564,7 +15596,9 @@ function renderScannerCanvas() {
       // фигур разное, поэтому обе стороны приводим к общему количеству
       // точек, равномерно разложенных по периметру.
       drawScannerArenaBase(ctx, size);
+      const _morphed = getScannerMorphedPolysAt(_from, _to, shuffleProgress, scannerGridState.shuffleMode);
       drawScannerMorphedTerritories(ctx, size, _from, _to, shuffleProgress, scannerGridState.players || []);
+      drawScannerMorphedBadges(ctx, size, _morphed, scannerGridState.players || [], 1);
     } else if (scannerGridState.shuffleMode === "keep") {
       // Раскладка не менялась — показываем её как есть, без анимации.
       if (scannerGridPreviewCanvasCache?.canvas) {
@@ -15582,7 +15616,11 @@ function renderScannerCanvas() {
         renderScannerActiveTransition(ctx, size, cellSize, shuffleProgress);
       }
     }
-    previewBadgeAlpha = 1 - shuffleProgress;
+    // Раньше значки гасли к концу фазы: в режиме "всё остаётся на месте" они
+    // просто исчезали и появлялись снова, хотя ничего не происходило.
+    // В режиме перетекания они рисуются отдельно, по текущей форме поля,
+    // поэтому общий проход отключаем.
+    previewBadgeAlpha = _canMorph ? 0 : 1;
   } else if (roundStatus === "preparing_next_round") {
     // В preparing_next_round рисуем финальные поля как в finished —
     // чтобы не было паузы с пустым экраном перед переходом в idle
