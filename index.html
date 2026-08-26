@@ -9581,8 +9581,9 @@ function buildScannerPlayersFromFirestore(round, participants) {
         cellOwners: _srvGrid.cellOwners,
         polys: Array.isArray(_srvGrid.polys) ? _srvGrid.polys : [],
         prevPolys: Array.isArray(_srvGrid.prevPolys) ? _srvGrid.prevPolys : [],
-        cuts: Array.isArray(_srvGrid.cuts) ? _srvGrid.cuts : [],
-        prevCuts: Array.isArray(_srvGrid.prevCuts) ? _srvGrid.prevCuts : [],
+        sites: Array.isArray(_srvGrid.sites) ? _srvGrid.sites : [],
+        weights: Array.isArray(_srvGrid.weights) ? _srvGrid.weights : [],
+        prevSites: Array.isArray(_srvGrid.prevSites) ? _srvGrid.prevSites : [],
         shuffleMode: _srvGrid.shuffleMode || "remix",
         totalPlayers: _ordered.length,
         gridVersion: `srv_${round?.id || "round"}_${versionKey}`
@@ -11417,8 +11418,9 @@ function applyScannerServerGrid(data) {
         : null,
       polys: Array.isArray(data.polys) ? data.polys : [],
       prevPolys: Array.isArray(data.prevPolys) ? data.prevPolys : [],
-      cuts: Array.isArray(data.cuts) ? data.cuts : [],
-      prevCuts: Array.isArray(data.prevCuts) ? data.prevCuts : [],
+      sites: Array.isArray(data.sites) ? data.sites : [],
+      weights: Array.isArray(data.weights) ? data.weights : [],
+      prevSites: Array.isArray(data.prevSites) ? data.prevSites : [],
       shuffleMode: data.shuffleMode || "remix",
       players: Array.isArray(data.players) ? data.players : []
     };
@@ -12487,8 +12489,9 @@ function syncScannerDerivedState() {
   // пересчитывалась при добавлении ставки).
   scannerGridState.polys = Array.isArray(finalized.polys) ? finalized.polys : [];
   scannerGridState.prevPolys = Array.isArray(finalized.prevPolys) ? finalized.prevPolys : [];
-  scannerGridState.cuts = Array.isArray(finalized.cuts) ? finalized.cuts : [];
-  scannerGridState.prevCuts = Array.isArray(finalized.prevCuts) ? finalized.prevCuts : [];
+  scannerGridState.sites = Array.isArray(finalized.sites) ? finalized.sites : [];
+  scannerGridState.weights = Array.isArray(finalized.weights) ? finalized.weights : [];
+  scannerGridState.prevSites = Array.isArray(finalized.prevSites) ? finalized.prevSites : [];
   scannerGridState.shuffleMode = finalized.shuffleMode || "remix";
   // Тот же отпечаток, что и у превью: без него холст основной арены тоже
   // не перестраивался при обновлении карты с сервера.
@@ -15415,6 +15418,84 @@ function drawScannerStaticPolys(ctx, size, polys, players) {
   }
 }
 
+// === Жидкая раскладка (та же, что на сервере) ===
+// Каждая точка арены достаётся ближайшему центру с поправкой на вес. Арена в
+// любом кадре поделена ЦЕЛИКОМ, поэтому угол не может на миг достаться соседу.
+// Двигая центры, поля толкают друг друга и меняют форму, не теряя площади.
+function getScannerLiquidCellOf(sites, weights, i) {
+  let cell = [[0, 0], [1, 0], [1, 1], [0, 1]];
+  const si = sites[i];
+  for (let j = 0; j < sites.length; j += 1) {
+    if (i === j || cell.length < 3) continue;
+    const sj = sites[j];
+    const nx = 2 * (sj[0] - si[0]);
+    const ny = 2 * (sj[1] - si[1]);
+    const d = (sj[0] * sj[0] + sj[1] * sj[1] - weights[j])
+            - (si[0] * si[0] + si[1] * si[1] - weights[i]);
+    cell = clipScannerHalfPlane(cell, nx, ny, d);
+  }
+  return cell;
+}
+
+// Веса подбираются поочерёдно делением отрезка пополам: площадь одной ячейки
+// монотонно растёт с её весом, поэтому сходится всегда.
+function solveScannerLiquidWeights(sites, targets, weights, rounds, bisect) {
+  const n = sites.length;
+  const w = (Array.isArray(weights) && weights.length === n) ? weights.slice() : new Array(n).fill(0);
+  const areaOf = (i, wi) => {
+    const old = w[i];
+    w[i] = wi;
+    const c = getScannerLiquidCellOf(sites, w, i);
+    w[i] = old;
+    return c.length >= 3 ? getScannerPolyArea(c) : 0;
+  };
+  for (let r = 0; r < rounds; r += 1) {
+    for (let i = 0; i < n; i += 1) {
+      let lo = w[i] - 0.25;
+      let hi = w[i] + 0.25;
+      let guard = 0;
+      while (areaOf(i, lo) > targets[i] && guard < 30) { lo -= 0.25; guard += 1; }
+      guard = 0;
+      while (areaOf(i, hi) < targets[i] && guard < 30) { hi += 0.25; guard += 1; }
+      for (let k = 0; k < bisect; k += 1) {
+        const m = (lo + hi) / 2;
+        if (areaOf(i, m) < targets[i]) lo = m; else hi = m;
+      }
+      w[i] = (lo + hi) / 2;
+    }
+  }
+  return w;
+}
+
+// Веса переносятся между кадрами: с тёплого старта хватает двух кругов
+// подбора вместо двадцати пяти, и кадр считается за единицы миллисекунд.
+let _scannerLiquidWarmWeights = null;
+let _scannerLiquidWarmKey = "";
+
+function getScannerLiquidFrame(players, fromSites, toSites, targetWeights, progress) {
+  const n = players.length;
+  if (!n || fromSites.length !== n || toSites.length !== n) return null;
+  const total = players.reduce((s, p) => s + Number(p.stake || 0), 0);
+  if (total <= 0) return null;
+  const targets = players.map((p) => Number(p.stake || 0) / total);
+
+  const t = Math.max(0, Math.min(1, progress));
+  const eased = t * t * (3 - 2 * t);
+  const sites = fromSites.map((p, i) => [
+    p[0] + (toSites[i][0] - p[0]) * eased,
+    p[1] + (toSites[i][1] - p[1]) * eased
+  ]);
+
+  const key = `${n}_${fromSites[0][0].toFixed(4)}_${toSites[0][0].toFixed(4)}`;
+  if (_scannerLiquidWarmKey !== key || !_scannerLiquidWarmWeights) {
+    _scannerLiquidWarmKey = key;
+    _scannerLiquidWarmWeights = solveScannerLiquidWeights(sites, targets, null, 20, 26);
+  } else {
+    _scannerLiquidWarmWeights = solveScannerLiquidWeights(sites, targets, _scannerLiquidWarmWeights, 2, 12);
+  }
+  return sites.map((_, i) => getScannerLiquidCellOf(sites, _scannerLiquidWarmWeights, i));
+}
+
 function drawScannerMorphedTerritories(ctx, size, fromPolys, toPolys, progress, players) {
   const _bw = Math.max(11, size * 0.031) + 1;
   const _inner = size - _bw * 2;
@@ -15759,11 +15840,16 @@ function renderScannerCanvas() {
       // фигур разное, поэтому обе стороны приводим к общему количеству
       // точек, равномерно разложенных по периметру.
       drawScannerArenaBase(ctx, size);
-      const _cuts = scannerGridState.cuts || [];
-      const _prevCuts = scannerGridState.prevCuts || [];
-      const _morphed = (_cuts.length && _prevCuts.length)
-        ? getScannerLiquidLayout(scannerGridState.players || [], _prevCuts, _cuts, shuffleProgress)
-        : getScannerMorphedPolysAt(_from, _to, shuffleProgress, scannerGridState.shuffleMode);
+      const _sites = scannerGridState.sites || [];
+      const _prevSites = scannerGridState.prevSites || [];
+      // На последнем кадре берём раскладку СЕРВЕРА: именно по ней считается
+      // победитель, и поля не должны дёрнуться в конце.
+      const _liquid = (shuffleProgress < 0.999 && _sites.length && _prevSites.length)
+        ? getScannerLiquidFrame(scannerGridState.players || [], _prevSites, _sites, scannerGridState.weights || [], shuffleProgress)
+        : null;
+      const _morphed = _liquid
+        || (shuffleProgress >= 0.999 ? (scannerGridState.polys || [])
+          : getScannerMorphedPolysAt(_from, _to, shuffleProgress, scannerGridState.shuffleMode));
       drawScannerStaticPolys(ctx, size, _morphed, scannerGridState.players || []);
       drawScannerMorphedBadges(ctx, size, _morphed, scannerGridState.players || [], 1);
     } else if (scannerGridState.shuffleMode === "keep") {
@@ -15843,13 +15929,14 @@ function renderScannerCanvas() {
   // поля. Раньше сюда всегда уходила финальная раскладка, и новый контур был
   // виден с первого кадра, хотя заливка ещё только перетекала.
   const _borderPolys = (roundStatus === "shuffling")
-    ? (((scannerGridState.cuts || []).length && (scannerGridState.prevCuts || []).length)
-      ? getScannerLiquidLayout(
+    ? (((scannerGridState.sites || []).length && (scannerGridState.prevSites || []).length)
+      ? (getScannerLiquidFrame(
           scannerGridState.players || [],
-          scannerGridState.prevCuts,
-          scannerGridState.cuts,
+          scannerGridState.prevSites,
+          scannerGridState.sites,
+          scannerGridState.weights || [],
           getScannerShuffleTransitionProgress(roundData)
-        )
+        ) || (scannerGridState.polys || []))
       : getScannerMorphedPolysAt(
           scannerGridState.prevPolys || [],
           scannerGridState.polys || [],
