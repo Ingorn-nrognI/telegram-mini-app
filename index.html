@@ -14989,11 +14989,20 @@ function drawScannerPlayerBadge(ctx, zone, size, alpha = 1) {
   // заметно меньший кружок именно для малых долей, а при 50%+ поля результат
   // не меняется (там shareT уже близко к 1).
   const eased = shareT * shareT;
-  const radius = 14 + (76 - 14) * eased;
+  let radius = 14 + (76 - 14) * eased;
+  // Доля банка не говорит ничего о ФОРМЕ поля: у крупного игрока с узким
+  // клином кружок выходил шире самого поля. anchorRoom — реальный запас от
+  // найденной точки до границ поля, поэтому он и есть потолок радиуса.
+  const room = Number(zone.anchorRoom) || 0;
+  if (room > 0) {
+    radius = Math.min(radius, room * size * 0.82);
+  }
   if (radius < 14) return;
 
-  const x = Math.max(radius + 12, Math.min(size - radius - 12, zone.centerX * size));
-  const y = Math.max(radius + 12, Math.min(size - radius - 12, zone.centerY * size));
+  // Зажим оставляем только по краям арены, и то мягкий: раньше он сдвигал
+  // значок с найденного места, и тот мог заехать на чужое поле.
+  const x = Math.max(radius + 4, Math.min(size - radius - 4, zone.centerX * size));
+  const y = Math.max(radius + 4, Math.min(size - radius - 4, zone.centerY * size));
   const player = zone.player;
   const avatarEntry = player.avatar ? getScannerAvatarEntry(player.avatar) : null;
 
