@@ -9580,6 +9580,8 @@ function buildScannerPlayersFromFirestore(round, participants) {
         totalPot: _srvPot,
         cellOwners: _srvGrid.cellOwners,
         polys: Array.isArray(_srvGrid.polys) ? _srvGrid.polys : [],
+        prevPolys: Array.isArray(_srvGrid.prevPolys) ? _srvGrid.prevPolys : [],
+        shuffleMode: _srvGrid.shuffleMode || "remix",
         totalPlayers: _ordered.length,
         gridVersion: `srv_${round?.id || "round"}_${versionKey}`
       };
@@ -10984,8 +10986,10 @@ function getScannerShuffleProgress(round) {
 
 function getScannerShuffleTransitionProgress(round) {
   const totalProgress = getScannerShuffleProgress(round);
-  const transitionShare = clampScannerNumber(SCANNER_PREVIEW_TRANSITION_MS / Math.max(1, SCANNER_SHUFFLING_MS), 0.05, 1);
-  return smoothstep(0, transitionShare, totalProgress);
+  // Перетекание занимает ВСЮ фазу перемешивания: к её концу поля уже стоят
+  // на новых местах. Раньше анимация укладывалась в первую четверть, а
+  // остаток времени экран стоял неподвижно.
+  return smoothstep(0, 1, totalProgress);
 }
 
 function getScannerPreparingProgress(round) {
@@ -11410,6 +11414,8 @@ function applyScannerServerGrid(data) {
         ? decodeScannerOwnersRle(data.previewCellsRle)
         : null,
       polys: Array.isArray(data.polys) ? data.polys : [],
+      prevPolys: Array.isArray(data.prevPolys) ? data.prevPolys : [],
+      shuffleMode: data.shuffleMode || "remix",
       players: Array.isArray(data.players) ? data.players : []
     };
   }
@@ -12476,6 +12482,8 @@ function syncScannerDerivedState() {
   // массив и откатывалась на клетки (лесенка по краям, заливка не
   // пересчитывалась при добавлении ставки).
   scannerGridState.polys = Array.isArray(finalized.polys) ? finalized.polys : [];
+  scannerGridState.prevPolys = Array.isArray(finalized.prevPolys) ? finalized.prevPolys : [];
+  scannerGridState.shuffleMode = finalized.shuffleMode || "remix";
   // Тот же отпечаток, что и у превью: без него холст основной арены тоже
   // не перестраивался при обновлении карты с сервера.
   const _gridPolySig = scannerGridState.polys.length
@@ -15111,6 +15119,63 @@ function getScannerShuffleVisualOwners(progress) {
   return result;
 }
 
+// Раскладывает контур многоугольника на count точек, равномерно по периметру.
+// Нужно, чтобы у старой и новой фигуры совпало число вершин: треугольник
+// может превращаться в пятиугольник, а перетекать можно только точка в точку.
+function resampleScannerPoly(poly, count) {
+  const pts = [];
+  let perim = 0;
+  const seg = [];
+  for (let i = 0; i < poly.length; i += 1) {
+    const [ax, ay] = poly[i];
+    const [bx, by] = poly[(i + 1) % poly.length];
+    const len = Math.hypot(bx - ax, by - ay);
+    seg.push(len);
+    perim += len;
+  }
+  if (perim <= 0) return new Array(count).fill(poly[0] || [0, 0]);
+  let target = 0;
+  let idx = 0;
+  let acc = 0;
+  const stepLen = perim / count;
+  for (let k = 0; k < count; k += 1) {
+    while (idx < seg.length - 1 && acc + seg[idx] < target) { acc += seg[idx]; idx += 1; }
+    const [ax, ay] = poly[idx];
+    const [bx, by] = poly[(idx + 1) % poly.length];
+    const t = seg[idx] > 0 ? (target - acc) / seg[idx] : 0;
+    pts.push([ax + (bx - ax) * t, ay + (by - ay) * t]);
+    target += stepLen;
+  }
+  return pts;
+}
+
+function drawScannerMorphedTerritories(ctx, size, fromPolys, toPolys, progress, players) {
+  const _bw = Math.max(11, size * 0.031) + 1;
+  const _inner = size - _bw * 2;
+  const _px = (u) => _bw + u * _inner;
+  const t = Math.max(0, Math.min(1, progress));
+  for (let i = 0; i < toPolys.length; i += 1) {
+    const a = fromPolys[i];
+    const b = toPolys[i];
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length < 3 || b.length < 3 || !players[i]) continue;
+    const n = Math.max(a.length, b.length, 24);
+    const ra = resampleScannerPoly(a, n);
+    const rb = resampleScannerPoly(b, n);
+    ctx.beginPath();
+    for (let k = 0; k < n; k += 1) {
+      const x = _px(ra[k][0] + (rb[k][0] - ra[k][0]) * t);
+      const y = _px(ra[k][1] + (rb[k][1] - ra[k][1]) * t);
+      if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = players[i].color;
+    ctx.fill();
+    ctx.strokeStyle = players[i].color;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
 function renderScannerActiveTransition(ctx, size, cellSize, progress) {
   if (scannerGridPreviewCanvasCache?.canvas) {
     ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
@@ -15355,15 +15420,32 @@ function renderScannerCanvas() {
     previewBadgeAlpha = 1;
   } else if (roundStatus === "shuffling") {
     const shuffleProgress = getScannerShuffleTransitionProgress(roundData);
-    if (scannerGridPreviewCanvasCache?.canvas) {
-      ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
-    }
-    if (shuffleProgress >= 0.999) {
-      if (scannerGridCache?.canvas) {
-        ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
+    const _from = scannerGridState.prevPolys || [];
+    const _to = scannerGridState.polys || [];
+    const _canMorph = _from.length && _to.length && _from.length === _to.length
+      && scannerGridState.shuffleMode !== "keep";
+    if (_canMorph) {
+      // Поля перетекают вершинами из старой формы в новую. Число углов у
+      // фигур разное, поэтому обе стороны приводим к общему количеству
+      // точек, равномерно разложенных по периметру.
+      drawScannerArenaBase(ctx, size);
+      drawScannerMorphedTerritories(ctx, size, _from, _to, shuffleProgress, scannerGridState.players || []);
+    } else if (scannerGridState.shuffleMode === "keep") {
+      // Раскладка не менялась — показываем её как есть, без анимации.
+      if (scannerGridPreviewCanvasCache?.canvas) {
+        ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
       }
     } else {
-      renderScannerActiveTransition(ctx, size, cellSize, shuffleProgress);
+      if (scannerGridPreviewCanvasCache?.canvas) {
+        ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
+      }
+      if (shuffleProgress >= 0.999) {
+        if (scannerGridCache?.canvas) {
+          ctx.drawImage(scannerGridCache.canvas, 0, 0, size, size);
+        }
+      } else {
+        renderScannerActiveTransition(ctx, size, cellSize, shuffleProgress);
+      }
     }
     previewBadgeAlpha = 1 - shuffleProgress;
   } else if (roundStatus === "preparing_next_round") {
