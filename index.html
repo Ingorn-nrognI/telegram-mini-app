@@ -14220,11 +14220,10 @@ function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players, poly
     const _bw = Math.max(11, size * 0.031) + 1;
     const _inner = size - _bw * 2;
     const _px = (u) => _bw + u * _inner;
+    const _roundness = Number(scannerGridState.morphRoundness) || 0;
+    const _pathPts = myPoly.map((pt) => [_px(pt[0]), _px(pt[1])]);
     const _path = () => {
-      ctx.beginPath();
-      ctx.moveTo(_px(myPoly[0][0]), _px(myPoly[0][1]));
-      for (let v = 1; v < myPoly.length; v += 1) ctx.lineTo(_px(myPoly[v][0]), _px(myPoly[v][1]));
-      ctx.closePath();
+      buildScannerRoundedPath(ctx, _pathPts, _roundness);
     };
     ctx.save();
     _path();
@@ -15375,40 +15374,60 @@ function getScannerLiquidLayout(players, prevCuts, cuts, progress) {
 // зоны, как у полигонов с сервера) — без интерполяции между двумя формами:
 // вызывающий код передаёт СЮДА уже вычисленную для текущего кадра форму
 // (например через getScannerLiquidLayout), поэтому здесь только заливка.
-function drawScannerStaticPolys(ctx, size, polys, players) {
+// Строит контур со скруглёнными углами. roundness от 0 (острые углы) до 1
+// (максимально круглая форма). Радиус на каждом углу ограничен половиной
+// более короткой из двух соседних сторон, иначе контур сам себя вывернет.
+function buildScannerRoundedPath(ctx, pts, roundness) {
+  const n = pts.length;
+  if (n < 3 || roundness <= 0.001) {
+    ctx.beginPath();
+    for (let i = 0; i < n; i += 1) {
+      if (i === 0) ctx.moveTo(pts[i][0], pts[i][1]); else ctx.lineTo(pts[i][0], pts[i][1]);
+    }
+    ctx.closePath();
+    return;
+  }
+  ctx.beginPath();
+  for (let i = 0; i < n; i += 1) {
+    const prev = pts[(i - 1 + n) % n];
+    const cur = pts[i];
+    const next = pts[(i + 1) % n];
+    const d1 = Math.hypot(cur[0] - prev[0], cur[1] - prev[1]);
+    const d2 = Math.hypot(next[0] - cur[0], next[1] - cur[1]);
+    const r = Math.min(d1, d2) * 0.5 * roundness;
+    const p1 = [cur[0] + (prev[0] - cur[0]) * (d1 > 0 ? r / d1 : 0), cur[1] + (prev[1] - cur[1]) * (d1 > 0 ? r / d1 : 0)];
+    const p2 = [cur[0] + (next[0] - cur[0]) * (d2 > 0 ? r / d2 : 0), cur[1] + (next[1] - cur[1]) * (d2 > 0 ? r / d2 : 0)];
+    if (i === 0) ctx.moveTo(p1[0], p1[1]); else ctx.lineTo(p1[0], p1[1]);
+    ctx.quadraticCurveTo(cur[0], cur[1], p2[0], p2[1]);
+  }
+  ctx.closePath();
+}
+
+function drawScannerStaticPolys(ctx, size, polys, players, roundness = 0) {
   const _bw = Math.max(11, size * 0.031) + 1;
   const _inner = size - _bw * 2;
   const _px = (u) => _bw + u * _inner;
 
-  let bigIndex = -1;
-  let bigArea = -1;
+  // Раньше крупнейший игрок заливался прямоугольником на всю арену, а
+  // остальные рисовались поверх. При жидкой раскладке это лишнее: арена уже
+  // поделена целиком, а такая заливка показывала его цвет там, где поле ещё
+  // не дошло. Рисуем всех одинаково.
   for (let i = 0; i < polys.length; i += 1) {
-    if (!Array.isArray(polys[i]) || polys[i].length < 3 || !players[i]) continue;
-    const area = getScannerPolyArea(polys[i]);
-    if (area > bigArea) { bigArea = area; bigIndex = i; }
-  }
-  if (bigIndex >= 0) {
-    ctx.fillStyle = getScannerFieldPaint(ctx, players[bigIndex].color, _bw, _bw + _inner, _bw + _inner, _bw);
-    ctx.fillRect(_bw, _bw, _inner, _inner);
-  }
-
-  for (let i = 0; i < polys.length; i += 1) {
-    if (i === bigIndex) continue;
     const poly = polys[i];
     if (!Array.isArray(poly) || poly.length < 3 || !players[i]) continue;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    ctx.beginPath();
+    const pts = [];
     for (let v = 0; v < poly.length; v += 1) {
       const x = _px(poly[v][0]);
       const y = _px(poly[v][1]);
-      if (v === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      pts.push([x, y]);
       if (x < minX) minX = x;
       if (x > maxX) maxX = x;
       if (y < minY) minY = y;
       if (y > maxY) maxY = y;
     }
-    ctx.closePath();
+    buildScannerRoundedPath(ctx, pts, roundness);
     const paint = getScannerFieldPaint(ctx, players[i].color, minX, maxY, maxX, minY);
     ctx.fillStyle = paint;
     ctx.fill();
@@ -15850,9 +15869,16 @@ function renderScannerCanvas() {
       const _morphed = _liquid
         || (shuffleProgress >= 0.999 ? (scannerGridState.polys || [])
           : getScannerMorphedPolysAt(_from, _to, shuffleProgress, scannerGridState.shuffleMode));
-      drawScannerStaticPolys(ctx, size, _morphed, scannerGridState.players || []);
+      // Капля: в покое углы острые, в движении форма скругляется и к приходу
+      // на место снова «затекает» в свои углы — как вода принимает форму
+      // посудины. Максимум скругления приходится на середину пути.
+      const _round = Math.sin(Math.PI * Math.max(0, Math.min(1, shuffleProgress))) * 0.85;
+      scannerGridState.morphRoundness = _round;
+      drawScannerStaticPolys(ctx, size, _morphed, scannerGridState.players || [], _round);
       drawScannerMorphedBadges(ctx, size, _morphed, scannerGridState.players || [], 1);
+      scannerGridState.morphRoundness = _round;
     } else if (scannerGridState.shuffleMode === "keep") {
+      scannerGridState.morphRoundness = 0;
       // Раскладка не менялась — показываем её как есть, без анимации.
       if (scannerGridPreviewCanvasCache?.canvas) {
         ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
