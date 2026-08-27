@@ -16110,6 +16110,8 @@ function renderScannerCanvas() {
       const _soft = Math.sin(Math.PI * Math.max(0, Math.min(1, shuffleProgress)));
       scannerGridState.morphRoundness = 0;
       const _liqSites = _liquid ? _liquidSitesUsed : null;
+      // Значки рисуются ПОСЛЕ заливки: раньше растровая арена накрывала их
+      // собой, и аватарки пропадали на всё время перемешивания.
       const _drawn = (_liqSites && _liquidWeightsUsed)
         ? drawScannerLiquidRaster(ctx, size, _liqSites, _liquidWeightsUsed, scannerGridState.players || [],
             0.0006 + _soft * 0.004,
@@ -16142,6 +16144,13 @@ function renderScannerCanvas() {
     // В режиме перетекания они рисуются отдельно, по текущей форме поля,
     // поэтому общий проход отключаем.
     previewBadgeAlpha = _canMorph ? 0 : 1;
+    // Течение арены слегка ведёт луч за собой: поля будто подталкивают его,
+    // пока перетекают, а к концу фазы он возвращается ровно на своё место.
+    // Само вращение лучей вокруг кружка при этом не трогается.
+    scannerGridState.shuffleBeamWarp = _canMorph
+      ? Math.sin(Math.PI * Math.max(0, Math.min(1, shuffleProgress))) * 0.10
+      : 0;
+    scannerGridState.shuffleBeamPhase = shuffleProgress * 5.0;
   } else if (roundStatus === "preparing_next_round") {
     // В preparing_next_round рисуем финальные поля как в finished —
     // чтобы не было паузы с пустым экраном перед переходом в idle
@@ -16179,7 +16188,20 @@ function renderScannerCanvas() {
     beamRenderKey,
     now
   );
-  const visualBeamSample = beamSample || null;
+  let visualBeamSample = beamSample || null;
+  // Во время перемешивания поля будто подталкивают луч: он ведётся тем же
+  // течением, которым изгибается арена, и к концу фазы возвращается ровно на
+  // своё место — сдвиг сходит к нулю вместе с течением. Вращение лучей вокруг
+  // кружка при этом не трогается, оно живёт отдельно.
+  const _beamWarp = Number(scannerGridState.shuffleBeamWarp) || 0;
+  if (visualBeamSample && _beamWarp > 0.0001) {
+    const _bph = Number(scannerGridState.shuffleBeamPhase) || 0;
+    const _v = scannerStreamVel(visualBeamSample.x, visualBeamSample.y, _bph);
+    visualBeamSample = Object.assign({}, visualBeamSample, {
+      x: Math.max(0.02, Math.min(0.98, visualBeamSample.x + _v[0] * _beamWarp)),
+      y: Math.max(0.02, Math.min(0.98, visualBeamSample.y + _v[1] * _beamWarp))
+    });
+  }
   if (visualBeamSample) {
     scannerLastBeamSample = visualBeamSample;
   }
@@ -16196,7 +16218,7 @@ function renderScannerCanvas() {
   // Во время перемешивания рамка обязана идти по ТЕКУЩЕЙ, промежуточной форме
   // поля. Раньше сюда всегда уходила финальная раскладка, и новый контур был
   // виден с первого кадра, хотя заливка ещё только перетекала.
-  const _borderPolys = (roundStatus === "shuffling")
+  const _borderPolys = (roundStatus === "shuffling" && scannerGridState.shuffleMode !== "keep")
     ? (((scannerGridState.sites || []).length && (scannerGridState.prevSites || []).length)
       ? (getScannerLiquidFrame(
           scannerGridState.players || [],
