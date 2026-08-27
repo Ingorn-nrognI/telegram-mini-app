@@ -15273,8 +15273,10 @@ function drawScannerMorphedBadges(ctx, size, polys, players, alpha) {
     if (!Array.isArray(poly) || poly.length < 3 || !players[i]) continue;
     const anchor = findScannerPolyAnchor(poly);
     if (!anchor) continue;
+    // Порог снижен: аватарка должна ехать вместе с полем у ВСЕХ игроков,
+    // а не только у тех, чьё поле сейчас достаточно широкое.
     const room = anchor.radius * SPAN;
-    if (room < 0.045) continue;
+    if (room < 0.012) continue;
     drawScannerPlayerBadge(ctx, {
       index: i,
       share: total > 0 ? areas[i] / total : 0,
@@ -15403,6 +15405,84 @@ function buildScannerRoundedPath(ctx, pts, roundness) {
   ctx.closePath();
 }
 
+// Цвет hsl(H S% L%) в rgb — для попиксельного смешивания на границе.
+function parseScannerHslToRgb(color) {
+  const m = /hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)/i.exec(String(color || ""));
+  if (!m) return [90, 110, 200];
+  const h = parseFloat(m[1]) / 360;
+  const s = parseFloat(m[2]) / 100;
+  const l = parseFloat(m[3]) / 100;
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const hue = (t) => {
+    let x = t;
+    if (x < 0) x += 1;
+    if (x > 1) x -= 1;
+    if (x < 1 / 6) return p + (q - p) * 6 * x;
+    if (x < 1 / 2) return q;
+    if (x < 2 / 3) return p + (q - p) * (2 / 3 - x) * 6;
+    return p;
+  };
+  return [
+    Math.round(hue(h + 1 / 3) * 255),
+    Math.round(hue(h) * 255),
+    Math.round(hue(h - 1 / 3) * 255)
+  ];
+}
+
+let _scannerLiquidRaster = null;
+
+function drawScannerLiquidRaster(ctx, size, sites, weights, players, softness) {
+  const n = sites.length;
+  if (!n || weights.length !== n) return false;
+  const RES = 200;
+  if (!_scannerLiquidRaster || _scannerLiquidRaster.width !== RES) {
+    _scannerLiquidRaster = document.createElement("canvas");
+    _scannerLiquidRaster.width = RES;
+    _scannerLiquidRaster.height = RES;
+  }
+  const rc = _scannerLiquidRaster.getContext("2d");
+  const img = rc.createImageData(RES, RES);
+  const data = img.data;
+  const cols = players.map((p) => parseScannerHslToRgb(p && p.color));
+  const k = Math.max(0.0002, softness);
+
+  for (let py = 0; py < RES; py += 1) {
+    const y = (py + 0.5) / RES;
+    for (let px = 0; px < RES; px += 1) {
+      const x = (px + 0.5) / RES;
+      let b1 = Infinity, b2 = Infinity, i1 = 0, i2 = 0;
+      for (let i = 0; i < n; i += 1) {
+        const dx = x - sites[i][0];
+        const dy = y - sites[i][1];
+        const d = dx * dx + dy * dy - weights[i];
+        if (d < b1) { b2 = b1; i2 = i1; b1 = d; i1 = i; }
+        else if (d < b2) { b2 = d; i2 = i; }
+      }
+      let t = (b2 - b1) / k;
+      if (t > 1) t = 1;
+      const mix = (1 - t) * 0.5;
+      const c1 = cols[i1] || [90, 110, 200];
+      const c2 = cols[i2] || c1;
+      const o = (py * RES + px) * 4;
+      data[o] = c1[0] + (c2[0] - c1[0]) * mix;
+      data[o + 1] = c1[1] + (c2[1] - c1[1]) * mix;
+      data[o + 2] = c1[2] + (c2[2] - c1[2]) * mix;
+      data[o + 3] = 255;
+    }
+  }
+  rc.putImageData(img, 0, 0);
+
+  const _bw = Math.max(11, size * 0.031) + 1;
+  const _inner = size - _bw * 2;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(_scannerLiquidRaster, 0, 0, RES, RES, _bw, _bw, _inner, _inner);
+  ctx.restore();
+  return true;
+}
+
 function drawScannerStaticPolys(ctx, size, polys, players, roundness = 0) {
   const _bw = Math.max(11, size * 0.031) + 1;
   const _inner = size - _bw * 2;
@@ -15512,8 +15592,13 @@ function getScannerLiquidFrame(players, fromSites, toSites, targetWeights, progr
   } else {
     _scannerLiquidWarmWeights = solveScannerLiquidWeights(sites, targets, _scannerLiquidWarmWeights, 2, 12);
   }
+  _scannerLiquidSitesUsed = sites;
   return sites.map((_, i) => getScannerLiquidCellOf(sites, _scannerLiquidWarmWeights, i));
 }
+
+let _scannerLiquidSitesUsed = null;
+function getScannerLiquidFrameSites() { return _scannerLiquidSitesUsed; }
+function getScannerLiquidFrameWeights() { return _scannerLiquidWarmWeights; }
 
 function drawScannerMorphedTerritories(ctx, size, fromPolys, toPolys, progress, players) {
   const _bw = Math.max(11, size * 0.031) + 1;
@@ -15869,12 +15954,21 @@ function renderScannerCanvas() {
       const _morphed = _liquid
         || (shuffleProgress >= 0.999 ? (scannerGridState.polys || [])
           : getScannerMorphedPolysAt(_from, _to, shuffleProgress, scannerGridState.shuffleMode));
+      const _liquidSitesUsed = _liquid ? getScannerLiquidFrameSites() : null;
+      const _liquidWeightsUsed = _liquid ? getScannerLiquidFrameWeights() : null;
       // Капля: в покое углы острые, в движении форма скругляется и к приходу
       // на место снова «затекает» в свои углы — как вода принимает форму
       // посудины. Максимум скругления приходится на середину пути.
-      const _round = Math.sin(Math.PI * Math.max(0, Math.min(1, shuffleProgress))) * 0.85;
-      scannerGridState.morphRoundness = _round;
-      drawScannerStaticPolys(ctx, size, _morphed, scannerGridState.players || [], _round);
+      // Мягкость границы максимальна в середине пути и сходит к нулю к концу,
+      // чтобы поля «затекли» в свои чёткие формы, как вода принимает форму
+      // посудины.
+      const _soft = Math.sin(Math.PI * Math.max(0, Math.min(1, shuffleProgress)));
+      scannerGridState.morphRoundness = 0;
+      const _liqSites = _liquid ? _liquidSitesUsed : null;
+      const _drawn = (_liqSites && _liquidWeightsUsed)
+        ? drawScannerLiquidRaster(ctx, size, _liqSites, _liquidWeightsUsed, scannerGridState.players || [], 0.0006 + _soft * 0.010)
+        : false;
+      if (!_drawn) drawScannerStaticPolys(ctx, size, _morphed, scannerGridState.players || [], 0);
       drawScannerMorphedBadges(ctx, size, _morphed, scannerGridState.players || [], 1);
       scannerGridState.morphRoundness = _round;
     } else if (scannerGridState.shuffleMode === "keep") {
