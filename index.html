@@ -15431,6 +15431,50 @@ function parseScannerHslToRgb(color) {
 }
 
 let _scannerLiquidRaster = null;
+let _scannerRadiiCache = { key: "", from: null, to: null };
+
+// Доля арены, достающаяся каждому полю при заданных радиусах. Считается по
+// сетке — этого достаточно, чтобы подобрать радиусы.
+function measureScannerLiquidShares(sites, radii, n) {
+  const RES = 56;
+  const counts = new Array(n).fill(0);
+  for (let py = 0; py < RES; py += 1) {
+    const y = (py + 0.5) / RES;
+    for (let px = 0; px < RES; px += 1) {
+      const x = (px + 0.5) / RES;
+      let best = Infinity, bi = 0;
+      for (let i = 0; i < n; i += 1) {
+        const dx = x - sites[i][0];
+        const dy = y - sites[i][1];
+        const d = Math.sqrt(dx * dx + dy * dy) - radii[i];
+        if (d < best) { best = d; bi = i; }
+      }
+      counts[bi] += 1;
+    }
+  }
+  const total = RES * RES;
+  return counts.map((c) => c / total);
+}
+
+// Радиусы подбираются делением отрезка пополам: площадь поля монотонно
+// растёт вместе с его радиусом, поэтому сходится всегда.
+function solveScannerLiquidRadii(sites, targets) {
+  const n = sites.length;
+  const r = new Array(n).fill(0);
+  for (let round = 0; round < 6; round += 1) {
+    for (let i = 0; i < n; i += 1) {
+      let lo = -0.6, hi = 0.6;
+      for (let k = 0; k < 14; k += 1) {
+        const m = (lo + hi) / 2;
+        r[i] = m;
+        const share = measureScannerLiquidShares(sites, r, n)[i];
+        if (share < targets[i]) lo = m; else hi = m;
+      }
+      r[i] = (lo + hi) / 2;
+    }
+  }
+  return r;
+}
 
 function drawScannerLiquidRaster(ctx, size, sites, weights, players, softness) {
   const n = sites.length;
@@ -15455,7 +15499,11 @@ function drawScannerLiquidRaster(ctx, size, sites, weights, players, softness) {
       for (let i = 0; i < n; i += 1) {
         const dx = x - sites[i][0];
         const dy = y - sites[i][1];
-        const d = dx * dx + dy * dy - weights[i];
+        // Расстояние с добавкой радиуса вместо его квадрата: граница между
+        // полями получается ДУГОЙ, а не прямой. Сильное поле выпучивается в
+        // слабое — у одного сторона выпуклая, у другого вогнутая, как у
+        // соприкасающихся капель.
+        const d = Math.sqrt(dx * dx + dy * dy) - weights[i];
         if (d < b1) { b2 = b1; i2 = i1; b1 = d; i1 = i; }
         else if (d < b2) { b2 = d; i2 = i; }
       }
@@ -15954,8 +16002,25 @@ function renderScannerCanvas() {
       const _morphed = _liquid
         || (shuffleProgress >= 0.999 ? (scannerGridState.polys || [])
           : getScannerMorphedPolysAt(_from, _to, shuffleProgress, scannerGridState.shuffleMode));
+      // Радиусы считаются ДВАЖДЫ за перемешивание — для начальной и конечной
+      // раскладки — и ведутся между ними. Подбирать их каждый кадр слишком
+      // дорого, а так поля всю дорогу примерно держат свои доли.
+      const _plist = scannerGridState.players || [];
+      const _ptotal = _plist.reduce((s, p) => s + Number(p.stake || 0), 0);
+      const _targets = _ptotal > 0 ? _plist.map((p) => Number(p.stake || 0) / _ptotal) : [];
+      const _rkey = `${_prevSites.length}_${_sites.length}_${_ptotal.toFixed(2)}`;
+      if (_liquid && _targets.length && _scannerRadiiCache.key !== _rkey) {
+        _scannerRadiiCache = {
+          key: _rkey,
+          from: solveScannerLiquidRadii(_prevSites, _targets),
+          to: solveScannerLiquidRadii(_sites, _targets)
+        };
+      }
       const _liquidSitesUsed = _liquid ? getScannerLiquidFrameSites() : null;
-      const _liquidWeightsUsed = _liquid ? getScannerLiquidFrameWeights() : null;
+      const _e = shuffleProgress * shuffleProgress * (3 - 2 * shuffleProgress);
+      const _liquidWeightsUsed = (_liquid && _scannerRadiiCache.from)
+        ? _scannerRadiiCache.from.map((v, i) => v + (_scannerRadiiCache.to[i] - v) * _e)
+        : null;
       // Капля: в покое углы острые, в движении форма скругляется и к приходу
       // на место снова «затекает» в свои углы — как вода принимает форму
       // посудины. Максимум скругления приходится на середину пути.
