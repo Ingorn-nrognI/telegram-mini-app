@@ -16120,7 +16120,7 @@ function renderScannerCanvas() {
         : false;
       if (!_drawn) drawScannerStaticPolys(ctx, size, _morphed, scannerGridState.players || [], 0);
       drawScannerMorphedBadges(ctx, size, _morphed, scannerGridState.players || [], 1);
-      scannerGridState.morphRoundness = _round;
+      scannerGridState.morphRoundness = 0;
     } else if (scannerGridState.shuffleMode === "keep") {
       scannerGridState.morphRoundness = 0;
       // Раскладка не менялась — показываем её как есть, без анимации.
@@ -16144,22 +16144,6 @@ function renderScannerCanvas() {
     // В режиме перетекания они рисуются отдельно, по текущей форме поля,
     // поэтому общий проход отключаем.
     previewBadgeAlpha = _canMorph ? 0 : 1;
-    // ВРЕМЕННАЯ ДИАГНОСТИКА — удалить после разбора.
-    if (!window._shufLog || Date.now() - window._shufLog > 400) {
-      window._shufLog = Date.now();
-      console.log("[SHUF]",
-        "прогресс", shuffleProgress.toFixed(2),
-        "| режим", scannerGridState.shuffleMode,
-        "| перетекание", _canMorph,
-        "| prevPolys", (scannerGridState.prevPolys || []).length,
-        "| polys", (scannerGridState.polys || []).length,
-        "| sites", (scannerGridState.sites || []).length,
-        "| prevSites", (scannerGridState.prevSites || []).length,
-        "| растр", _drawn,
-        "| игроков", (scannerGridState.players || []).length,
-        "| зон", (scannerGridState.previewZones || []).length,
-        "| луч", beamSample ? "есть" : "НЕТ");
-    }
     // Течение арены слегка ведёт луч за собой: поля будто подталкивают его,
     // пока перетекают, а к концу фазы он возвращается ровно на своё место.
     // Само вращение лучей вокруг кружка при этом не трогается.
