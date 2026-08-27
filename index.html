@@ -15713,6 +15713,15 @@ function getScannerLiquidFrame(players, fromSites, toSites, targetWeights, progr
     ];
   });
 
+  // Функция вызывается ДВАЖДЫ за кадр — для заливки и для рамки. Раньше
+  // каждый вызов доводил веса заново и перезаписывал точки: заливка рисовалась
+  // по одному состоянию, рамка по другому, поэтому поле прыгало, а рамка
+  // плыла отдельно. Считаем один раз на кадр, оба берут готовое.
+  const frameKey = `${n}_${fromSites[0][0].toFixed(4)}_${toSites[0][0].toFixed(4)}_${t.toFixed(5)}`;
+  if (_scannerLiquidFrameKey === frameKey && _scannerLiquidFrameCells) {
+    return _scannerLiquidFrameCells;
+  }
+
   const key = `${n}_${fromSites[0][0].toFixed(4)}_${toSites[0][0].toFixed(4)}`;
   if (_scannerLiquidWarmKey !== key || !_scannerLiquidWarmWeights) {
     _scannerLiquidWarmKey = key;
@@ -15721,8 +15730,13 @@ function getScannerLiquidFrame(players, fromSites, toSites, targetWeights, progr
     _scannerLiquidWarmWeights = solveScannerLiquidWeights(sites, targets, _scannerLiquidWarmWeights, 2, 12);
   }
   _scannerLiquidSitesUsed = sites;
-  return sites.map((_, i) => getScannerLiquidCellOf(sites, _scannerLiquidWarmWeights, i));
+  _scannerLiquidFrameKey = frameKey;
+  _scannerLiquidFrameCells = sites.map((_, i) => getScannerLiquidCellOf(sites, _scannerLiquidWarmWeights, i));
+  return _scannerLiquidFrameCells;
 }
+
+let _scannerLiquidFrameKey = "";
+let _scannerLiquidFrameCells = null;
 
 let _scannerLiquidSitesUsed = null;
 function getScannerLiquidFrameSites() { return _scannerLiquidSitesUsed; }
