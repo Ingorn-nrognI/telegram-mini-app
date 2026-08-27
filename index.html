@@ -15690,11 +15690,28 @@ function getScannerLiquidFrame(players, fromSites, toSites, targetWeights, progr
   const targets = players.map((p) => Number(p.stake || 0) / total);
 
   const t = Math.max(0, Math.min(1, progress));
-  const eased = t * t * (3 - 2 * t);
-  const sites = fromSites.map((p, i) => [
-    p[0] + (toSites[i][0] - p[0]) * eased,
-    p[1] + (toSites[i][1] - p[1]) * eased
-  ]);
+  // У каждого поля свой характер: одно трогается раньше и идёт резвее, другое
+  // раскачивается дольше, третье слегка уводит в сторону по дуге. Всё это
+  // выводится из координат самой точки, поэтому у всех игроков картинка
+  // одинаковая, но поля движутся по-разному.
+  const sites = fromSites.map((p, i) => {
+    const seed = Math.abs(Math.sin((p[0] * 12.9898 + p[1] * 78.233 + i * 3.71) * 43758.5453));
+    const seed2 = Math.abs(Math.sin((p[1] * 39.346 + p[0] * 11.135 + i * 7.13) * 24634.6345));
+    // Задержка старта и скорость — свои у каждого.
+    const lag = seed * 0.22;
+    const speed = 0.9 + seed2 * 0.45;
+    let tk = (t - lag) / Math.max(0.0001, 1 - lag);
+    tk = Math.max(0, Math.min(1, tk * speed));
+    const e = tk * tk * (3 - 2 * tk);
+    const dx = toSites[i][0] - p[0];
+    const dy = toSites[i][1] - p[1];
+    // Лёгкая дуга поперёк пути: поле не едет по линейке, а обходит по кривой.
+    const bow = (seed2 - 0.5) * 0.34 * Math.sin(Math.PI * tk);
+    return [
+      p[0] + dx * e - dy * bow,
+      p[1] + dy * e + dx * bow
+    ];
+  });
 
   const key = `${n}_${fromSites[0][0].toFixed(4)}_${toSites[0][0].toFixed(4)}`;
   if (_scannerLiquidWarmKey !== key || !_scannerLiquidWarmWeights) {
