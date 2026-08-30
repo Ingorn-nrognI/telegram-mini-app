@@ -15319,6 +15319,10 @@ function drawScannerMorphedBadges(ctx, size, polys, players, alpha) {
     if (room < 0.012) continue;
     drawScannerPlayerBadge(ctx, {
       index: i,
+      // Без этого поля значок молча не рисовался: функция первым делом
+      // проверяет zone.player и выходит, если его нет. Отсюда и пропажа
+      // аватарок на всё время перетекания.
+      player: players[i],
       share: total > 0 ? areas[i] / total : 0,
       centerX: PAD + anchor.x * SPAN,
       centerY: PAD + anchor.y * SPAN,
@@ -16151,18 +16155,6 @@ function renderScannerCanvas() {
       && (scannerGridState.prevSites || []).length === (scannerGridState.sites || []).length;
     const _canMorph = scannerGridState.shuffleMode !== "keep"
       && (_sitesOk || (_from.length && _to.length && _from.length === _to.length));
-    // ВРЕМЕННАЯ ДИАГНОСТИКА — удалить после разбора.
-    if (!window._shufLog2 || Date.now() - window._shufLog2 > 500) {
-      window._shufLog2 = Date.now();
-      console.log("[SHUF2] прогресс", shuffleProgress.toFixed(2),
-        "| режим", String(scannerGridState.shuffleMode),
-        "| перетекание", String(_canMorph),
-        "| prevPolys", _from.length,
-        "| polys", _to.length,
-        "| sites", (scannerGridState.sites || []).length,
-        "| prevSites", (scannerGridState.prevSites || []).length,
-        "| игроков", (scannerGridState.players || []).length);
-    }
     if (_canMorph) {
       // Поля перетекают вершинами из старой формы в новую. Число углов у
       // фигур разное, поэтому обе стороны приводим к общему количеству
