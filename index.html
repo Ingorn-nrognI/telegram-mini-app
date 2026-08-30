@@ -16144,6 +16144,18 @@ function renderScannerCanvas() {
     const _to = scannerGridState.polys || [];
     const _canMorph = _from.length && _to.length && _from.length === _to.length
       && scannerGridState.shuffleMode !== "keep";
+    // ВРЕМЕННАЯ ДИАГНОСТИКА — удалить после разбора.
+    if (!window._shufLog2 || Date.now() - window._shufLog2 > 500) {
+      window._shufLog2 = Date.now();
+      console.log("[SHUF2] прогресс", shuffleProgress.toFixed(2),
+        "| режим", String(scannerGridState.shuffleMode),
+        "| перетекание", String(_canMorph),
+        "| prevPolys", _from.length,
+        "| polys", _to.length,
+        "| sites", (scannerGridState.sites || []).length,
+        "| prevSites", (scannerGridState.prevSites || []).length,
+        "| игроков", (scannerGridState.players || []).length);
+    }
     if (_canMorph) {
       // Поля перетекают вершинами из старой формы в новую. Число углов у
       // фигур разное, поэтому обе стороны приводим к общему количеству
@@ -16233,6 +16245,10 @@ function renderScannerCanvas() {
 
   if (previewBadgeAlpha > 0.02) {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
+  } else if (roundStatus === "shuffling" && Number(scannerGridState.warpAmp) > 0.0001) {
+    // Во время перетекания значки уже нарисованы по ТЕКУЩЕЙ форме полей.
+    // Здесь они рисовались повторно по зонам финальной раскладки и ложились
+    // сверху — из-за этого аватарка сразу оказывалась на новом месте.
   } else if (Array.isArray(scannerGridState.previewZones) && scannerGridState.previewZones.length) {
     // Раньше значки жили только в ожидании и гасли к концу перемешивания:
     // в розыгрыше, на показе результата и в подготовке следующего раунда
