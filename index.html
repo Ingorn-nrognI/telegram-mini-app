@@ -16142,8 +16142,15 @@ function renderScannerCanvas() {
     const shuffleProgress = getScannerShuffleTransitionProgress(roundData);
     const _from = scannerGridState.prevPolys || [];
     const _to = scannerGridState.polys || [];
-    const _canMorph = _from.length && _to.length && _from.length === _to.length
-      && scannerGridState.shuffleMode !== "keep";
+    // Раньше требовалось точное совпадение числа полей. Если игрок входил под
+    // конец отсчёта, старая раскладка была посчитана без него, числа
+    // расходились — и вместо перетекания шла мгновенная подмена. Теперь
+    // хватает совпадения по точкам, а недостающие поля просто появляются
+    // на своих местах.
+    const _sitesOk = (scannerGridState.sites || []).length
+      && (scannerGridState.prevSites || []).length === (scannerGridState.sites || []).length;
+    const _canMorph = scannerGridState.shuffleMode !== "keep"
+      && (_sitesOk || (_from.length && _to.length && _from.length === _to.length));
     // ВРЕМЕННАЯ ДИАГНОСТИКА — удалить после разбора.
     if (!window._shufLog2 || Date.now() - window._shufLog2 > 500) {
       window._shufLog2 = Date.now();
