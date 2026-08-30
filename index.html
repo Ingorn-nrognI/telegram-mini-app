@@ -15277,6 +15277,8 @@ function getScannerFieldPaint(ctx, color, x0, y0, x1, y1) {
 
 // Значки на промежуточных формах: аватарка едет вместе со своим полем,
 // а не оказывается на новом месте с первого кадра.
+const _scannerBadgeAnchors = new Map();
+
 function drawScannerMorphedBadges(ctx, size, polys, players, alpha) {
   const PAD = 0.031;
   const SPAN = 1 - PAD * 2;
@@ -15299,6 +15301,18 @@ function drawScannerMorphedBadges(ctx, size, polys, players, alpha) {
       anchor.x = moved[0];
       anchor.y = moved[1];
     }
+    // Место значка каждый кадр ищется заново перебором, и при малейшем
+    // изменении формы «самая просторная точка» скачком перескакивала в другой
+    // закуток — аватарка телепортировалась. Ведём её плавно за найденной
+    // точкой: рывки сглаживаются, а за полем она всё равно поспевает.
+    const _pid = String(players[i] && players[i].id || i);
+    const _prevA = _scannerBadgeAnchors.get(_pid);
+    if (_prevA && Math.hypot(anchor.x - _prevA.x, anchor.y - _prevA.y) < 0.5) {
+      anchor.x = _prevA.x + (anchor.x - _prevA.x) * 0.18;
+      anchor.y = _prevA.y + (anchor.y - _prevA.y) * 0.18;
+      anchor.radius = _prevA.r + (anchor.radius - _prevA.r) * 0.18;
+    }
+    _scannerBadgeAnchors.set(_pid, { x: anchor.x, y: anchor.y, r: anchor.radius });
     // Порог снижен: аватарка должна ехать вместе с полем у ВСЕХ игроков,
     // а не только у тех, чьё поле сейчас достаточно широкое.
     const room = anchor.radius * SPAN;
@@ -15598,8 +15612,13 @@ function drawScannerLiquidRaster(ctx, size, sites, weights, players, softness, w
         const fy = Math.min(gG - 1e-9, Math.max(0, y * gG));
         const gi = Math.floor(fx);
         const gj = Math.floor(fy);
-        const tx = fx - gi;
-        const ty = fy - gj;
+        // Плавный переход между узлами сетки вместо линейного: линейная
+        // растяжка давала излом на каждом стыке ячеек, и вместо дуг края
+        // получались гранёными.
+        const _rx = fx - gi;
+        const _ry = fy - gj;
+        const tx = _rx * _rx * (3 - 2 * _rx);
+        const ty = _ry * _ry * (3 - 2 * _ry);
         const kk = gj * (gG + 1) + gi;
         sx = (_wq.gx[kk] * (1 - tx) + _wq.gx[kk + 1] * tx) * (1 - ty)
            + (_wq.gx[kk + gG + 1] * (1 - tx) + _wq.gx[kk + gG + 2] * tx) * ty;
@@ -16172,6 +16191,7 @@ function renderScannerCanvas() {
     } else if (scannerGridState.shuffleMode === "keep") {
       scannerGridState.morphRoundness = 0;
       scannerGridState.warpAmp = 0;
+      _scannerBadgeAnchors.clear();
       // Раскладка не менялась — показываем её как есть, без анимации.
       if (scannerGridPreviewCanvasCache?.canvas) {
         ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
