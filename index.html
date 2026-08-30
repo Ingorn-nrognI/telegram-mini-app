@@ -14221,7 +14221,26 @@ function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players, poly
     const _inner = size - _bw * 2;
     const _px = (u) => _bw + u * _inner;
     const _roundness = Number(scannerGridState.morphRoundness) || 0;
-    const _pathPts = myPoly.map((pt) => [_px(pt[0]), _px(pt[1])]);
+    // Вершины рамки проводим через то же течение, что и заливку, иначе
+    // контур ехал прямым, пока поле под ним изгибалось.
+    const _wAmp = Number(scannerGridState.warpAmp) || 0;
+    const _wPh = Number(scannerGridState.warpPhase) || 0;
+    const _warped = (_wAmp > 0.0001)
+      ? myPoly.map((pt) => scannerWarpForward(pt[0], pt[1], _wAmp, _wPh))
+      : myPoly;
+    // Точек в контуре мало, а течение кривое — добавляем промежуточные, иначе
+    // между вершинами рамка пойдёт прямой хордой мимо изогнутого края.
+    const _dense = [];
+    for (let v = 0; v < _warped.length; v += 1) {
+      const a = myPoly[v];
+      const b = myPoly[(v + 1) % myPoly.length];
+      for (let k = 0; k < 6; k += 1) {
+        const tt = k / 6;
+        const mid = [a[0] + (b[0] - a[0]) * tt, a[1] + (b[1] - a[1]) * tt];
+        _dense.push((_wAmp > 0.0001) ? scannerWarpForward(mid[0], mid[1], _wAmp, _wPh) : mid);
+      }
+    }
+    const _pathPts = _dense.map((pt) => [_px(pt[0]), _px(pt[1])]);
     const _path = () => {
       buildScannerRoundedPath(ctx, _pathPts, _roundness);
     };
@@ -15273,6 +15292,13 @@ function drawScannerMorphedBadges(ctx, size, polys, players, alpha) {
     if (!Array.isArray(poly) || poly.length < 3 || !players[i]) continue;
     const anchor = findScannerPolyAnchor(poly);
     if (!anchor) continue;
+    // Центр значка сносим тем же течением, что изгибает поле под ним.
+    const _wa = Number(scannerGridState.warpAmp) || 0;
+    if (_wa > 0.0001) {
+      const moved = scannerWarpForward(anchor.x, anchor.y, _wa, Number(scannerGridState.warpPhase) || 0);
+      anchor.x = moved[0];
+      anchor.y = moved[1];
+    }
     // Порог снижен: аватарка должна ехать вместе с полем у ВСЕХ игроков,
     // а не только у тех, чьё поле сейчас достаточно широкое.
     const room = anchor.radius * SPAN;
@@ -15451,6 +15477,24 @@ function scannerStreamVel(x, y, ph) {
     (scannerStreamFn(x, y + h, ph) - scannerStreamFn(x, y - h, ph)) / (2 * h),
     -(scannerStreamFn(x + h, y, ph) - scannerStreamFn(x - h, y, ph)) / (2 * h)
   ];
+}
+
+// Переносит точку тем же течением, каким изгибается заливка, но В ОБРАТНУЮ
+// сторону: растр ищет, откуда пиксель притёк, а значкам и рамке нужно знать,
+// куда уехала их точка. Без этого они оставались на неизогнутых местах, пока
+// поля под ними гнулись.
+function scannerWarpForward(x, y, amp, ph) {
+  if (!(amp > 0.0001)) return [x, y];
+  const STEPS = 4;
+  let px = x;
+  let py = y;
+  for (let s = 0; s < STEPS; s += 1) {
+    const a = scannerStreamVel(px, py, ph);
+    const b = scannerStreamVel(px + (amp / STEPS) * a[0] * 0.5, py + (amp / STEPS) * a[1] * 0.5, ph);
+    px += (amp / STEPS) * b[0];
+    py += (amp / STEPS) * b[1];
+  }
+  return [Math.max(0, Math.min(1, px)), Math.max(0, Math.min(1, py))];
 }
 
 // Смещения считаются на грубой сетке и растягиваются между узлами — так
@@ -16109,6 +16153,10 @@ function renderScannerCanvas() {
       // посудины.
       const _soft = Math.sin(Math.PI * Math.max(0, Math.min(1, shuffleProgress)));
       scannerGridState.morphRoundness = 0;
+      // Те же параметры течения передаём значкам и рамке, чтобы они гнулись
+      // ровно вместе с заливкой.
+      scannerGridState.warpAmp = _soft * 0.10;
+      scannerGridState.warpPhase = shuffleProgress * 5.0;
       const _liqSites = _liquid ? _liquidSitesUsed : null;
       // Значки рисуются ПОСЛЕ заливки: раньше растровая арена накрывала их
       // собой, и аватарки пропадали на всё время перемешивания.
@@ -16123,6 +16171,7 @@ function renderScannerCanvas() {
       scannerGridState.morphRoundness = 0;
     } else if (scannerGridState.shuffleMode === "keep") {
       scannerGridState.morphRoundness = 0;
+      scannerGridState.warpAmp = 0;
       // Раскладка не менялась — показываем её как есть, без анимации.
       if (scannerGridPreviewCanvasCache?.canvas) {
         ctx.drawImage(scannerGridPreviewCanvasCache.canvas, 0, 0, size, size);
