@@ -16198,11 +16198,13 @@ function renderScannerCanvas() {
             shuffleProgress * 5.0)
         : false;
       if (!_drawn) drawScannerStaticPolys(ctx, size, _morphed, scannerGridState.players || [], 0);
-      drawScannerMorphedBadges(ctx, size, _morphed, scannerGridState.players || [], 1);
-      scannerGridState.morphRoundness = 0;
+      // Форму полей этого кадра запоминаем: значки рисуются позже, в общем
+      // месте, и им нужна именно она, а не финальная раскладка.
+      scannerGridState.morphPolys = _morphed;
     } else if (scannerGridState.shuffleMode === "keep") {
       scannerGridState.morphRoundness = 0;
       scannerGridState.warpAmp = 0;
+      scannerGridState.morphPolys = null;
       _scannerBadgeAnchors.clear();
       // Раскладка не менялась — показываем её как есть, без анимации.
       if (scannerGridPreviewCanvasCache?.canvas) {
@@ -16245,10 +16247,11 @@ function renderScannerCanvas() {
 
   if (previewBadgeAlpha > 0.02) {
     drawScannerPreviewBadges(ctx, size, previewBadgeAlpha);
-  } else if (roundStatus === "shuffling" && Number(scannerGridState.warpAmp) > 0.0001) {
-    // Во время перетекания значки уже нарисованы по ТЕКУЩЕЙ форме полей.
-    // Здесь они рисовались повторно по зонам финальной раскладки и ложились
-    // сверху — из-за этого аватарка сразу оказывалась на новом месте.
+  } else if (roundStatus === "shuffling" && Array.isArray(scannerGridState.morphPolys) && scannerGridState.morphPolys.length) {
+    // Во время перетекания значки ставятся по ТЕКУЩЕЙ форме полей. Раньше
+    // здесь рисовались зоны финальной раскладки, и аватарка оказывалась на
+    // новом месте раньше своего поля.
+    drawScannerMorphedBadges(ctx, size, scannerGridState.morphPolys, scannerGridState.players || [], 1);
   } else if (Array.isArray(scannerGridState.previewZones) && scannerGridState.previewZones.length) {
     // Раньше значки жили только в ожидании и гасли к концу перемешивания:
     // в розыгрыше, на показе результата и в подготовке следующего раунда
@@ -16278,15 +16281,6 @@ function renderScannerCanvas() {
   // течением, которым изгибается арена, и к концу фазы возвращается ровно на
   // своё место — сдвиг сходит к нулю вместе с течением. Вращение лучей вокруг
   // кружка при этом не трогается, оно живёт отдельно.
-  const _beamWarp = Number(scannerGridState.shuffleBeamWarp) || 0;
-  if (visualBeamSample && _beamWarp > 0.0001) {
-    const _bph = Number(scannerGridState.shuffleBeamPhase) || 0;
-    const _v = scannerStreamVel(visualBeamSample.x, visualBeamSample.y, _bph);
-    visualBeamSample = Object.assign({}, visualBeamSample, {
-      x: Math.max(0.02, Math.min(0.98, visualBeamSample.x + _v[0] * _beamWarp)),
-      y: Math.max(0.02, Math.min(0.98, visualBeamSample.y + _v[1] * _beamWarp))
-    });
-  }
   if (visualBeamSample) {
     scannerLastBeamSample = visualBeamSample;
   }
