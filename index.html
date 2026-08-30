@@ -12492,6 +12492,17 @@ function syncScannerDerivedState() {
   scannerGridState.sites = Array.isArray(finalized.sites) ? finalized.sites : [];
   scannerGridState.weights = Array.isArray(finalized.weights) ? finalized.weights : [];
   scannerGridState.prevSites = Array.isArray(finalized.prevSites) ? finalized.prevSites : [];
+  // ВРЕМЕННАЯ ДИАГНОСТИКА — удалить после разбора.
+  if (round && round.status === "shuffling") {
+    const _sm = String(scannerGridState.shuffleMode);
+    const _sg = `${_sm}_${(scannerGridState.sites || []).length}_${(scannerGridState.prevSites || []).length}`;
+    if (window._gridSig !== _sg) {
+      window._gridSig = _sg;
+      console.log("[GRID] карта обновилась в shuffling:", _sg,
+        "| прошло от старта фазы:",
+        (Date.now() - Number(scannerRealtime.roundData?.shuffleStartedAt || 0)) + "мс");
+    }
+  }
   scannerGridState.shuffleMode = finalized.shuffleMode || "remix";
   // Тот же отпечаток, что и у превью: без него холст основной арены тоже
   // не перестраивался при обновлении карты с сервера.
