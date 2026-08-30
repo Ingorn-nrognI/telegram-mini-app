@@ -15294,28 +15294,46 @@ function drawScannerMorphedBadges(ctx, size, polys, players, alpha) {
     if (!Array.isArray(poly) || poly.length < 3 || !players[i]) continue;
     const anchor = findScannerPolyAnchor(poly);
     if (!anchor) continue;
-    // Центр значка сносим тем же течением, что изгибает поле под ним.
+
+    // Место значка каждый кадр ищется заново перебором, и при малейшем
+    // изменении формы «самая просторная точка» скачком перескакивала в другой
+    // закуток — аватарка телепортировалась. Ведём её плавно за найденной
+    // точкой. Всё это делается в НЕИЗОГНУТЫХ координатах, чтобы запас места
+    // мерился по тому же контуру, которому значок должен подчиняться.
+    const _pid = String(players[i] && players[i].id || i);
+    const _prevA = _scannerBadgeAnchors.get(_pid);
+    if (_prevA && Math.hypot(anchor.x - _prevA.x, anchor.y - _prevA.y) < 0.5) {
+      anchor.x = _prevA.x + (anchor.x - _prevA.x) * 0.18;
+      anchor.y = _prevA.y + (anchor.y - _prevA.y) * 0.18;
+    }
+
+    // Сглаживание отстаёт от уезжающего поля, и точка может оказаться уже за
+    // его границей. Подтягиваем её обратно внутрь — иначе кусок аватарки
+    // вылезал за край своего поля.
+    let _guard = 0;
+    while (!isPointInScannerPoly(poly, anchor.x, anchor.y) && _guard < 12) {
+      anchor.x += (findScannerPolyAnchor(poly).x - anchor.x) * 0.35;
+      anchor.y += (findScannerPolyAnchor(poly).y - anchor.y) * 0.35;
+      _guard += 1;
+    }
+
+    // Запас меряем В ТОЙ ЖЕ точке, где значок реально окажется, а не там, где
+    // он был найден до сглаживания.
+    anchor.radius = getScannerPolyEdgeDistance(poly, anchor.x, anchor.y);
+    _scannerBadgeAnchors.set(_pid, { x: anchor.x, y: anchor.y, r: anchor.radius });
+
+    // Только теперь сносим точку течением — для отрисовки.
     const _wa = Number(scannerGridState.warpAmp) || 0;
     if (_wa > 0.0001) {
       const moved = scannerWarpForward(anchor.x, anchor.y, _wa, Number(scannerGridState.warpPhase) || 0);
       anchor.x = moved[0];
       anchor.y = moved[1];
     }
-    // Место значка каждый кадр ищется заново перебором, и при малейшем
-    // изменении формы «самая просторная точка» скачком перескакивала в другой
-    // закуток — аватарка телепортировалась. Ведём её плавно за найденной
-    // точкой: рывки сглаживаются, а за полем она всё равно поспевает.
-    const _pid = String(players[i] && players[i].id || i);
-    const _prevA = _scannerBadgeAnchors.get(_pid);
-    if (_prevA && Math.hypot(anchor.x - _prevA.x, anchor.y - _prevA.y) < 0.5) {
-      anchor.x = _prevA.x + (anchor.x - _prevA.x) * 0.18;
-      anchor.y = _prevA.y + (anchor.y - _prevA.y) * 0.18;
-      anchor.radius = _prevA.r + (anchor.radius - _prevA.r) * 0.18;
-    }
-    _scannerBadgeAnchors.set(_pid, { x: anchor.x, y: anchor.y, r: anchor.radius });
-    // Порог снижен: аватарка должна ехать вместе с полем у ВСЕХ игроков,
-    // а не только у тех, чьё поле сейчас достаточно широкое.
-    const room = anchor.radius * SPAN;
+
+    // Множитель 0.72 вместо прежнего запаса под самый край: течение局ально
+    // растягивает картинку, и без него значок в узком месте всё равно
+    // задевал бы границу.
+    const room = anchor.radius * SPAN * 0.72;
     if (room < 0.012) continue;
     drawScannerPlayerBadge(ctx, {
       index: i,
