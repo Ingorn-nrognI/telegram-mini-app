@@ -14245,15 +14245,18 @@ function drawScannerMyTerritoryBorder(ctx, size, cellSize, owners, players, poly
     for (let v = 0; v < _warped.length; v += 1) {
       const a = myPoly[v];
       const b = myPoly[(v + 1) % myPoly.length];
-      for (let k = 0; k < 6; k += 1) {
-        const tt = k / 6;
+      for (let k = 0; k < 14; k += 1) {
+        const tt = k / 14;
         const mid = [a[0] + (b[0] - a[0]) * tt, a[1] + (b[1] - a[1]) * tt];
         _dense.push((_wAmp > 0.0001) ? scannerWarpForward(mid[0], mid[1], _wAmp, _wPh) : mid);
       }
     }
     const _pathPts = _dense.map((pt) => [_px(pt[0]), _px(pt[1])]);
     const _path = () => {
-      buildScannerRoundedPath(ctx, _pathPts, _roundness);
+      // Во время перетекания края поля изогнуты течением, и соединять точки
+      // прямыми нельзя — контур шёл ломаной с углами. Ведём гладкую кривую.
+      if (_wAmp > 0.0001) buildScannerSmoothPath(ctx, _pathPts);
+      else buildScannerRoundedPath(ctx, _pathPts, _roundness);
     };
     ctx.save();
     _path();
@@ -15452,6 +15455,23 @@ function getScannerLiquidLayout(players, prevCuts, cuts, progress) {
 // Строит контур со скруглёнными углами. roundness от 0 (острые углы) до 1
 // (максимально круглая форма). Радиус на каждом углу ограничен половиной
 // более короткой из двух соседних сторон, иначе контур сам себя вывернет.
+// Проводит гладкую замкнутую линию через набор точек: сама линия идёт по
+// серединам отрезков, а точки служат направляющими. Изломов не остаётся
+// нигде, в отличие от соединения прямыми отрезками.
+function buildScannerSmoothPath(ctx, pts) {
+  const n = pts.length;
+  if (n < 3) return;
+  ctx.beginPath();
+  const start = [(pts[n - 1][0] + pts[0][0]) / 2, (pts[n - 1][1] + pts[0][1]) / 2];
+  ctx.moveTo(start[0], start[1]);
+  for (let i = 0; i < n; i += 1) {
+    const cur = pts[i];
+    const nxt = pts[(i + 1) % n];
+    ctx.quadraticCurveTo(cur[0], cur[1], (cur[0] + nxt[0]) / 2, (cur[1] + nxt[1]) / 2);
+  }
+  ctx.closePath();
+}
+
 function buildScannerRoundedPath(ctx, pts, roundness) {
   const n = pts.length;
   if (n < 3 || roundness <= 0.001) {
