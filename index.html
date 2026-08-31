@@ -8357,16 +8357,6 @@ function setAppFps(level) {
   ensureScannerVisualLoop();
 }
 
-// Прежнее поведение кнопки PvP вынесено сюда: на арене и главном экране она
-// работает как раньше, а в маркете превращается в "Аукцион".
-function handleBottomNavPvpDefault(event) {
-  closeModePopup();
-  closeHistoryPanel({ preserveNav: true });
-  closeLeaderboard();
-  closeBobrRunRooms();
-  setMenuView("scannerScreen");
-}
-
 function handleBottomNav(action, event) {
   if (event) event.stopPropagation();
   userHasNavigatedManually = true;
@@ -8387,9 +8377,21 @@ function handleBottomNav(action, event) {
       break;
     }
 
-    case "pvp":
+    case "pvp": {
+      // В маркете и на аукционе эта кнопка показывает молоток и подпись
+      // "Аукцион" — значит и вести должна на аукцион, а не в арену.
+      if (currentMenuView === "market" || currentMenuView === "auction") {
+        closeModePopup();
+        closeHistoryPanel({ preserveNav: true });
+        closeLeaderboard();
+        closeBobrRunRooms();
+        setActiveBottomNav("pvp");
+        setMenuView("auction");
+        break;
+      }
       enterScannerGridMode(event);
       break;
+    }
 
     case "skins":
       openSkins();
@@ -8406,20 +8408,6 @@ function handleBottomNav(action, event) {
       } else {
         openRecentHistory();
       }
-      break;
-    }
-
-    case "pvp": {
-      // В маркете и на аукционе эта кнопка — "Аукцион", а не PvP.
-      if (currentMenuView === "market" || currentMenuView === "auction") {
-        closeModePopup();
-        closeHistoryPanel({ preserveNav: true });
-        closeLeaderboard();
-        closeBobrRunRooms();
-        setMenuView("auction");
-        break;
-      }
-      handleBottomNavPvpDefault(event);
       break;
     }
 
