@@ -4455,10 +4455,10 @@ body.history-mode .history-panel-header .history-panel-title {
 
 .app-settings-sheet {
   width: min(calc(100vw - 12px), 480px);
-  /* Шторка поднимается почти до самого верха, а не на высоту содержимого.
-     Отступ сверху оставлен под системную панель Telegram. Класс общий для
-     окон настроек и рефералов, поэтому оба открываются одинаково. */
-  height: calc(100vh - var(--safe-top, 0px) - 16px);
+  /* Высота по содержимому, как было. Минимум задан, чтобы окно рефералов
+     совпадало по размеру с настройками: содержимого в нём меньше, и без
+     этого оно открывалось заметно ниже. */
+  min-height: 62vh;
   max-height: calc(100vh - var(--safe-top, 0px) - 16px);
   display: flex;
   flex-direction: column;
