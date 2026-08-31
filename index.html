@@ -6840,12 +6840,15 @@ function setMenuView(view, options = {}) {
   const navMarketStateMarket = document.getElementById("navMarketStateMarket");
   const navMarketStateArena = document.getElementById("navMarketStateArena");
   if (navMarketStateMarket && navMarketStateArena) {
-    const onMarket = view === "market";
+    const onMarket = (view === "market" || view === "auction");
     navMarketStateMarket.style.display = onMarket ? "none" : "flex";
     navMarketStateArena.style.display = onMarket ? "flex" : "none";
   }
 
-  const marketModeActive = (view === "market" || view === "inventory");
+  // Аукцион открывается из маркета и остаётся его частью: панель должна
+  // сохранять тот же набор кнопок. Без этого при переходе возвращалась
+  // кнопка "Игры", пропадали "Скины", а арена с маркетом менялись местами.
+  const marketModeActive = (view === "market" || view === "inventory" || view === "auction");
   const navGamesBtn = document.getElementById("navGames");
   const navSkinsBtn = document.getElementById("navSkins");
   if (navGamesBtn) navGamesBtn.style.display = marketModeActive ? "none" : "flex";
