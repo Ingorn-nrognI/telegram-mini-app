@@ -4455,6 +4455,13 @@ body.history-mode .history-panel-header .history-panel-title {
 
 .app-settings-sheet {
   width: min(calc(100vw - 12px), 480px);
+  /* Шторка поднимается почти до самого верха, а не на высоту содержимого.
+     Отступ сверху оставлен под системную панель Telegram. Класс общий для
+     окон настроек и рефералов, поэтому оба открываются одинаково. */
+  height: calc(100vh - var(--safe-top, 0px) - 16px);
+  max-height: calc(100vh - var(--safe-top, 0px) - 16px);
+  display: flex;
+  flex-direction: column;
   border-radius: 30px 30px 0 0;
   padding: 18px 18px calc(18px + var(--safe-bottom, 0px));
   background: linear-gradient(180deg, rgba(13, 20, 46, 0.96), rgba(6, 9, 22, 0.98));
@@ -4466,6 +4473,15 @@ body.history-mode .history-panel-header .history-panel-title {
   transform: translateY(100%);
   transition: transform 0.26s ease;
   overflow: hidden;
+}
+
+/* Содержимое прокручивается внутри, а шапка с заголовком остаётся на месте. */
+.app-settings-sheet > .app-settings-body,
+.app-settings-sheet > .app-settings-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .app-settings-overlay.open .app-settings-sheet {
