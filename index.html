@@ -4452,7 +4452,9 @@ body.history-mode .history-panel-header .history-panel-title {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: 0 12px calc(var(--safe-bottom) + 10px);
+  /* Боковые поля вдвое уже — окно стало шире. Снизу отступ убран совсем,
+     иначе под шторкой оставалась видна полоска фона. */
+  padding: 0 6px 0;
   background: rgba(2, 6, 18, 0.36);
   backdrop-filter: blur(10px);
   opacity: 0;
@@ -4466,7 +4468,7 @@ body.history-mode .history-panel-header .history-panel-title {
 }
 
 .app-settings-sheet {
-  width: min(calc(100vw - 12px), 480px);
+  width: min(calc(100vw - 6px), 560px);
   /* Высота по содержимому, как было. Минимум задан, чтобы окно рефералов
      совпадало по размеру с настройками: содержимого в нём меньше, и без
      этого оно открывалось заметно ниже. */
@@ -4478,7 +4480,8 @@ body.history-mode .history-panel-header .history-panel-title {
   display: flex;
   flex-direction: column;
   border-radius: 30px 30px 0 0;
-  padding: 18px 18px calc(18px + var(--safe-bottom, 0px));
+  border-bottom: none;
+  padding: 18px 18px calc(10px + var(--safe-bottom, 0px));
   background: linear-gradient(180deg, rgba(13, 20, 46, 0.96), rgba(6, 9, 22, 0.98));
   border: 1px solid rgba(255,255,255,0.1);
   box-shadow:
@@ -4501,6 +4504,20 @@ body.history-mode .history-panel-header .history-panel-title {
 
 .app-settings-overlay.open .app-settings-sheet {
   transform: translateY(0);
+}
+
+/* Тот же баннер, что на главном экране: пропорция 4:1, картинка вписывается
+   по ширине без обрезки важной части. */
+.referrals-sheet-banner {
+  width: 100%;
+  aspect-ratio: 1200 / 300;
+  margin: 2px 0 14px;
+  border-radius: 18px;
+  background-image: url("banner-referral-ru.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  flex-shrink: 0;
 }
 
 .app-settings-handle {
@@ -5720,6 +5737,8 @@ body.history-mode .history-panel-header .history-panel-title {
       <span class="app-settings-title" id="appReferralsTitle">Рефералы</span>
       <button class="app-settings-close" onclick="closeReferrals()" aria-label="Закрыть">✕</button>
     </div>
+
+    <div id="referralsSheetBanner" class="referrals-sheet-banner"></div>
 
     <div class="app-settings-section">
       <div class="app-settings-section-title">Твоя ссылка-приглашение</div>
@@ -7908,6 +7927,8 @@ function applyAppLanguage(lang) {
 
   // Referral banner (image swaps by language)
   const referralBannerFile = lang === "en" ? "banner-referral-en.jpg" : "banner-referral-ru.jpg";
+  const _refSheetBanner = document.getElementById("referralsSheetBanner");
+  if (_refSheetBanner) _refSheetBanner.style.backgroundImage = `url("${referralBannerFile}")`;
   document.querySelectorAll(".home-promo-slide-referral").forEach(el => {
     el.style.backgroundImage = `url("${referralBannerFile}")`;
   });
