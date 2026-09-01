@@ -4641,6 +4641,20 @@ body.history-mode .history-panel-header .history-panel-title {
 .app-settings-chip:active {
   transform: scale(0.98);
 }
+.lang-chip {
+  gap: 8px;
+  padding: 0 16px 0 6px;
+}
+.lang-chip-flag {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
 .app-settings-chip.auto-hint {
   border-color: rgba(45, 225, 255, 0.55);
   box-shadow: 0 0 0 1px rgba(45, 225, 255, 0.28);
@@ -5125,7 +5139,7 @@ body.history-mode .history-panel-header .history-panel-title {
 
   <div id="modePopup" class="mode-popup" onclick="event.stopPropagation()">
     <div class="mode-popup-inner">
-      <button type="button" class="mode-popup-btn primary" onclick="enterScannerGridMode(event)">
+      <button type="button" id="modePopupScannerBtn" class="mode-popup-btn primary" onclick="enterScannerGridMode(event)">
         🧬 Сканер
       </button>
       <button type="button" class="mode-popup-btn" onclick="showBobrRunComingSoon(event)">
@@ -5420,7 +5434,7 @@ body.history-mode .history-panel-header .history-panel-title {
         <span style="width:56px; height:56px; display:flex; align-items:center; justify-content:center; border-radius:16px; background:rgba(255,255,255,0.06); color:var(--text-soft);">
           <svg width="28" height="28" fill="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M4.04 7.43a4 4 0 0 1 7.92 0 .5.5 0 1 1-.99.14 3 3 0 0 0-5.94 0 .5.5 0 1 1-.99-.14"/><path fill-rule="evenodd" d="M4 9.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zm1 .5v3h6v-3h-1v.5a.5.5 0 0 1-1 0V10z"/><path d="M6 2.341V2a2 2 0 1 1 4 0v.341c2.33.824 4 3.047 4 5.659v1.191l1.17.585a1.5 1.5 0 0 1 .83 1.342V13.5a1.5 1.5 0 0 1-1.5 1.5h-1c-.456.607-1.182 1-2 1h-7a2.5 2.5 0 0 1-2-1h-1A1.5 1.5 0 0 1 0 13.5v-2.382a1.5 1.5 0 0 1 .83-1.342L2 9.191V8a6 6 0 0 1 4-5.659M7 2v.083a6 6 0 0 1 2 0V2a1 1 0 0 0-2 0M3 13.5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5V8A5 5 0 0 0 3 8zm-1-3.19-.724.362a.5.5 0 0 0-.276.447V13.5a.5.5 0 0 0 .5.5H2zm12 0V14h.5a.5.5 0 0 0 .5-.5v-2.382a.5.5 0 0 0-.276-.447L14 10.309Z"/></svg>
         </span>
-        <div style="color:var(--text-soft); font-size:14px; line-height:1.5;">
+        <div id="inventoryEmptyNote" style="color:var(--text-soft); font-size:14px; line-height:1.5;">
           Пока пусто.<br>Подключение кошелька и добавление подарков появится позже.
         </div>
       </section>
@@ -5715,8 +5729,8 @@ body.history-mode .history-panel-header .history-panel-title {
       <div class="app-settings-section">
         <div class="app-settings-section-title">Язык</div>
         <div class="app-settings-chips">
-          <button id="settingsLangRu" class="app-settings-chip" onclick="setAppLanguage('ru')">🇷🇺 Русский</button>
-          <button id="settingsLangEn" class="app-settings-chip" onclick="setAppLanguage('en')">🇬🇧 English</button>
+          <button id="settingsLangRu" class="app-settings-chip lang-chip" onclick="setAppLanguage('ru')"><span class="lang-chip-flag">🇷🇺</span>RU</button>
+          <button id="settingsLangEn" class="app-settings-chip lang-chip" onclick="setAppLanguage('en')"><span class="lang-chip-flag">🇬🇧</span>EN</button>
         </div>
       </div>
 
@@ -5727,15 +5741,6 @@ body.history-mode .history-panel-header .history-panel-title {
           <button id="settingsQualityLow" class="app-settings-chip" onclick="setAppQuality('low')">Низкое</button>
           <button id="settingsQualityMid" class="app-settings-chip" onclick="setAppQuality('mid')">Среднее</button>
           <button id="settingsQualityHigh" class="app-settings-chip" onclick="setAppQuality('high')">Высокое</button>
-        </div>
-      </div>
-      <div class="app-settings-section">
-        <div class="app-settings-section-title">Живой фон</div>
-        <div class="app-settings-chips">
-          <button id="settingsLiveBgAuto" class="app-settings-chip" onclick="setAppLiveBg('auto')">Авто</button>
-          <button id="settingsLiveBgLow" class="app-settings-chip" onclick="setAppLiveBg('low')">Низкое</button>
-          <button id="settingsLiveBgMid" class="app-settings-chip" onclick="setAppLiveBg('mid')">Среднее</button>
-          <button id="settingsLiveBgHigh" class="app-settings-chip" onclick="setAppLiveBg('high')">Высокое</button>
         </div>
       </div>
       <div class="app-settings-section">
@@ -6237,7 +6242,7 @@ function getStableGuestPlayerId() {
 
 function getCurrentPlayer() {
   const nicknameEl = document.getElementById("nickname");
-  const fallbackName = nicknameEl?.innerText?.trim() || "Игрок";
+  const fallbackName = nicknameEl?.innerText?.trim() || L("Игрок", "Player");
   const id = tgUser?.id ? String(tgUser.id) : getStableGuestPlayerId();
   const name = tgUser?.username || tgUser?.first_name || fallbackName;
   return {
@@ -6248,8 +6253,9 @@ function getCurrentPlayer() {
 }
 
 function getPlayerInitial(name) {
-  const value = String(name || "И").trim();
-  if (!value) return "И";
+  const fallbackInitial = L("И", "P");
+  const value = String(name || fallbackInitial).trim();
+  if (!value) return fallbackInitial;
   return value.charAt(0).toUpperCase();
 }
 
@@ -6613,7 +6619,7 @@ function renderProfileScreen(options = {}) {
   }
 
   if (profileNameEl) {
-    setTextContentIfChanged(profileNameEl, currentPlayer.name || "Игрок");
+    setTextContentIfChanged(profileNameEl, currentPlayer.name || L("Игрок", "Player"));
   }
 
   if (profileIdEl) {
@@ -6658,8 +6664,8 @@ function closeProfileScreen() {
 
 function showProfilePlaceholderAction(action) {
   const message = action === "withdraw"
-    ? "Вывод будет добавлен позже."
-    : "Пополнение будет добавлено позже.";
+    ? L("Вывод будет добавлен позже.", "Withdrawals will be added later.")
+    : L("Пополнение будет добавлено позже.", "Top-ups will be added later.");
   alert(message);
 }
 
@@ -6895,8 +6901,8 @@ function setMenuView(view, options = {}) {
     const label = pvpBtn.querySelector(".nav-label");
     if (swords) swords.style.display = asAuction ? "none" : "";
     if (gavel) gavel.style.display = asAuction ? "" : "none";
-    if (label) label.textContent = asAuction ? "Аукцион" : "PvP";
-    pvpBtn.setAttribute("aria-label", asAuction ? "Аукцион" : "PvP");
+    if (label) label.textContent = asAuction ? L("Аукцион", "Auction") : "PvP";
+    pvpBtn.setAttribute("aria-label", asAuction ? L("Аукцион", "Auction") : "PvP");
   }
   // На экране Market кнопка в круге меняется на "Arena" (возврат к арене),
   // на всех остальных экранах — обратно на "Market".
@@ -7053,24 +7059,24 @@ function syncHistoryModeState() {
   const roundsOpen = !!document.getElementById("scannerRoundsPanel")?.classList.contains("open");
   const ratingOpen = document.getElementById("leaderboardModal")?.style.display === "flex";
   if (ratingOpen) {
-    setHistoryMode("rating", "Турниры");
+    setHistoryMode("rating", L("Турниры", "Tournaments"));
     return;
   }
   const gamesOpen = !!document.getElementById("modePopup")?.classList.contains("open");
   if (gamesOpen) {
-    setHistoryMode("games", "Игры");
+    setHistoryMode("games", L("Игры", "Games"));
     return;
   }
   const referralsOpen = !!document.getElementById("appReferralsOverlay")?.classList.contains("open");
   if (referralsOpen) {
-    setHistoryMode("referrals", "Рефералы");
+    setHistoryMode("referrals", L("Рефералы", "Referrals"));
     return;
   }
   const t = (typeof APP_TRANSLATIONS === "object" && APP_TRANSLATIONS)
     ? (APP_TRANSLATIONS[(typeof appSettings === "object" && appSettings?.language) || "ru"] || {})
     : {};
-  if (roundsOpen) setHistoryMode("history", t.roundsHistory || "История раундов");
-  else if (gameOpen) setHistoryMode("history", t.gameHistory || "История");
+  if (roundsOpen) setHistoryMode("history", t.roundsHistory || L("История раундов", "Rounds history"));
+  else if (gameOpen) setHistoryMode("history", t.gameHistory || L("История", "History"));
   else setHistoryMode(null, "");
 }
 
@@ -7091,7 +7097,7 @@ function closeHistoryPanel(options = {}) {
 function getHistoryPanelHeaderHtml() {
   return `
     <div class="history-panel-header">
-      <div class="history-panel-title">История</div>
+      <div class="history-panel-title">${L("История", "History")}</div>
       <button type="button" class="panel-close-btn" onclick="event.stopPropagation(); closeHistoryPanel()">✕</button>
     </div>
     <div class="history-tabs">
@@ -7100,7 +7106,7 @@ function getHistoryPanelHeaderHtml() {
       <button type="button" class="history-tab-btn" data-history-tab="market" onclick="switchHistoryTab('market', event)">Market</button>
     </div>
     <div class="history-scroll-area history-scroll-area-market is-hidden">
-      <div class="history-panel-empty">История сделок в Market появится здесь позже.</div>
+      <div class="history-panel-empty">${L("История сделок в Market появится здесь позже.", "Market trade history will appear here later.")}</div>
     </div>
   `;
 }
@@ -7140,15 +7146,15 @@ function getHistoryCollectionRef(playerId) {
 function getHistoryResultMeta(item) {
   const winnerValue = String(item?.winner || "").trim().toLowerCase();
 
-  if (winnerValue === "ничья") {
-    return { label: "Ничья", className: "draw" };
+  if (winnerValue === "ничья" || winnerValue === "draw") {
+    return { label: L("Ничья", "Draw"), className: "draw" };
   }
 
   if (item?.youWon) {
-    return { label: "Победа", className: "win" };
+    return { label: L("Победа", "Win"), className: "win" };
   }
 
-  return { label: "Поражение", className: "lose" };
+  return { label: L("Поражение", "Loss"), className: "lose" };
 }
 
 function toggleHistoryMatchDetails(matchId, event) {
@@ -7245,7 +7251,7 @@ function getScannerHistoryMyMeta(item) {
   const myResult = getScannerHistoryCurrentUserResult(item) || {};
   return {
     id: String(myResult.playerId || myResult.id || myResult.userId || item?.playerId || currentPlayer.id || ""),
-    name: String(item?.myName || myResult.name || currentPlayer.name || "Игрок"),
+    name: String(item?.myName || myResult.name || currentPlayer.name || L("Игрок", "Player")),
     avatar: item?.myAvatar || myResult.avatar || currentPlayer.avatar || null,
     color: item?.myColor || item?.roundColor || item?.playerColor || myResult.roundColor || myResult.playerColor || myResult.color || "hsl(182 88% 58%)",
     stake: getScannerHistoryMoneyValue(item?.myStake, item?.stake, item?.bet, myResult.stake, myResult.bet, myResult.score)
@@ -7256,7 +7262,7 @@ function getScannerHistoryWinnerMeta(item) {
   const winnerResult = getScannerHistoryWinnerResult(item) || {};
   return {
     id: String(item?.winnerPlayerId || item?.winnerId || winnerResult.playerId || winnerResult.id || ""),
-    name: String(item?.winnerName || item?.winner || winnerResult.name || "Победитель"),
+    name: String(item?.winnerName || item?.winner || winnerResult.name || L("Победитель", "Winner")),
     avatar: item?.winnerAvatar || winnerResult.avatar || null,
     color: item?.winnerColor || winnerResult.roundColor || winnerResult.playerColor || winnerResult.color || "hsl(145 74% 58%)",
     stake: getScannerHistoryMoneyValue(item?.winnerStake, winnerResult.stake, winnerResult.bet, winnerResult.score),
@@ -7276,7 +7282,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
   const winnerMeta = getScannerHistoryWinnerMeta(item);
   const youWon = item?.youWon === true || (winnerMeta.id && winnerMeta.id === String(currentPlayer.id));
   const resultClass = youWon ? "win" : "lose";
-  const resultWord = youWon ? "Выиграл" : "Проиграл";
+  const resultWord = youWon ? L("Выиграл", "Won") : L("Проиграл", "Lost");
   const wonAmount = getScannerHistoryMoneyValue(item?.winnerPayout, item?.payout, item?.winPayout, item?.reward, item?.prize);
   const amountText = youWon ? `+${wonAmount.toFixed(2)} GRAM` : `- ${myMeta.stake.toFixed(2)} GRAM`;
   const playedAtText = formatHistoryDate(item?.playedAt || item?.finishedAt || item?.createdAt);
@@ -7289,7 +7295,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
   const netBank = totalPot;
   const historyRoundPlayers = getScannerHistoryResults(item).map((row) => ({
     id: String(row.playerId || row.id || ""),
-    name: row.name || "Игрок",
+    name: row.name || L("Игрок", "Player"),
     avatar: row.avatar || null,
     color: row.color || row.roundColor || row.playerColor || "hsl(182 88% 58%)",
     stake: Number(row.stake || row.score || 0),
@@ -7316,7 +7322,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
           <div class="scanner-player-copy">
             <div class="scanner-player-name">${escapeHtml(player.name)}</div>
             <div class="scanner-player-percent-row">
-              <div class="scanner-player-percent"><span class="scanner-player-percent-label">Шансы</span> ${arenaPercent}</div>
+              <div class="scanner-player-percent"><span class="scanner-player-percent-label">${L("Шансы", "Chance")}</span> ${arenaPercent}</div>
               <div class="scanner-player-swatch" style="background:${escapeHtml(player.color)};"></div>
             </div>
           </div>
@@ -7342,10 +7348,10 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
   return `
     <div class="history-match-card scanner-history-card${expandedClass}" onclick="toggleScannerHistoryDetails('${safeClickId}', event)">
       <div class="scanner-history-header-row">
-        <div class="scanner-history-topline">Режим: Сканер</div>
+        <div class="scanner-history-topline">${L("Режим: Сканер", "Mode: Scanner")}</div>
         <div class="scanner-history-meta-col">
           <div class="scanner-history-date">${playedAtText}</div>
-          ${item?.roundNumber ? `<div class="scanner-history-round-number">· Раунд №: ${item.roundNumber}</div>` : ""}
+          ${item?.roundNumber ? `<div class="scanner-history-round-number">· ${L("Раунд №", "Round #")}: ${item.roundNumber}</div>` : ""}
         </div>
       </div>
       <div class="scanner-history-result-line">
@@ -7360,7 +7366,7 @@ function getScannerHistoryEntryHtml(item, index, matchId) {
 
       <div id="${detailsId}" class="scanner-history-details${detailsOpenClass}" data-scanner-history-details="true" aria-hidden="${detailsHidden}">
         <div class="scanner-history-detail-item">
-          <div class="scanner-history-detail-label">Игроки в раунде: ${formatCompactNumber(participantCount)}</div>
+          <div class="scanner-history-detail-label">${L("Игроки в раунде", "Players in round")}: ${formatCompactNumber(participantCount)}</div>
           <div class="scanner-history-detail-value">${netBank.toFixed(2)} GRAM</div>
         </div>
 
@@ -7379,7 +7385,7 @@ function renderHistoryEntries(entries) {
   const header = getHistoryPanelHeaderHtml();
 
   if (!Array.isArray(entries) || entries.length === 0) {
-    panel.innerHTML = `${header}<div class="history-scroll-area history-scroll-area-arena"><div class="history-panel-empty">Пока нет сыгранных матчей.</div></div>`;
+    panel.innerHTML = `${header}<div class="history-scroll-area history-scroll-area-arena"><div class="history-panel-empty">${L("Пока нет сыгранных матчей.", "No matches played yet.")}</div></div>`;
     return;
   }
 
@@ -7404,7 +7410,7 @@ function renderHistoryEntries(entries) {
             .map((row) => `
               <tr>
                 <td>${Number(row.place || 0)}</td>
-                <td>${escapeHtml(row.name || "Игрок")}</td>
+                <td>${escapeHtml(row.name || L("Игрок", "Player"))}</td>
                 <td>${Number(row.score || 0)}</td>
               </tr>
             `)
@@ -7416,9 +7422,9 @@ function renderHistoryEntries(entries) {
           <table class="history-match-table">
             <thead>
               <tr>
-                <th>Место</th>
-                <th>Игрок</th>
-                <th>Счёт</th>
+                <th>${L("Место", "Place")}</th>
+                <th>${L("Игрок", "Player")}</th>
+                <th>${L("Счёт", "Score")}</th>
               </tr>
             </thead>
             <tbody>${resultsRows}</tbody>
@@ -7428,7 +7434,7 @@ function renderHistoryEntries(entries) {
 
       return `
         <div class="history-match-card" onclick="toggleHistoryMatchDetails('${matchId.replace(/'/g, "&#39;")}', event)">
-          <div class="history-match-mode">Режим: ${modeLabel}</div>
+          <div class="history-match-mode">${L("Режим", "Mode")}: ${modeLabel}</div>
           <div class="history-match-result ${resultMeta.className}">${resultMeta.label}</div>
           <div class="history-match-date">${playedAtText}</div>
           ${detailsHtml}
@@ -7436,7 +7442,7 @@ function renderHistoryEntries(entries) {
       `;
     }).join("");
 
-  panel.innerHTML = `${header}<div class="history-scroll-area history-scroll-area-arena">${items || `<div class="history-panel-empty">Пока нет сыгранных матчей.</div>`}</div>`;
+  panel.innerHTML = `${header}<div class="history-scroll-area history-scroll-area-arena">${items || `<div class="history-panel-empty">${L("Пока нет сыгранных матчей.", "No matches played yet.")}</div>`}</div>`;
 }
 
 async function loadGameHistory() {
@@ -7447,7 +7453,7 @@ async function loadGameHistory() {
   panel.innerHTML = `
     ${getHistoryPanelHeaderHtml()}
     <div class="history-scroll-area history-scroll-area-arena">
-      <div class="history-panel-text">Загрузка...</div>
+      <div class="history-panel-text">${L("Загрузка...", "Loading...")}</div>
     </div>
   `;
 
@@ -7465,7 +7471,7 @@ async function loadGameHistory() {
     panel.innerHTML = `
       ${getHistoryPanelHeaderHtml()}
       <div class="history-scroll-area history-scroll-area-arena">
-        <div class="history-panel-text">Не удалось загрузить историю игр.</div>
+        <div class="history-panel-text">${L("Не удалось загрузить историю игр.", "Failed to load game history.")}</div>
       </div>
     `;
   } finally {
@@ -7484,7 +7490,7 @@ async function openLeaderboard() {
   setActiveBottomNav("leaderboard");
   modal.style.display = "flex";
   if (typeof syncHistoryModeState === "function") syncHistoryModeState();
-  contentDiv.innerHTML = "<div class='history-panel-text'>Загрузка...</div>";
+  contentDiv.innerHTML = `<div class='history-panel-text'>${L("Загрузка...", "Loading...")}</div>`;
 
   try {
     // Рейтинг по ЧИСТОЙ прибыли: выплата минус собственная ставка,
@@ -7503,7 +7509,7 @@ async function openLeaderboard() {
     contentDiv.innerHTML = "";
 
     if (!items.length) {
-      contentDiv.innerHTML = "<div class='history-panel-text'>Пока нет результатов.</div>";
+      contentDiv.innerHTML = `<div class='history-panel-text'>${L("Пока нет результатов.", "No results yet.")}</div>`;
       return;
     }
 
@@ -7514,7 +7520,7 @@ async function openLeaderboard() {
 
       const name = document.createElement("div");
       name.className = "leaderboard-row-name";
-      name.textContent = `${p.place}. ${p.name || "Игрок"}`;
+      name.textContent = `${p.place}. ${p.name || L("Игрок", "Player")}`;
 
       const score = document.createElement("div");
       score.className = "leaderboard-row-score";
@@ -7526,7 +7532,7 @@ async function openLeaderboard() {
     });
   } catch (error) {
     console.error("Ошибка загрузки таблицы:", error);
-    contentDiv.innerHTML = "<div class='history-panel-text'>Ошибка загрузки таблицы.</div>";
+    contentDiv.innerHTML = `<div class='history-panel-text'>${L("Ошибка загрузки таблицы.", "Failed to load the leaderboard.")}</div>`;
   }
 }
 
@@ -7553,15 +7559,18 @@ function renderBobrRunRooms() {
   if (roomsList) {
     roomsList.innerHTML = `
       <div class="rooms-note compact-note">
-        <strong>Комнаты Bobr Run пока не подключены.</strong><br>
-        Этот раздел подготовлен только для будущего Bobr Run. Он не связан со Scanner Grid, не использует pvp_runtime и не влияет на общий PvP-раунд, банк, участников, статусы или историю Сканер-сетки.
+        <strong>${L("Комнаты Bobr Run пока не подключены.", "Bobr Run rooms are not connected yet.")}</strong><br>
+        ${L(
+          "Этот раздел подготовлен только для будущего Bobr Run. Он не связан со Scanner Grid, не использует pvp_runtime и не влияет на общий PvP-раунд, банк, участников, статусы или историю Сканер-сетки.",
+          "This section is prepared for a future Bobr Run only. It is not linked to Scanner Grid, does not use pvp_runtime and does not affect the shared PvP round, pot, participants, statuses or Scanner Grid history."
+        )}
       </div>
     `;
   }
 
   if (createRoomBtn) {
-    createRoomBtn.textContent = "Создать комнату Bobr Run";
-    createRoomBtn.title = "Заглушка для будущего подключения комнат Bobr Run к Firebase";
+    createRoomBtn.textContent = L("Создать комнату Bobr Run", "Create a Bobr Run room");
+    createRoomBtn.title = L("Заглушка для будущего подключения комнат Bobr Run к Firebase", "Placeholder for future Bobr Run rooms integration with Firebase");
   }
 }
 
@@ -7647,7 +7656,7 @@ function hideAppNotice(event) {
 
 function showBobrRunComingSoon(event) {
   if (event) event.stopPropagation();
-  showAppNotice("Игра на стадии разработке", { timeoutMs: 2600, closeModeMenu: true });
+  showAppNotice(L("Игра на стадии разработки", "The game is under development"), { timeoutMs: 2600, closeModeMenu: true });
 }
 
 function openSkins(event) {
@@ -7660,7 +7669,7 @@ function openSkins(event) {
 }
 
 function openWallet() {
-  alert("Кошелёк");
+  alert(L("Кошелёк", "Wallet"));
 }
 
 const SETTINGS_STORAGE_KEY = "bobr_world_app_settings_v1";
@@ -7682,6 +7691,12 @@ const appSettings = {
   liveBg: window._savedAppSettings?.liveBg || "auto",
 };
 delete window._savedAppSettings;
+
+// Возвращает строку на текущем языке интерфейса. Используется для всех
+// пользовательских текстов, которые строятся в JS динамически.
+function L(ru, en) {
+  return (typeof appSettings === "object" && appSettings && appSettings.language === "en") ? en : ru;
+}
 
 function getEffectiveLiveBg() {
   if (appSettings.liveBg === "auto") return detectOptimalQuality();
@@ -7993,7 +8008,7 @@ function applyAppLanguage(lang) {
   // Settings overlay
   set("#appSettingsTitle", t.settingsTitle);
   const settingsSections = document.querySelectorAll(".app-settings-section-title");
-  const sectionKeys = [t.language, t.graphicsQuality, t.liveBg, t.fpsLabel, t.vibration];
+  const sectionKeys = [t.language, t.graphicsQuality, t.fpsLabel, t.vibration];
   settingsSections.forEach((el, i) => { if (sectionKeys[i]) el.textContent = sectionKeys[i]; });
 
   // Settings chips labels
@@ -8084,7 +8099,7 @@ function applyAppLanguage(lang) {
   });
 
   // Home scanner preview enter button
-  set(".scanner-preview-enter-btn", t.scanner);
+  set(".scanner-preview-enter-btn", L("Зайти в Сканер", "Enter Scanner"));
 
   // Leaderboard modal title
   const lbHeader = document.querySelector(".leaderboardHeader h2");
@@ -8096,8 +8111,148 @@ function applyAppLanguage(lang) {
 
   // Scanner result title (only if not showing winner)
   const resultTitle = document.getElementById("scannerResultTitle");
-  if (resultTitle && resultTitle.textContent.trim() === "Раунд завершён") {
-    resultTitle.textContent = "Round finished";
+  if (resultTitle) {
+    const _rt = resultTitle.textContent.trim();
+    if (_rt === "Раунд завершён" || _rt === "Round finished") {
+      resultTitle.textContent = L("Раунд завершён", "Round finished");
+    }
+  }
+
+  // ---- Static HTML strings (full EN localization) ----
+  set("#marketModal .history-panel-empty", L("Раздел Market скоро откроется.", "The Market section is coming soon."));
+
+  document.querySelectorAll(".home-promo-slide-referral .home-promo-slide-title").forEach(el => {
+    el.textContent = L("Реферальная программа", "Referral program");
+  });
+  document.querySelectorAll(".home-promo-slide-referral .home-promo-slide-text").forEach(el => {
+    el.textContent = L("Приглашай друзей и получай бонусы за каждого приглашённого игрока.", "Invite friends and earn a bonus for every player you bring in.");
+  });
+  document.querySelectorAll(".home-promo-slide:not(.home-promo-slide-referral) .home-promo-slide-title").forEach(el => {
+    el.textContent = L("Турнир", "Tournament");
+  });
+  document.querySelectorAll(".home-promo-slide:not(.home-promo-slide-referral) .home-promo-slide-text").forEach(el => {
+    el.textContent = L("Участвуй в розыгрыше призового банка среди игроков Bobr World.", "Join the prize pool draw among Bobr World players.");
+  });
+
+  const highlightLabels = document.querySelectorAll(".scanner-highlight-label");
+  if (highlightLabels[0]) highlightLabels[0].textContent = L("Топ дня", "Top of the day");
+  if (highlightLabels[1]) highlightLabels[1].textContent = L("Последний раунд", "Last round");
+
+  set("#bobrRunScreen .section-title", L("Что уже готово", "What's already done"));
+  const bobrInfoHeadings = document.querySelectorAll("#bobrRunScreen .info-card h3");
+  if (bobrInfoHeadings[0]) bobrInfoHeadings[0].textContent = L("🔌 Точки подключения сохранены", "🔌 Integration points preserved");
+  if (bobrInfoHeadings[1]) bobrInfoHeadings[1].textContent = L("🎮 Игровой модуль можно вернуть позже", "🎮 The game module can be reconnected later");
+  const bobrPrimaryBtn = document.querySelector("#bobrRunScreen .primary-action");
+  if (bobrPrimaryBtn) bobrPrimaryBtn.textContent = L("Комнаты Bobr Run", "Bobr Run rooms");
+  const bobrSecondaryBtn = document.querySelector("#bobrRunScreen .secondary-action");
+  if (bobrSecondaryBtn) bobrSecondaryBtn.textContent = L("Рейтинг", "Leaderboard");
+
+  const modePopupScannerBtn = document.getElementById("modePopupScannerBtn");
+  if (modePopupScannerBtn) modePopupScannerBtn.textContent = L("🧬 Сканер", "🧬 Scanner");
+
+  set("#bobrRunScreen .mode-kicker", L("⚔️ PvP режим", "⚔️ PvP mode"));
+  set("#bobrRunScreen .mode-subtitle", L(
+    "Игровой рантайм убран из этой версии файла. Остались меню, история, таблица лидеров, комнаты и вся базовая навигация приложения.",
+    "The game runtime has been removed from this version of the file. The menu, history, leaderboard, rooms and all the app's core navigation remain."
+  ));
+  set("#bobrRunScreen .section-kicker", L("Интеграция", "Integration"));
+  const bobrInfoParagraphs = document.querySelectorAll("#bobrRunScreen .info-card p");
+  if (bobrInfoParagraphs[0]) bobrInfoParagraphs[0].textContent = L(
+    "Экран режима, кнопка назад, переходы, история матчей, таблица, модалки и навигация продолжают работать как часть приложения.",
+    "The mode screen, back button, transitions, match history, leaderboard, modals and navigation keep working as part of the app."
+  );
+  if (bobrInfoParagraphs[1]) bobrInfoParagraphs[1].textContent = L(
+    "Когда ты снова подключишь отдельный runtime Bobr Run, его можно будет встроить обратно без полного переделывания оболочки.",
+    "Once you reconnect a separate Bobr Run runtime, it can be plugged back in without rebuilding the whole shell."
+  );
+
+  set("#inventoryScreen .section-title", L("Инвентарь", "Inventory"));
+  const inventoryNote = document.getElementById("inventoryEmptyNote");
+  if (inventoryNote) {
+    inventoryNote.innerHTML = L(
+      "Пока пусто.<br>Подключение кошелька и добавление подарков появится позже.",
+      "Nothing here yet.<br>Wallet connection and adding gifts will come later."
+    );
+  }
+
+  set("#auctionScreen .scanner-inline-section-title", L("Аукцион", "Auction"));
+  set("#auctionEmpty", L("Лотов пока нет", "No lots yet"));
+
+  const _sortLabels = {
+    "price-asc": L("Цена: по возрастанию", "Price: low to high"),
+    "price-desc": L("Цена: по убыванию", "Price: high to low"),
+    "num-asc": L("Номер: по возрастанию", "Number: low to high"),
+    "num-desc": L("Номер: по убыванию", "Number: high to low")
+  };
+  Object.keys(_sortLabels).forEach(k => {
+    const opt = document.querySelector(`.market-sort-option[data-sort="${k}"] span:first-child`);
+    if (opt) opt.textContent = _sortLabels[k];
+  });
+
+  set(".insufficient-balance-text", L("Для ставки не хватает баланса. Пополните свой баланс и повторите попытку.", "Not enough balance for this bet. Top up your balance and try again."));
+  set(".insufficient-balance-close", L("Понятно", "Got it"));
+
+  set("#appReferralsTitle", L("Рефералы", "Referrals"));
+  const refSectionTitles = document.querySelectorAll("#appReferralsOverlay .app-settings-section-title");
+  if (refSectionTitles[0]) refSectionTitles[0].textContent = L("Твоя ссылка-приглашение", "Your invite link");
+  if (refSectionTitles[1]) {
+    const _cnt = refSectionTitles[1].querySelector("#referralCount");
+    refSectionTitles[1].textContent = L("Приглашено игроков: ", "Players invited: ");
+    if (_cnt) refSectionTitles[1].appendChild(_cnt);
+  }
+
+  set("#roomsModal .roomsHeader h2", "🎮 " + L("Комнаты Bobr Run", "Bobr Run rooms"));
+  set("#createRoomBtn", L("Создать комнату Bobr Run", "Create a Bobr Run room"));
+
+  const profileReferralsBtn = document.querySelectorAll("#profileScreen .profile-settings-btn")[1];
+  if (profileReferralsBtn) {
+    const _refIcon = profileReferralsBtn.querySelector(".btn-inline-icon");
+    profileReferralsBtn.textContent = L("Рефералы", "Referrals");
+    if (_refIcon) profileReferralsBtn.prepend(_refIcon);
+  }
+
+  // ---- aria-label / placeholder localization ----
+  const _ariaMap = [
+    ["#modeBackButton", L("Назад", "Back")],
+    [".balance-add-btn", L("Пополнить баланс / подключить кошелёк", "Top up balance / connect wallet")],
+    ["#navHistory", L("История", "History")],
+    ["#scannerRoundsPanelBtn", L("История раундов", "Rounds history")],
+    [".profile-card", L("Открыть профиль", "Open profile")],
+    ["#homePromoCarousel", L("Промо-карусель", "Promo carousel")],
+    ["#marketPromoCarousel", L("Промо-карусель", "Promo carousel")],
+    [".home-promo-dot[data-dot='0']", L("Слайд 1", "Slide 1")],
+    [".home-promo-dot[data-dot='1']", L("Слайд 2", "Slide 2")],
+    [".app-settings-close", L("Закрыть", "Close")],
+    [".scanner-result-close-btn", L("Закрыть", "Close")],
+    [".scanner-stake-settings-close", L("Закрыть", "Close")],
+    ["#navProfileFloat", L("Профиль", "Profile")],
+    [".scanner-bet-edit", L("Настроить быстрые ставки", "Configure quick bets")],
+    [".scanner-stake-settings-clear", L("Стереть ставку", "Clear bet")],
+    ["#scannerBetBar", L("Бар ставок Сканера", "Scanner bet bar")],
+    ["#scannerBetBarEditFab", L("Бар ставок Сканера — настройка", "Scanner bet bar — settings")],
+    ["#copyReferralBtn", L("Скопировать ссылку", "Copy link")],
+    ["#marketFilterBtn", L("Фильтры", "Filters")],
+    ["#marketSortBtn", L("Сортировка", "Sort")],
+    ["#marketViewBtn", L("Вид списка", "List view")],
+    ["#marketSearchInput", L("Поиск подарков", "Search gifts")]
+  ];
+  _ariaMap.forEach(([sel, val]) => {
+    document.querySelectorAll(sel).forEach(el => el.setAttribute("aria-label", val));
+  });
+  const _marketSearch = document.getElementById("marketSearchInput");
+  if (_marketSearch) _marketSearch.setAttribute("placeholder", L("Поиск подарков", "Search gifts"));
+  const _stakeInput = document.getElementById("scannerStakeSettingsInput");
+  if (_stakeInput) _stakeInput.setAttribute("aria-label", L("Сумма ставки в GRAM", "Bet amount in GRAM"));
+
+  // Re-render scanner UI so dynamically-built texts pick up the new language.
+  if (typeof renderScannerRound === "function") {
+    try { renderScannerRound(); } catch (e) {}
+  }
+  if (typeof setMenuView === "function" && typeof currentMenuView === "string") {
+    const _pvpLabel = document.querySelector("#navPvp .nav-label");
+    if (_pvpLabel && (currentMenuView === "market" || currentMenuView === "auction")) {
+      _pvpLabel.textContent = L("Аукцион", "Auction");
+    }
   }
 
   // Waiting text on canvas (invalidate cache so it redraws)
@@ -8246,14 +8401,14 @@ function copyReferralLink() {
 
   if (btn) {
     btn.classList.add("is-copied");
-    btn.setAttribute("aria-label", "Скопировано");
+    btn.setAttribute("aria-label", L("Скопировано", "Copied"));
 
     if (_copyReferralResetTimer) {
       clearTimeout(_copyReferralResetTimer);
     }
     _copyReferralResetTimer = setTimeout(() => {
       btn.classList.remove("is-copied");
-      btn.setAttribute("aria-label", "Скопировать ссылку");
+      btn.setAttribute("aria-label", L("Скопировать ссылку", "Copy link"));
       _copyReferralResetTimer = null;
     }, 2000);
   }
@@ -8266,7 +8421,7 @@ async function renderReferralsScreen() {
   const countEl = document.getElementById("referralCount");
   const listEl = document.getElementById("referralList");
   if (!listEl) return;
-  listEl.innerHTML = "Загрузка...";
+  listEl.innerHTML = L("Загрузка...", "Loading...");
 
   try {
     const myId = getCurrentPlayer().id;
@@ -8285,18 +8440,18 @@ async function renderReferralsScreen() {
     if (countEl) countEl.textContent = String(items.length);
 
     if (items.length === 0) {
-      listEl.innerHTML = `<div style="opacity:0.6; font-size:13px;">Пока никого не пригласил${getCurrentPlayer().name ? "" : ""}.</div>`;
+      listEl.innerHTML = `<div style="opacity:0.6; font-size:13px;">${L("Пока никого не пригласил.", "You haven't invited anyone yet.")}</div>`;
       return;
     }
 
     listEl.innerHTML = items.map((item) => {
-      const name = escapeHtml(item.name || item.username || ("Игрок " + (item.playerId || item.id || "")));
+      const name = escapeHtml(item.name || item.username || (L("Игрок", "Player") + " " + (item.playerId || item.id || "")));
       return `<div style="display:flex; justify-content:space-between; padding:8px 10px; background:rgba(255,255,255,0.04); border-radius:8px; font-size:13px;">
         <span>${name}</span>
       </div>`;
     }).join("");
   } catch (e) {
-    listEl.innerHTML = `<div style="opacity:0.6; font-size:13px;">Не удалось загрузить список.</div>`;
+    listEl.innerHTML = `<div style="opacity:0.6; font-size:13px;">${L("Не удалось загрузить список.", "Failed to load the list.")}</div>`;
     console.warn("Ошибка загрузки рефералов:", e.message);
   }
 }
@@ -8682,7 +8837,7 @@ function formatScannerChanceWithMultiplier(multiplier, stake, pot) {
   const _multText = `x${_mult.toFixed(2)}`;
   if (!(_pot > 0) || !(_stake > 0)) return _multText;
   const _chance = (_stake / _pot) * 100;
-  return `Шансы: ${_chance.toFixed(2)}% · ${_multText}`;
+  return `${L("Шансы", "Chance")}: ${_chance.toFixed(2)}% · ${_multText}`;
 }
 
 function applyScannerDailyTop(data) {
@@ -9671,8 +9826,8 @@ function buildScannerPlayersFromFirestore(round, participants) {
     // Если это текущий игрок — берём актуальное имя и аватар из Telegram
     // чтобы не зависеть от того что сохранилось в Firestore или пришло от сокета
     name: (String(participant.playerId || participant.id) === getCurrentPlayer().id)
-      ? (getCurrentPlayer().name || participant.name || "Игрок")
-      : (participant.name || "Игрок"),
+      ? (getCurrentPlayer().name || participant.name || L("Игрок", "Player"))
+      : (participant.name || L("Игрок", "Player")),
     // Аватарку берём ТОЛЬКО из данных участника, пришедших с сервера.
     // Подстановка своей аватарки по совпадению id давала чужим игрокам
     // твою картинку, если сравнение срабатывало ложно (пустой id профиля,
@@ -9722,7 +9877,7 @@ function buildScannerPlayersFromFirestore(round, participants) {
       // серверным данным, чтобы позиция в массиве не поехала.
       return {
         id: pid,
-        name: sp.name || "Игрок",
+        name: sp.name || L("Игрок", "Player"),
         avatar: sp.avatar || null,
         stake: Number(sp.stake || 0),
         stakeHistory: [],
@@ -11963,7 +12118,7 @@ function applySocketRoundPatch(patch) {
     scannerRealtime.participants = _list.map((p) => ({
       id: String(p.playerId),
       playerId: String(p.playerId),
-      name: p.name || "Игрок",
+      name: p.name || L("Игрок", "Player"),
       avatar: p.avatar || null,
       stake: Number(p.stake || 0),
       stakeHistory: Array.isArray(p.stakeHistory) ? p.stakeHistory : [],
@@ -12207,7 +12362,7 @@ function applySocketRoundState(data) {
   scannerRealtime.participants = _stateList.map((p) => ({
     id: String(p.playerId),
     playerId: String(p.playerId),
-    name: p.name || "Игрок",
+    name: p.name || L("Игрок", "Player"),
     avatar: p.avatar || null,
     stake: Number(p.stake || 0),
     stakeHistory: Array.isArray(p.stakeHistory) ? p.stakeHistory : [],
@@ -12321,7 +12476,7 @@ function applySocketRoundResult(data) {
     if (!scannerGridState.winningPlayer && data.winnerPlayerId) {
       scannerGridState.winningPlayer = {
         id: String(data.winnerPlayerId),
-        name: data.winnerName || "Победитель",
+        name: data.winnerName || L("Победитель", "Winner"),
         color: getScannerColorById(data.winnerPlayerId, scannerGridState.roundId || "winner"),
         stake: data.winnerStake || 0
       };
@@ -12701,7 +12856,7 @@ function syncScannerDerivedState() {
 async function joinOrCreateScannerRound() {
   if (scannerRealtime.isJoinBusy) return;
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", {
+    setScannerTransientMessage(L("Ставки заблокированы до окончания текущего раунда.", "Bets are locked until the current round ends."), {
       type: "info",
       timeoutMs: 5000
     });
@@ -12718,7 +12873,7 @@ async function joinOrCreateScannerRound() {
     const stakeToAdd = normalizeStakeValue(scannerGridState.selectedStake);
 
     if (!Number.isFinite(stakeToAdd) || stakeToAdd <= 0) {
-      throw new Error("Выбери корректную ставку перед входом в раунд.");
+      throw new Error(L("Выбери корректную ставку перед входом в раунд.", "Pick a valid bet before joining the round."));
     }
 
     const balance = normalizeMoneyValue(getCurrentBalanceRaw());
@@ -12728,7 +12883,7 @@ async function joinOrCreateScannerRound() {
 
     await new Promise((resolve, reject) => {
       if (!_socket || !_socket.connected) {
-        return reject(new Error("Нет соединения с сервером. Попробуй ещё раз."));
+        return reject(new Error(L("Нет соединения с сервером. Попробуй ещё раз.", "No connection to the server. Please try again.")));
       }
 
       const eventName = scannerRealtime.activeRoundId && getScannerParticipantById(player.id)
@@ -12746,14 +12901,14 @@ async function joinOrCreateScannerRound() {
           syncLocalDemoBalance(newBalance);
           resolve();
         } else {
-          reject(new Error(response?.error || "Не удалось войти в раунд."));
+          reject(new Error(response?.error || L("Не удалось войти в раунд.", "Failed to join the round.")));
         }
       });
 
-      setTimeout(() => reject(new Error("Сервер не ответил. Попробуй ещё раз.")), 8000);
+      setTimeout(() => reject(new Error(L("Сервер не ответил. Попробуй ещё раз.", "The server didn't respond. Please try again."))), 8000);
     });
 
-    setScannerTransientMessage("Ты подключён к раунду.", { type: "success", timeoutMs: 3000, render: false });
+    setScannerTransientMessage(L("Ты подключён к раунду.", "You've joined the round."), { type: "success", timeoutMs: 3000, render: false });
     enterScannerGridMode();
 
   } catch (error) {
@@ -12761,7 +12916,7 @@ async function joinOrCreateScannerRound() {
     if (isInsufficientBalanceError(error)) {
       showInsufficientBalanceModal();
     } else {
-      setScannerTransientMessage(error?.message || "Не удалось войти в раунд.", {
+      setScannerTransientMessage(error?.message || L("Не удалось войти в раунд.", "Failed to join the round."), {
         type: "error",
         timeoutMs: 6000
       });
@@ -13118,7 +13273,7 @@ function saveScannerStakeSettings(event) {
       input.value = scannerStakeSettingsState.draftValues[invalidIndex] || "";
       input.focus({ preventScroll: true });
     }
-    setScannerStakeSettingsError("Каждая быстрая ставка должна быть числом больше 0.");
+    setScannerStakeSettingsError(L("Каждая быстрая ставка должна быть числом больше 0.", "Each quick bet must be a number greater than 0."));
     return;
   }
 
@@ -13156,12 +13311,12 @@ async function setScannerQuickStake(value, event) {
   if (event) event.stopPropagation();
   const nextStake = normalizeStakeValue(value);
   if (!nextStake || nextStake <= 0) {
-    setScannerTransientMessage("Некорректная ставка.", { type: "error", timeoutMs: 5000 });
+    setScannerTransientMessage(L("Некорректная ставка.", "Invalid bet."), { type: "error", timeoutMs: 5000 });
     return;
   }
 
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", { type: "info", timeoutMs: 5000 });
+    setScannerTransientMessage(L("Ставки заблокированы до окончания текущего раунда.", "Bets are locked until the current round ends."), { type: "info", timeoutMs: 5000 });
     renderScannerBetBar();
     return;
   }
@@ -13180,7 +13335,7 @@ async function setScannerAllInStake(event) {
   }
 
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", { type: "info", timeoutMs: 5000 });
+    setScannerTransientMessage(L("Ставки заблокированы до окончания текущего раунда.", "Bets are locked until the current round ends."), { type: "info", timeoutMs: 5000 });
     renderScannerBetBar();
     return;
   }
@@ -13207,7 +13362,7 @@ async function startOrJoinScannerRound(event) {
   const currentParticipant = getScannerParticipantById(currentPlayer.id);
 
   if (isScannerBettingLocked()) {
-    setScannerTransientMessage("Ставки заблокированы до окончания текущего раунда.", {
+    setScannerTransientMessage(L("Ставки заблокированы до окончания текущего раунда.", "Bets are locked until the current round ends."), {
       type: "info",
       timeoutMs: 5000
     });
@@ -13216,7 +13371,7 @@ async function startOrJoinScannerRound(event) {
   }
 
   if (status === "shuffling" || status === "finished" || status === "preparing_next_round") {
-    setScannerTransientMessage("Сейчас идёт завершение текущего общего раунда. Следующая lobby откроется автоматически.", {
+    setScannerTransientMessage(L("Сейчас идёт завершение текущего общего раунда. Следующая lobby откроется автоматически.", "The current shared round is wrapping up. The next lobby will open automatically."), {
       type: "info",
       timeoutMs: 5000
     });
@@ -13394,7 +13549,7 @@ function getScannerPlayerRowHtml(player, options = {}) {
   const stakesBlockHtml = chipsHtml ? `
       <div class="scanner-player-stakes-wrap">
         <div class="scanner-player-stakes-row${isRowExpanded ? " is-expanded" : ""}" data-player-id="${escapeHtml(String(player.id))}">${chipsHtml}</div>
-        <button type="button" class="scanner-stake-toggle${isRowExpanded ? " is-open" : ""}" onclick="toggleScannerPlayerStakesExpand(event)" aria-expanded="${isRowExpanded ? "true" : "false"}" aria-label="Показать все ставки">
+        <button type="button" class="scanner-stake-toggle${isRowExpanded ? " is-open" : ""}" onclick="toggleScannerPlayerStakesExpand(event)" aria-expanded="${isRowExpanded ? "true" : "false"}" aria-label="${L("Показать все ставки", "Show all bets")}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 9l6 6 6-6"/></svg>
         </button>
       </div>
@@ -13409,7 +13564,7 @@ function getScannerPlayerRowHtml(player, options = {}) {
         <div class="scanner-player-copy">
           <div class="scanner-player-name">${escapeHtml(player.name)}</div>
           <div class="scanner-player-percent-row">
-            <div class="scanner-player-percent"><span class="scanner-player-percent-label">Шансы</span> ${arenaPercent}</div>
+            <div class="scanner-player-percent"><span class="scanner-player-percent-label">${L("Шансы", "Chance")}</span> ${arenaPercent}</div>
             <div class="scanner-player-swatch" style="background:${player.color};"></div>
           </div>
         </div>
@@ -13460,7 +13615,7 @@ function renderScannerParticipants() {
   if (toggleButton) {
     toggleButton.classList.toggle("is-open", expanded);
     toggleButton.setAttribute("aria-expanded", String(expanded));
-    toggleButton.setAttribute("aria-label", expanded ? "Скрыть игроков" : "Показать игроков");
+    toggleButton.setAttribute("aria-label", expanded ? L("Скрыть игроков", "Hide players") : L("Показать игроков", "Show players"));
   }
 
   list.className = `scanner-player-list ${expanded ? "is-expanded" : "is-collapsed"}`;
@@ -13538,12 +13693,12 @@ function renderScannerRecentList() {
     toggleButton.disabled = !canExpand;
     toggleButton.classList.toggle("is-open", expanded && canExpand);
     toggleButton.setAttribute("aria-expanded", String(expanded && canExpand));
-    toggleButton.setAttribute("aria-label", expanded && canExpand ? "Скрыть последние раунды" : "Показать последние раунды");
+    toggleButton.setAttribute("aria-label", expanded && canExpand ? L("Скрыть последние раунды", "Hide recent rounds") : L("Показать последние раунды", "Show recent rounds"));
     toggleButton.style.opacity = canExpand ? "1" : "0.45";
   }
 
   if (!items.length) {
-    setInnerHtmlIfChanged(container, `<div class="scanner-empty">Глобальная история раундов пока пуста.</div>`);
+    setInnerHtmlIfChanged(container, `<div class="scanner-empty">${L("Глобальная история раундов пока пуста.", "The global rounds history is still empty.")}</div>`);
     return;
   }
 
@@ -13611,7 +13766,7 @@ function getScannerRecentRoundCardHtml(item, index) {
     item.winnerName ||
     item.winner ||
     (resultsArr.find((row) => String(row.playerId || row.id || row.userId || "") === String(item.winnerPlayerId || ""))?.name || "")
-  ).trim() || "Победитель";
+  ).trim() || L("Победитель", "Winner");
   const winnerAvatar = item.winnerAvatar ||
     (resultsArr.find((row) => String(row.playerId || row.id || "") === String(item.winnerPlayerId || ""))?.avatar || null) ||
     (String(item.winnerPlayerId || "") === String(currentPlayer.id) ? currentPlayer.avatar : null) ||
@@ -13620,12 +13775,12 @@ function getScannerRecentRoundCardHtml(item, index) {
     resultsArr.find((row) => String(row.playerId || row.id || "") === String(item.winnerPlayerId || ""))?.cellCount || 0
   );
   const winnerChance = formatPercent((winnerCellCount / SCANNER_GRID_TOTAL_CELLS) * 100);
-  const roundNumberText = item.roundNumber ? `Раунд №: ${item.roundNumber}` : "";
+  const roundNumberText = item.roundNumber ? `${L("Раунд №", "Round #")}: ${item.roundNumber}` : "";
   const youWon = String(item.winnerPlayerId || "") === String(currentPlayer.id);
 
   const recentRoundPlayers = resultsArr.map((row) => ({
     id: String(row.playerId || row.id || ""),
-    name: row.name || "Игрок",
+    name: row.name || L("Игрок", "Player"),
     avatar: row.avatar || null,
     color: row.color || row.roundColor || row.playerColor || "hsl(182 88% 58%)",
     stake: Number(row.stake || row.score || 0),
@@ -13654,7 +13809,7 @@ function getScannerRecentRoundCardHtml(item, index) {
           <div class="scanner-player-copy">
             <div class="scanner-player-name">${escapeHtml(player.name)}</div>
             <div class="scanner-player-percent-row">
-              <div class="scanner-player-percent"><span class="scanner-player-percent-label">Шансы</span> ${arenaPercent}</div>
+              <div class="scanner-player-percent"><span class="scanner-player-percent-label">${L("Шансы", "Chance")}</span> ${arenaPercent}</div>
               <div class="scanner-player-swatch" style="background:${escapeHtml(player.color)};"></div>
             </div>
           </div>
@@ -13668,7 +13823,7 @@ function getScannerRecentRoundCardHtml(item, index) {
   return `
     <div class="history-match-card scanner-history-card${expandedClass}" onclick="toggleScannerRecentRoundDetails('${safeId}', event)">
       <div class="scanner-history-header-row">
-        <div class="scanner-history-topline">Победитель</div>
+        <div class="scanner-history-topline">${L("Победитель", "Winner")}</div>
         <div class="scanner-history-meta-col">
           <div class="scanner-history-date">${finishedAtText}</div>
           ${roundNumberText ? `<div class="scanner-history-round-number">· ${roundNumberText}</div>` : ""}
@@ -13679,7 +13834,7 @@ function getScannerRecentRoundCardHtml(item, index) {
           <div class="scanner-player-swatch" style="background:${escapeHtml(winnerColor)};"></div>
           ${getScannerHistoryAvatarHtml(winnerNickname, winnerAvatar)}
           <span class="scanner-history-result-name">${escapeHtml(winnerNickname)}</span>
-          <span class="scanner-history-result-chance">Шансы ${winnerChance}</span>
+          <span class="scanner-history-result-chance">${L("Шансы", "Chance")} ${winnerChance}</span>
         </div>
         <div class="scanner-history-amount${youWon ? " win" : ""}">${winnerPayout.toFixed(2)} GRAM · ${multiplierText}</div>
       </div>
@@ -13694,7 +13849,7 @@ function getScannerRecentRoundCardHtml(item, index) {
 
       <div id="${detailsId}" class="scanner-history-details${detailsOpenClass}" data-scanner-recent-details="true" aria-hidden="${detailsHidden}">
         <div class="scanner-history-detail-item">
-          <div class="scanner-history-detail-label">Игроки в раунде: ${formatCompactNumber(participantCount)}</div>
+          <div class="scanner-history-detail-label">${L("Игроки в раунде", "Players in round")}: ${formatCompactNumber(participantCount)}</div>
           <div class="scanner-history-detail-value">${totalPot.toFixed(2)} GRAM</div>
         </div>
 
@@ -13749,7 +13904,7 @@ function renderScannerBetBar() {
     button.classList.remove("active");
     button.classList.toggle("is-locked", bettingLocked);
     button.disabled = shouldDisable;
-    button.setAttribute("aria-label", bettingLocked ? "Ставки заблокированы до окончания раунда" : `Поставить ${formatTon(normalizedValue)}`);
+    button.setAttribute("aria-label", bettingLocked ? L("Ставки заблокированы до окончания раунда", "Bets are locked until the round ends") : `${L("Поставить", "Bet")} ${formatTon(normalizedValue)}`);
   });
 
   if (allInButton) {
@@ -13865,7 +14020,7 @@ function updateScannerBetBarVisibility() {
     if (shouldShow) {
       const avatarEl = document.getElementById("profileAvatar");
       floatBtn.style.backgroundImage = avatarEl?.style.backgroundImage || "";
-      const initial = document.getElementById("profileAvatar")?.textContent || "И";
+      const initial = document.getElementById("profileAvatar")?.textContent || L("И", "P");
       if (!floatBtn.style.backgroundImage) floatBtn.textContent = initial;
     }
   }
@@ -13980,37 +14135,37 @@ function renderScannerButtons() {
 
   const currentPlayer = getCurrentPlayer();
   const hasMe = !!getScannerParticipantById(currentPlayer.id);
-  let text = "Войти в раунд";
+  let text = L("Войти в раунд", "Join round");
   let disabled = false;
 
   if (scannerGridState.status === "waiting") {
     text = hasMe
-      ? `Добавить ${formatTon(scannerGridState.selectedStake)}`
-      : `Войти — ${formatTon(scannerGridState.selectedStake)}`;
+      ? `${L("Добавить", "Add")} ${formatTon(scannerGridState.selectedStake)}`
+      : `${L("Войти", "Join")} — ${formatTon(scannerGridState.selectedStake)}`;
   } else if (scannerGridState.status === "countdown") {
     text = hasMe
-      ? `Добавить ${formatTon(scannerGridState.selectedStake)}`
-      : `Войти до старта — ${formatTon(scannerGridState.selectedStake)}`;
+      ? `${L("Добавить", "Add")} ${formatTon(scannerGridState.selectedStake)}`
+      : `${L("Войти до старта", "Join before start")} — ${formatTon(scannerGridState.selectedStake)}`;
     if (!hasMe && scannerGridState.totalPlayers >= scannerGridState.maxPlayers) {
-      text = "Раунд заполнен";
+      text = L("Раунд заполнен", "Round is full");
       disabled = true;
     }
   } else if (scannerGridState.status === "shuffling") {
-    text = "Перемешивание";
+    text = L("Перемешивание", "Shuffling");
     disabled = true;
   } else if (scannerGridState.status === "active") {
-    text = "Раунд идёт";
+    text = L("Раунд идёт", "Round in progress");
     disabled = true;
   } else if (scannerGridState.status === "finished") {
-    text = "Показ результата";
+    text = L("Показ результата", "Showing result");
     disabled = true;
   } else if (scannerGridState.status === "preparing_next_round") {
-    text = "Подготовка";
+    text = L("Подготовка", "Preparing");
     disabled = true;
   }
 
   if (scannerRealtime.isJoinBusy) {
-    text = "Подключение...";
+    text = L("Подключение...", "Connecting...");
     disabled = true;
   }
 
@@ -14025,33 +14180,33 @@ function isScannerResultRevealReady() {
 
 function getScannerRoundOverlayLeft() {
   if (scannerGridState.status === "idle" || scannerGridState.totalPlayers <= 0) {
-    return "Арена: ожидание игроков";
+    return L("Арена: ожидание игроков", "Arena: waiting for players");
   }
-  return `Игроки: ${formatCompactNumber(scannerGridState.totalPlayers)} / ${formatCompactNumber(scannerGridState.maxPlayers || 0)}`;
+  return `${L("Игроки", "Players")}: ${formatCompactNumber(scannerGridState.totalPlayers)} / ${formatCompactNumber(scannerGridState.maxPlayers || 0)}`;
 }
 
 function getScannerRoundOverlayRight() {
   if (scannerGridState.totalPlayers <= 0) {
-    return "Лазер в ожидании";
+    return L("Лазер в ожидании", "Laser standing by");
   }
 
   switch (scannerGridState.status) {
     case "waiting":
-      return "Арена готова";
+      return L("Арена готова", "Arena ready");
     case "countdown":
-      return scannerGridState.totalPlayers === 1 ? "Ожидание 2-го игрока" : "Лазер идёт к границе";
+      return scannerGridState.totalPlayers === 1 ? L("Ожидание 2-го игрока", "Waiting for a 2nd player") : L("Лазер идёт к границе", "Laser heading to the edge");
     case "shuffling":
-      return "Игроки перемешиваются";
+      return L("Игроки перемешиваются", "Players are being shuffled");
     case "active":
-      return "Раунд идёт";
+      return L("Раунд идёт", "Round in progress");
     case "finished":
       return isScannerResultRevealReady()
-        ? `Победитель: ${scannerGridState.winningPlayer?.name || "—"}`
-        : "Раунд завершён";
+        ? `${L("Победитель", "Winner")}: ${scannerGridState.winningPlayer?.name || "—"}`
+        : L("Раунд завершён", "Round finished");
     case "preparing_next_round":
-      return "Арена готова";
+      return L("Арена готова", "Arena ready");
     default:
-      return "Лазер в ожидании";
+      return L("Лазер в ожидании", "Laser standing by");
   }
 }
 
@@ -14112,19 +14267,19 @@ function renderScannerRound(options = {}) {
     countdown.classList.toggle("is-round-active", scannerGridState.status === "active");
   }
   const _displayPot = isArenaResetPhase ? 0 : (scannerRealtime.roundData?.totalPot || scannerGridState.totalPot || 0);
-  if (poolChip) setTextContentIfChanged(poolChip, `Банк: ${formatTon(_displayPot)}`);
+  if (poolChip) setTextContentIfChanged(poolChip, `${L("Банк", "Bank")}: ${formatTon(_displayPot)}`);
   const screenPoolChip = document.getElementById("scannerScreenPoolChip");
-  if (screenPoolChip) setTextContentIfChanged(screenPoolChip, `Банк: ${formatTon(_displayPot)}`);
+  if (screenPoolChip) setTextContentIfChanged(screenPoolChip, `${L("Банк", "Bank")}: ${formatTon(_displayPot)}`);
   const roundNumberDisplay = document.getElementById("scannerRoundNumberDisplay");
   const homeRoundNumberDisplay = document.getElementById("scannerHomeRoundNumber");
-  const _roundNumText = `Раунд №: ${(scannerRealtime.roundData?.roundNumber || scannerDisplayRoundNumber) || "—"}`;
+  const _roundNumText = `${L("Раунд №", "Round #")}: ${(scannerRealtime.roundData?.roundNumber || scannerDisplayRoundNumber) || "—"}`;
   if (roundNumberDisplay) {
     setTextContentIfChanged(roundNumberDisplay, _roundNumText);
   }
   if (homeRoundNumberDisplay) {
     setTextContentIfChanged(homeRoundNumberDisplay, _roundNumText);
   }
-  if (chanceChip) setTextContentIfChanged(chanceChip, `Мои шансы: ${isArenaResetPhase ? "0%" : myChanceValue}`);
+  if (chanceChip) setTextContentIfChanged(chanceChip, `${L("Мои шансы", "My chance")}: ${isArenaResetPhase ? "0%" : myChanceValue}`);
   if (selectedStake) setTextContentIfChanged(selectedStake, formatTon(scannerGridState.selectedStake));
   if (selectedPopulation) setTextContentIfChanged(selectedPopulation, scannerGridState.roundData ? formatCompactNumber(scannerGridState.maxPlayers || 0) : formatCompactNumber(scannerGridState.selectedPopulation));
   if (cellsValue) setTextContentIfChanged(cellsValue, formatCompactNumber(SCANNER_GRID_TOTAL_CELLS));
@@ -14164,7 +14319,7 @@ function renderScannerRound(options = {}) {
         resultOverlay.classList.add("open");
         startScannerResultTimer();
       }
-      setTextContentIfChanged(resultTitle, "Победитель");
+      setTextContentIfChanged(resultTitle, L("Победитель", "Winner"));
       setInnerHtmlIfChanged(resultText, `
         <div class="scanner-result-winner">
           ${getScannerPlayerAvatarHtml(winnerPlayer)}
@@ -14172,7 +14327,7 @@ function renderScannerRound(options = {}) {
             <span class="scanner-result-color-swatch" style="background:${winnerColor};"></span>
             <span>${escapeHtml(winnerPlayer.name)}</span>
           </div>
-          <div class="scanner-result-chance">Шансы: ${winnerChanceText}</div>
+          <div class="scanner-result-chance">${L("Шансы", "Chance")}: ${winnerChanceText}</div>
           <div class="scanner-result-summary">
             <span class="scanner-result-payout">${formatTon(payout)}</span>
             <span class="scanner-result-mult">${multiplier}</span>
@@ -14994,7 +15149,7 @@ function addScannerWaitingTextBeamGlow(cache, beamSample, size, fontSize, center
 }
 
 function drawScannerWaitingText(ctx, size, beamSample, options = {}) {
-  const text = options.text || "Ожидание раунда...";
+  const text = options.text || L("Ожидание раунда...", "Waiting for round...");
   const isHomePreview = document.getElementById('scannerGridCanvas')?.closest('#scannerHomeCanvasShell') !== null;
   // Раньше у превью на главной странице арены был отдельный, заниженный
   // множитель (0.048) вместо того же 0.074, что и в полной арене — из-за
@@ -16709,7 +16864,7 @@ function renderScannerCanvas() {
       const px = Math.max(0, Math.min(size - 1, visualBeamSample.x * size));
       const py = Math.max(0, Math.min(size - 1, visualBeamSample.y * size));
       const fontSize = Math.max(11, size * 0.038);
-      const label = ownerPlayer.name || "Игрок";
+      const label = ownerPlayer.name || L("Игрок", "Player");
       const paddingX = fontSize * 0.7;
       const paddingY = fontSize * 0.38;
       ctx.font = `700 ${fontSize}px Arial, sans-serif`;
@@ -17425,7 +17580,7 @@ function toggleMarketViewMode(event) {
 function handleMarketFilterClick(event) {
   if (event) event.stopPropagation();
   closeMarketSortMenu();
-  showAppNotice("Фильтры появятся позже");
+  showAppNotice(L("Фильтры появятся позже", "Filters will be added later"));
 }
 
 document.addEventListener("click", closeMarketSortMenu);
