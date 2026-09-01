@@ -883,14 +883,28 @@ body.referrals-mode #appReferralsOverlay .app-settings-sheet {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Заголовок и крестик живут в верхней панели, внутри они не нужны. */
-body.referrals-mode #appReferralsOverlay .app-settings-handle,
-body.referrals-mode #appReferralsOverlay .app-settings-header {
+/* Полоска-ручка от всплывающего окна на экране не нужна. */
+body.referrals-mode #appReferralsOverlay .app-settings-handle {
   display: none;
 }
 
+/* Заголовок слева, крестик справа — своей строкой над содержимым. */
+body.referrals-mode #appReferralsOverlay .app-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 14px;
+}
+
+body.referrals-mode #appReferralsOverlay .app-settings-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Заголовок в верхней панели не дублируем — он теперь внутри экрана. */
 body.referrals-mode .history-mode-title {
-  opacity: 1;
+  opacity: 0;
 }
 
 body.rating-mode #leaderboardModal {
@@ -6622,11 +6636,20 @@ function openProfileScreen(event) {
   closeBobrRunRooms();
   currentProfileBestRoundWin = 0;
   renderProfileScreen({ reloadBestWin: true });
-  setMenuView("profile", { preserveNav: true });
+  // Профиль — не раздел нижней панели, поэтому подсветку снимаем полностью.
+  // Заодно запоминаем, откуда пришли, чтобы вернуть туда же по "назад".
+  _profileReturnView = (currentMenuView === "profile") ? _profileReturnView : currentMenuView;
+  setMenuView("profile");
+  setActiveBottomNav("");
 }
 
+let _profileReturnView = "home";
+
 function closeProfileScreen() {
-  setMenuView("home", { preserveNav: true });
+  // Возвращаемся на тот экран, с которого открыли профиль: арена, маркет
+  // или главная. Раньше выход всегда вёл на главную.
+  const back = _profileReturnView || "home";
+  setMenuView(back);
   renderTopProfile();
 }
 
