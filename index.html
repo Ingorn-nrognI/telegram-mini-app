@@ -910,6 +910,48 @@ body.referrals-mode .history-mode-title {
   opacity: 0;
 }
 
+/* Настройки во весь экран — точная копия правил для Рефералов выше. */
+body.settings-mode #appSettingsOverlay {
+  padding: 0;
+  background: var(--bg-1);
+  backdrop-filter: none;
+}
+
+body.settings-mode #appSettingsOverlay .app-settings-sheet {
+  width: 100vw;
+  max-width: none;
+  height: calc(100vh - var(--safe-top, 0px) - 5px);
+  margin-top: calc(var(--safe-top, 0px) + 5px);
+  margin-bottom: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.settings-mode #appSettingsOverlay .app-settings-handle {
+  display: none;
+}
+
+body.settings-mode #appSettingsOverlay .app-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 14px;
+}
+
+body.settings-mode #appSettingsOverlay .app-settings-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+body.settings-mode .history-mode-title {
+  opacity: 0;
+}
+
 body.rating-mode #leaderboardModal {
   padding-top: calc(var(--safe-top) + 62px);
   background: var(--bg-1);
@@ -5781,6 +5823,20 @@ body.history-mode .history-panel-header .history-panel-title {
 
     <div id="referralsSheetBanner" class="referrals-sheet-banner"></div>
 
+    <div class="referral-earned-pill" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; margin-top:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:14px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true">
+          <path fill="currentColor" d="M494.422,238.219v-72.281c-0.016-34.063-23.641-62.5-55.422-70.063c-3.063-37-33.969-66.125-71.781-66.125H108.156C53.984,29.766,9.297,69.594,1.406,121.547H0v16.359v42.125v194.063c0.016,59.75,48.422,108.156,108.156,108.156h314.125c39.844,0,72.125-32.281,72.141-72.141v-45.672c10.141-2.891,17.563-12.109,17.578-23.156v-79.875C511.984,250.344,504.563,241.125,494.422,238.219z M470.219,410.109c-0.016,13.266-5.344,25.172-14.047,33.891c-8.703,8.688-20.609,14.031-33.891,14.031H108.156c-23.219,0-44.125-9.375-59.359-24.578c-15.203-15.234-24.578-36.141-24.578-59.359V180.031v-41.156l0.203-4.688c1.953-44.625,38.641-80.25,83.734-80.219h259.063c23.719-0.016,43.328,17.219,47.156,39.844H65.938c-6.688,0-12.125,5.406-12.125,12.094s5.438,12.109,12.125,12.109h357.828l2.484,0.203c24.594,2.031,43.969,22.609,43.969,47.719v71.25H358.406c-17.688,0-33.766,7.203-45.344,18.781l-0.016,0.016c-11.578,11.578-18.797,27.656-18.766,45.359c-0.031,17.688,7.188,33.75,18.781,45.344l0,0c11.578,11.594,27.656,18.797,45.344,18.781h111.813V410.109z M487.781,341.266H358.406c-11.141-0.016-20.875-4.406-28.219-11.703c-7.313-7.344-11.688-17.094-11.703-28.219c0.016-11.141,4.391-20.891,11.703-28.25l-0.094,0.094l0.078-0.094h0.016c7.344-7.281,17.078-11.656,28.219-11.688h129.375V341.266z"/>
+          <path fill="currentColor" d="M341.969,301.344c0,9.578,7.75,17.344,17.344,17.344c9.563,0,17.344-7.766,17.344-17.344c0-9.594-7.781-17.359-17.344-17.359C349.719,283.984,341.969,291.75,341.969,301.344z"/>
+        </svg>
+        <span id="referralEarnedLabel" style="font-size:13px; opacity:0.75;">Заработано</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span id="referralEarnedAmount" style="font-size:14px; font-weight:700; display:flex; align-items:center; gap:4px;">0.00 GRAM</span>
+        <button id="claimReferralBtn" onclick="claimReferralEarnings()" style="background:#fff; color:#0a0a12; border:none; border-radius:10px; padding:7px 14px; font-size:13px; font-weight:700;">Забрать</button>
+      </div>
+    </div>
+
     <div class="app-settings-section">
       <div class="app-settings-section-title">Твоя ссылка-приглашение</div>
       <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
@@ -5788,17 +5844,37 @@ body.history-mode .history-panel-header .history-panel-title {
           id="referralLinkInput"
           type="text"
           readonly
-          style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px 12px; color:#fff; font-size:13px;"
+          style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:8px 10px; color:#fff; font-size:13px;"
         />
         <button id="copyReferralBtn" class="app-settings-chip copy-referral-btn" onclick="copyReferralLink()" aria-label="Скопировать ссылку">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="copy-referral-icon" aria-hidden="true"><path fill="currentColor" d="M480 400L288 400C279.2 400 272 392.8 272 384L272 128C272 119.2 279.2 112 288 112L421.5 112C425.7 112 429.8 113.7 432.8 116.7L491.3 175.2C494.3 178.2 496 182.3 496 186.5L496 384C496 392.8 488.8 400 480 400zM288 448L480 448C515.3 448 544 419.3 544 384L544 186.5C544 169.5 537.3 153.2 525.3 141.2L466.7 82.7C454.7 70.7 438.5 64 421.5 64L288 64C252.7 64 224 92.7 224 128L224 384C224 419.3 252.7 448 288 448zM160 192C124.7 192 96 220.7 96 256L96 512C96 547.3 124.7 576 160 576L352 576C387.3 576 416 547.3 416 512L416 496L368 496L368 512C368 520.8 360.8 528 352 528L160 528C151.2 528 144 520.8 144 512L144 256C144 247.2 151.2 240 160 240L176 240L176 192L160 192z"/></svg>
         </button>
+        <button id="inviteFriendsBtn" class="app-settings-chip copy-referral-btn" onclick="shareReferralLink()" aria-label="Пригласить">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="copy-referral-icon" aria-hidden="true"><path fill="currentColor" d="M476.9 122.7C488.3 111.3 507 111.3 518.4 122.7L582.4 186.7C593.8 198.1 593.8 216.8 582.4 228.2L518.4 292.2C507 303.6 488.3 303.6 476.9 292.2C465.5 280.8 465.5 262.1 476.9 250.7L491.2 236.4L400 236.4C382.3 236.4 368 222.1 368 204.4C368 186.7 382.3 172.4 400 172.4L491.2 172.4L476.9 158.1C465.5 146.7 465.5 128 476.9 116.6L476.9 122.7zM256 128C309 128 352 171 352 224C352 277 309 320 256 320C203 320 160 277 160 224C160 171 203 128 256 128zM128 528C128 439.6 199.6 368 288 368L224 368C135.6 368 64 439.6 64 528C64 545.7 78.3 560 96 560L416 560C433.7 560 448 545.7 448 528C448 439.6 376.4 368 288 368C376.4 368 448 439.6 448 528z"/></svg>
+        </button>
       </div>
+    </div>
+
+    <div class="app-settings-section" id="referralProgramInfo">
+      <!-- Описание того, как работает реферальная программа. Заполним позже. -->
     </div>
 
     <div class="app-settings-section">
       <div class="app-settings-section-title">Приглашено игроков: <span id="referralCount">0</span></div>
-      <div id="referralList" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;"></div>
+      <div style="overflow-x:auto; margin-top:8px;">
+        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+          <thead>
+            <tr style="opacity:0.6; text-align:left;">
+              <th style="padding:6px 4px;">№</th>
+              <th style="padding:6px 4px;">Игрок</th>
+              <th style="padding:6px 4px; text-align:right;">Игры Market</th>
+              <th style="padding:6px 4px; text-align:right;">Market</th>
+              <th style="padding:6px 4px; text-align:right;">Доход</th>
+            </tr>
+          </thead>
+          <tbody id="referralList"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -8346,6 +8422,7 @@ function renderAppSettings() {
 function openSettings() {
   const overlay = document.getElementById("appSettingsOverlay");
   if (!overlay) return;
+  document.body.classList.add("settings-mode");
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
   renderAppSettings();
@@ -8355,6 +8432,7 @@ function openSettings() {
 function closeSettings() {
   const overlay = document.getElementById("appSettingsOverlay");
   if (!overlay) return;
+  document.body.classList.remove("settings-mode");
   overlay.classList.remove("open");
   overlay.setAttribute("aria-hidden", "true");
   syncAppBackButton();
@@ -8421,6 +8499,21 @@ function copyReferralLink() {
   }
 }
 
+function shareReferralLink() {
+  const link = getMyReferralLink();
+  const text = L("Присоединяйся к Laser Market!", "Join Laser Market!");
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+  if (window.Telegram?.WebApp?.openTelegramLink) {
+    window.Telegram.WebApp.openTelegramLink(shareUrl);
+  } else {
+    window.open(shareUrl, "_blank");
+  }
+}
+
+function claimReferralEarnings() {
+  showAppNotice(L("Пока недоступно", "Not available yet"));
+}
+
 async function renderReferralsScreen() {
   const linkInput = document.getElementById("referralLinkInput");
   if (linkInput) linkInput.value = getMyReferralLink();
@@ -8428,7 +8521,7 @@ async function renderReferralsScreen() {
   const countEl = document.getElementById("referralCount");
   const listEl = document.getElementById("referralList");
   if (!listEl) return;
-  listEl.innerHTML = L("Загрузка...", "Loading...");
+  listEl.innerHTML = `<tr><td colspan="5" style="padding:10px 4px; opacity:0.6;">${L("Загрузка...", "Loading...")}</td></tr>`;
 
   try {
     const myId = getCurrentPlayer().id;
@@ -8447,18 +8540,35 @@ async function renderReferralsScreen() {
     if (countEl) countEl.textContent = String(items.length);
 
     if (items.length === 0) {
-      listEl.innerHTML = `<div style="opacity:0.6; font-size:13px;">${L("Пока никого не пригласил.", "You haven't invited anyone yet.")}</div>`;
+      listEl.innerHTML = `<tr><td colspan="5" style="padding:10px 4px; opacity:0.6; font-size:13px;">${L("Пока никого не пригласил.", "You haven't invited anyone yet.")}</td></tr>`;
       return;
     }
 
-    listEl.innerHTML = items.map((item) => {
+    listEl.innerHTML = items.map((item, index) => {
       const name = escapeHtml(item.name || item.username || (L("Игрок", "Player") + " " + (item.playerId || item.id || "")));
-      return `<div style="display:flex; justify-content:space-between; padding:8px 10px; background:rgba(255,255,255,0.04); border-radius:8px; font-size:13px;">
-        <span>${name}</span>
-      </div>`;
+      const joinedDate = item.joinedAt ? new Date(item.joinedAt).toLocaleDateString() : "—";
+      const avatarLetter = name.trim().charAt(0).toUpperCase() || (L("И", "P"));
+      const gamesMarketEarn = item.gamesMarketEarn != null ? formatTon(item.gamesMarketEarn) : "—";
+      const marketEarn = item.marketEarn != null ? formatTon(item.marketEarn) : "—";
+      const totalEarn = item.totalEarn != null ? formatTon(item.totalEarn) : "—";
+      return `<tr style="border-top:1px solid rgba(255,255,255,0.06);">
+        <td style="padding:8px 4px;">${index + 1}</td>
+        <td style="padding:8px 4px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0;">${avatarLetter}</div>
+            <div>
+              <div style="font-weight:600;">${name}</div>
+              <div style="opacity:0.55; font-size:11px;">${joinedDate}</div>
+            </div>
+          </div>
+        </td>
+        <td style="padding:8px 4px; text-align:right;">${gamesMarketEarn}</td>
+        <td style="padding:8px 4px; text-align:right;">${marketEarn}</td>
+        <td style="padding:8px 4px; text-align:right; font-weight:700;">${totalEarn}</td>
+      </tr>`;
     }).join("");
   } catch (e) {
-    listEl.innerHTML = `<div style="opacity:0.6; font-size:13px;">${L("Не удалось загрузить список.", "Failed to load the list.")}</div>`;
+    listEl.innerHTML = `<tr><td colspan="5" style="padding:10px 4px; opacity:0.6; font-size:13px;">${L("Не удалось загрузить список.", "Failed to load the list.")}</td></tr>`;
     console.warn("Ошибка загрузки рефералов:", e.message);
   }
 }
@@ -8487,6 +8597,9 @@ function tryClaimReferralFromStartParam() {
 }
 
 function handleAppSettingsBackdrop(event) {
+  // В полноэкранном режиме подложки нет — закрывать по клику мимо нечему.
+  // Выход только системной кнопкой "назад"/крестиком.
+  if (document.body.classList.contains("settings-mode")) return;
   if (event.target === document.getElementById("appSettingsOverlay")) {
     closeSettings();
   }
@@ -17611,6 +17724,8 @@ window.openReferrals = openReferrals;
 window.closeReferrals = closeReferrals;
 window.handleReferralsBackdrop = handleReferralsBackdrop;
 window.copyReferralLink = copyReferralLink;
+window.shareReferralLink = shareReferralLink;
+window.claimReferralEarnings = claimReferralEarnings;
 window.renderAppSettings = renderAppSettings;
 window.handleAppSettingsBackdrop = handleAppSettingsBackdrop;
 window.setAppLanguage = setAppLanguage;
