@@ -861,6 +861,38 @@ body.history-mode .history-panel-header {
 /* Рейтинг сделан не панелью, а модальным окном (.app-modal) — приводим его
    к тому же полноэкранному виду: без затемнения, без скруглений и без
    собственной шапки с крестиком. */
+/* Рефералы во весь экран, как турниры и игры: не всплывающее окно снизу,
+   а отдельный экран с заголовком в верхней панели. */
+body.referrals-mode #appReferralsOverlay {
+  padding: 0;
+  background: var(--bg-1);
+  backdrop-filter: none;
+}
+
+body.referrals-mode #appReferralsOverlay .app-settings-sheet {
+  width: 100vw;
+  max-width: none;
+  height: calc(100vh - var(--safe-top, 0px) - 62px);
+  margin-top: calc(var(--safe-top, 0px) + 62px);
+  margin-bottom: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Заголовок и крестик живут в верхней панели, внутри они не нужны. */
+body.referrals-mode #appReferralsOverlay .app-settings-handle,
+body.referrals-mode #appReferralsOverlay .app-settings-header {
+  display: none;
+}
+
+body.referrals-mode .history-mode-title {
+  opacity: 1;
+}
+
 body.rating-mode #leaderboardModal {
   padding-top: calc(var(--safe-top) + 62px);
   background: var(--bg-1);
@@ -6985,6 +7017,7 @@ function setHistoryMode(mode, titleText) {
   document.body.classList.toggle("history-mode", mode === "history");
   document.body.classList.toggle("rating-mode", mode === "rating");
   document.body.classList.toggle("games-mode", mode === "games");
+  document.body.classList.toggle("referrals-mode", mode === "referrals");
   const titleEl = document.getElementById("historyModeTitle");
   if (titleEl) titleEl.textContent = mode ? (titleText || "") : "";
 }
@@ -7000,6 +7033,11 @@ function syncHistoryModeState() {
   const gamesOpen = !!document.getElementById("modePopup")?.classList.contains("open");
   if (gamesOpen) {
     setHistoryMode("games", "Игры");
+    return;
+  }
+  const referralsOpen = !!document.getElementById("appReferralsOverlay")?.classList.contains("open");
+  if (referralsOpen) {
+    setHistoryMode("referrals", "Рефералы");
     return;
   }
   const t = (typeof APP_TRANSLATIONS === "object" && APP_TRANSLATIONS)
@@ -8145,6 +8183,7 @@ function openReferrals() {
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
   renderReferralsScreen();
+  if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   syncAppBackButton({ forceShow: true, onClick: closeReferrals });
 }
 
@@ -8153,10 +8192,14 @@ function closeReferrals() {
   if (!overlay) return;
   overlay.classList.remove("open");
   overlay.setAttribute("aria-hidden", "true");
+  if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   syncAppBackButton();
 }
 
 function handleReferralsBackdrop(event) {
+  // В полноэкранном режиме подложки нет — закрывать по клику мимо нечему.
+  // Выход только системной кнопкой "назад".
+  if (document.body.classList.contains("referrals-mode")) return;
   if (event.target === document.getElementById("appReferralsOverlay")) {
     closeReferrals();
   }
