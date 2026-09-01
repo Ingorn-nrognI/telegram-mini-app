@@ -8570,9 +8570,14 @@ async function renderReferralsScreen() {
       const name = escapeHtml(item.name || item.username || (L("Игрок", "Player") + " " + (item.playerId || item.id || "")));
       const joinedDate = item.joinedAt ? new Date(item.joinedAt).toLocaleDateString() : "—";
       const avatarLetter = name.trim().charAt(0).toUpperCase() || (L("И", "P"));
-      const gamesMarketEarn = item.gamesMarketEarn != null ? formatTon(item.gamesMarketEarn) : "—";
-      const marketEarn = item.marketEarn != null ? formatTon(item.marketEarn) : "—";
-      const totalEarn = item.totalEarn != null ? formatTon(item.totalEarn) : "—";
+      const formatTonSmallUnit = (value) => {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return "—";
+        return `${n.toFixed(2)} <span style="font-size:0.8em; opacity:0.75;">gram</span>`;
+      };
+      const gamesMarketEarn = item.gamesMarketEarn != null ? formatTonSmallUnit(item.gamesMarketEarn) : "—";
+      const marketEarn = item.marketEarn != null ? formatTonSmallUnit(item.marketEarn) : "—";
+      const totalEarn = item.totalEarn != null ? formatTonSmallUnit(item.totalEarn) : "—";
       return `<tr style="border-top:1px solid rgba(255,255,255,0.06);">
         <td style="padding:8px 16px 8px 4px; border-right:1px solid rgba(255,255,255,0.08);">${index + 1}</td>
         <td style="padding:8px 4px 8px 16px;">
