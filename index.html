@@ -1582,7 +1582,7 @@ body.history-mode .history-panel-header .history-panel-title {
 }
 
 .home-promo-slide-referral {
-  background-image: url("banner-referral-ru.jpg");
+  background-image: url("banner-referral-ru.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -4548,7 +4548,7 @@ body.history-mode .history-panel-header .history-panel-title {
   aspect-ratio: 1200 / 300;
   margin: 2px 0 14px;
   border-radius: 18px;
-  background-image: url("banner-referral-ru.jpg");
+  background-image: url("banner-referral-ru.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -7976,7 +7976,7 @@ function applyAppLanguage(lang) {
   set(".balance-label", t.balance);
 
   // Referral banner (image swaps by language)
-  const referralBannerFile = lang === "en" ? "banner-referral-en.jpg" : "banner-referral-ru.jpg";
+  const referralBannerFile = lang === "en" ? "banner-referral-en.png" : "banner-referral-ru.png";
   const _refSheetBanner = document.getElementById("referralsSheetBanner");
   if (_refSheetBanner) _refSheetBanner.style.backgroundImage = `url("${referralBannerFile}")`;
   document.querySelectorAll(".home-promo-slide-referral").forEach(el => {
