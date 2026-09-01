@@ -5846,7 +5846,7 @@ body.history-mode .history-panel-header .history-panel-title {
       </div>
     </div>
 
-    <div class="app-settings-section" style="margin-top:12px;">
+    <div class="app-settings-section" style="margin-top:12px; margin-bottom:12px;">
       <div class="app-settings-section-title" id="referralLinkSectionTitle">Твоя ссылка-приглашение</div>
       <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
         <input
@@ -5858,28 +5858,34 @@ body.history-mode .history-panel-header .history-panel-title {
         <button id="copyReferralBtn" class="app-settings-chip copy-referral-btn" onclick="copyReferralLink()" aria-label="Скопировать ссылку" style="flex-shrink:0;">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="copy-referral-icon" aria-hidden="true"><path fill="currentColor" d="M480 400L288 400C279.2 400 272 392.8 272 384L272 128C272 119.2 279.2 112 288 112L421.5 112C425.7 112 429.8 113.7 432.8 116.7L491.3 175.2C494.3 178.2 496 182.3 496 186.5L496 384C496 392.8 488.8 400 480 400zM288 448L480 448C515.3 448 544 419.3 544 384L544 186.5C544 169.5 537.3 153.2 525.3 141.2L466.7 82.7C454.7 70.7 438.5 64 421.5 64L288 64C252.7 64 224 92.7 224 128L224 384C224 419.3 252.7 448 288 448zM160 192C124.7 192 96 220.7 96 256L96 512C96 547.3 124.7 576 160 576L352 576C387.3 576 416 547.3 416 512L416 496L368 496L368 512C368 520.8 360.8 528 352 528L160 528C151.2 528 144 520.8 144 512L144 256C144 247.2 151.2 240 160 240L176 240L176 192L160 192z"/></svg>
         </button>
-        <button id="inviteFriendsBtn" class="app-settings-chip copy-referral-btn" onclick="shareReferralLink()" aria-label="Пригласить" style="flex-shrink:0; display:flex; align-items:center; gap:6px; padding:0 14px;">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        <button id="inviteFriendsBtn" class="app-settings-chip copy-referral-btn" onclick="shareReferralLink()" aria-label="Пригласить" style="flex-shrink:0; padding:0 14px;">
           <span>Пригласить</span>
         </button>
       </div>
     </div>
 
-    <div class="app-settings-section" id="referralProgramInfo">
+    <div class="app-settings-section" id="referralProgramInfo" style="margin-bottom:0;">
       <!-- Описание того, как работает реферальная программа. Заполним позже. -->
     </div>
 
     <div class="app-settings-section">
       <div class="app-settings-section-title" id="referralCountSectionTitle" style="text-transform:none;">Приглашено пользователей: <span id="referralCount">0</span></div>
       <div style="overflow-x:auto; margin-top:8px;">
-        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+        <table style="width:100%; table-layout:fixed; border-collapse:collapse; font-size:12px;">
+          <colgroup>
+            <col style="width:28px;">
+            <col style="width:auto;">
+            <col style="width:78px;">
+            <col style="width:70px;">
+            <col style="width:70px;">
+          </colgroup>
           <thead>
             <tr style="text-align:left; color:rgba(255,255,255,0.44);">
-              <th style="padding:6px 12px 6px 4px; border-right:1px solid rgba(255,255,255,0.12);">№</th>
-              <th style="padding:6px 4px 6px 12px;">Пользователь</th>
-              <th style="padding:6px 4px; text-align:right;">Игры Market</th>
-              <th style="padding:6px 12px 6px 4px; text-align:right; border-right:1px solid rgba(255,255,255,0.12);">Market</th>
-              <th style="padding:6px 4px 6px 12px; text-align:right;">Доход</th>
+              <th style="padding:6px 12px 6px 4px; border-right:1px solid rgba(255,255,255,0.12); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">№</th>
+              <th style="padding:6px 4px 6px 12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Пользователь</th>
+              <th style="padding:6px 4px; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Игры Market</th>
+              <th style="padding:6px 12px 6px 4px; text-align:right; border-right:1px solid rgba(255,255,255,0.12); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Market</th>
+              <th style="padding:6px 4px 6px 12px; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Доход</th>
             </tr>
           </thead>
           <tbody id="referralList"></tbody>
@@ -8578,9 +8584,9 @@ async function renderReferralsScreen() {
             </div>
           </div>
         </td>
-        <td style="padding:8px 4px; text-align:right;">${gamesMarketEarn}</td>
-        <td style="padding:8px 12px 8px 4px; text-align:right; border-right:1px solid rgba(255,255,255,0.08);">${marketEarn}</td>
-        <td style="padding:8px 4px 8px 12px; text-align:right; font-weight:700;">${totalEarn}</td>
+        <td style="padding:8px 4px; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${gamesMarketEarn}</td>
+        <td style="padding:8px 12px 8px 4px; text-align:right; border-right:1px solid rgba(255,255,255,0.08); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${marketEarn}</td>
+        <td style="padding:8px 4px 8px 12px; text-align:right; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${totalEarn}</td>
       </tr>`;
     }).join("");
   } catch (e) {
