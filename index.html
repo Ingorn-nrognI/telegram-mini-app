@@ -4685,6 +4685,11 @@ body.history-mode .history-panel-header .history-panel-title {
   box-shadow: 0 12px 24px rgba(45, 225, 255, 0.16);
 }
 
+.tournament-tab.active {
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(255,255,255,0.3);
+}
+
 .app-settings-chip:active {
   transform: scale(0.98);
 }
@@ -4721,6 +4726,72 @@ body.history-mode .history-panel-header .history-panel-title {
   color: #06101f;
   border-color: rgba(255,255,255,0.18);
   box-shadow: 0 0 14px rgba(47, 224, 122, 0.65);
+}
+
+.referral-level-card {
+  flex: 0 0 82%;
+  max-width: 340px;
+  scroll-snap-align: start;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 14px 16px 18px;
+  box-sizing: border-box;
+}
+#referralLevelsRow {
+  scroll-snap-type: x mandatory;
+}
+.referral-level-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.referral-level-card-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+.referral-level-card-percent {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2fe07a;
+}
+.referral-level-track {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.1);
+  margin-top: 22px;
+}
+.referral-level-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #2fe07a, #1fb866);
+  transition: width 0.4s ease;
+}
+.referral-level-bound {
+  position: absolute;
+  top: 12px;
+  font-size: 10px;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+.referral-level-bound.start { left: 0; }
+.referral-level-bound.end { right: 0; }
+.referral-level-bubble {
+  position: absolute;
+  bottom: 14px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(255,255,255,0.12);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+#referralLevelsModal.open {
+  display: flex;
 }
 
 /* Smooth Scanner updates, waiting text focus and top UI focus behavior */
@@ -5220,6 +5291,12 @@ body.history-mode .history-panel-header .history-panel-title {
       <div class="leaderboardHeader">
         <h2>🏆 Рейтинг</h2>
         <span class="closeBtn" onclick="closeLeaderboard()">✕</span>
+      </div>
+      <div style="display:flex; gap:6px; overflow-x:auto; padding:10px 0; -webkit-overflow-scrolling:touch;">
+        <button class="app-settings-chip tournament-tab active" data-tab="market" onclick="switchTournamentTab('market')">Market</button>
+        <button class="app-settings-chip tournament-tab" data-tab="pvp" onclick="switchTournamentTab('pvp')">PvP</button>
+        <button class="app-settings-chip tournament-tab" data-tab="cases" onclick="switchTournamentTab('cases')">Кейсы</button>
+        <button class="app-settings-chip tournament-tab" data-tab="referrals" onclick="switchTournamentTab('referrals')">Рефералы</button>
       </div>
       <div id="leaderboardContent"></div>
     </div>
@@ -5865,7 +5942,17 @@ body.history-mode .history-panel-header .history-panel-title {
     </div>
 
     <div class="app-settings-section" id="referralProgramInfo" style="margin-bottom:0;">
-      <!-- Описание того, как работает реферальная программа. Заполним позже. -->
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;">
+        <div>
+          <div id="referralPitchTitle" style="font-weight:700; font-size:14px; margin-bottom:4px;">Зарабатывай до 15% с приглашённых пользователей</div>
+          <div id="referralPitchSubtitle" style="font-size:12px; opacity:0.6;">Чем больше активных рефералов — тем выше твой процент</div>
+        </div>
+        <button id="referralInfoBtn" onclick="openReferralLevelsModal()" style="flex-shrink:0; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.14); color:#fff; border-radius:10px; padding:8px 14px; font-size:12px; font-weight:600; white-space:nowrap;">Подробнее</button>
+      </div>
+
+      <div id="referralLevelsRow" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; scrollbar-width:none;">
+        <!-- 4 карточки уровней рендерятся сюда через JS -->
+      </div>
     </div>
 
     <div class="app-settings-section">
@@ -5892,6 +5979,16 @@ body.history-mode .history-panel-header .history-panel-title {
         </table>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="referralLevelsModal" class="app-modal" onclick="handleModalBackdropClick('referralLevelsModal', event)">
+  <div class="app-modal-card" onclick="event.stopPropagation()">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+      <div id="referralLevelsModalTitle" style="font-size:16px; font-weight:700;">Уровни реферальной программы</div>
+      <button onclick="closeReferralLevelsModal()" style="background:rgba(255,255,255,0.08); border:none; border-radius:50%; width:28px; height:28px; color:#fff;">×</button>
+    </div>
+    <div id="referralLevelsModalBody"></div>
   </div>
 </div>
 
@@ -8302,6 +8399,13 @@ function applyAppLanguage(lang) {
   set("#refTableColGamesMarket", L("Игры Market", "Games Market"));
   set("#refTableColMarket", "Market");
   set("#refTableColIncome", L("Доход", "Income"));
+  set("#referralPitchTitle", L("Зарабатывай до 15% с приглашённых пользователей", "Earn up to 15% from invited users"));
+  set("#referralPitchSubtitle", L("Чем больше активных рефералов — тем выше твой процент", "The more active referrals — the higher your percentage"));
+  set("#referralInfoBtn", L("Подробнее", "Learn more"));
+  set("#referralLevelsModalTitle", L("Уровни реферальной программы", "Referral program levels"));
+  if (_lastReferralLevelsData) {
+    renderReferralLevelCards(_lastReferralLevelsData.levels, Number(_lastReferralLevelsData.turnover || 0), _lastReferralLevelsData.levelKey);
+  }
 
   set("#roomsModal .roomsHeader h2", "🎮 " + L("Комнаты Bobr Run", "Bobr Run rooms"));
   set("#createRoomBtn", L("Создать комнату Bobr Run", "Create a Bobr Run room"));
@@ -8542,8 +8646,137 @@ function shareReferralLink() {
 }
 
 function claimReferralEarnings() {
-  showAppNotice(L("Пока недоступно", "Not available yet"));
+  if (!_socket || !_socket.connected) {
+    showAppNotice(L("Нет соединения с сервером", "No connection to the server"));
+    return;
+  }
+  _socket.emit("referral:claimEarnings", {}, (response) => {
+    if (response && response.ok) {
+      const earnedAmountEl = document.getElementById("referralEarnedAmount");
+      if (earnedAmountEl) earnedAmountEl.textContent = formatTon(0);
+      if (response.claimed > 0) {
+        showAppNotice(L(`Зачислено ${formatTon(response.claimed)}`, `Credited ${formatTon(response.claimed)}`));
+      } else {
+        showAppNotice(L("Нечего забирать", "Nothing to claim"));
+      }
+    } else {
+      showAppNotice(L("Не удалось забрать", "Failed to claim"));
+    }
+  });
 }
+
+// Уровни приходят с сервера через referrals:request (поле levels),
+// сохраняем последний ответ, чтобы применить перевод при смене языка
+// без нового запроса к серверу.
+let _lastReferralLevelsData = null;
+
+function renderReferralLevelCards(levels, turnover, levelKey) {
+  const row = document.getElementById("referralLevelsRow");
+  if (!row || !Array.isArray(levels) || !levels.length) return;
+
+  row.innerHTML = levels.map((level, index) => {
+    const nextLevel = levels[index + 1];
+    const rangeStart = level.threshold;
+    const rangeEnd = nextLevel ? nextLevel.threshold : null; // у "Профи" верхней границы нет
+
+    let percent;
+    let currentValueInRange;
+    if (turnover >= (rangeEnd ?? Infinity)) {
+      percent = 100;
+      currentValueInRange = rangeEnd;
+    } else if (turnover <= rangeStart) {
+      percent = 0;
+      currentValueInRange = rangeStart;
+    } else {
+      const span = (rangeEnd ?? (rangeStart * 2 || 1)) - rangeStart;
+      percent = Math.min(100, Math.max(0, ((turnover - rangeStart) / span) * 100));
+      currentValueInRange = turnover;
+    }
+
+    const displayName = L(level.name, level.nameEn);
+    const startLabel = formatCompactNumber(rangeStart);
+    const endLabel = rangeEnd != null ? formatCompactNumber(rangeEnd) : "∞";
+
+    // Подпись текущего значения прячется у краёв, чтобы не наезжать
+    // на подписи границ 0/конец — вместо этого у самого края границы
+    // сами меняются на актуальное число.
+    let bubbleHtml = "";
+    let startBoundLabel = startLabel;
+    let endBoundLabel = endLabel;
+    if (percent <= 6) {
+      startBoundLabel = formatCompactNumber(Math.round(currentValueInRange));
+    } else if (percent >= 94 && rangeEnd != null) {
+      endBoundLabel = formatCompactNumber(Math.round(currentValueInRange));
+    } else {
+      bubbleHtml = `<div class="referral-level-bubble" style="left:${percent}%;">${formatCompactNumber(Math.round(currentValueInRange))}</div>`;
+    }
+
+    const isCurrent = level.key === levelKey;
+
+    return `
+      <div class="referral-level-card" style="${isCurrent ? "border-color:rgba(47,224,122,0.5);" : ""}">
+        <div class="referral-level-card-header">
+          <span class="referral-level-card-name">${escapeHtml(displayName)}</span>
+          <span class="referral-level-card-percent">${level.percent}%</span>
+        </div>
+        <div class="referral-level-track">
+          <div class="referral-level-fill" style="width:${percent}%;"></div>
+          ${bubbleHtml}
+          <div class="referral-level-bound start">${startBoundLabel}</div>
+          <div class="referral-level-bound end">${endBoundLabel}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function openReferralLevelsModal() {
+  const data = _lastReferralLevelsData;
+  const levels = data?.levels || [];
+  const modal = document.getElementById("referralLevelsModal");
+  const body = document.getElementById("referralLevelsModalBody");
+  if (!modal || !body) return;
+
+  body.innerHTML = levels.map((level, index) => {
+    const nextLevel = levels[index + 1];
+    const displayName = L(level.name, level.nameEn);
+    const rangeText = nextLevel
+      ? L(`от ${formatCompactNumber(level.threshold)} до ${formatCompactNumber(nextLevel.threshold)} GRAM оборота рефералов`,
+           `${formatCompactNumber(level.threshold)}–${formatCompactNumber(nextLevel.threshold)} GRAM referral turnover`)
+      : L(`от ${formatCompactNumber(level.threshold)} GRAM оборота рефералов`,
+           `${formatCompactNumber(level.threshold)}+ GRAM referral turnover`);
+    return `
+      <div style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; ${index > 0 ? "border-top:1px solid rgba(255,255,255,0.08);" : ""}">
+        <div style="width:10px; height:10px; border-radius:50%; background:#3b82f6; margin-top:5px; flex-shrink:0;"></div>
+        <div>
+          <div style="font-weight:700; font-size:14px; margin-bottom:2px;">${escapeHtml(displayName)} — ${level.percent}%</div>
+          <div style="font-size:12px; opacity:0.65;">${rangeText}</div>
+        </div>
+      </div>
+    `;
+  }).join("") + `
+    <div style="font-size:12px; opacity:0.55; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+      ${L("Оборот считается по сумме всех ставок твоих рефералов в играх. Скоро сюда добавятся сделки Market.",
+          "Turnover is the sum of all bets placed by your referrals in games. Market deals will be added soon.")}
+    </div>
+  `;
+
+  modal.classList.add("open");
+}
+
+function closeReferralLevelsModal() {
+  const modal = document.getElementById("referralLevelsModal");
+  if (modal) modal.classList.remove("open");
+}
+window.openReferralLevelsModal = openReferralLevelsModal;
+window.closeReferralLevelsModal = closeReferralLevelsModal;
+
+function switchTournamentTab(tab) {
+  document.querySelectorAll(".tournament-tab").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === tab);
+  });
+}
+window.switchTournamentTab = switchTournamentTab;
 
 async function renderReferralsScreen() {
   const linkInput = document.getElementById("referralLinkInput");
@@ -8559,14 +8792,24 @@ async function renderReferralsScreen() {
     // Реферальные связи после переезда лежат в SQLite на сервере.
     // Прежний запрос в Firestore по полю referredBy находил только старые
     // записи, а новых приглашённых не видел вообще.
-    const items = await new Promise((resolve) => {
-      if (!_socket || !_socket.connected) return resolve([]);
-      const _timer = setTimeout(() => resolve([]), 8000);
+    const referralsResponse = await new Promise((resolve) => {
+      if (!_socket || !_socket.connected) return resolve(null);
+      const _timer = setTimeout(() => resolve(null), 8000);
       _socket.emit("referrals:request", {}, (response) => {
         clearTimeout(_timer);
-        resolve(Array.isArray(response?.items) ? response.items : []);
+        resolve(response || null);
       });
     });
+    const items = Array.isArray(referralsResponse?.items) ? referralsResponse.items : [];
+
+    if (referralsResponse?.levels) {
+      _lastReferralLevelsData = referralsResponse;
+      renderReferralLevelCards(referralsResponse.levels, Number(referralsResponse.turnover || 0), referralsResponse.levelKey);
+      const earnedAmountEl = document.getElementById("referralEarnedAmount");
+      if (earnedAmountEl && referralsResponse.unclaimedTotal != null) {
+        earnedAmountEl.textContent = formatTon(referralsResponse.unclaimedTotal);
+      }
+    }
 
     if (countEl) countEl.textContent = String(items.length);
 
@@ -8922,6 +9165,8 @@ function handleModalBackdropClick(modalId, event) {
     closeLeaderboard();
   } else if (modalId === "roomsModal") {
     closeBobrRunRooms();
+  } else if (modalId === "referralLevelsModal") {
+    closeReferralLevelsModal();
   }
 }
 
