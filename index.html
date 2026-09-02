@@ -4728,9 +4728,14 @@ body.history-mode .history-panel-header .history-panel-title {
   box-shadow: 0 0 14px rgba(47, 224, 122, 0.65);
 }
 
-#copyReferralBtn, #inviteFriendsBtn {
-  background: var(--bg-3) !important;
-  border-color: rgba(255,255,255,0.08) !important;
+#copyReferralBtn:not(.is-copied), #inviteFriendsBtn:not(.is-copied) {
+  background: var(--bg-3);
+  border-color: rgba(255,255,255,0.08);
+}
+
+#referralLinkCard {
+  box-shadow: none;
+  outline: none;
 }
 
 .referral-level-card {
@@ -5963,7 +5968,7 @@ body.history-mode .history-panel-header .history-panel-title {
       </div>
     </div>
 
-    <div class="app-settings-section" style="margin-top:12px; margin-bottom:12px; background:#20242f; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px 16px;">
+    <div id="referralLinkCard" class="app-settings-section" style="margin-top:12px; margin-bottom:12px; background:#20242f; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px 16px; box-shadow:none; outline:none; filter:none;">
       <div class="app-settings-section-title" id="referralLinkSectionTitle" style="margin-bottom:8px;">Твоя ссылка</div>
       <div style="display:flex; gap:8px; align-items:center;">
         <input
