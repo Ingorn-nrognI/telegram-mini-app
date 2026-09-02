@@ -884,6 +884,12 @@ body.referrals-mode #appReferralsOverlay .app-settings-sheet {
   background: transparent;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body.referrals-mode #appReferralsOverlay .app-settings-sheet::-webkit-scrollbar {
+  display: none;
 }
 
 /* Полоска-ручка от всплывающего окна на экране не нужна. */
@@ -5963,7 +5969,7 @@ body.history-mode .history-panel-header .history-panel-title {
       </div>
     </div>
 
-    <div class="referral-earned-pill" style="display:flex; flex-direction:column; gap:2px; padding:16px; margin-bottom:14px; background:#2a2e3a; border:1px solid rgba(255,255,255,0.08); border-radius:26px; box-shadow:var(--shadow-main);">
+    <div class="referral-earned-pill" style="display:flex; flex-direction:column; gap:2px; padding:16px; margin-bottom:14px; background:linear-gradient(135deg, #0e6180, #22d3ee); border:1px solid rgba(255,255,255,0.12); border-radius:26px; box-shadow:var(--shadow-main);">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
         <div style="display:flex; align-items:center; gap:12px;">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="36" height="36" aria-hidden="true" style="color:#ffffff; flex-shrink:0;">
