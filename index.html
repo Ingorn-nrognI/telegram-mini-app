@@ -8645,7 +8645,27 @@ function shareReferralLink() {
   }
 }
 
+function updateClaimButtonState(amount) {
+  const btn = document.getElementById("claimReferralBtn");
+  if (!btn) return;
+  const canClaim = Number(amount) >= 1;
+  if (canClaim) {
+    btn.style.background = "linear-gradient(135deg, #2fe07a, #1fb866)";
+    btn.style.color = "#06101f";
+    btn.style.boxShadow = "0 0 14px rgba(47, 224, 122, 0.5)";
+    btn.disabled = false;
+  } else {
+    btn.style.background = "rgba(255,255,255,0.12)";
+    btn.style.color = "rgba(255,255,255,0.4)";
+    btn.style.boxShadow = "none";
+    btn.disabled = true;
+  }
+}
+window.updateClaimButtonState = updateClaimButtonState;
+
 function claimReferralEarnings() {
+  const btn = document.getElementById("claimReferralBtn");
+  if (btn && btn.disabled) return;
   if (!_socket || !_socket.connected) {
     showAppNotice(L("Нет соединения с сервером", "No connection to the server"));
     return;
@@ -8654,6 +8674,7 @@ function claimReferralEarnings() {
     if (response && response.ok) {
       const earnedAmountEl = document.getElementById("referralEarnedAmount");
       if (earnedAmountEl) earnedAmountEl.textContent = formatTon(0);
+      updateClaimButtonState(0);
       if (response.claimed > 0) {
         showAppNotice(L(`Зачислено ${formatTon(response.claimed)}`, `Credited ${formatTon(response.claimed)}`));
       } else {
@@ -8808,6 +8829,7 @@ async function renderReferralsScreen() {
       const earnedAmountEl = document.getElementById("referralEarnedAmount");
       if (earnedAmountEl && referralsResponse.unclaimedTotal != null) {
         earnedAmountEl.textContent = formatTon(referralsResponse.unclaimedTotal);
+        updateClaimButtonState(referralsResponse.unclaimedTotal);
       }
     }
 
@@ -12390,6 +12412,17 @@ function initSocketConnection() {
       syncLocalDemoBalance(value);
       currentDemoTonBalanceLoaded = true;
     }
+  });
+
+  // Приходит с сервера при каждом новом реферальном начислении (payoutEngine.js),
+  // даже если экран "Рефералы" сейчас закрыт — чтобы сумма и цвет кнопки
+  // "Забрать" были актуальны, когда пользователь его откроет.
+  _socket.on('referral:earningsUpdate', (data) => {
+    const amount = Number(data?.unclaimedTotal);
+    if (!Number.isFinite(amount)) return;
+    const earnedAmountEl = document.getElementById("referralEarnedAmount");
+    if (earnedAmountEl) earnedAmountEl.textContent = formatTon(amount);
+    updateClaimButtonState(amount);
   });
 
   // Полный список истории раундов, присылается сервером в ответ
