@@ -5977,7 +5977,8 @@ body.history-mode .history-panel-header .history-panel-title {
         <table style="width:auto; max-width:100%; table-layout:fixed; border-collapse:collapse; font-size:12px;">
           <colgroup>
             <col style="width:34px;">
-            <col style="width:150px;">
+            <col style="width:130px;">
+            <col style="width:70px;">
             <col style="width:76px;">
             <col style="width:76px;">
             <col style="width:64px;">
@@ -5986,6 +5987,7 @@ body.history-mode .history-panel-header .history-panel-title {
             <tr style="text-align:left; color:rgba(255,255,255,0.44); border-bottom:1px solid rgba(255,255,255,0.12);">
               <th style="padding:6px 16px 8px 4px; border-right:1px solid rgba(255,255,255,0.12); white-space:normal; line-height:1.3;">№</th>
               <th id="refTableColUser" style="padding:6px 4px 6px 16px; white-space:normal; line-height:1.3;">Пользователь</th>
+              <th id="refTableColTurnover" style="padding:6px 4px; text-align:right; white-space:normal; line-height:1.3;">Оборот</th>
               <th id="refTableColGamesMarket" style="padding:6px 4px; text-align:right; white-space:normal; line-height:1.3;">Игры Market</th>
               <th id="refTableColMarket" style="padding:6px 16px 6px 4px; text-align:right; border-right:1px solid rgba(255,255,255,0.12); white-space:normal; line-height:1.3;">Market</th>
               <th id="refTableColIncome" style="padding:6px 4px 6px 16px; text-align:right; white-space:normal; line-height:1.3;">Доход</th>
@@ -8412,6 +8414,7 @@ function applyAppLanguage(lang) {
   const inviteBtnEl = document.getElementById("inviteFriendsBtn");
   if (inviteBtnEl) inviteBtnEl.setAttribute("aria-label", L("Пригласить", "Invite"));
   set("#refTableColUser", L("Пользователь", "User"));
+  set("#refTableColTurnover", L("Оборот", "Turnover"));
   set("#refTableColGamesMarket", L("Игры Market", "Games Market"));
   set("#refTableColMarket", "Market");
   set("#refTableColIncome", L("Доход", "Income"));
@@ -8823,7 +8826,7 @@ async function renderReferralsScreen() {
   const countEl = document.getElementById("referralCount");
   const listEl = document.getElementById("referralList");
   if (!listEl) return;
-  listEl.innerHTML = `<tr><td colspan="5" style="padding:10px 4px; opacity:0.6;">${L("Загрузка...", "Loading...")}</td></tr>`;
+  listEl.innerHTML = `<tr><td colspan="6" style="padding:10px 4px; opacity:0.6;">${L("Загрузка...", "Loading...")}</td></tr>`;
 
   try {
     const myId = getCurrentPlayer().id;
@@ -8853,7 +8856,7 @@ async function renderReferralsScreen() {
     if (countEl) countEl.textContent = String(items.length);
 
     if (items.length === 0) {
-      listEl.innerHTML = `<tr><td colspan="5" style="padding:10px 4px; opacity:0.6; font-size:13px;">${L("Пока никого не пригласил.", "You haven't invited anyone yet.")}</td></tr>`;
+      listEl.innerHTML = `<tr><td colspan="6" style="padding:10px 4px; opacity:0.6; font-size:13px;">${L("Пока никого не пригласил.", "You haven't invited anyone yet.")}</td></tr>`;
       return;
     }
 
@@ -8866,6 +8869,7 @@ async function renderReferralsScreen() {
         if (!Number.isFinite(n)) return "—";
         return `${n.toFixed(2)} <span style="font-size:0.8em; opacity:0.75;">gram</span>`;
       };
+      const turnoverValue = item.turnover != null ? formatTonSmallUnit(item.turnover) : "—";
       const gamesMarketEarn = item.gamesMarketEarn != null ? formatTonSmallUnit(item.gamesMarketEarn) : "—";
       const marketEarn = item.marketEarn != null ? formatTonSmallUnit(item.marketEarn) : "—";
       const totalEarn = item.totalEarn != null ? formatTonSmallUnit(item.totalEarn) : "—";
@@ -8884,13 +8888,14 @@ async function renderReferralsScreen() {
             </div>
           </div>
         </td>
+        <td style="padding:8px 4px; text-align:right;">${turnoverValue}</td>
         <td style="padding:8px 4px; text-align:right;">${gamesMarketEarn}</td>
         <td style="padding:8px 16px 8px 4px; text-align:right; border-right:1px solid rgba(255,255,255,0.08);">${marketEarn}</td>
         <td style="padding:8px 4px 8px 16px; text-align:right; font-weight:700;">${totalEarn}</td>
       </tr>`;
     }).join("");
   } catch (e) {
-    listEl.innerHTML = `<tr><td colspan="5" style="padding:10px 4px; opacity:0.6; font-size:13px;">${L("Не удалось загрузить список.", "Failed to load the list.")}</td></tr>`;
+    listEl.innerHTML = `<tr><td colspan="6" style="padding:10px 4px; opacity:0.6; font-size:13px;">${L("Не удалось загрузить список.", "Failed to load the list.")}</td></tr>`;
     console.warn("Ошибка загрузки рефералов:", e.message);
   }
 }
