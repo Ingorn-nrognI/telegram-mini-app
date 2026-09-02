@@ -4729,7 +4729,7 @@ body.history-mode .history-panel-header .history-panel-title {
 }
 
 #copyReferralBtn, #inviteFriendsBtn {
-  background: rgba(255,255,255,0.06) !important;
+  background: var(--bg-3) !important;
   border-color: rgba(255,255,255,0.08) !important;
 }
 
@@ -4806,6 +4806,16 @@ body.history-mode .history-panel-header .history-panel-title {
   max-height: 80vh;
   overflow-y: auto;
   margin-bottom: calc(var(--safe-bottom) + 16px);
+  transform: scale(0.1);
+  opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.22s ease;
+}
+#referralLevelsModal.open .app-modal-card {
+  transform: scale(1);
+  opacity: 1;
+}
+#referralLevelsModal {
+  transition: opacity 0.2s ease;
 }
 
 /* Smooth Scanner updates, waiting text focus and top UI focus behavior */
@@ -5953,7 +5963,7 @@ body.history-mode .history-panel-header .history-panel-title {
       </div>
     </div>
 
-    <div class="app-settings-section" style="margin-top:12px; margin-bottom:12px; background:#20242f; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px 16px;">
+    <div class="app-settings-section" style="margin-top:12px; margin-bottom:12px; background:var(--bg-3); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px 16px;">
       <div class="app-settings-section-title" id="referralLinkSectionTitle" style="margin-bottom:8px;">Твоя ссылка</div>
       <div style="display:flex; gap:8px; align-items:center;">
         <input
@@ -8772,40 +8782,79 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
 }
 
 function openReferralLevelsModal() {
+  const btn = document.getElementById("referralInfoBtn");
+  const card = document.querySelector("#referralLevelsModal .app-modal-card");
+  if (btn && card) {
+    const btnRect = btn.getBoundingClientRect();
+    const originX = btnRect.left + btnRect.width / 2;
+    const originY = btnRect.top + btnRect.height / 2;
+    card.style.transformOrigin = `${originX}px ${originY}px`;
+  }
   const data = _lastReferralLevelsData;
   const levels = data?.levels || [];
   const modal = document.getElementById("referralLevelsModal");
   const body = document.getElementById("referralLevelsModalBody");
   if (!modal || !body) return;
 
-  body.innerHTML = levels.map((level, index) => {
+  const levelsListText = levels.map((level, index) => {
     const nextLevel = levels[index + 1];
     const displayName = L(level.name, level.nameEn);
     const rangeText = nextLevel
-      ? L(`от ${formatCompactNumber(level.threshold)} до ${formatCompactNumber(nextLevel.threshold)} GRAM оборота рефералов`,
-           `${formatCompactNumber(level.threshold)}–${formatCompactNumber(nextLevel.threshold)} GRAM referral turnover`)
-      : L(`от ${formatCompactNumber(level.threshold)} GRAM оборота рефералов`,
-           `${formatCompactNumber(level.threshold)}+ GRAM referral turnover`);
-    return `
-      <div style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; ${index > 0 ? "border-top:1px solid rgba(255,255,255,0.08);" : ""}">
-        <div style="width:10px; height:10px; border-radius:50%; background:#3b82f6; margin-top:5px; flex-shrink:0;"></div>
-        <div>
-          <div style="font-weight:700; font-size:14px; margin-bottom:2px;">${escapeHtml(displayName)} — ${level.percent}%</div>
-          <div style="font-size:12px; opacity:0.65;">${rangeText}</div>
-        </div>
+      ? `${formatCompactNumber(level.threshold)}–${formatCompactNumber(nextLevel.threshold)}`
+      : `${formatCompactNumber(level.threshold)}+`;
+    return `${escapeHtml(displayName)} (${level.percent}%, ${rangeText} GRAM)`;
+  }).join(" → ");
+
+  const points = [
+    {
+      title: L("1. Приглашай по ссылке", "1. Invite with your link"),
+      text: L("Скопируй свою персональную ссылку выше или отправь её другу кнопкой «Пригласить». Каждый, кто откроет приложение по этой ссылке, станет твоим рефералом навсегда.",
+               "Copy your personal link above or send it with the \"Invite\" button. Anyone who opens the app through this link becomes your referral permanently.")
+    },
+    {
+      title: L("2. Получай % с каждой игры реферала", "2. Earn % from every game your referral plays"),
+      text: L("Когда твой реферал выигрывает раунд в Лазере, приложение забирает свою комиссию с банка. Часть этой комиссии автоматически зачисляется тебе — без каких-либо действий с твоей стороны.",
+               "When your referral wins a round in Laser, the app takes its commission from the pot. A share of that commission is credited to you automatically — no action needed on your part.")
+    },
+    {
+      title: L("3. Уровни и процент", "3. Levels and percentage"),
+      text: L(`Чем больше суммарный оборот твоих рефералов (сумма всех их ставок), тем выше твой процент с их комиссии: ${levelsListText}.`,
+               `The higher the total turnover of your referrals (sum of all their bets), the higher your commission share: ${levelsListText}.`)
+    },
+    {
+      title: L("4. Что считается оборотом", "4. What counts as turnover"),
+      text: L("Оборот — это сумма всех ставок, которые сделали приглашённые тобой игроки во всех сыгранных раундах Лазера. Скоро сюда добавятся и сделки на Market — покупка и продажа подарков.",
+               "Turnover is the sum of all bets your invited players have placed across all Laser rounds. Market deals — buying and selling gifts — will be added here soon.")
+    },
+    {
+      title: L("5. Вывод заработанного", "5. Claiming your earnings"),
+      text: L("Заработанное копится в карточке «Заработано» вверху экрана. Как только сумма достигнет 1 GRAM, кнопка «Забрать» станет активной — нажми её, и деньги сразу зачислятся на твой основной баланс в приложении.",
+               "Earnings accumulate in the \"Earned\" card at the top of the screen. Once the amount reaches 1 GRAM, the \"Claim\" button becomes active — tap it and the funds are credited straight to your main app balance.")
+    }
+  ];
+
+  body.innerHTML = points.map((p, index) => `
+    <div style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; ${index > 0 ? "border-top:1px solid rgba(255,255,255,0.08);" : ""}">
+      <div style="width:10px; height:10px; border-radius:50%; background:#3b82f6; margin-top:5px; flex-shrink:0;"></div>
+      <div>
+        <div style="font-weight:700; font-size:14px; margin-bottom:3px;">${p.title}</div>
+        <div style="font-size:12.5px; opacity:0.7; line-height:1.45;">${p.text}</div>
       </div>
-    `;
-  }).join("") + `
-    <div style="font-size:12px; opacity:0.55; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
-      ${L("Оборот считается по сумме всех ставок твоих рефералов в играх. Скоро сюда добавятся сделки Market.",
-          "Turnover is the sum of all bets placed by your referrals in games. Market deals will be added soon.")}
     </div>
-  `;
+  `).join("");
 
   modal.classList.add("open");
 }
 
 function closeReferralLevelsModal() {
+  const btn = document.getElementById("referralInfoBtn");
+  const card = document.querySelector("#referralLevelsModal .app-modal-card");
+  if (btn && card) {
+    const btnRect = btn.getBoundingClientRect();
+    const originX = btnRect.left + btnRect.width / 2;
+    const originY = btnRect.top + btnRect.height / 2;
+    card.style.transformOrigin = `${originX}px ${originY}px`;
+  }
   const modal = document.getElementById("referralLevelsModal");
   if (modal) modal.classList.remove("open");
 }
