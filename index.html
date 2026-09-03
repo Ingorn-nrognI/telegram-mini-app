@@ -5947,8 +5947,12 @@ body.history-mode .history-panel-header .history-panel-title {
       <button class="app-settings-close" onclick="closeReferrals()" aria-label="Закрыть">✕</button>
     </div>
 
-    <div style="display:flex; justify-content:center; margin:14px 0 6px;">
-      <div id="referralGiftAnimation" style="width:200px; height:200px;"></div>
+    <div style="position:relative; height:200px; display:flex; justify-content:center; align-items:center; margin:14px 0 6px;">
+      <div id="giftStreetBeast" style="position:absolute; left:calc(50% - 190px); width:140px; height:140px; z-index:1;"></div>
+      <div id="giftHulaGirl" style="position:absolute; left:calc(50% - 110px); width:160px; height:160px; z-index:2;"></div>
+      <div id="giftKingOfRock" style="position:relative; width:200px; height:200px; z-index:4;"></div>
+      <div id="giftMoonwalker" style="position:absolute; right:calc(50% - 110px); width:160px; height:160px; z-index:2;"></div>
+      <div id="giftJordan" style="position:absolute; right:calc(50% - 190px); width:140px; height:140px; z-index:1;"></div>
     </div>
     <div id="referralPitchTitle" style="font-weight:700; font-size:14px; text-align:center; margin-bottom:14px;">Зарабатывай до 15% с приглашённых пользователей</div>
 
@@ -8617,17 +8621,26 @@ function openReferrals() {
   if (!overlay) return;
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
-  const _giftContainer = document.getElementById("referralGiftAnimation");
-  if (_giftContainer && !_giftContainer.dataset.loaded) {
-    _giftContainer.dataset.loaded = "1";
-    lottie.loadAnimation({
-      container: _giftContainer,
-      renderer: "svg",
-      loop: true,
-      autoplay: true,
-      path: "hula_girl_noBG.json"
-    });
-  }
+  const _giftsConfig = [
+    { id: "giftKingOfRock", file: "kingofrock_noBG.json" },
+    { id: "giftHulaGirl", file: "hula_girl_noBG.json" },
+    { id: "giftMoonwalker", file: "moonwalker_noBG.json" },
+    { id: "giftStreetBeast", file: "streetbeast_noBG.json" },
+    { id: "giftJordan", file: "jordan_noBG.json" }
+  ];
+  _giftsConfig.forEach((g) => {
+    const el = document.getElementById(g.id);
+    if (el && !el.dataset.loaded) {
+      el.dataset.loaded = "1";
+      lottie.loadAnimation({
+        container: el,
+        renderer: "svg",
+        loop: true,
+        autoplay: true,
+        path: g.file
+      });
+    }
+  });
   renderReferralsScreen();
   if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   syncAppBackButton({ forceShow: true, onClick: closeReferrals });
