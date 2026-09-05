@@ -14144,6 +14144,35 @@ function initScannerStakesRowInteractions(list) {
   }, { passive: false });
 }
 
+  const levelsRow = document.getElementById("referralLevelsRow");
+  if (levelsRow) {
+    let dragLevels = false;
+    let levelsStartX = 0;
+    let levelsScrollStart = 0;
+
+    levelsRow.addEventListener("mousedown", (event) => {
+      dragLevels = true;
+      levelsStartX = event.pageX;
+      levelsScrollStart = levelsRow.scrollLeft;
+    });
+
+    window.addEventListener("mousemove", (event) => {
+      if (!dragLevels) return;
+      levelsRow.scrollLeft = levelsScrollStart - (event.pageX - levelsStartX);
+    });
+
+    window.addEventListener("mouseup", () => {
+      dragLevels = false;
+    });
+
+    levelsRow.addEventListener("wheel", (event) => {
+      if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+        levelsRow.scrollLeft += event.deltaY;
+        event.preventDefault();
+      }
+    }, { passive: false });
+  }
+
 function toggleScannerPlayerStakesExpand(event) {
   if (event) event.stopPropagation();
   const button = event.currentTarget;
