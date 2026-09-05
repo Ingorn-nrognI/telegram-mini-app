@@ -14154,6 +14154,11 @@ function initScannerStakesRowInteractions(list) {
       dragLevels = true;
       levelsStartX = event.pageX;
       levelsScrollStart = levelsRow.scrollLeft;
+      // Отключаем привязку к точкам на время перетаскивания мышью —
+      // иначе браузер каждый кадр пытается притянуть карточку обратно,
+      // из-за чего скролл дёргается и лагает. На телефоне это не нужно,
+      // там работает нативный тач-скролл без нашего JS.
+      levelsRow.style.scrollSnapType = "none";
     });
 
     window.addEventListener("mousemove", (event) => {
@@ -14162,7 +14167,9 @@ function initScannerStakesRowInteractions(list) {
     });
 
     window.addEventListener("mouseup", () => {
+      if (!dragLevels) return;
       dragLevels = false;
+      levelsRow.style.scrollSnapType = "";
     });
 
     levelsRow.addEventListener("wheel", (event) => {
