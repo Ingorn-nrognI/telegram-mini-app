@@ -8706,12 +8706,12 @@ function openReferrals() {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       const bar = document.querySelector(".top-bar");
-      const header = document.querySelector("#appReferralsOverlay .app-settings-header");
+      const title = document.getElementById("appReferralsTitle");
       const debug = document.getElementById("debugGapValue");
       if (debug) {
-        const barTop = bar ? Math.round(bar.getBoundingClientRect().top) : "нет .top-bar";
-        const headerTop = header ? Math.round(header.getBoundingClientRect().top) : "нет header";
-        debug.textContent = `bar:${barTop} hdr:${headerTop}`;
+        const barTop = bar ? Math.round(bar.getBoundingClientRect().top) : -1;
+        const titleTop = title ? Math.round(title.getBoundingClientRect().top) : -1;
+        debug.textContent = `bar:${barTop} title:${titleTop}`;
       }
     });
   });
