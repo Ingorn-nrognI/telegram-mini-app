@@ -8703,23 +8703,21 @@ function openReferrals() {
   const overlay = document.getElementById("appReferralsOverlay");
   if (!overlay) return;
   syncOverlayTopSpacing();
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const bar = document.querySelector(".top-bar");
-      const title = document.getElementById("appReferralsTitle");
-      const debug = document.getElementById("debugGapValue");
-      if (debug) {
-        const barTop = bar ? Math.round(bar.getBoundingClientRect().top) : -1;
-        const titleTop = title ? Math.round(title.getBoundingClientRect().top) : -1;
-        debug.textContent = `bar:${barTop} title:${titleTop}`;
-      }
-    });
-  });
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
   renderReferralsScreen();
   if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   syncAppBackButton({ forceShow: true, onClick: closeReferrals });
+  setTimeout(() => {
+    const bar = document.querySelector(".top-bar");
+    const title = document.getElementById("appReferralsTitle");
+    const debug = document.getElementById("debugGapValue");
+    if (debug) {
+      const barTop = bar ? Math.round(bar.getBoundingClientRect().top) : -1;
+      const titleTop = title ? Math.round(title.getBoundingClientRect().top) : -1;
+      debug.textContent = `bar:${barTop} title:${titleTop}`;
+    }
+  }, 350);
 }
 
 function closeReferrals() {
