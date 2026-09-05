@@ -875,8 +875,8 @@ body.referrals-mode #appReferralsOverlay .app-settings-sheet {
   /* Отступ сверху оставался под заголовок в верхней панели. Заголовок
      переехал внутрь экрана, поэтому пустое место убрано — контент начинается
      сразу под системной панелью Telegram. */
-  height: calc(100vh - var(--safe-top, 0px) - 18px);
-  margin-top: calc(var(--safe-top, 0px) + 18px);
+  height: calc(100vh - var(--safe-top, 0px) - 12px);
+  margin-top: calc(var(--safe-top, 0px) + 12px);
   margin-bottom: 0;
   border-radius: 0;
   border: none;
@@ -926,8 +926,8 @@ body.settings-mode #appSettingsOverlay {
 body.settings-mode #appSettingsOverlay .app-settings-sheet {
   width: 100vw;
   max-width: none;
-  height: calc(100vh - var(--safe-top, 0px) - 18px);
-  margin-top: calc(var(--safe-top, 0px) + 18px);
+  height: calc(100vh - var(--safe-top, 0px) - 12px);
+  margin-top: calc(var(--safe-top, 0px) + 12px);
   margin-bottom: 0;
   border-radius: 0;
   border: none;
@@ -5977,7 +5977,7 @@ body.history-mode .history-panel-header .history-panel-title {
     <div id="referralLinkCard" class="app-settings-section" style="margin-top:14px; margin-bottom:12px; background:linear-gradient(180deg, #7ed957, #081e0f); border:none; border-radius:26px; padding:16px; box-shadow:var(--shadow-main);">
       <div style="position:relative; width:340px; height:190px; margin:0 auto 6px;">
         <div class="gift-shadow" style="position:absolute; left:-18px; top:121px; width:55px; z-index:0; animation-delay:0s;"></div>
-        <div id="giftStreetBeast" style="position:absolute; left:-10px; top:48px; width:100px; height:100px; z-index:1;"></div>
+        <div id="giftStreetBeast" style="position:absolute; left:-20px; top:48px; width:100px; height:100px; z-index:1;"></div>
 
         <div class="gift-shadow" style="position:absolute; left:48px; top:134px; width:80px; z-index:0; animation-delay:0.4s;"></div>
         <div id="giftHulaGirl" style="position:absolute; left:15px; top:23px; width:145px; height:145px; z-index:2;"></div>
@@ -5986,10 +5986,10 @@ body.history-mode .history-panel-header .history-panel-title {
         <div id="giftKingOfRock" style="position:absolute; left:75px; top:0; width:190px; height:190px; z-index:3;"></div>
 
         <div class="gift-shadow" style="position:absolute; right:58px; top:134px; width:80px; z-index:0; animation-delay:0.4s;"></div>
-        <div id="giftMoonwalker" style="position:absolute; right:10px; top:23px; width:145px; height:145px; z-index:2;"></div>
+        <div id="giftMoonwalker" style="position:absolute; right:14px; top:23px; width:145px; height:145px; z-index:2;"></div>
 
         <div class="gift-shadow" style="position:absolute; right:-3px; top:121px; width:55px; z-index:0; animation-delay:0s;"></div>
-        <div id="giftJordan" style="position:absolute; right:-55px; top:48px; width:100px; height:100px; z-index:1;"></div>
+        <div id="giftJordan" style="position:absolute; right:-25px; top:48px; width:100px; height:100px; z-index:1;"></div>
       </div>
       <div id="referralPitchTitle" style="font-weight:900; font-size:28px; line-height:1.15; text-align:center; color:#ffffff; margin-bottom:14px; text-shadow:0 0 1px rgba(255,255,255,0.5);">Зарабатывай до 15% с приглашённых пользователей</div>
       <div class="app-settings-section-title" id="referralLinkSectionTitle" style="margin-bottom:4px; color:rgba(255,255,255,0.75); text-transform:none;">Твоя ссылка</div>
@@ -6023,7 +6023,7 @@ body.history-mode .history-panel-header .history-panel-title {
         </div>
         <button id="claimReferralBtn" onclick="claimReferralEarnings()" style="background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; flex-shrink:0; transition:background 0.2s, color 0.2s, box-shadow 0.2s;">Забрать</button>
       </div>
-      <div id="referralClaimMinNote" style="font-size:11px; opacity:0.5; margin-left:48px;">Мин. 1 gram</div>
+      <div id="referralClaimMinNote" style="font-size:11px; opacity:0.5; text-align:right;">Мин. 1 gram</div>
     </div>
 
     <div id="referralLevelsRow" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:14px; -webkit-overflow-scrolling:touch; scrollbar-width:none;">
@@ -6031,9 +6031,9 @@ body.history-mode .history-panel-header .history-panel-title {
     </div>
 
     <div class="app-settings-section">
-      <div class="app-settings-section-title" id="referralCountSectionTitle" style="text-transform:none; font-size:13px; white-space:nowrap;">Приглашено пользователей: <span id="referralCount">0</span></div>
+      <div class="app-settings-section-title" id="referralCountSectionTitle" style="text-transform:none; font-size:11px; white-space:nowrap;">Приглашено пользователей: <span id="referralCount">0</span></div>
       <div style="overflow-x:auto; margin-top:8px;">
-        <table style="width:100%; table-layout:fixed; border-collapse:collapse; font-size:12px;">
+        <table style="width:100%; table-layout:fixed; border-collapse:collapse; font-size:24px;">
           <colgroup>
             <col style="width:7%;">
             <col style="width:29%;">
@@ -6047,12 +6047,12 @@ body.history-mode .history-panel-header .history-panel-title {
               <th id="refTableColUser" style="padding:6px 4px 6px 16px; white-space:normal; line-height:1.3;">Пользователь</th>
               <th id="refTableColTurnover" style="padding:6px 4px; text-align:right; white-space:normal; line-height:1.3;">Оборот</th>
               <th style="padding:6px 16px 6px 4px; text-align:right; border-right:1px solid rgba(255,255,255,0.12); white-space:normal; line-height:1.3;">
-                <button id="refMarketColToggle" onclick="toggleReferralMarketColumn()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:999px; cursor:pointer; padding:3px; display:inline-flex; align-items:center; gap:2px; margin-left:auto;">
-                  <span id="refMarketColIconArena" style="width:20px; height:20px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.18); color:#fff;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 64 64" fill="currentColor" fill-rule="evenodd"><path d="M31.3 62.8C31 62.6 30.8 62.1 28.2 57.1C26.7 54 25.4 51.5 25.4 51.5C25.4 51.5 24.8 52.5 24 53.7C22.5 56.2 22.3 56.5 21.7 56.5C21.4 56.5 21.1 56.4 21 56.3C20.8 56.2 15.5 49.8 15.3 49.3C14.9 48.5 15.5 47.5 16.4 47.5C17 47.5 17.4 47.8 19.3 50.3C20.4 51.7 21.3 52.8 21.4 52.9C21.4 52.9 22.1 51.8 22.9 50.5C24.6 47.7 24.7 47.6 25.4 47.5C26.3 47.4 26.2 47.3 29.2 53.3C30.7 56.3 31.9 58.7 31.9 58.7C32 58.7 33.2 56.3 34.7 53.3C37.6 47.5 37.6 47.5 38.4 47.5C39.1 47.5 39.3 47.7 40.9 50.4C41.7 51.8 42.5 52.9 42.5 52.9C42.5 52.8 43.5 51.7 44.6 50.3C46.6 47.7 46.9 47.5 47.5 47.5C48.4 47.5 49 48.5 48.6 49.3C48.4 49.8 43.1 56.2 42.9 56.3C42.6 56.5 41.8 56.5 41.5 56.2C41.4 56.1 40.6 55 39.9 53.8C39.2 52.5 38.5 51.5 38.5 51.5C38.5 51.5 37.2 54 35.7 57.1C33.1 62.2 32.9 62.6 32.5 62.8C32.1 63 31.8 63 31.3 62.8ZM6.4 44.7C5.2 44.4 4.3 43.6 3.9 42.5L3.6 41.9L3.6 31.9L3.6 22L3.9 21.4C4.2 20.5 5 19.7 5.8 19.4L6.5 19.1L17.2 19.1L28 19.1L28.7 19.3C29.7 19.7 30.4 20.1 31.2 20.9L31.9 21.5L32.7 20.9C33.5 20.1 34.2 19.7 35.2 19.3L35.9 19.1L46.7 19.1L57.4 19.1L58.1 19.4C58.9 19.7 59.7 20.5 60 21.3L60.3 22L60.3 31.9L60.3 41.9L60 42.6C59.7 43.4 58.9 44.2 58.1 44.5L57.4 44.8L51 44.9C46.4 44.9 44.3 44.8 43.9 44.8C41.8 44.4 40.1 42.6 39.8 40.5L39.7 39.7L37.7 39.7C35.1 39.6 34.1 39.3 32.7 37.9L31.9 37.2L31.2 37.9C29.7 39.3 28.8 39.6 26.2 39.7L24.2 39.7L24.1 40.5C23.8 42.6 22.1 44.3 20.1 44.8C19.3 44.9 6.9 44.9 6.4 44.7Z"/></svg>
+                <button id="refMarketColToggle" onclick="toggleReferralMarketColumn()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:999px; cursor:pointer; padding:6px; display:inline-flex; align-items:center; gap:4px; margin-left:auto;">
+                  <span id="refMarketColIconArena" style="width:40px; height:40px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.18); color:#fff;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 64 64" fill="currentColor" fill-rule="evenodd"><path d="M31.3 62.8C31 62.6 30.8 62.1 28.2 57.1C26.7 54 25.4 51.5 25.4 51.5C25.4 51.5 24.8 52.5 24 53.7C22.5 56.2 22.3 56.5 21.7 56.5C21.4 56.5 21.1 56.4 21 56.3C20.8 56.2 15.5 49.8 15.3 49.3C14.9 48.5 15.5 47.5 16.4 47.5C17 47.5 17.4 47.8 19.3 50.3C20.4 51.7 21.3 52.8 21.4 52.9C21.4 52.9 22.1 51.8 22.9 50.5C24.6 47.7 24.7 47.6 25.4 47.5C26.3 47.4 26.2 47.3 29.2 53.3C30.7 56.3 31.9 58.7 31.9 58.7C32 58.7 33.2 56.3 34.7 53.3C37.6 47.5 37.6 47.5 38.4 47.5C39.1 47.5 39.3 47.7 40.9 50.4C41.7 51.8 42.5 52.9 42.5 52.9C42.5 52.8 43.5 51.7 44.6 50.3C46.6 47.7 46.9 47.5 47.5 47.5C48.4 47.5 49 48.5 48.6 49.3C48.4 49.8 43.1 56.2 42.9 56.3C42.6 56.5 41.8 56.5 41.5 56.2C41.4 56.1 40.6 55 39.9 53.8C39.2 52.5 38.5 51.5 38.5 51.5C38.5 51.5 37.2 54 35.7 57.1C33.1 62.2 32.9 62.6 32.5 62.8C32.1 63 31.8 63 31.3 62.8ZM6.4 44.7C5.2 44.4 4.3 43.6 3.9 42.5L3.6 41.9L3.6 31.9L3.6 22L3.9 21.4C4.2 20.5 5 19.7 5.8 19.4L6.5 19.1L17.2 19.1L28 19.1L28.7 19.3C29.7 19.7 30.4 20.1 31.2 20.9L31.9 21.5L32.7 20.9C33.5 20.1 34.2 19.7 35.2 19.3L35.9 19.1L46.7 19.1L57.4 19.1L58.1 19.4C58.9 19.7 59.7 20.5 60 21.3L60.3 22L60.3 31.9L60.3 41.9L60 42.6C59.7 43.4 58.9 44.2 58.1 44.5L57.4 44.8L51 44.9C46.4 44.9 44.3 44.8 43.9 44.8C41.8 44.4 40.1 42.6 39.8 40.5L39.7 39.7L37.7 39.7C35.1 39.6 34.1 39.3 32.7 37.9L31.9 37.2L31.2 37.9C29.7 39.3 28.8 39.6 26.2 39.7L24.2 39.7L24.1 40.5C23.8 42.6 22.1 44.3 20.1 44.8C19.3 44.9 6.9 44.9 6.4 44.7ZM8.7 31.9L8.7 21.6L7.9 21.6C7 21.6 6.5 21.8 6.3 22.3C6 22.8 6 41.1 6.3 41.6C6.5 42.1 7 42.3 7.9 42.3L8.7 42.3L8.7 31.9ZM19.9 42.1C20.6 41.9 21.2 41.2 21.4 40.6C21.7 39.7 21.8 39.7 20.5 39.7C18.7 39.6 17.5 38.9 16.8 37.4C16.5 36.8 16.5 36.8 16.5 34.2C16.4 32 16.5 31.6 16.6 31.3C17 30.5 18.4 30.5 18.9 31.4C19 31.7 19 32.1 19 33.9C19 37.3 18.7 37.1 23.6 37.1C27.6 37.1 27.9 37.1 28.9 36.5C29.5 36.1 29.9 35.6 30.3 34.9L30.6 34.4L30.6 29.4L30.6 24.3L30.2 23.7C29.8 22.9 29 22.2 28.2 21.9L27.7 21.7L19.5 21.6L11.3 21.6L11.3 31.9L11.3 42.3L15.3 42.3C18.8 42.3 19.5 42.3 19.9 42.1ZM52.6 31.9L52.6 21.6L44.4 21.6L36.1 21.7L35.6 21.9C34.8 22.3 34.1 22.9 33.7 23.7L33.3 24.3L33.3 29.4L33.3 34.4L33.7 35C34.1 35.8 34.9 36.5 35.7 36.8C36.2 37.1 36.4 37.1 40 37.1C45.2 37.1 44.9 37.4 44.9 33.9C44.9 31.4 44.9 31.2 45.5 30.9C46.2 30.5 47 30.8 47.3 31.4C47.4 31.7 47.5 32.1 47.4 34.3C47.4 36.7 47.4 36.8 47.1 37.4C46.4 38.9 45.2 39.6 43.4 39.7L42.3 39.7L42.3 40.2C42.5 41 43.2 41.8 44 42.1C44.3 42.2 45.4 42.3 48.5 42.3L52.6 42.3L52.6 31.9ZM57.1 42.1C57.8 41.7 57.8 42.2 57.8 31.9C57.8 21.7 57.8 22.2 57.1 21.8C56.9 21.7 56.6 21.6 56 21.6L55.2 21.6L55.2 31.9L55.2 42.3L56 42.3C56.6 42.3 56.9 42.2 57.1 42.1ZM15.8 16.3C15.3 16 15 15.1 15.3 14.6C15.5 14.1 20.8 7.7 21 7.6C21.1 7.5 21.4 7.4 21.7 7.4C22.3 7.4 22.5 7.7 24 10.2C24.8 11.4 25.4 12.4 25.4 12.4C25.5 12.3 26.7 9.9 28.2 6.8C31.2 0.9 31.1 1 31.9 1C32.8 1 32.7 0.9 35.7 6.8C37.2 9.9 38.4 12.3 38.5 12.4C38.5 12.4 39.1 11.4 39.9 10.2C41.4 7.7 41.6 7.4 42.2 7.4C42.5 7.4 42.8 7.5 42.9 7.6C43.1 7.7 48.4 14.1 48.6 14.6C48.9 15.2 48.6 16 48 16.3C47.1 16.7 47 16.6 44.6 13.6C43.4 12.1 42.4 11 42.4 11C42.3 11.1 41.7 12.2 40.8 13.6C39.3 16.2 39.1 16.4 38.4 16.4C37.6 16.4 37.6 16.4 34.7 10.6C33.2 7.6 32 5.2 31.9 5.2C31.9 5.2 30.7 7.6 29.2 10.6C26.3 16.4 26.3 16.4 25.5 16.4C24.8 16.4 24.6 16.2 23 13.5C22.2 12.1 21.4 11 21.4 11C21.4 11.1 20.4 12.2 19.3 13.6C17 16.5 16.7 16.7 15.8 16.3Z"/></svg>
                   </span>
-                  <span id="refMarketColIconMarket" style="width:20px; height:20px; border-radius:999px; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.5);">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M0.312 15.500L0.312 15.000L0.906 15.000L1.500 15.000L1.500 11.805L1.500 8.609L8.000 8.609L14.500 8.609L14.500 11.805L14.500 15.000L15.102 15.000L15.703 15.000L15.703 15.500L15.703 16.000L8.008 16.000L0.312 16.000L0.312 15.500zM12.000 11.406L12.000 9.609L8.000 9.609L4.000 9.609L4.000 11.406L4.000 13.203L8.000 13.203L12.000 13.203L12.000 11.406zM2.025 7.976C1.021 7.813 0.262 7.089 0.043 6.088C-0.009 5.846 -0.009 5.195 0.044 5.000C0.091 4.827 0.194 4.611 0.291 4.484C0.435 4.295 2.993 1.321 3.076 1.247C3.178 1.155 3.287 1.093 3.430 1.045L3.539 1.008L8.008 1.008L12.477 1.008L12.602 1.056C12.748 1.113 12.835 1.165 12.934 1.255C13.011 1.326 15.582 4.317 15.709 4.484C15.806 4.611 15.908 4.826 15.956 5.000C16.009 5.194 16.009 5.845 15.956 6.088C15.749 7.046 15.046 7.748 14.088 7.956C13.859 8.006 13.392 8.006 13.162 7.957C12.643 7.844 12.170 7.572 11.849 7.203C11.800 7.147 11.756 7.102 11.750 7.102C11.745 7.102 11.696 7.151 11.643 7.211C11.312 7.584 10.857 7.844 10.338 7.957C10.109 8.006 9.641 8.006 9.413 7.957C8.892 7.843 8.425 7.577 8.106 7.211C8.054 7.151 8.006 7.102 8.000 7.102C7.995 7.102 7.946 7.151 7.893 7.211C6.948 8.276 5.245 8.255 4.315 7.166L4.250 7.090L4.177 7.174C3.827 7.572 3.366 7.843 2.846 7.954C2.645 7.997 2.223 8.009 2.025 7.976z"/></svg>
+                  <span id="refMarketColIconMarket" style="width:40px; height:40px; border-radius:999px; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.5);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M0.312 15.500L0.312 15.000L0.906 15.000L1.500 15.000L1.500 11.805L1.500 8.609L8.000 8.609L14.500 8.609L14.500 11.805L14.500 15.000L15.102 15.000L15.703 15.000L15.703 15.500L15.703 16.000L8.008 16.000L0.312 16.000L0.312 15.500zM12.000 11.406L12.000 9.609L8.000 9.609L4.000 9.609L4.000 11.406L4.000 13.203L8.000 13.203L12.000 13.203L12.000 11.406zM2.025 7.976C1.021 7.813 0.262 7.089 0.043 6.088C-0.009 5.846 -0.009 5.195 0.044 5.000C0.091 4.827 0.194 4.611 0.291 4.484C0.435 4.295 2.993 1.321 3.076 1.247C3.178 1.155 3.287 1.093 3.430 1.045L3.539 1.008L8.008 1.008L12.477 1.008L12.602 1.056C12.748 1.113 12.835 1.165 12.934 1.255C13.011 1.326 15.582 4.317 15.709 4.484C15.806 4.611 15.908 4.826 15.956 5.000C16.009 5.194 16.009 5.845 15.956 6.088C15.749 7.046 15.046 7.748 14.088 7.956C13.859 8.006 13.392 8.006 13.162 7.957C12.643 7.844 12.170 7.572 11.849 7.203C11.800 7.147 11.756 7.102 11.750 7.102C11.745 7.102 11.696 7.151 11.643 7.211C11.312 7.584 10.857 7.844 10.338 7.957C10.109 8.006 9.641 8.006 9.413 7.957C8.892 7.843 8.425 7.577 8.106 7.211C8.054 7.151 8.006 7.102 8.000 7.102C7.995 7.102 7.946 7.151 7.893 7.211C6.948 8.276 5.245 8.255 4.315 7.166L4.250 7.090L4.177 7.174C3.827 7.572 3.366 7.843 2.846 7.954C2.645 7.997 2.223 8.009 2.025 7.976z"/></svg>
                   </span>
                 </button>
               </th>
