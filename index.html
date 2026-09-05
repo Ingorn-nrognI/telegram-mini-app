@@ -875,8 +875,8 @@ body.referrals-mode #appReferralsOverlay .app-settings-sheet {
   /* Отступ сверху оставался под заголовок в верхней панели. Заголовок
      переехал внутрь экрана, поэтому пустое место убрано — контент начинается
      сразу под системной панелью Telegram. */
-  height: calc(100vh - var(--safe-top, 0px) - 12px);
-  margin-top: calc(var(--safe-top, 0px) + 12px);
+  height: calc(100vh - var(--referral-header-gap, calc(var(--safe-top, 0px) + 12px)));
+  margin-top: var(--referral-header-gap, calc(var(--safe-top, 0px) + 12px));
   margin-bottom: 0;
   border-radius: 0;
   border: none;
@@ -926,8 +926,8 @@ body.settings-mode #appSettingsOverlay {
 body.settings-mode #appSettingsOverlay .app-settings-sheet {
   width: 100vw;
   max-width: none;
-  height: calc(100vh - var(--safe-top, 0px) - 12px);
-  margin-top: calc(var(--safe-top, 0px) + 12px);
+  height: calc(100vh - var(--referral-header-gap, calc(var(--safe-top, 0px) + 12px)));
+  margin-top: var(--referral-header-gap, calc(var(--safe-top, 0px) + 12px));
   margin-bottom: 0;
   border-radius: 0;
   border: none;
@@ -5976,7 +5976,7 @@ body.history-mode .history-panel-header .history-panel-title {
 
     <div id="referralLinkCard" class="app-settings-section" style="margin-top:14px; margin-bottom:12px; background:linear-gradient(180deg, #7ed957, #081e0f); border:none; border-radius:26px; padding:16px; box-shadow:var(--shadow-main);">
       <div style="position:relative; width:340px; height:190px; margin:0 auto 6px;">
-        <div class="gift-shadow" style="position:absolute; left:-18px; top:121px; width:55px; z-index:0; animation-delay:0s;"></div>
+        <div class="gift-shadow" style="position:absolute; left:10px; top:121px; width:55px; z-index:0; animation-delay:0s;"></div>
         <div id="giftStreetBeast" style="position:absolute; left:-28px; top:48px; width:100px; height:100px; z-index:1;"></div>
 
         <div class="gift-shadow" style="position:absolute; left:48px; top:134px; width:80px; z-index:0; animation-delay:0.4s;"></div>
@@ -5985,7 +5985,7 @@ body.history-mode .history-panel-header .history-panel-title {
         <div class="gift-shadow" style="position:absolute; left:118px; top:147px; width:105px; z-index:0; animation-delay:0.8s;"></div>
         <div id="giftKingOfRock" style="position:absolute; left:75px; top:0; width:190px; height:190px; z-index:3;"></div>
 
-        <div class="gift-shadow" style="position:absolute; right:50px; top:134px; width:80px; z-index:0; animation-delay:0.4s;"></div>
+        <div class="gift-shadow" style="position:absolute; right:44px; top:134px; width:80px; z-index:0; animation-delay:0.4s;"></div>
         <div id="giftMoonwalker" style="position:absolute; right:14px; top:23px; width:145px; height:145px; z-index:2;"></div>
 
         <div class="gift-shadow" style="position:absolute; right:-3px; top:121px; width:55px; z-index:0; animation-delay:0s;"></div>
@@ -6033,7 +6033,7 @@ body.history-mode .history-panel-header .history-panel-title {
     </div>
 
     <div class="app-settings-section">
-      <div class="app-settings-section-title" id="referralCountSectionTitle" style="text-transform:none; font-size:10px; white-space:nowrap; letter-spacing:normal;">Приглашено пользователей: <span id="referralCount">0</span></div>
+      <div class="app-settings-section-title" id="referralCountSectionTitle" style="text-transform:none; font-size:9px; white-space:nowrap; letter-spacing:normal; overflow:hidden; text-overflow:ellipsis;">Приглашено пользователей: <span id="referralCount">0</span></div>
       <div style="overflow-x:auto; margin-top:8px;">
         <table style="width:100%; table-layout:fixed; border-collapse:collapse; font-size:12px;">
           <colgroup>
@@ -8657,10 +8657,27 @@ function renderAppSettings() {
   }
 }
 
+function syncOverlayTopSpacing() {
+  const reference = document.querySelector(".top-bar");
+  if (!reference) return;
+  // Дважды через requestAnimationFrame — чтобы измерение случилось
+  // уже после того, как браузер реально отрисовал переключение
+  // полноэкранного режима, а не до него.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const gap = reference.getBoundingClientRect().top;
+      if (gap > 0) {
+        document.documentElement.style.setProperty("--referral-header-gap", gap + "px");
+      }
+    });
+  });
+}
+
 function openSettings() {
   const overlay = document.getElementById("appSettingsOverlay");
   if (!overlay) return;
   document.body.classList.add("settings-mode");
+  syncOverlayTopSpacing();
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
   renderAppSettings();
@@ -8684,6 +8701,7 @@ function getMyReferralLink() {
 function openReferrals() {
   const overlay = document.getElementById("appReferralsOverlay");
   if (!overlay) return;
+  syncOverlayTopSpacing();
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
   renderReferralsScreen();
