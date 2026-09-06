@@ -980,6 +980,12 @@ body.rating-mode #leaderboardModal .app-modal-card {
 body.rating-mode #leaderboardModal .leaderboardHeader {
   display: none;
 }
+body.rating-mode #ratingModeTitle {
+  display: block;
+}
+body.rating-mode .history-mode-title {
+  opacity: 0 !important;
+}
 
 /* В режиме турниров шапка обычная: баланс и кнопка истории на месте,
    меняется только заголовок по центру. */
@@ -4693,6 +4699,28 @@ body.history-mode .history-panel-header .history-panel-title {
   box-shadow: 0 12px 24px rgba(45, 225, 255, 0.16);
 }
 
+.tournament-tab-frame {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 4px;
+}
+.tournament-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
 .tournament-tab.active {
   background: rgba(255,255,255,0.16);
   border-color: rgba(255,255,255,0.3);
@@ -5363,11 +5391,14 @@ body.history-mode .history-panel-header .history-panel-title {
         <h2>🏆 Рейтинг</h2>
         <span class="closeBtn" onclick="closeLeaderboard()">✕</span>
       </div>
-      <div style="display:flex; gap:6px; overflow-x:auto; padding:10px 0; -webkit-overflow-scrolling:touch;">
-        <button class="app-settings-chip tournament-tab active" data-tab="market" onclick="switchTournamentTab('market')">Market</button>
-        <button class="app-settings-chip tournament-tab" data-tab="pvp" onclick="switchTournamentTab('pvp')">PvP</button>
-        <button class="app-settings-chip tournament-tab" data-tab="cases" onclick="switchTournamentTab('cases')">Кейсы</button>
-        <button class="app-settings-chip tournament-tab" data-tab="referrals" onclick="switchTournamentTab('referrals')">Рефералы</button>
+      <div id="ratingModeTitle" style="display:none; font-size:16px; font-weight:800; color:#eaf3ff; padding:0 14px; margin-top:6px;">Турниры</div>
+      <div style="padding:10px 14px;">
+        <div class="tournament-tab-frame">
+          <button class="tournament-tab active" data-tab="market" onclick="switchTournamentTab('market')">Market</button>
+          <button class="tournament-tab" data-tab="pvp" onclick="switchTournamentTab('pvp')">Арена</button>
+          <button class="tournament-tab" data-tab="cases" onclick="switchTournamentTab('cases')">Кейсы</button>
+          <button class="tournament-tab" data-tab="referrals" onclick="switchTournamentTab('referrals')">Рефералы</button>
+        </div>
       </div>
       <div id="leaderboardContent"></div>
     </div>
