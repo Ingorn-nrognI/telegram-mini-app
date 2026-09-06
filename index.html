@@ -7274,8 +7274,8 @@ function setMenuView(view, options = {}) {
   const navArenaMarketStateMarket = document.getElementById("navArenaMarketStateMarket");
   if (navArenaMarketBtn) navArenaMarketBtn.dataset.nav = marketModeActive ? "market" : "arena";
   if (navArenaMarketStateArena && navArenaMarketStateMarket) {
-    navArenaMarketStateArena.style.display = marketModeActive ? "none" : "flex";
-    navArenaMarketStateMarket.style.display = marketModeActive ? "flex" : "none";
+    navArenaMarketStateArena.style.display = marketModeActive ? "flex" : "none";
+    navArenaMarketStateMarket.style.display = marketModeActive ? "none" : "flex";
   }
   if (modePopup) modePopup.classList.remove("open");
   if (historyPanel && !keepHistory) historyPanel.classList.remove("open");
