@@ -9358,11 +9358,11 @@ function handleArenaMarketNavClick(event) {
   closeLeaderboard();
   closeBobrRunRooms();
 
-  const marketModeActive = (currentMenuView === "market" || currentMenuView === "inventory");
+  const marketModeActive = (currentMenuView === "market" || currentMenuView === "inventory" || currentMenuView === "auction");
   if (marketModeActive) {
-    setMenuView("market");
-  } else {
     setMenuView("home");
+  } else {
+    setMenuView("market");
   }
 }
 
