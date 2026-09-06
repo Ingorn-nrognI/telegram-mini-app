@@ -7242,7 +7242,7 @@ function setMenuView(view, options = {}) {
   // остаётся прежней.
   const pvpBtn = document.getElementById("navPvp");
   if (pvpBtn) {
-    const asAuction = (view === "market" || view === "auction");
+    const asAuction = (view === "market" || view === "auction" || view === "inventory");
     const swords = pvpBtn.querySelector(".nav-icon-svg:not(.nav-icon-auction)");
     const gavel = pvpBtn.querySelector(".nav-icon-auction");
     const label = pvpBtn.querySelector(".nav-label");
