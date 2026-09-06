@@ -9335,9 +9335,8 @@ function handleBottomNav(action, event) {
       closeHistoryPanel({ preserveNav: true });
       closeLeaderboard();
       closeBobrRunRooms();
-      if (currentMenuView === "market") {
-        // Уже на экране Market — кнопка сейчас в состоянии "Arena",
-        // нажатие возвращает на главный экран с ареной.
+      const isInMarketFamily = (currentMenuView === "market" || currentMenuView === "inventory" || currentMenuView === "auction");
+      if (isInMarketFamily) {
         setMenuView("home");
       } else {
         setMenuView("market");
