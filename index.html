@@ -14151,6 +14151,7 @@ function initScannerStakesRowInteractions(list) {
     let levelsScrollStart = 0;
 
     levelsRow.addEventListener("mousedown", (event) => {
+      event.preventDefault();
       dragLevels = true;
       levelsStartX = event.pageX;
       levelsScrollStart = levelsRow.scrollLeft;
@@ -14159,6 +14160,7 @@ function initScannerStakesRowInteractions(list) {
       // из-за чего скролл дёргается и лагает. На телефоне это не нужно,
       // там работает нативный тач-скролл без нашего JS.
       levelsRow.style.scrollSnapType = "none";
+      levelsRow.style.userSelect = "none";
     });
 
     window.addEventListener("mousemove", (event) => {
@@ -14170,6 +14172,7 @@ function initScannerStakesRowInteractions(list) {
       if (!dragLevels) return;
       dragLevels = false;
       levelsRow.style.scrollSnapType = "";
+      levelsRow.style.userSelect = "";
     });
 
     levelsRow.addEventListener("wheel", (event) => {
