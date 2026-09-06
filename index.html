@@ -980,11 +980,11 @@ body.rating-mode #leaderboardModal .app-modal-card {
 body.rating-mode #leaderboardModal .leaderboardHeader {
   display: none;
 }
-body.rating-mode #ratingModeTitle {
-  display: block;
+body.rating-mode .top-bar {
+  pointer-events: auto;
 }
-body.rating-mode .history-mode-title {
-  opacity: 0 !important;
+body.rating-mode #ratingModeTitle {
+  display: none;
 }
 
 /* В режиме турниров шапка обычная: баланс и кнопка истории на месте,
@@ -5419,7 +5419,7 @@ body.history-mode .history-panel-header .history-panel-title {
     <div class="bg-orb orb-11"></div>
   </div>
 
-  <div class="top-bar">
+  <div class="top-bar" onclick="if (document.body.classList.contains('rating-mode')) event.stopPropagation();">
     <div class="top-bar-left">
       <div id="modeBackButton" class="mode-back-btn" onclick="event.stopPropagation(); handleTelegramAppBack()" aria-label="Назад">←</div>
 
