@@ -7256,7 +7256,7 @@ function setMenuView(view, options = {}) {
   const navMarketStateMarket = document.getElementById("navMarketStateMarket");
   const navMarketStateArena = document.getElementById("navMarketStateArena");
   if (navMarketStateMarket && navMarketStateArena) {
-    const onMarket = (view === "market" || view === "auction");
+    const onMarket = (view === "market" || view === "auction" || view === "inventory");
     navMarketStateMarket.style.display = onMarket ? "none" : "flex";
     navMarketStateArena.style.display = onMarket ? "flex" : "none";
   }
