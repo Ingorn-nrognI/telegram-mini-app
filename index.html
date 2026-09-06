@@ -6081,7 +6081,7 @@ body.history-mode .history-panel-header .history-panel-title {
   <div class="app-modal-card" onclick="event.stopPropagation()">
     <div style="padding:18px 18px 4px;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-        <div id="referralLevelsModalTitle" style="font-size:16px; font-weight:700;">Подробно о реф. программе</div>
+        <div id="referralLevelsModalTitle" style="font-size:16px; font-weight:700;">Подробно реферальной программе</div>
         <button onclick="closeReferralLevelsModal()" style="background:rgba(255,255,255,0.08); border:none; border-radius:50%; width:32px; height:32px; font-size:16px; color:#fff; flex-shrink:0;">×</button>
       </div>
       <div id="referralLevelsModalBody"></div>
@@ -8522,7 +8522,7 @@ function applyAppLanguage(lang) {
   set("#referralPitchTitle", L("Зарабатывай до 15% с приглашённых пользователей", "Earn up to 15% from invited users"));
   const referralInfoBtnEl = document.getElementById("referralInfoBtn");
   if (referralInfoBtnEl) referralInfoBtnEl.setAttribute("aria-label", L("Подробнее о реферальной программе", "Learn more about the referral program"));
-  set("#referralLevelsModalTitle", L("Подробно о реф. программе", "Referral program details"));
+  set("#referralLevelsModalTitle", L("Подробно реферальной программе", "Referral program details"));
   if (_lastReferralLevelsData) {
     renderReferralLevelCards(_lastReferralLevelsData.levels, Number(_lastReferralLevelsData.turnover || 0), _lastReferralLevelsData.levelKey);
   }
