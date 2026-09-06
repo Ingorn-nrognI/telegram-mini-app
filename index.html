@@ -1354,6 +1354,68 @@ body.history-mode .history-panel-header .history-panel-title {
   transform: scale(0.94);
 }
 
+.market-side-fab {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 -10px 24px rgba(0, 0, 0, 0.32),
+    inset 0 0 0 1px rgba(255,255,255,0.02);
+  backdrop-filter: blur(18px);
+  color: #ffffff;
+  z-index: 80;
+  cursor: pointer;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.market-side-fab-left {
+  left: 6px;
+  bottom: calc(max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px)) + var(--bottom-nav-height) + 14px);
+}
+.market-side-fab-right {
+  right: 6px;
+  bottom: calc(18px + var(--market-fab-size) + 10px);
+}
+body.market-mode .market-side-fab {
+  display: flex;
+}
+
+/* Скролл вниз: сердце/корзина уходят первыми (без задержки), затем —
+   с задержкой 0.18с — уходит сам главный бар и круглая кнопка Market.
+   Скролл вверх: бар с круглой кнопкой появляются первыми, сердце/корзина —
+   следом, с той же задержкой. Эффект получается за счёт разных
+   transition-delay у "верхнего" и "нижнего" яруса кнопок. */
+body.market-mode.market-nav-hidden .market-side-fab {
+  transform: translateY(80px);
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 0s;
+}
+body.market-mode:not(.market-nav-hidden) .market-side-fab {
+  transition-delay: 0.18s;
+}
+
+body.market-mode .bottom-bar,
+body.market-mode .bottom-market-fab {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+body.market-mode.market-nav-hidden .bottom-bar,
+body.market-mode.market-nav-hidden .bottom-market-fab {
+  transform: translateY(120px);
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 0.18s;
+}
+body.market-mode:not(.market-nav-hidden) .bottom-bar,
+body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
+  transition-delay: 0s;
+}
+
 .bottom-market-fab .nav-icon {
   font-size: 32px;
   line-height: 1;
@@ -6009,6 +6071,14 @@ body.history-mode .history-panel-header .history-panel-title {
       <span id="navProfileFloatInitials"></span>
     </div>
   </div>
+
+  <button type="button" id="marketFavoritesFab" class="market-side-fab market-side-fab-left" onclick="openMarketFavorites(event)" aria-label="Избранное">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></svg>
+  </button>
+
+  <button type="button" id="marketCartFab" class="market-side-fab market-side-fab-right" onclick="openMarketCart(event)" aria-label="Корзина">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M15 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M17 17h-11v-14h-2" /><path d="M6 5l14 1l-1 7h-13" /></svg>
+  </button>
 
   <button type="button" id="navMarket" class="bottom-market-fab" data-nav="market" onclick="handleBottomNav('market', event)" aria-label="Market">
     <span id="navMarketStateMarket" style="display:flex; flex-direction:column; align-items:center; gap:3px;">
@@ -18358,6 +18428,49 @@ function handleMarketFilterClick(event) {
   closeMarketSortMenu();
   showAppNotice(L("Фильтры появятся позже", "Filters will be added later"));
 }
+
+function openMarketFavorites(event) {
+  if (event) event.stopPropagation();
+  showAppNotice(L("Избранное появится позже", "Favorites coming soon"));
+}
+window.openMarketFavorites = openMarketFavorites;
+
+function openMarketCart(event) {
+  if (event) event.stopPropagation();
+  showAppNotice(L("Корзина появится позже", "Cart coming soon"));
+}
+window.openMarketCart = openMarketCart;
+
+// Поочерёдное скрытие/появление кнопок Маркета при скролле экрана.
+let _marketNavLastScrollTop = 0;
+let _marketNavHiddenState = false;
+function handleMarketScreenScroll() {
+  const el = document.getElementById("marketScreen");
+  if (!el) return;
+  const scrollTop = el.scrollTop;
+  const delta = scrollTop - _marketNavLastScrollTop;
+
+  if (scrollTop <= 10) {
+    if (_marketNavHiddenState) {
+      _marketNavHiddenState = false;
+      document.body.classList.remove("market-nav-hidden");
+    }
+  } else if (delta > 4 && !_marketNavHiddenState) {
+    _marketNavHiddenState = true;
+    document.body.classList.add("market-nav-hidden");
+  } else if (delta < -4 && _marketNavHiddenState) {
+    _marketNavHiddenState = false;
+    document.body.classList.remove("market-nav-hidden");
+  }
+  _marketNavLastScrollTop = scrollTop;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const marketScreenEl = document.getElementById("marketScreen");
+  if (marketScreenEl) {
+    marketScreenEl.addEventListener("scroll", handleMarketScreenScroll, { passive: true });
+  }
+});
 
 document.addEventListener("click", closeMarketSortMenu);
 
