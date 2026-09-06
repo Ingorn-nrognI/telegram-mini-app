@@ -1720,6 +1720,57 @@ body.history-mode .history-panel-header .history-panel-title {
   gap: 8px;
 }
 
+.market-gift-tile {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+.market-gift-tile-inner {
+  background: rgba(255,255,255,0.03);
+  border-radius: 16px;
+  aspect-ratio: 1/1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.market-gift-anim {
+  width: 80%;
+  height: 80%;
+}
+.market-gift-tile-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.market-gift-price {
+  background: #ffffff;
+  color: #0a0a12;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.market-gift-cart-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .market-search-shell {
   flex: 1;
   min-width: 0;
@@ -5754,6 +5805,31 @@ body.history-mode .history-panel-header .history-panel-title {
         </div>
       </div>
 
+      <div id="marketGiftsGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;">
+        <div class="market-gift-tile">
+          <div class="market-gift-tile-inner">
+            <div id="marketGiftDemo1" class="market-gift-anim"></div>
+          </div>
+          <div class="market-gift-tile-footer">
+            <div class="market-gift-price">12.50 GRAM</div>
+            <button type="button" class="market-gift-cart-btn" aria-label="Добавить в корзину">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M12.5 17h-6.5v-14h-2" /><path d="M6 5l14 1l-.86 6.017m-2.64 .983h-10.5" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>
+            </button>
+          </div>
+        </div>
+        <div class="market-gift-tile">
+          <div class="market-gift-tile-inner">
+            <div id="marketGiftDemo2" class="market-gift-anim"></div>
+          </div>
+          <div class="market-gift-tile-footer">
+            <div class="market-gift-price">8.20 GRAM</div>
+            <button type="button" class="market-gift-cart-btn" aria-label="Добавить в корзину">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M12.5 17h-6.5v-14h-2" /><path d="M6 5l14 1l-.86 6.017m-2.64 .983h-10.5" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -6553,7 +6629,9 @@ document.addEventListener("DOMContentLoaded", () => {
     { id: "giftHulaGirl", file: "hula_girl_noBG.json" },
     { id: "giftMoonwalker", file: "moonwalker_noBG.json" },
     { id: "giftStreetBeast", file: "streetbeast_noBG.json" },
-    { id: "giftJordan", file: "jordan_noBG.json" }
+    { id: "giftJordan", file: "jordan_noBG.json" },
+    { id: "marketGiftDemo1", file: "kingofrock_noBG.json" },
+    { id: "marketGiftDemo2", file: "hula_girl_noBG.json" }
   ];
   _giftsConfig.forEach((g) => {
     const el = document.getElementById(g.id);
