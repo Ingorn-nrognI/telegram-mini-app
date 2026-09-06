@@ -4761,7 +4761,6 @@ body.history-mode .history-panel-header .history-panel-title {
 .referral-level-card {
   flex: 0 0 82%;
   max-width: 340px;
-  scroll-snap-align: start;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 16px;
@@ -4769,7 +4768,6 @@ body.history-mode .history-panel-header .history-panel-title {
   box-sizing: border-box;
 }
 #referralLevelsRow {
-  scroll-snap-type: x mandatory;
   touch-action: pan-x;
 }
 .referral-level-card-header {
@@ -14146,39 +14144,11 @@ function initScannerStakesRowInteractions(list) {
 
   const levelsRow = document.getElementById("referralLevelsRow");
   if (levelsRow) {
-    let dragLevels = false;
-    let levelsStartX = 0;
-    let levelsScrollStart = 0;
-
-    levelsRow.addEventListener("mousedown", (event) => {
-      event.preventDefault();
-      dragLevels = true;
-      levelsStartX = event.pageX;
-      levelsScrollStart = levelsRow.scrollLeft;
-      // Отключаем привязку к точкам на время перетаскивания мышью —
-      // иначе браузер каждый кадр пытается притянуть карточку обратно,
-      // из-за чего скролл дёргается и лагает. На телефоне это не нужно,
-      // там работает нативный тач-скролл без нашего JS.
-      levelsRow.style.scrollSnapType = "none";
-      levelsRow.style.userSelect = "none";
-    });
-
-    window.addEventListener("mousemove", (event) => {
-      if (!dragLevels) return;
-      levelsRow.scrollLeft = levelsScrollStart - (event.pageX - levelsStartX);
-    });
-
-    window.addEventListener("mouseup", () => {
-      if (!dragLevels) return;
-      dragLevels = false;
-      levelsRow.style.scrollSnapType = "";
-      levelsRow.style.userSelect = "";
-    });
-
+    levelsRow.style.scrollBehavior = "smooth";
     levelsRow.addEventListener("wheel", (event) => {
       if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-        levelsRow.scrollLeft += event.deltaY;
         event.preventDefault();
+        levelsRow.scrollLeft += event.deltaY;
       }
     }, { passive: false });
   }
