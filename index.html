@@ -7413,6 +7413,7 @@ function setMenuView(view, options = {}) {
   // сохранять тот же набор кнопок. Без этого при переходе возвращалась
   // кнопка "Игры", пропадали "Скины", а арена с маркетом менялись местами.
   const marketModeActive = (view === "market" || view === "inventory" || view === "auction");
+  document.body.classList.toggle("market-mode", marketModeActive);
   const navGamesBtn = document.getElementById("navGames");
   const navSkinsBtn = document.getElementById("navSkins");
   if (navGamesBtn) navGamesBtn.style.display = marketModeActive ? "none" : "flex";
