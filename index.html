@@ -1373,13 +1373,15 @@ body.history-mode .history-panel-header .history-panel-title {
   cursor: pointer;
   transition: transform 0.25s ease, opacity 0.25s ease;
 }
+.market-side-fab-left,
+.market-side-fab-right {
+  bottom: calc(18px + var(--market-fab-size) + 10px);
+}
 .market-side-fab-left {
   left: 6px;
-  bottom: calc(max(var(--bottom-nav-offset), calc(var(--safe-bottom) + 2px)) + var(--bottom-nav-height) + 14px);
 }
 .market-side-fab-right {
   right: 6px;
-  bottom: calc(18px + var(--market-fab-size) + 10px);
 }
 body.market-mode .market-side-fab {
   display: flex;
@@ -1788,6 +1790,39 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   border-radius: 20px;
   padding: 10px;
   box-sizing: border-box;
+}
+.market-gift-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+.market-gift-number {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 10px;
+}
+#marketGiftsGrid.market-gifts-list {
+  grid-template-columns: 1fr;
+}
+.market-gifts-list .market-gift-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.market-gifts-list .market-gift-tile-inner {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+.market-gifts-list .market-gift-name,
+.market-gifts-list .market-gift-number {
+  margin-bottom: 0;
+}
+.market-gifts-list .market-gift-tile-footer {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .market-gift-tile-inner {
   background: rgba(255,255,255,0.03);
@@ -5872,6 +5907,8 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
           <div class="market-gift-tile-inner">
             <div id="marketGiftDemo1" class="market-gift-anim"></div>
           </div>
+          <div class="market-gift-name">King of Rock</div>
+          <div class="market-gift-number">#124337</div>
           <div class="market-gift-tile-footer">
             <div class="market-gift-price">12.50 GRAM</div>
             <button type="button" class="market-gift-cart-btn" aria-label="Добавить в корзину">
@@ -5883,6 +5920,8 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
           <div class="market-gift-tile-inner">
             <div id="marketGiftDemo2" class="market-gift-anim"></div>
           </div>
+          <div class="market-gift-name">Hula Girl</div>
+          <div class="market-gift-number">#180512</div>
           <div class="market-gift-tile-footer">
             <div class="market-gift-price">8.20 GRAM</div>
             <button type="button" class="market-gift-cart-btn" aria-label="Добавить в корзину">
@@ -18422,6 +18461,8 @@ function toggleMarketViewMode(event) {
   const listIcon = document.getElementById("marketViewIconList");
   if (gridIcon) gridIcon.style.display = marketViewMode === "grid" ? "flex" : "none";
   if (listIcon) listIcon.style.display = marketViewMode === "list" ? "flex" : "none";
+  const grid = document.getElementById("marketGiftsGrid");
+  if (grid) grid.classList.toggle("market-gifts-list", marketViewMode === "list");
 }
 
 function handleMarketFilterClick(event) {
