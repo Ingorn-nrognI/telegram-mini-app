@@ -1375,7 +1375,7 @@ body.history-mode .history-panel-header .history-panel-title {
 }
 .market-side-fab-left,
 .market-side-fab-right {
-  bottom: calc(18px + var(--market-fab-size) + 10px);
+  bottom: calc(18px + var(--bottom-nav-height) + 10px);
 }
 .market-side-fab-left {
   left: 6px;
@@ -18462,7 +18462,10 @@ function toggleMarketViewMode(event) {
   if (gridIcon) gridIcon.style.display = marketViewMode === "grid" ? "flex" : "none";
   if (listIcon) listIcon.style.display = marketViewMode === "list" ? "flex" : "none";
   const grid = document.getElementById("marketGiftsGrid");
-  if (grid) grid.classList.toggle("market-gifts-list", marketViewMode === "list");
+  if (grid) {
+    grid.classList.toggle("market-gifts-list", marketViewMode === "list");
+    grid.style.gridTemplateColumns = marketViewMode === "list" ? "1fr" : "1fr 1fr";
+  }
 }
 
 function handleMarketFilterClick(event) {
