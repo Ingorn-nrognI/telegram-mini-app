@@ -15015,12 +15015,25 @@ function syncEditFabWidth() {
   }
 }
 
+function syncMarketSideFabPosition() {
+  const bar = document.querySelector(".bottom-bar");
+  const favBtn = document.getElementById("marketFavoritesFab");
+  const cartBtn = document.getElementById("marketCartFab");
+  if (!bar || (!favBtn && !cartBtn)) return;
+  const rect = bar.getBoundingClientRect();
+  if (rect.top <= 0) return;
+  const bottomOffset = `${Math.round(window.innerHeight - rect.top + 14)}px`;
+  if (favBtn) favBtn.style.bottom = bottomOffset;
+  if (cartBtn) cartBtn.style.bottom = bottomOffset;
+}
+
 function forceMarketFabSizeRefresh() {
   syncMarketFabSize();
   syncEditFabWidth();
-  setTimeout(() => { syncMarketFabSize(); syncEditFabWidth(); }, 80);
-  setTimeout(() => { syncMarketFabSize(); syncEditFabWidth(); }, 220);
-  setTimeout(() => { syncMarketFabSize(); syncEditFabWidth(); }, 520);
+  syncMarketSideFabPosition();
+  setTimeout(() => { syncMarketFabSize(); syncEditFabWidth(); syncMarketSideFabPosition(); }, 80);
+  setTimeout(() => { syncMarketFabSize(); syncEditFabWidth(); syncMarketSideFabPosition(); }, 220);
+  setTimeout(() => { syncMarketFabSize(); syncEditFabWidth(); syncMarketSideFabPosition(); }, 520);
 }
 
 window.addEventListener("resize", forceMarketFabSizeRefresh, { passive: true });
@@ -18515,18 +18528,18 @@ function ensureMarketGiftAnim(gift, viewPrefix) {
 
 function buildMarketGiftTileHtml(gift, viewPrefix) {
   const animId = `marketAnim_${viewPrefix}_${gift.id}`;
-  const isFav = marketFavoriteIds.has(gift.id);
-  const isCart = marketCartIds.has(gift.id);
-  const cartActiveClass = isCart ? " is-active" : "";
-  const favActiveClass = isFav ? " is-active" : "";
-  const favIconSvg = isFav
+  const cartActiveClass = marketCartIds.has(gift.id) ? " is-active" : "";
+  const favActiveClass = marketFavoriteIds.has(gift.id) ? " is-active" : "";
+  const isFavView = viewPrefix === "fav";
+  const isCartView = viewPrefix === "cart";
+  const favIconSvg = isFavView
     ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M19.5 12.572l-2.494 2.47m-5.006 4.958l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /><path d="M16 19h6" /></svg>'
     : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 20l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.96 6.053" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>';
-  const cartIconSvg = isCart
+  const cartIconSvg = isCartView
     ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M12.5 17h-6.5v-14h-2" /><path d="M6 5l14 1l-1 7h-13" /><path d="M16 19h6" /></svg>'
     : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M12.5 17h-6.5v-14h-2" /><path d="M6 5l14 1l-.86 6.017m-2.64 .983h-10.5" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>';
-  const favLabel = isFav ? "Убрать из избранного" : "Добавить в избранное";
-  const cartLabel = isCart ? "Убрать из корзины" : "Добавить в корзину";
+  const favLabel = isFavView ? "Убрать из избранного" : "Добавить в избранное";
+  const cartLabel = isCartView ? "Убрать из корзины" : "Добавить в корзину";
   return `
         <div class="market-gift-tile" data-gift-id="${gift.id}">
           <button type="button" class="market-gift-fav-btn${favActiveClass}" aria-label="${favLabel}" onclick="toggleMarketGiftFavorite('${gift.id}', event)">
