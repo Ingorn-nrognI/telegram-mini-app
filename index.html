@@ -453,6 +453,12 @@ button {
   padding-top: calc(var(--safe-top) + 64px);
 }
 
+#marketScreen .screen-inner {
+  /* Единый отступ между всеми блоками экрана маркета — такой же,
+     как между балансом и баннером (8px), вместо общего gap:14px. */
+  gap: 8px;
+}
+
 .menu-screen.active {
   display: block;
 }
@@ -1866,6 +1872,31 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+}
+.market-gift-cart-btn.is-active {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #0a0a12;
+}
+#marketMainView {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#marketFavoritesView,
+#marketCartView {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.market-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: rgba(255,255,255,0.5);
+  font-size: 14px;
+  text-align: center;
 }
 
 .market-search-shell {
@@ -5858,77 +5889,62 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
         </div>
       </div>
 
-      <div class="market-toolbar">
-        <div class="market-search-shell">
-          <span class="market-search-icon" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </span>
-          <input
-            id="marketSearchInput"
-            class="market-search-input"
-            type="text"
-            autocomplete="off"
-            placeholder="Поиск подарков"
-            aria-label="Поиск подарков"
-          >
+      <div id="marketMainView">
+        <div class="market-toolbar">
+          <div class="market-search-shell">
+            <span class="market-search-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input
+              id="marketSearchInput"
+              class="market-search-input"
+              type="text"
+              autocomplete="off"
+              placeholder="Поиск подарков"
+              aria-label="Поиск подарков"
+            >
+          </div>
+          <button type="button" id="marketFilterBtn" class="market-tool-btn" onclick="handleMarketFilterClick(event)" aria-label="Фильтры">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 640 640"><path fill="currentColor" d="M96 128C96 110.3 110.3 96 128 96L512 96C529.7 96 544 110.3 544 128C544 135.5 541.4 142.8 536.6 148.6L384 331.7L384 496C384 508.1 377.2 519.2 366.4 524.6C355.6 530 342.6 528.9 332.8 521.6L268.8 473.6C260.7 467.6 256 458.1 256 448L256 331.7L103.4 148.6C98.6 142.8 96 135.5 96 128z"/></svg>
+          </button>
+          <button type="button" id="marketSortBtn" class="market-tool-btn" onclick="toggleMarketSortMenu(event)" aria-label="Сортировка">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 640 640"><path fill="currentColor" d="M182.6 137.4C170.1 124.9 149.8 124.9 137.3 137.4L57.3 217.4C44.8 229.9 44.8 250.2 57.3 262.7C69.8 275.2 90.1 275.2 102.6 262.7L128 237.3L128 480C128 497.7 142.3 512 160 512C177.7 512 192 497.7 192 480L192 237.3L217.4 262.7C229.9 275.2 250.2 275.2 262.7 262.7C275.2 250.2 275.2 229.9 262.7 217.4L182.7 137.4zM457.4 502.6C469.9 515.1 490.2 515.1 502.7 502.6L582.7 422.6C595.2 410.1 595.2 389.8 582.7 377.3C570.2 364.8 549.9 364.8 537.4 377.3L512 402.7L512 160C512 142.3 497.7 128 480 128C462.3 128 448 142.3 448 160L448 402.7L422.6 377.3C410.1 364.8 389.8 364.8 377.3 377.3C364.8 389.8 364.8 410.1 377.3 422.6L457.3 502.6z"/></svg>
+          </button>
+          <button type="button" id="marketViewBtn" class="market-tool-btn" onclick="toggleMarketViewMode(event)" aria-label="Вид списка">
+            <span id="marketViewIconGrid" style="display:flex;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 640 640"><path fill="currentColor" d="M128 96C110.3 96 96 110.3 96 128L96 256C96 273.7 110.3 288 128 288L256 288C273.7 288 288 273.7 288 256L288 128C288 110.3 273.7 96 256 96L128 96zM384 96C366.3 96 352 110.3 352 128L352 256C352 273.7 366.3 288 384 288L512 288C529.7 288 544 273.7 544 256L544 128C544 110.3 529.7 96 512 96L384 96zM128 352C110.3 352 96 366.3 96 384L96 512C96 529.7 110.3 544 128 544L256 544C273.7 544 288 529.7 288 512L288 384C288 366.3 273.7 352 256 352L128 352zM384 352C366.3 352 352 366.3 352 384L352 512C352 529.7 366.3 544 384 544L512 544C529.7 544 544 529.7 544 512L544 384C544 366.3 529.7 352 512 352L384 352z"/></svg>
+            </span>
+            <span id="marketViewIconList" style="display:none;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 640 640"><path fill="currentColor" d="M96 144C96 117.5 117.5 96 144 96C170.5 96 192 117.5 192 144C192 170.5 170.5 192 144 192C117.5 192 96 170.5 96 144zM256 144C256 126.3 270.3 112 288 112L512 112C529.7 112 544 126.3 544 144C544 161.7 529.7 176 512 176L288 176C270.3 176 256 161.7 256 144zM96 320C96 293.5 117.5 272 144 272C170.5 272 192 293.5 192 320C192 346.5 170.5 368 144 368C117.5 368 96 346.5 96 320zM256 320C256 302.3 270.3 288 288 288L512 288C529.7 288 544 302.3 544 320C544 337.7 529.7 352 512 352L288 352C270.3 352 256 337.7 256 320zM96 496C96 469.5 117.5 448 144 448C170.5 448 192 469.5 192 496C192 522.5 170.5 544 144 544C117.5 544 96 522.5 96 496zM256 496C256 478.3 270.3 464 288 464L512 464C529.7 464 544 478.3 544 496C544 513.7 529.7 528 512 528L288 528C270.3 528 256 513.7 256 496z"/></svg>
+            </span>
+          </button>
+          <div id="marketSortMenu" class="market-sort-menu" onclick="event.stopPropagation()">
+            <button type="button" class="market-sort-option active" data-sort="price-asc" onclick="selectMarketSort('price-asc', event)">
+              <span>Цена: по возрастанию</span><span class="market-sort-check">✓</span>
+            </button>
+            <button type="button" class="market-sort-option" data-sort="price-desc" onclick="selectMarketSort('price-desc', event)">
+              <span>Цена: по убыванию</span><span class="market-sort-check">✓</span>
+            </button>
+            <button type="button" class="market-sort-option" data-sort="num-asc" onclick="selectMarketSort('num-asc', event)">
+              <span>Номер: по возрастанию</span><span class="market-sort-check">✓</span>
+            </button>
+            <button type="button" class="market-sort-option" data-sort="num-desc" onclick="selectMarketSort('num-desc', event)">
+              <span>Номер: по убыванию</span><span class="market-sort-check">✓</span>
+            </button>
+          </div>
         </div>
-        <button type="button" id="marketFilterBtn" class="market-tool-btn" onclick="handleMarketFilterClick(event)" aria-label="Фильтры">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 640 640"><path fill="currentColor" d="M96 128C96 110.3 110.3 96 128 96L512 96C529.7 96 544 110.3 544 128C544 135.5 541.4 142.8 536.6 148.6L384 331.7L384 496C384 508.1 377.2 519.2 366.4 524.6C355.6 530 342.6 528.9 332.8 521.6L268.8 473.6C260.7 467.6 256 458.1 256 448L256 331.7L103.4 148.6C98.6 142.8 96 135.5 96 128z"/></svg>
-        </button>
-        <button type="button" id="marketSortBtn" class="market-tool-btn" onclick="toggleMarketSortMenu(event)" aria-label="Сортировка">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 640 640"><path fill="currentColor" d="M182.6 137.4C170.1 124.9 149.8 124.9 137.3 137.4L57.3 217.4C44.8 229.9 44.8 250.2 57.3 262.7C69.8 275.2 90.1 275.2 102.6 262.7L128 237.3L128 480C128 497.7 142.3 512 160 512C177.7 512 192 497.7 192 480L192 237.3L217.4 262.7C229.9 275.2 250.2 275.2 262.7 262.7C275.2 250.2 275.2 229.9 262.7 217.4L182.7 137.4zM457.4 502.6C469.9 515.1 490.2 515.1 502.7 502.6L582.7 422.6C595.2 410.1 595.2 389.8 582.7 377.3C570.2 364.8 549.9 364.8 537.4 377.3L512 402.7L512 160C512 142.3 497.7 128 480 128C462.3 128 448 142.3 448 160L448 402.7L422.6 377.3C410.1 364.8 389.8 364.8 377.3 377.3C364.8 389.8 364.8 410.1 377.3 422.6L457.3 502.6z"/></svg>
-        </button>
-        <button type="button" id="marketViewBtn" class="market-tool-btn" onclick="toggleMarketViewMode(event)" aria-label="Вид списка">
-          <span id="marketViewIconGrid" style="display:flex;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 640 640"><path fill="currentColor" d="M128 96C110.3 96 96 110.3 96 128L96 256C96 273.7 110.3 288 128 288L256 288C273.7 288 288 273.7 288 256L288 128C288 110.3 273.7 96 256 96L128 96zM384 96C366.3 96 352 110.3 352 128L352 256C352 273.7 366.3 288 384 288L512 288C529.7 288 544 273.7 544 256L544 128C544 110.3 529.7 96 512 96L384 96zM128 352C110.3 352 96 366.3 96 384L96 512C96 529.7 110.3 544 128 544L256 544C273.7 544 288 529.7 288 512L288 384C288 366.3 273.7 352 256 352L128 352zM384 352C366.3 352 352 366.3 352 384L352 512C352 529.7 366.3 544 384 544L512 544C529.7 544 544 529.7 544 512L544 384C544 366.3 529.7 352 512 352L384 352z"/></svg>
-          </span>
-          <span id="marketViewIconList" style="display:none;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 640 640"><path fill="currentColor" d="M96 144C96 117.5 117.5 96 144 96C170.5 96 192 117.5 192 144C192 170.5 170.5 192 144 192C117.5 192 96 170.5 96 144zM256 144C256 126.3 270.3 112 288 112L512 112C529.7 112 544 126.3 544 144C544 161.7 529.7 176 512 176L288 176C270.3 176 256 161.7 256 144zM96 320C96 293.5 117.5 272 144 272C170.5 272 192 293.5 192 320C192 346.5 170.5 368 144 368C117.5 368 96 346.5 96 320zM256 320C256 302.3 270.3 288 288 288L512 288C529.7 288 544 302.3 544 320C544 337.7 529.7 352 512 352L288 352C270.3 352 256 337.7 256 320zM96 496C96 469.5 117.5 448 144 448C170.5 448 192 469.5 192 496C192 522.5 170.5 544 144 544C117.5 544 96 522.5 96 496zM256 496C256 478.3 270.3 464 288 464L512 464C529.7 464 544 478.3 544 496C544 513.7 529.7 528 512 528L288 528C270.3 528 256 513.7 256 496z"/></svg>
-          </span>
-        </button>
-        <div id="marketSortMenu" class="market-sort-menu" onclick="event.stopPropagation()">
-          <button type="button" class="market-sort-option active" data-sort="price-asc" onclick="selectMarketSort('price-asc', event)">
-            <span>Цена: по возрастанию</span><span class="market-sort-check">✓</span>
-          </button>
-          <button type="button" class="market-sort-option" data-sort="price-desc" onclick="selectMarketSort('price-desc', event)">
-            <span>Цена: по убыванию</span><span class="market-sort-check">✓</span>
-          </button>
-          <button type="button" class="market-sort-option" data-sort="num-asc" onclick="selectMarketSort('num-asc', event)">
-            <span>Номер: по возрастанию</span><span class="market-sort-check">✓</span>
-          </button>
-          <button type="button" class="market-sort-option" data-sort="num-desc" onclick="selectMarketSort('num-desc', event)">
-            <span>Номер: по убыванию</span><span class="market-sort-check">✓</span>
-          </button>
-        </div>
+
+        <div id="marketGiftsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px;"></div>
       </div>
 
-      <div id="marketGiftsGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;">
-        <div class="market-gift-tile">
-          <div class="market-gift-tile-inner">
-            <div id="marketGiftDemo1" class="market-gift-anim"></div>
-          </div>
-          <div class="market-gift-name">King of Rock</div>
-          <div class="market-gift-number">#124337</div>
-          <div class="market-gift-tile-footer">
-            <div class="market-gift-price">12.50 GRAM</div>
-            <button type="button" class="market-gift-cart-btn" aria-label="Добавить в корзину">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M12.5 17h-6.5v-14h-2" /><path d="M6 5l14 1l-.86 6.017m-2.64 .983h-10.5" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>
-            </button>
-          </div>
-        </div>
-        <div class="market-gift-tile">
-          <div class="market-gift-tile-inner">
-            <div id="marketGiftDemo2" class="market-gift-anim"></div>
-          </div>
-          <div class="market-gift-name">Hula Girl</div>
-          <div class="market-gift-number">#180512</div>
-          <div class="market-gift-tile-footer">
-            <div class="market-gift-price">8.20 GRAM</div>
-            <button type="button" class="market-gift-cart-btn" aria-label="Добавить в корзину">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M12.5 17h-6.5v-14h-2" /><path d="M6 5l14 1l-.86 6.017m-2.64 .983h-10.5" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>
-            </button>
-          </div>
-        </div>
+      <div id="marketFavoritesView" style="display:none;">
+        <div id="marketFavoritesGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px;"></div>
+        <div id="marketFavoritesEmpty" class="market-empty-state" style="display:none;">Пока нет избранных подарков.</div>
+      </div>
+
+      <div id="marketCartView" style="display:none;">
+        <div id="marketCartGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px;"></div>
+        <div id="marketCartEmpty" class="market-empty-state" style="display:none;">Корзина пуста.</div>
       </div>
 
     </div>
@@ -6738,9 +6754,7 @@ document.addEventListener("DOMContentLoaded", () => {
     { id: "giftHulaGirl", file: "hula_girl_noBG.json" },
     { id: "giftMoonwalker", file: "moonwalker_noBG.json" },
     { id: "giftStreetBeast", file: "streetbeast_noBG.json" },
-    { id: "giftJordan", file: "jordan_noBG.json" },
-    { id: "marketGiftDemo1", file: "kingofrock_noBG.json" },
-    { id: "marketGiftDemo2", file: "hula_girl_noBG.json" }
+    { id: "giftJordan", file: "jordan_noBG.json" }
   ];
   _giftsConfig.forEach((g) => {
     const el = document.getElementById(g.id);
@@ -18429,8 +18443,115 @@ function initPromoCarousel(trackId, containerId) {
 initPromoCarousel("homePromoTrack", "homePromoCarousel");
 initPromoCarousel("marketPromoTrack", "marketPromoCarousel");
 
+const MARKET_GIFTS = [
+  { id: "kingofrock", name: "King of Rock", number: 124337, price: 12.50, file: "kingofrock_noBG.json" },
+  { id: "hulagirl", name: "Hula Girl", number: 180512, price: 8.20, file: "hula_girl_noBG.json" }
+];
+
 let marketSortMode = "price-asc";
 let marketViewMode = "grid";
+let marketActiveView = "main";
+const marketCartIds = new Set();
+const marketFavoriteIds = new Set();
+
+const MARKET_HEART_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></svg>';
+const MARKET_CART_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M15 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M17 17h-11v-14h-2" /><path d="M6 5l14 1l-1 7h-13" /></svg>';
+const MARKET_BACK_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l-6 6l6 6" /><path d="M3 12h18" /></svg>';
+
+function sortMarketGiftsList(list) {
+  const sorted = list.slice();
+  sorted.sort((a, b) => {
+    if (marketSortMode === "price-asc") return a.price - b.price;
+    if (marketSortMode === "price-desc") return b.price - a.price;
+    if (marketSortMode === "num-asc") return a.number - b.number;
+    if (marketSortMode === "num-desc") return b.number - a.number;
+    return 0;
+  });
+  return sorted;
+}
+
+function ensureMarketGiftAnim(gift, viewPrefix) {
+  const el = document.getElementById(`marketAnim_${viewPrefix}_${gift.id}`);
+  if (!el || el.dataset.loaded) return;
+  el.dataset.loaded = "1";
+  lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: true, path: gift.file });
+}
+
+function buildMarketGiftTileHtml(gift, viewPrefix) {
+  const animId = `marketAnim_${viewPrefix}_${gift.id}`;
+  const cartActiveClass = marketCartIds.has(gift.id) ? " is-active" : "";
+  return `
+        <div class="market-gift-tile" data-gift-id="${gift.id}">
+          <div class="market-gift-tile-inner">
+            <div id="${animId}" class="market-gift-anim"></div>
+          </div>
+          <div class="market-gift-name">${gift.name}</div>
+          <div class="market-gift-number">#${gift.number}</div>
+          <div class="market-gift-tile-footer">
+            <div class="market-gift-price">${gift.price.toFixed(2)} GRAM</div>
+            <button type="button" class="market-gift-cart-btn${cartActiveClass}" aria-label="Добавить в корзину" onclick="toggleMarketGiftCart('${gift.id}', event)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M12.5 17h-6.5v-14h-2" /><path d="M6 5l14 1l-.86 6.017m-2.64 .983h-10.5" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>
+            </button>
+          </div>
+        </div>`;
+}
+
+function renderMarketGifts() {
+  const grid = document.getElementById("marketGiftsGrid");
+  if (!grid) return;
+  const sorted = sortMarketGiftsList(MARKET_GIFTS);
+  grid.innerHTML = sorted.map((gift) => buildMarketGiftTileHtml(gift, "main")).join("");
+  sorted.forEach((gift) => ensureMarketGiftAnim(gift, "main"));
+}
+
+function renderMarketFavorites() {
+  const grid = document.getElementById("marketFavoritesGrid");
+  const empty = document.getElementById("marketFavoritesEmpty");
+  if (!grid || !empty) return;
+  const favs = sortMarketGiftsList(MARKET_GIFTS.filter((gift) => marketFavoriteIds.has(gift.id)));
+  grid.style.display = favs.length ? "grid" : "none";
+  empty.style.display = favs.length ? "none" : "flex";
+  grid.innerHTML = favs.map((gift) => buildMarketGiftTileHtml(gift, "fav")).join("");
+  favs.forEach((gift) => ensureMarketGiftAnim(gift, "fav"));
+}
+
+function renderMarketCart() {
+  const grid = document.getElementById("marketCartGrid");
+  const empty = document.getElementById("marketCartEmpty");
+  if (!grid || !empty) return;
+  const items = sortMarketGiftsList(MARKET_GIFTS.filter((gift) => marketCartIds.has(gift.id)));
+  grid.style.display = items.length ? "grid" : "none";
+  empty.style.display = items.length ? "none" : "flex";
+  grid.innerHTML = items.map((gift) => buildMarketGiftTileHtml(gift, "cart")).join("");
+  items.forEach((gift) => ensureMarketGiftAnim(gift, "cart"));
+}
+
+function toggleMarketGiftCart(giftId, event) {
+  if (event) event.stopPropagation();
+  if (marketCartIds.has(giftId)) {
+    marketCartIds.delete(giftId);
+  } else {
+    marketCartIds.add(giftId);
+  }
+  renderMarketGifts();
+  if (marketActiveView === "cart") renderMarketCart();
+}
+window.toggleMarketGiftCart = toggleMarketGiftCart;
+
+function setMarketActiveView(view) {
+  marketActiveView = view;
+  const mainEl = document.getElementById("marketMainView");
+  const favEl = document.getElementById("marketFavoritesView");
+  const cartEl = document.getElementById("marketCartView");
+  if (mainEl) mainEl.style.display = view === "main" ? "" : "none";
+  if (favEl) favEl.style.display = view === "favorites" ? "" : "none";
+  if (cartEl) cartEl.style.display = view === "cart" ? "" : "none";
+
+  const favBtn = document.getElementById("marketFavoritesFab");
+  const cartBtn = document.getElementById("marketCartFab");
+  if (favBtn) favBtn.innerHTML = view === "favorites" ? MARKET_BACK_ICON_SVG : MARKET_HEART_ICON_SVG;
+  if (cartBtn) cartBtn.innerHTML = view === "cart" ? MARKET_BACK_ICON_SVG : MARKET_CART_ICON_SVG;
+}
 
 function toggleMarketSortMenu(event) {
   if (event) event.stopPropagation();
@@ -18452,6 +18573,9 @@ function selectMarketSort(mode, event) {
     option.classList.toggle("active", option.dataset.sort === mode);
   });
   closeMarketSortMenu();
+  renderMarketGifts();
+  if (marketActiveView === "favorites") renderMarketFavorites();
+  if (marketActiveView === "cart") renderMarketCart();
 }
 
 function toggleMarketViewMode(event) {
@@ -18464,7 +18588,7 @@ function toggleMarketViewMode(event) {
   const grid = document.getElementById("marketGiftsGrid");
   if (grid) {
     grid.classList.toggle("market-gifts-list", marketViewMode === "list");
-    grid.style.gridTemplateColumns = marketViewMode === "list" ? "1fr" : "1fr 1fr";
+    grid.style.gridTemplateColumns = marketViewMode === "list" ? "1fr" : "repeat(auto-fit, minmax(150px, 1fr))";
   }
 }
 
@@ -18476,15 +18600,29 @@ function handleMarketFilterClick(event) {
 
 function openMarketFavorites(event) {
   if (event) event.stopPropagation();
-  showAppNotice(L("Избранное появится позже", "Favorites coming soon"));
+  if (marketActiveView === "favorites") {
+    setMarketActiveView("main");
+    return;
+  }
+  renderMarketFavorites();
+  setMarketActiveView("favorites");
 }
 window.openMarketFavorites = openMarketFavorites;
 
 function openMarketCart(event) {
   if (event) event.stopPropagation();
-  showAppNotice(L("Корзина появится позже", "Cart coming soon"));
+  if (marketActiveView === "cart") {
+    setMarketActiveView("main");
+    return;
+  }
+  renderMarketCart();
+  setMarketActiveView("cart");
 }
 window.openMarketCart = openMarketCart;
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderMarketGifts();
+});
 
 // Поочерёдное скрытие/появление кнопок Маркета при скролле экрана.
 let _marketNavLastScrollTop = 0;
