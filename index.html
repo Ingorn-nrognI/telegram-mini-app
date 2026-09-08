@@ -1791,6 +1791,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 }
 
 .market-gift-tile {
+  position: relative;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 20px;
@@ -1874,6 +1875,28 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   flex-shrink: 0;
 }
 .market-gift-cart-btn.is-active {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #0a0a12;
+}
+.market-gift-fav-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.market-gift-fav-btn.is-active {
   background: #ffffff;
   border-color: #ffffff;
   color: #0a0a12;
@@ -5934,16 +5957,16 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
           </div>
         </div>
 
-        <div id="marketGiftsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px;"></div>
+        <div id="marketGiftsGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px;"></div>
       </div>
 
       <div id="marketFavoritesView" style="display:none;">
-        <div id="marketFavoritesGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px;"></div>
+        <div id="marketFavoritesGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px;"></div>
         <div id="marketFavoritesEmpty" class="market-empty-state" style="display:none;">Пока нет избранных подарков.</div>
       </div>
 
       <div id="marketCartView" style="display:none;">
-        <div id="marketCartGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px;"></div>
+        <div id="marketCartGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px;"></div>
         <div id="marketCartEmpty" class="market-empty-state" style="display:none;">Корзина пуста.</div>
       </div>
 
@@ -18480,8 +18503,12 @@ function ensureMarketGiftAnim(gift, viewPrefix) {
 function buildMarketGiftTileHtml(gift, viewPrefix) {
   const animId = `marketAnim_${viewPrefix}_${gift.id}`;
   const cartActiveClass = marketCartIds.has(gift.id) ? " is-active" : "";
+  const favActiveClass = marketFavoriteIds.has(gift.id) ? " is-active" : "";
   return `
         <div class="market-gift-tile" data-gift-id="${gift.id}">
+          <button type="button" class="market-gift-fav-btn${favActiveClass}" aria-label="Добавить в избранное" onclick="toggleMarketGiftFavorite('${gift.id}', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 20l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.96 6.053" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>
+          </button>
           <div class="market-gift-tile-inner">
             <div id="${animId}" class="market-gift-anim"></div>
           </div>
@@ -18526,6 +18553,12 @@ function renderMarketCart() {
   items.forEach((gift) => ensureMarketGiftAnim(gift, "cart"));
 }
 
+function refreshMarketViews() {
+  renderMarketGifts();
+  renderMarketFavorites();
+  renderMarketCart();
+}
+
 function toggleMarketGiftCart(giftId, event) {
   if (event) event.stopPropagation();
   if (marketCartIds.has(giftId)) {
@@ -18533,16 +18566,28 @@ function toggleMarketGiftCart(giftId, event) {
   } else {
     marketCartIds.add(giftId);
   }
-  renderMarketGifts();
-  if (marketActiveView === "cart") renderMarketCart();
+  refreshMarketViews();
 }
 window.toggleMarketGiftCart = toggleMarketGiftCart;
 
+function toggleMarketGiftFavorite(giftId, event) {
+  if (event) event.stopPropagation();
+  if (marketFavoriteIds.has(giftId)) {
+    marketFavoriteIds.delete(giftId);
+  } else {
+    marketFavoriteIds.add(giftId);
+  }
+  refreshMarketViews();
+}
+window.toggleMarketGiftFavorite = toggleMarketGiftFavorite;
+
 function setMarketActiveView(view) {
   marketActiveView = view;
+  const promoEl = document.getElementById("marketPromoCarousel");
   const mainEl = document.getElementById("marketMainView");
   const favEl = document.getElementById("marketFavoritesView");
   const cartEl = document.getElementById("marketCartView");
+  if (promoEl) promoEl.style.display = view === "main" ? "" : "none";
   if (mainEl) mainEl.style.display = view === "main" ? "" : "none";
   if (favEl) favEl.style.display = view === "favorites" ? "" : "none";
   if (cartEl) cartEl.style.display = view === "cart" ? "" : "none";
@@ -18588,7 +18633,7 @@ function toggleMarketViewMode(event) {
   const grid = document.getElementById("marketGiftsGrid");
   if (grid) {
     grid.classList.toggle("market-gifts-list", marketViewMode === "list");
-    grid.style.gridTemplateColumns = marketViewMode === "list" ? "1fr" : "repeat(auto-fit, minmax(150px, 1fr))";
+    grid.style.gridTemplateColumns = marketViewMode === "list" ? "1fr" : "repeat(auto-fill, minmax(150px, 1fr))";
   }
 }
 
