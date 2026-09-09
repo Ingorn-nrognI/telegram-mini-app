@@ -9052,7 +9052,7 @@ function copyReferralLink() {
       btn.classList.remove("is-copied");
       btn.setAttribute("aria-label", L("Скопировать ссылку", "Copy link"));
       _copyReferralResetTimer = null;
-    }, 80);
+    }, 200);
   }
 }
 
@@ -9073,7 +9073,7 @@ function shareReferralLink() {
     setTimeout(() => {
       btn.style.transition = "background 2s ease, color 2s ease, border-color 2s ease";
       btn.classList.remove("is-copied");
-    }, 80);
+    }, 200);
   }
 }
 
