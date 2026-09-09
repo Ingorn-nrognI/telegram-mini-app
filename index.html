@@ -6350,7 +6350,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   <div class="app-modal-card" onclick="event.stopPropagation()">
     <div style="padding:18px 18px 4px;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-        <div id="referralLevelsModalTitle" style="font-size:16px; font-weight:700;">Подробно реферальной программе</div>
+        <div id="referralLevelsModalTitle" style="font-size:16px; font-weight:700;">Подробно о реферальной программе</div>
         <button onclick="closeReferralLevelsModal()" style="background:rgba(255,255,255,0.08); border:none; border-radius:50%; width:32px; height:32px; font-size:16px; color:#fff; flex-shrink:0;">×</button>
       </div>
       <div id="referralLevelsModalBody"></div>
@@ -8808,7 +8808,7 @@ function applyAppLanguage(lang) {
   set("#referralPitchTitle", L("Зарабатывай до 15% с приглашённых пользователей", "Earn up to 15% from invited users"));
   const referralInfoBtnEl = document.getElementById("referralInfoBtn");
   if (referralInfoBtnEl) referralInfoBtnEl.setAttribute("aria-label", L("Подробнее о реферальной программе", "Learn more about the referral program"));
-  set("#referralLevelsModalTitle", L("Подробно реферальной программе", "Referral program details"));
+  set("#referralLevelsModalTitle", L("Подробно о реферальной программе", "Referral program details"));
   if (_lastReferralLevelsData) {
     renderReferralLevelCards(_lastReferralLevelsData.levels, Number(_lastReferralLevelsData.turnover || 0), _lastReferralLevelsData.levelKey);
   }
@@ -9033,7 +9033,6 @@ function copyReferralLink() {
   const input = document.getElementById("referralLinkInput");
   const btn = document.getElementById("copyReferralBtn");
   if (!input) return;
-  input.select();
   try {
     navigator.clipboard?.writeText(input.value);
   } catch (e) {
@@ -9053,7 +9052,7 @@ function copyReferralLink() {
       btn.classList.remove("is-copied");
       btn.setAttribute("aria-label", L("Скопировать ссылку", "Copy link"));
       _copyReferralResetTimer = null;
-    }, 400);
+    }, 80);
   }
 }
 
@@ -9074,7 +9073,7 @@ function shareReferralLink() {
     setTimeout(() => {
       btn.style.transition = "background 2s ease, color 2s ease, border-color 2s ease";
       btn.classList.remove("is-copied");
-    }, 400);
+    }, 80);
   }
 }
 
@@ -9232,7 +9231,7 @@ function openReferralLevelsModal() {
                "Copy your personal link above or send it with the \"Invite\" button. Anyone who opens the app through this link becomes your referral permanently.")
     },
     {
-      title: L("Получай % с каждой игры реферала", "Earn % from every game your referral plays"),
+      title: L("Получай % с оборота средств приглашенным", "Earn % from every game your referral plays"),
       text: L("Когда твой реферал выигрывает раунд в Лазере, приложение забирает свою комиссию с банка. Часть этой комиссии автоматически зачисляется тебе — без каких-либо действий с твоей стороны.",
                "When your referral wins a round in Laser, the app takes its commission from the pot. A share of that commission is credited to you automatically — no action needed on your part.")
     },
@@ -9326,7 +9325,7 @@ async function renderReferralsScreen() {
     if (countEl) countEl.textContent = String(items.length);
 
     if (items.length === 0) {
-      listEl.innerHTML = `<tr><td colspan="6" style="padding:10px 4px; opacity:0.6; font-size:13px;">${L("Пока никого не пригласил.", "You haven't invited anyone yet.")}</td></tr>`;
+      listEl.innerHTML = `<tr><td colspan="6" style="padding:10px 4px; opacity:0.6; font-size:13px;"><div style="min-height:50vh;">${L("Пока никого не пригласил.", "You haven't invited anyone yet.")}</div></td></tr>`;
       return;
     }
 
