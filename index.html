@@ -6780,7 +6780,10 @@ document.addEventListener("DOMContentLoaded", () => {
   setTimeout(tryClaimReferralFromStartParam, 1500);
 });
 
-document.addEventListener("DOMContentLoaded", () => {
+const referralGiftAnims = [];
+
+function ensureReferralGiftAnimsLoaded() {
+  if (referralGiftAnims.length) return;
   const _giftsConfig = [
     { id: "giftKingOfRock", file: "kingofrock_noBG.json" },
     { id: "giftHulaGirl", file: "hula_girl_noBG.json" },
@@ -6792,16 +6795,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const el = document.getElementById(g.id);
     if (el && !el.dataset.loaded) {
       el.dataset.loaded = "1";
-      lottie.loadAnimation({
+      const anim = lottie.loadAnimation({
         container: el,
         renderer: "svg",
         loop: true,
-        autoplay: true,
+        autoplay: false,
         path: g.file
       });
+      referralGiftAnims.push(anim);
     }
   });
-});
+}
+
+function playReferralGiftAnims() {
+  referralGiftAnims.forEach((anim) => anim.play());
+}
+
+function pauseReferralGiftAnims() {
+  referralGiftAnims.forEach((anim) => anim.pause());
+}
 
 function hasTelegramSystemBackButton() {
   return !!(tgApp?.BackButton && typeof tgApp.BackButton.show === "function");
@@ -8990,6 +9002,8 @@ function openReferrals() {
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
   renderReferralsScreen();
+  ensureReferralGiftAnimsLoaded();
+  playReferralGiftAnims();
   if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   syncAppBackButton({ forceShow: true, onClick: closeReferrals });
 }
@@ -8999,6 +9013,7 @@ function closeReferrals() {
   if (!overlay) return;
   overlay.classList.remove("open");
   overlay.setAttribute("aria-hidden", "true");
+  pauseReferralGiftAnims();
   if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   syncAppBackButton();
 }
@@ -18519,11 +18534,25 @@ function sortMarketGiftsList(list) {
   return sorted;
 }
 
+const marketGiftAnimObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    const anim = entry.target._lottieAnim;
+    if (!anim) return;
+    if (entry.isIntersecting) {
+      anim.play();
+    } else {
+      anim.pause();
+    }
+  });
+}, { root: document.getElementById("marketScreen"), threshold: 0.1 });
+
 function ensureMarketGiftAnim(gift, viewPrefix) {
   const el = document.getElementById(`marketAnim_${viewPrefix}_${gift.id}`);
   if (!el || el.dataset.loaded) return;
   el.dataset.loaded = "1";
-  lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: true, path: gift.file });
+  const anim = lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: false, path: gift.file });
+  el._lottieAnim = anim;
+  marketGiftAnimObserver.observe(el);
 }
 
 function buildMarketGiftTileHtml(gift, viewPrefix) {
