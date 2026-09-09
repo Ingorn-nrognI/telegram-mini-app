@@ -9028,6 +9028,7 @@ function handleReferralsBackdrop(event) {
 }
 
 let _copyReferralResetTimer = null;
+let _inviteReferralResetTimer = null;
 
 function copyReferralLink() {
   const input = document.getElementById("referralLinkInput");
@@ -9040,19 +9041,25 @@ function copyReferralLink() {
   }
 
   if (btn) {
-    btn.style.transition = "background 0.15s ease, color 0.15s ease, border-color 0.15s ease";
-    btn.classList.add("is-copied");
-    btn.setAttribute("aria-label", L("Скопировано", "Copied"));
-
-    if (_copyReferralResetTimer) {
+    if (!_copyReferralResetTimer) {
+      btn.dataset.originalBg = getComputedStyle(btn).backgroundColor;
+      btn.dataset.originalColor = getComputedStyle(btn).color;
+    } else {
       clearTimeout(_copyReferralResetTimer);
     }
+    btn.style.transition = "none";
+    btn.style.background = "#2fe07a";
+    btn.style.color = "#06101f";
+    btn.setAttribute("aria-label", L("Скопировано", "Copied"));
+    void btn.offsetWidth;
+
     _copyReferralResetTimer = setTimeout(() => {
-      btn.style.transition = "background 2s ease, color 2s ease, border-color 2s ease";
-      btn.classList.remove("is-copied");
+      btn.style.transition = "background 2s ease, color 2s ease";
+      btn.style.background = btn.dataset.originalBg;
+      btn.style.color = btn.dataset.originalColor;
       btn.setAttribute("aria-label", L("Скопировать ссылку", "Copy link"));
       _copyReferralResetTimer = null;
-    }, 200);
+    }, 250);
   }
 }
 
@@ -9068,12 +9075,23 @@ function shareReferralLink() {
 
   const btn = document.getElementById("inviteFriendsBtn");
   if (btn) {
-    btn.style.transition = "background 0.15s ease, color 0.15s ease, border-color 0.15s ease";
-    btn.classList.add("is-copied");
-    setTimeout(() => {
-      btn.style.transition = "background 2s ease, color 2s ease, border-color 2s ease";
-      btn.classList.remove("is-copied");
-    }, 200);
+    if (!_inviteReferralResetTimer) {
+      btn.dataset.originalBg = getComputedStyle(btn).backgroundColor;
+      btn.dataset.originalColor = getComputedStyle(btn).color;
+    } else {
+      clearTimeout(_inviteReferralResetTimer);
+    }
+    btn.style.transition = "none";
+    btn.style.background = "#2fe07a";
+    btn.style.color = "#06101f";
+    void btn.offsetWidth;
+
+    _inviteReferralResetTimer = setTimeout(() => {
+      btn.style.transition = "background 2s ease, color 2s ease";
+      btn.style.background = btn.dataset.originalBg;
+      btn.style.color = btn.dataset.originalColor;
+      _inviteReferralResetTimer = null;
+    }, 250);
   }
 }
 
