@@ -6358,6 +6358,36 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   </div>
 </div>
 
+<div
+  id="marketGiftDetailOverlay"
+  class="app-settings-overlay"
+  onclick="closeMarketGiftDetail(event)"
+  aria-hidden="true"
+>
+  <div class="app-settings-sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="marketGiftDetailTitle" style="max-height:88vh; overflow-y:auto;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <button type="button" onclick="closeMarketGiftDetail(event)" aria-label="Закрыть" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.08); border:none; display:flex; align-items:center; justify-content:center; color:#fff;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+      </button>
+      <div id="marketGiftDetailPriceBadge" style="display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; background:rgba(255,255,255,0.08); font-weight:700; font-size:14px;"></div>
+    </div>
+
+    <div id="marketGiftDetailAnim" class="market-gift-anim" style="width:140px; height:140px; margin:8px auto;"></div>
+
+    <div id="marketGiftDetailTitle" style="font-size:20px; font-weight:800; text-align:center;"></div>
+    <div id="marketGiftDetailNumber" style="font-size:13px; color:rgba(255,255,255,0.5); text-align:center; margin-bottom:14px;"></div>
+
+    <div id="marketGiftDetailAttrs" style="display:flex; flex-direction:column; gap:1px; border-radius:16px; overflow:hidden; margin-bottom:14px;"></div>
+
+    <div id="marketGiftDetailActions" style="display:flex; gap:10px;"></div>
+
+    <div id="marketGiftDetailOthersWrap" style="margin-top:16px;">
+      <div style="font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:8px;">Другие в продаже</div>
+      <div id="marketGiftDetailOthers" style="display:flex; gap:10px; overflow-x:auto;"></div>
+    </div>
+  </div>
+</div>
+
 <div id="roomsModal" class="app-modal" onclick="handleModalBackdropClick('roomsModal', event)">
   <div class="app-modal-card" onclick="event.stopPropagation()">
     <div class="roomsHeader">
@@ -18524,20 +18554,33 @@ function initPromoCarousel(trackId, containerId) {
 initPromoCarousel("homePromoTrack", "homePromoCarousel");
 initPromoCarousel("marketPromoTrack", "marketPromoCarousel");
 
-const MARKET_GIFTS = [
-  { id: "kingofrock", name: "King of Rock", number: 124337, price: 12.50, file: "kingofrock_noBG.json" },
-  { id: "hulagirl", name: "Hula Girl", number: 180512, price: 8.20, file: "hula_girl_noBG.json" }
-];
+const GIFT_TYPE_META = {
+  kingofrock: { name: "King of Rock", file: "kingofrock_noBG.json" },
+  hulagirl: { name: "Hula Girl", file: "hula_girl_noBG.json" }
+};
 
+let MARKET_LISTINGS = [];
 let marketSortMode = "price-asc";
 let marketViewMode = "grid";
 let marketActiveView = "main";
 const marketCartIds = new Set();
 const marketFavoriteIds = new Set();
+let marketDetailListingId = null;
+let marketOfferMode = false;
 
 const MARKET_HEART_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></svg>';
 const MARKET_CART_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M15 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M17 17h-11v-14h-2" /><path d="M6 5l14 1l-1 7h-13" /></svg>';
 const MARKET_BACK_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l-6 6l6 6" /><path d="M3 12h18" /></svg>';
+
+function fetchMarketListings() {
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("market:listings:request", {}, (res) => {
+    if (res && res.ok) {
+      MARKET_LISTINGS = res.items || [];
+      refreshMarketViews();
+    }
+  });
+}
 
 function sortMarketGiftsList(list) {
   const sorted = list.slice();
@@ -18563,42 +18606,44 @@ const marketGiftAnimObserver = new IntersectionObserver((entries) => {
   });
 }, { root: document.getElementById("marketScreen"), threshold: 0.1 });
 
-function ensureMarketGiftAnim(gift, viewPrefix) {
-  const el = document.getElementById(`marketAnim_${viewPrefix}_${gift.id}`);
-  if (!el || el.dataset.loaded) return;
+function ensureMarketGiftAnim(item, viewPrefix) {
+  const meta = GIFT_TYPE_META[item.giftType] || {};
+  const el = document.getElementById(`marketAnim_${viewPrefix}_${item.listingId}`);
+  if (!el || el.dataset.loaded || !meta.file) return;
   el.dataset.loaded = "1";
-  const anim = lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: false, path: gift.file });
+  const anim = lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: false, path: meta.file });
   el._lottieAnim = anim;
   marketGiftAnimObserver.observe(el);
 }
 
-function buildMarketGiftTileHtml(gift, viewPrefix) {
-  const animId = `marketAnim_${viewPrefix}_${gift.id}`;
-  const cartActiveClass = marketCartIds.has(gift.id) ? " is-active" : "";
-  const favActiveClass = marketFavoriteIds.has(gift.id) ? " is-active" : "";
-  const isFavView = viewPrefix === "fav";
-  const isCartView = viewPrefix === "cart";
-  const favIconSvg = isFavView
+function buildMarketGiftTileHtml(item, viewPrefix) {
+  const meta = GIFT_TYPE_META[item.giftType] || {};
+  const animId = `marketAnim_${viewPrefix}_${item.listingId}`;
+  const isFav = marketFavoriteIds.has(item.listingId);
+  const isCart = marketCartIds.has(item.listingId);
+  const cartActiveClass = isCart ? " is-active" : "";
+  const favActiveClass = isFav ? " is-active" : "";
+  const favIconSvg = isFav
     ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M19.5 12.572l-2.494 2.47m-5.006 4.958l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /><path d="M16 19h6" /></svg>'
     : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 20l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.96 6.053" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>';
-  const cartIconSvg = isCartView
+  const cartIconSvg = isCart
     ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M12.5 17h-6.5v-14h-2" /><path d="M6 5l14 1l-1 7h-13" /><path d="M16 19h6" /></svg>'
     : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M12.5 17h-6.5v-14h-2" /><path d="M6 5l14 1l-.86 6.017m-2.64 .983h-10.5" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>';
-  const favLabel = isFavView ? "Убрать из избранного" : "Добавить в избранное";
-  const cartLabel = isCartView ? "Убрать из корзины" : "Добавить в корзину";
+  const favLabel = isFav ? "Убрать из избранного" : "Добавить в избранное";
+  const cartLabel = isCart ? "Убрать из корзины" : "Добавить в корзину";
   return `
-        <div class="market-gift-tile" data-gift-id="${gift.id}">
-          <button type="button" class="market-gift-fav-btn${favActiveClass}" aria-label="${favLabel}" onclick="toggleMarketGiftFavorite('${gift.id}', event)">
+        <div class="market-gift-tile" data-listing-id="${item.listingId}" onclick="openMarketGiftDetail(${item.listingId})">
+          <button type="button" class="market-gift-fav-btn${favActiveClass}" aria-label="${favLabel}" onclick="toggleMarketGiftFavorite(${item.listingId}, event)">
             ${favIconSvg}
           </button>
           <div class="market-gift-tile-inner">
             <div id="${animId}" class="market-gift-anim"></div>
           </div>
-          <div class="market-gift-name">${gift.name}</div>
-          <div class="market-gift-number">#${gift.number}</div>
+          <div class="market-gift-name">${meta.name || item.giftType}</div>
+          <div class="market-gift-number">#${item.number}</div>
           <div class="market-gift-tile-footer">
-            <div class="market-gift-price">${gift.price.toFixed(2)} GRAM</div>
-            <button type="button" class="market-gift-cart-btn${cartActiveClass}" aria-label="${cartLabel}" onclick="toggleMarketGiftCart('${gift.id}', event)">
+            <div class="market-gift-price">${item.price.toFixed(2)} GRAM</div>
+            <button type="button" class="market-gift-cart-btn${cartActiveClass}" aria-label="${cartLabel}" onclick="toggleMarketGiftCart(${item.listingId}, event)">
               ${cartIconSvg}
             </button>
           </div>
@@ -18608,31 +18653,31 @@ function buildMarketGiftTileHtml(gift, viewPrefix) {
 function renderMarketGifts() {
   const grid = document.getElementById("marketGiftsGrid");
   if (!grid) return;
-  const sorted = sortMarketGiftsList(MARKET_GIFTS);
-  grid.innerHTML = sorted.map((gift) => buildMarketGiftTileHtml(gift, "main")).join("");
-  sorted.forEach((gift) => ensureMarketGiftAnim(gift, "main"));
+  const sorted = sortMarketGiftsList(MARKET_LISTINGS);
+  grid.innerHTML = sorted.map((item) => buildMarketGiftTileHtml(item, "main")).join("");
+  sorted.forEach((item) => ensureMarketGiftAnim(item, "main"));
 }
 
 function renderMarketFavorites() {
   const grid = document.getElementById("marketFavoritesGrid");
   const empty = document.getElementById("marketFavoritesEmpty");
   if (!grid || !empty) return;
-  const favs = sortMarketGiftsList(MARKET_GIFTS.filter((gift) => marketFavoriteIds.has(gift.id)));
+  const favs = sortMarketGiftsList(MARKET_LISTINGS.filter((item) => marketFavoriteIds.has(item.listingId)));
   grid.style.display = favs.length ? "grid" : "none";
   empty.style.display = favs.length ? "none" : "flex";
-  grid.innerHTML = favs.map((gift) => buildMarketGiftTileHtml(gift, "fav")).join("");
-  favs.forEach((gift) => ensureMarketGiftAnim(gift, "fav"));
+  grid.innerHTML = favs.map((item) => buildMarketGiftTileHtml(item, "fav")).join("");
+  favs.forEach((item) => ensureMarketGiftAnim(item, "fav"));
 }
 
 function renderMarketCart() {
   const grid = document.getElementById("marketCartGrid");
   const empty = document.getElementById("marketCartEmpty");
   if (!grid || !empty) return;
-  const items = sortMarketGiftsList(MARKET_GIFTS.filter((gift) => marketCartIds.has(gift.id)));
+  const items = sortMarketGiftsList(MARKET_LISTINGS.filter((item) => marketCartIds.has(item.listingId)));
   grid.style.display = items.length ? "grid" : "none";
   empty.style.display = items.length ? "none" : "flex";
-  grid.innerHTML = items.map((gift) => buildMarketGiftTileHtml(gift, "cart")).join("");
-  items.forEach((gift) => ensureMarketGiftAnim(gift, "cart"));
+  grid.innerHTML = items.map((item) => buildMarketGiftTileHtml(item, "cart")).join("");
+  items.forEach((item) => ensureMarketGiftAnim(item, "cart"));
 }
 
 function refreshMarketViews() {
@@ -18641,23 +18686,23 @@ function refreshMarketViews() {
   renderMarketCart();
 }
 
-function toggleMarketGiftCart(giftId, event) {
+function toggleMarketGiftCart(listingId, event) {
   if (event) event.stopPropagation();
-  if (marketCartIds.has(giftId)) {
-    marketCartIds.delete(giftId);
+  if (marketCartIds.has(listingId)) {
+    marketCartIds.delete(listingId);
   } else {
-    marketCartIds.add(giftId);
+    marketCartIds.add(listingId);
   }
   refreshMarketViews();
 }
 window.toggleMarketGiftCart = toggleMarketGiftCart;
 
-function toggleMarketGiftFavorite(giftId, event) {
+function toggleMarketGiftFavorite(listingId, event) {
   if (event) event.stopPropagation();
-  if (marketFavoriteIds.has(giftId)) {
-    marketFavoriteIds.delete(giftId);
+  if (marketFavoriteIds.has(listingId)) {
+    marketFavoriteIds.delete(listingId);
   } else {
-    marketFavoriteIds.add(giftId);
+    marketFavoriteIds.add(listingId);
   }
   refreshMarketViews();
 }
@@ -18700,9 +18745,7 @@ function selectMarketSort(mode, event) {
     option.classList.toggle("active", option.dataset.sort === mode);
   });
   closeMarketSortMenu();
-  renderMarketGifts();
-  if (marketActiveView === "favorites") renderMarketFavorites();
-  if (marketActiveView === "cart") renderMarketCart();
+  refreshMarketViews();
 }
 
 function toggleMarketViewMode(event) {
@@ -18747,8 +18790,128 @@ function openMarketCart(event) {
 }
 window.openMarketCart = openMarketCart;
 
+// === Модалка карточки подарка: модель/фон/узор, покупка, оффер ===
+
+function buildMarketAttrRowHtml(label, value, rarity) {
+  if (!value) return "";
+  const rarityHtml = rarity != null ? ` <span style="color:rgba(255,255,255,0.4); font-size:12px;">${rarity}%</span>` : "";
+  return `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(255,255,255,0.04);">
+      <span style="color:rgba(255,255,255,0.5); font-size:13px;">${label}</span>
+      <span style="font-size:14px; font-weight:600;">${value}${rarityHtml}</span>
+    </div>`;
+}
+
+function renderMarketOfferForm(showForm) {
+  marketOfferMode = showForm;
+  const actionsEl = document.getElementById("marketGiftDetailActions");
+  if (!actionsEl) return;
+  const item = MARKET_LISTINGS.find((g) => g.listingId === marketDetailListingId);
+  if (!item) return;
+  if (!showForm) {
+    actionsEl.innerHTML = `
+      <button type="button" onclick="handleMarketGiftBuy()" style="flex:1; padding:14px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:700; font-size:15px; border:none;">Купить за ${item.price.toFixed(2)} GRAM</button>
+      <button type="button" onclick="renderMarketOfferForm(true)" style="flex:1; padding:14px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:700; font-size:15px;">Отправить оффер</button>`;
+  } else {
+    actionsEl.innerHTML = `
+      <input id="marketOfferPriceInput" type="number" step="0.01" min="0.01" placeholder="Твоя цена в GRAM" style="flex:1; padding:14px; border-radius:16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:15px;">
+      <button type="button" onclick="handleMarketGiftOfferSend()" style="padding:14px 18px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:700; font-size:15px; border:none;">Отправить</button>
+      <button type="button" onclick="renderMarketOfferForm(false)" style="padding:14px 16px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:700; font-size:15px;">Отмена</button>`;
+  }
+}
+window.renderMarketOfferForm = renderMarketOfferForm;
+
+function openMarketGiftDetail(listingId) {
+  const item = MARKET_LISTINGS.find((g) => g.listingId === listingId);
+  if (!item) return;
+  marketDetailListingId = listingId;
+
+  const meta = GIFT_TYPE_META[item.giftType] || {};
+  const overlay = document.getElementById("marketGiftDetailOverlay");
+  if (!overlay) return;
+
+  document.getElementById("marketGiftDetailTitle").textContent = meta.name || item.giftType;
+  document.getElementById("marketGiftDetailNumber").textContent = `Коллекционный подарок #${item.number}`;
+  document.getElementById("marketGiftDetailPriceBadge").textContent = `${item.price.toFixed(2)} GRAM`;
+
+  const attrsEl = document.getElementById("marketGiftDetailAttrs");
+  attrsEl.innerHTML =
+    buildMarketAttrRowHtml("Модель", item.model, item.modelRarity) +
+    buildMarketAttrRowHtml("Фон", item.backdrop, item.backdropRarity) +
+    buildMarketAttrRowHtml("Узор", item.pattern, item.patternRarity);
+
+  renderMarketOfferForm(false);
+
+  const animEl = document.getElementById("marketGiftDetailAnim");
+  animEl.innerHTML = "";
+  delete animEl.dataset.loaded;
+  if (meta.file) {
+    animEl.dataset.loaded = "1";
+    lottie.loadAnimation({ container: animEl, renderer: "svg", loop: true, autoplay: true, path: meta.file });
+  }
+
+  const othersWrap = document.getElementById("marketGiftDetailOthers");
+  const others = MARKET_LISTINGS.filter((g) => g.giftType === item.giftType && g.listingId !== listingId);
+  document.getElementById("marketGiftDetailOthersWrap").style.display = others.length ? "" : "none";
+  othersWrap.innerHTML = others.map((g) => `
+    <div onclick="openMarketGiftDetail(${g.listingId})" style="flex:0 0 auto; width:76px; padding:8px; border-radius:14px; background:rgba(255,255,255,0.06); text-align:center; cursor:pointer;">
+      <div style="font-size:12px; font-weight:700;">${g.price.toFixed(2)}</div>
+      <div style="font-size:10px; color:rgba(255,255,255,0.4);">#${g.number}</div>
+    </div>`).join("");
+
+  overlay.classList.add("open");
+  overlay.removeAttribute("aria-hidden");
+}
+window.openMarketGiftDetail = openMarketGiftDetail;
+
+function closeMarketGiftDetail(event) {
+  if (event) event.stopPropagation();
+  const overlay = document.getElementById("marketGiftDetailOverlay");
+  if (overlay) {
+    overlay.classList.remove("open");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+  marketDetailListingId = null;
+}
+window.closeMarketGiftDetail = closeMarketGiftDetail;
+
+function handleMarketGiftBuy() {
+  const listingId = marketDetailListingId;
+  if (!listingId || typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("market:buy", { listingId }, (res) => {
+    if (res && res.ok) {
+      showAppNotice(L("Подарок куплен", "Gift purchased"));
+      closeMarketGiftDetail();
+      fetchMarketListings();
+    } else {
+      showAppNotice((res && res.error) || L("Не удалось купить", "Purchase failed"));
+    }
+  });
+}
+window.handleMarketGiftBuy = handleMarketGiftBuy;
+
+function handleMarketGiftOfferSend() {
+  const listingId = marketDetailListingId;
+  const input = document.getElementById("marketOfferPriceInput");
+  const price = Number(input && input.value);
+  if (!(price > 0)) {
+    showAppNotice(L("Укажи цену оффера", "Enter an offer price"));
+    return;
+  }
+  if (!listingId || typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("market:offer:send", { listingId, price }, (res) => {
+    if (res && res.ok) {
+      showAppNotice(L("Оффер отправлен", "Offer sent"));
+      closeMarketGiftDetail();
+    } else {
+      showAppNotice((res && res.error) || L("Не удалось отправить оффер", "Failed to send offer"));
+    }
+  });
+}
+window.handleMarketGiftOfferSend = handleMarketGiftOfferSend;
+
 document.addEventListener("DOMContentLoaded", () => {
-  renderMarketGifts();
+  fetchMarketListings();
 });
 
 // Поочерёдное скрытие/появление кнопок Маркета при скролле экрана.
