@@ -1928,6 +1928,37 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   font-size: 14px;
   text-align: center;
 }
+.inventory-tab-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+}
+.inventory-tab-btn.active {
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+}
+.inventory-oval-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.6);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.inventory-oval-btn.active {
+  background: #ffffff;
+  color: #0a0a12;
+  border-color: #ffffff;
+}
 
 .market-search-shell {
   flex: 1;
@@ -5871,18 +5902,25 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 
   <div id="inventoryScreen" class="menu-screen">
     <div class="screen-inner">
-      <section class="section-card">
-        <h1 class="section-title">Инвентарь</h1>
-        <p class="section-subtitle">Здесь будут отображаться подарки Telegram (NFT), которые вы добавите из своего кошелька.</p>
-      </section>
-      <section class="section-card" style="display:flex; flex-direction:column; align-items:center; gap:14px; padding:36px 20px; text-align:center;">
-        <span style="width:56px; height:56px; display:flex; align-items:center; justify-content:center; border-radius:16px; background:rgba(255,255,255,0.06); color:var(--text-soft);">
-          <svg width="28" height="28" fill="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M4.04 7.43a4 4 0 0 1 7.92 0 .5.5 0 1 1-.99.14 3 3 0 0 0-5.94 0 .5.5 0 1 1-.99-.14"/><path fill-rule="evenodd" d="M4 9.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zm1 .5v3h6v-3h-1v.5a.5.5 0 0 1-1 0V10z"/><path d="M6 2.341V2a2 2 0 1 1 4 0v.341c2.33.824 4 3.047 4 5.659v1.191l1.17.585a1.5 1.5 0 0 1 .83 1.342V13.5a1.5 1.5 0 0 1-1.5 1.5h-1c-.456.607-1.182 1-2 1h-7a2.5 2.5 0 0 1-2-1h-1A1.5 1.5 0 0 1 0 13.5v-2.382a1.5 1.5 0 0 1 .83-1.342L2 9.191V8a6 6 0 0 1 4-5.659M7 2v.083a6 6 0 0 1 2 0V2a1 1 0 0 0-2 0M3 13.5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5V8A5 5 0 0 0 3 8zm-1-3.19-.724.362a.5.5 0 0 0-.276.447V13.5a.5.5 0 0 0 .5.5H2zm12 0V14h.5a.5.5 0 0 0 .5-.5v-2.382a.5.5 0 0 0-.276-.447L14 10.309Z"/></svg>
-        </span>
-        <div id="inventoryEmptyNote" style="color:var(--text-soft); font-size:14px; line-height:1.5;">
-          Пока пусто.<br>Подключение кошелька и добавление подарков появится позже.
+      <div id="inventoryTabsPill" style="display:flex; background:rgba(255,255,255,0.06); border-radius:999px; padding:4px; gap:4px;">
+        <button type="button" id="inventoryTabGifts" class="inventory-tab-btn active" onclick="switchInventoryTab('gifts')">Подарки</button>
+        <button type="button" id="inventoryTabOffers" class="inventory-tab-btn" onclick="switchInventoryTab('offers')">Офферы</button>
+      </div>
+
+      <div id="inventoryGiftsView">
+        <div id="inventoryGiftsGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; margin-top:14px;"></div>
+        <div id="inventoryGiftsEmpty" class="market-empty-state" style="display:none;">Пока пусто. Отправь свой подарок нашему боту, и он появится здесь.</div>
+      </div>
+
+      <div id="inventoryOffersView" style="display:none;">
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <button type="button" id="inventoryOffersSentBtn" class="inventory-oval-btn active" onclick="switchInventoryOffersTab('sent')">Отправленные</button>
+          <button type="button" id="inventoryOffersReceivedBtn" class="inventory-oval-btn" onclick="switchInventoryOffersTab('received')">Получено</button>
         </div>
-      </section>
+        <div id="inventoryOffersSentList" style="margin-top:14px; display:flex; flex-direction:column; gap:10px;"></div>
+        <div id="inventoryOffersReceivedList" style="margin-top:14px; display:none; flex-direction:column; gap:10px;"></div>
+        <div id="inventoryOffersEmpty" class="market-empty-state" style="display:none;"></div>
+      </div>
     </div>
   </div>
 
@@ -18607,13 +18645,12 @@ const marketGiftAnimObserver = new IntersectionObserver((entries) => {
 }, { root: document.getElementById("marketScreen"), threshold: 0.1 });
 
 function ensureMarketGiftAnim(item, viewPrefix) {
-  const meta = GIFT_TYPE_META[item.giftType] || {};
   const el = document.getElementById(`marketAnim_${viewPrefix}_${item.listingId}`);
-  if (!el || el.dataset.loaded || !meta.file) return;
-  el.dataset.loaded = "1";
-  const anim = lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: false, path: meta.file });
-  el._lottieAnim = anim;
-  marketGiftAnimObserver.observe(el);
+  const anim = loadGiftAnimInto(el, item, false);
+  if (anim) {
+    el._lottieAnim = anim;
+    marketGiftAnimObserver.observe(el);
+  }
 }
 
 function buildMarketGiftTileHtml(item, viewPrefix) {
@@ -18636,7 +18673,7 @@ function buildMarketGiftTileHtml(item, viewPrefix) {
           <button type="button" class="market-gift-fav-btn${favActiveClass}" aria-label="${favLabel}" onclick="toggleMarketGiftFavorite(${item.listingId}, event)">
             ${favIconSvg}
           </button>
-          <div class="market-gift-tile-inner">
+          <div class="market-gift-tile-inner" style="${getGiftBackdropStyle(item)}">
             <div id="${animId}" class="market-gift-anim"></div>
           </div>
           <div class="market-gift-name">${meta.name || item.giftType}</div>
@@ -18845,10 +18882,10 @@ function openMarketGiftDetail(listingId) {
   const animEl = document.getElementById("marketGiftDetailAnim");
   animEl.innerHTML = "";
   delete animEl.dataset.loaded;
-  if (meta.file) {
-    animEl.dataset.loaded = "1";
-    lottie.loadAnimation({ container: animEl, renderer: "svg", loop: true, autoplay: true, path: meta.file });
-  }
+  animEl.style.background = (item.backdropCenterColor && item.backdropEdgeColor)
+    ? `radial-gradient(circle, ${item.backdropCenterColor}, ${item.backdropEdgeColor})`
+    : "";
+  loadGiftAnimInto(animEl, item, true);
 
   const othersWrap = document.getElementById("marketGiftDetailOthers");
   const others = MARKET_LISTINGS.filter((g) => g.giftType === item.giftType && g.listingId !== listingId);
@@ -18909,6 +18946,275 @@ function handleMarketGiftOfferSend() {
   });
 }
 window.handleMarketGiftOfferSend = handleMarketGiftOfferSend;
+
+function getGiftAnimSource(item) {
+  if (item.modelAssetId) {
+    const isVideo = /\.webm$/i.test(item.modelAssetId);
+    return { kind: isVideo ? "video" : "lottie", url: `/gift-assets/${item.modelAssetId}` };
+  }
+  const meta = GIFT_TYPE_META[item.giftType] || {};
+  if (meta.file) return { kind: "lottie", url: meta.file };
+  return null;
+}
+
+function getGiftBackdropStyle(item) {
+  if (item.backdropCenterColor && item.backdropEdgeColor) {
+    return `background: radial-gradient(circle, ${item.backdropCenterColor}, ${item.backdropEdgeColor});`;
+  }
+  return "";
+}
+
+function loadGiftAnimInto(el, item, autoplay) {
+  if (!el || el.dataset.loaded) return null;
+  const src = getGiftAnimSource(item);
+  if (!src) return null;
+  el.dataset.loaded = "1";
+  if (src.kind === "video") {
+    el.innerHTML = `<video src="${src.url}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:contain;"></video>`;
+    return null;
+  }
+  return lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: !!autoplay, path: src.url });
+}
+
+// === Инвентарь: подарки пользователя + офферы ===
+
+let INVENTORY_GIFTS = [];
+let inventoryActiveTab = "gifts";
+let inventoryOffersTab = "sent";
+let INVENTORY_SENT_OFFERS = [];
+let INVENTORY_RECEIVED_OFFERS = [];
+
+const inventoryGiftAnimObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    const anim = entry.target._lottieAnim;
+    if (!anim) return;
+    if (entry.isIntersecting) {
+      anim.play();
+    } else {
+      anim.pause();
+    }
+  });
+}, { root: document.getElementById("inventoryScreen"), threshold: 0.1 });
+
+function ensureInventoryGiftAnim(item) {
+  const el = document.getElementById(`inventoryAnim_${item.id}`);
+  const anim = loadGiftAnimInto(el, item, false);
+  if (anim) {
+    el._lottieAnim = anim;
+    inventoryGiftAnimObserver.observe(el);
+  }
+}
+
+function buildInventoryGiftTileHtml(item) {
+  const meta = GIFT_TYPE_META[item.giftType] || {};
+  const animId = `inventoryAnim_${item.id}`;
+  const badge = item.hasActiveListing
+    ? `<div style="position:absolute; top:8px; left:8px; padding:4px 10px; border-radius:999px; background:#ffffff; color:#0a0a12; font-size:11px; font-weight:700; z-index:2;">На продаже</div>`
+    : "";
+  const btnLabel = item.hasActiveListing
+    ? `Снять с продажи (${(item.activeListingPrice || 0).toFixed(2)} GRAM)`
+    : "Выставить на продажу";
+  const btnStyle = item.hasActiveListing
+    ? "background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14);"
+    : "background:linear-gradient(135deg, #8a7cff, #6a5cff); border:none;";
+  return `
+    <div class="market-gift-tile" style="position:relative;">
+      ${badge}
+      <div class="market-gift-tile-inner" style="${getGiftBackdropStyle(item)}">
+        <div id="${animId}" class="market-gift-anim"></div>
+      </div>
+      <div class="market-gift-name">${meta.name || item.giftType}</div>
+      <div class="market-gift-number">#${item.number}</div>
+      <div class="market-gift-tile-footer" style="width:100%;">
+        <button type="button" onclick="handleInventoryListToggle(${item.id})" style="width:100%; padding:10px; border-radius:14px; color:#fff; font-weight:700; font-size:12px; ${btnStyle}">${btnLabel}</button>
+      </div>
+    </div>`;
+}
+
+function fetchInventoryGifts() {
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("inventory:request", {}, (res) => {
+    if (res && res.ok) {
+      INVENTORY_GIFTS = res.items || [];
+      renderInventoryGifts();
+    }
+  });
+}
+
+function renderInventoryGifts() {
+  const grid = document.getElementById("inventoryGiftsGrid");
+  const empty = document.getElementById("inventoryGiftsEmpty");
+  if (!grid || !empty) return;
+  grid.style.display = INVENTORY_GIFTS.length ? "grid" : "none";
+  empty.style.display = INVENTORY_GIFTS.length ? "none" : "flex";
+  grid.innerHTML = INVENTORY_GIFTS.map(buildInventoryGiftTileHtml).join("");
+  INVENTORY_GIFTS.forEach(ensureInventoryGiftAnim);
+}
+
+function handleInventoryListToggle(giftId) {
+  const item = INVENTORY_GIFTS.find((g) => g.id === giftId);
+  if (!item || typeof _socket === "undefined" || !_socket) return;
+
+  if (item.hasActiveListing) {
+    _socket.emit("market:listing:cancel", { listingId: item.activeListingId }, (res) => {
+      if (res && res.ok) {
+        showAppNotice(L("Снято с продажи", "Removed from sale"));
+        fetchInventoryGifts();
+        fetchMarketListings();
+      } else {
+        showAppNotice((res && res.error) || L("Не удалось снять с продажи", "Failed to cancel"));
+      }
+    });
+    return;
+  }
+
+  const priceStr = prompt(L("Укажи цену в GRAM", "Enter price in GRAM"));
+  const price = Number(priceStr);
+  if (!(price > 0)) return;
+  _socket.emit("market:listing:create", { giftInstanceId: giftId, price }, (res) => {
+    if (res && res.ok) {
+      showAppNotice(L("Подарок выставлен на продажу", "Listed for sale"));
+      fetchInventoryGifts();
+      fetchMarketListings();
+    } else {
+      showAppNotice((res && res.error) || L("Не удалось выставить", "Failed to list"));
+    }
+  });
+}
+window.handleInventoryListToggle = handleInventoryListToggle;
+
+function switchInventoryTab(tab) {
+  inventoryActiveTab = tab;
+  const giftsBtn = document.getElementById("inventoryTabGifts");
+  const offersBtn = document.getElementById("inventoryTabOffers");
+  const giftsView = document.getElementById("inventoryGiftsView");
+  const offersView = document.getElementById("inventoryOffersView");
+  if (giftsBtn) giftsBtn.classList.toggle("active", tab === "gifts");
+  if (offersBtn) offersBtn.classList.toggle("active", tab === "offers");
+  if (giftsView) giftsView.style.display = tab === "gifts" ? "" : "none";
+  if (offersView) offersView.style.display = tab === "offers" ? "" : "none";
+  if (tab === "gifts") {
+    fetchInventoryGifts();
+  } else {
+    fetchInventoryOffers();
+  }
+}
+window.switchInventoryTab = switchInventoryTab;
+
+function switchInventoryOffersTab(tab) {
+  inventoryOffersTab = tab;
+  const sentBtn = document.getElementById("inventoryOffersSentBtn");
+  const receivedBtn = document.getElementById("inventoryOffersReceivedBtn");
+  const sentList = document.getElementById("inventoryOffersSentList");
+  const receivedList = document.getElementById("inventoryOffersReceivedList");
+  if (sentBtn) sentBtn.classList.toggle("active", tab === "sent");
+  if (receivedBtn) receivedBtn.classList.toggle("active", tab === "received");
+  if (sentList) sentList.style.display = tab === "sent" ? "" : "none";
+  if (receivedList) receivedList.style.display = tab === "received" ? "" : "none";
+  renderInventoryOffers();
+}
+window.switchInventoryOffersTab = switchInventoryOffersTab;
+
+function buildOfferRowHtml(offer, role) {
+  const meta = GIFT_TYPE_META[offer.gift_type] || {};
+  const statusLabels = {
+    pending: L("Ожидает", "Pending"),
+    accepted: L("Принят", "Accepted"),
+    declined: L("Отклонён", "Declined"),
+    cancelled: L("Отменён", "Cancelled"),
+    expired: L("Истёк", "Expired")
+  };
+  const statusText = statusLabels[offer.status] || offer.status;
+  let actionsHtml = "";
+  if (offer.status === "pending") {
+    if (role === "sent") {
+      actionsHtml = `<button type="button" onclick="handleOfferCancel(${offer.id})" style="padding:8px 14px; border-radius:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12px; font-weight:700;">Отменить</button>`;
+    } else {
+      actionsHtml = `
+        <button type="button" onclick="handleOfferAccept(${offer.id})" style="padding:8px 14px; border-radius:12px; background:linear-gradient(135deg, #8a7cff, #6a5cff); border:none; color:#fff; font-size:12px; font-weight:700;">Принять</button>
+        <button type="button" onclick="handleOfferDecline(${offer.id})" style="padding:8px 14px; border-radius:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12px; font-weight:700;">Отклонить</button>`;
+    }
+  }
+  return `
+    <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:16px; background:rgba(255,255,255,0.04);">
+      <div style="width:44px; height:44px; border-radius:12px; flex-shrink:0; ${getGiftBackdropStyle({ backdropCenterColor: offer.backdrop_center_color, backdropEdgeColor: offer.backdrop_edge_color })}"></div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:13px; font-weight:700;">${meta.name || offer.gift_type} #${offer.collectible_number}</div>
+        <div style="font-size:12px; color:rgba(255,255,255,0.5);">${Number(offer.price).toFixed(2)} GRAM · ${statusText}</div>
+      </div>
+      <div style="display:flex; gap:8px; flex-shrink:0;">${actionsHtml}</div>
+    </div>`;
+}
+
+function fetchInventoryOffers() {
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("market:offers:request", {}, (res) => {
+    if (res && res.ok) {
+      INVENTORY_SENT_OFFERS = res.sent || [];
+      INVENTORY_RECEIVED_OFFERS = res.received || [];
+      renderInventoryOffers();
+    }
+  });
+}
+
+function renderInventoryOffers() {
+  const sentList = document.getElementById("inventoryOffersSentList");
+  const receivedList = document.getElementById("inventoryOffersReceivedList");
+  const empty = document.getElementById("inventoryOffersEmpty");
+  if (!sentList || !receivedList || !empty) return;
+  const list = inventoryOffersTab === "sent" ? INVENTORY_SENT_OFFERS : INVENTORY_RECEIVED_OFFERS;
+  empty.style.display = list.length ? "none" : "flex";
+  empty.textContent = inventoryOffersTab === "sent"
+    ? L("Нет отправленных офферов.", "No sent offers.")
+    : L("Нет полученных офферов.", "No received offers.");
+  sentList.innerHTML = INVENTORY_SENT_OFFERS.map((o) => buildOfferRowHtml(o, "sent")).join("");
+  receivedList.innerHTML = INVENTORY_RECEIVED_OFFERS.map((o) => buildOfferRowHtml(o, "received")).join("");
+}
+
+function handleOfferCancel(offerId) {
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("market:offer:cancel", { offerId }, (res) => {
+    if (res && res.ok) {
+      showAppNotice(L("Оффер отменён", "Offer cancelled"));
+      fetchInventoryOffers();
+    } else {
+      showAppNotice((res && res.error) || L("Не удалось отменить", "Failed to cancel"));
+    }
+  });
+}
+window.handleOfferCancel = handleOfferCancel;
+
+function handleOfferAccept(offerId) {
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("market:offer:accept", { offerId }, (res) => {
+    if (res && res.ok) {
+      showAppNotice(L("Оффер принят, подарок продан", "Offer accepted, gift sold"));
+      fetchInventoryOffers();
+      fetchInventoryGifts();
+      fetchMarketListings();
+    } else {
+      showAppNotice((res && res.error) || L("Не удалось принять", "Failed to accept"));
+    }
+  });
+}
+window.handleOfferAccept = handleOfferAccept;
+
+function handleOfferDecline(offerId) {
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("market:offer:decline", { offerId }, (res) => {
+    if (res && res.ok) {
+      showAppNotice(L("Оффер отклонён", "Offer declined"));
+      fetchInventoryOffers();
+    } else {
+      showAppNotice((res && res.error) || L("Не удалось отклонить", "Failed to decline"));
+    }
+  });
+}
+window.handleOfferDecline = handleOfferDecline;
+
+document.addEventListener("DOMContentLoaded", () => {
+  fetchInventoryGifts();
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   fetchMarketListings();
