@@ -1839,6 +1839,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   flex-shrink: 0;
 }
 .market-gift-tile-inner {
+  position: relative;
   background: rgba(255,255,255,0.03);
   border-radius: 16px;
   aspect-ratio: 1/1;
@@ -1847,6 +1848,16 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   justify-content: center;
   overflow: hidden;
   margin-bottom: 10px;
+}
+.market-gift-pattern-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 1;
 }
 .market-gift-anim {
   width: 80%;
@@ -9635,9 +9646,15 @@ function handleBottomNav(action, event) {
     }
 
     case "pvp": {
-      // В маркете и на аукционе эта кнопка показывает молоток и подпись
-      // "Аукцион" — значит и вести должна на аукцион, а не в арену.
-      if (currentMenuView === "market" || currentMenuView === "auction") {
+      // Раньше решение принималось по переменной currentMenuView, которая
+      // могла разойтись с тем, что реально нарисовано на кнопке — из-за
+      // этого клик иногда уводил в арену вместо аукциона. Теперь смотрим
+      // прямо на то, какая иконка сейчас показана (молоток или мечи) —
+      // это всегда совпадает с тем, что видит пользователь.
+      const pvpBtn = document.getElementById("navPvp");
+      const gavelIcon = pvpBtn ? pvpBtn.querySelector(".nav-icon-auction") : null;
+      const isShowingAuction = !!(gavelIcon && gavelIcon.style.display !== "none");
+      if (isShowingAuction) {
         closeModePopup();
         closeHistoryPanel({ preserveNav: true });
         closeLeaderboard();
@@ -18651,6 +18668,7 @@ function ensureMarketGiftAnim(item, viewPrefix) {
     el._lottieAnim = anim;
     marketGiftAnimObserver.observe(el);
   }
+  ensurePatternAnim(item, `marketPattern_${viewPrefix}_${item.listingId}`);
 }
 
 function buildMarketGiftTileHtml(item, viewPrefix) {
@@ -18675,6 +18693,7 @@ function buildMarketGiftTileHtml(item, viewPrefix) {
           </button>
           <div class="market-gift-tile-inner" style="${getGiftBackdropStyle(item)}">
             <div id="${animId}" class="market-gift-anim"></div>
+            <div id="marketPattern_${viewPrefix}_${item.listingId}" class="market-gift-pattern-badge"></div>
           </div>
           <div class="market-gift-name">${meta.name || item.giftType}</div>
           <div class="market-gift-number">#${item.number}</div>
@@ -18950,11 +18969,30 @@ window.handleMarketGiftOfferSend = handleMarketGiftOfferSend;
 function getGiftAnimSource(item) {
   if (item.modelAssetId) {
     const isVideo = /\.webm$/i.test(item.modelAssetId);
-    return { kind: isVideo ? "video" : "lottie", url: `/gift-assets/${item.modelAssetId}` };
+    return { kind: isVideo ? "video" : "lottie", url: `${SOCKET_SERVER}/gift-assets/${item.modelAssetId}` };
   }
   const meta = GIFT_TYPE_META[item.giftType] || {};
   if (meta.file) return { kind: "lottie", url: meta.file };
   return null;
+}
+
+function getGiftPatternAnimSource(item) {
+  if (!item.patternAssetId) return null;
+  const isVideo = /\.webm$/i.test(item.patternAssetId);
+  return { kind: isVideo ? "video" : "lottie", url: `${SOCKET_SERVER}/gift-assets/${item.patternAssetId}` };
+}
+
+function ensurePatternAnim(item, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el || el.dataset.loaded) return;
+  const src = getGiftPatternAnimSource(item);
+  if (!src) return;
+  el.dataset.loaded = "1";
+  if (src.kind === "video") {
+    el.innerHTML = `<video src="${src.url}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:contain;"></video>`;
+    return;
+  }
+  lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: true, path: src.url });
 }
 
 function getGiftBackdropStyle(item) {
@@ -19003,6 +19041,7 @@ function ensureInventoryGiftAnim(item) {
     el._lottieAnim = anim;
     inventoryGiftAnimObserver.observe(el);
   }
+  ensurePatternAnim(item, `inventoryPattern_${item.id}`);
 }
 
 function buildInventoryGiftTileHtml(item) {
@@ -19022,6 +19061,7 @@ function buildInventoryGiftTileHtml(item) {
       ${badge}
       <div class="market-gift-tile-inner" style="${getGiftBackdropStyle(item)}">
         <div id="${animId}" class="market-gift-anim"></div>
+        <div id="inventoryPattern_${item.id}" class="market-gift-pattern-badge"></div>
       </div>
       <div class="market-gift-name">${meta.name || item.giftType}</div>
       <div class="market-gift-number">#${item.number}</div>
