@@ -1857,6 +1857,15 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   overflow: hidden;
   margin-bottom: 10px;
 }
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
 .market-gift-pattern-badge {
   position: absolute;
   bottom: 6px;
@@ -6421,7 +6430,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   onclick="closeMarketGiftDetail(event)"
   aria-hidden="true"
 >
-  <div class="app-settings-sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="marketGiftDetailTitle" style="max-height:88vh; overflow-y:auto; padding:0; overflow-x:hidden;">
+  <div class="app-settings-sheet no-scrollbar" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="marketGiftDetailTitle" style="max-height:88vh; overflow-y:auto; padding:0; overflow-x:hidden;">
 
     <div id="marketGiftDetailHeader" style="position:relative; padding:16px 16px 22px; overflow:hidden;">
       <div id="marketGiftDetailHeaderPattern"></div>
