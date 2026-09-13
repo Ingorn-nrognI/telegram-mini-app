@@ -6487,6 +6487,16 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+<!-- Движок tlottie (Rust/WASM, тот же класс, что rlottie в самом Telegram).
+     Браузерный lottie-web неточно рисует градиентные обводки и маски, которых
+     в подарках Telegram сотни — отсюда съехавшие контуры и мигание. -->
+<script type="module">
+  import "https://cdn.jsdelivr.net/npm/tlottie@0.1.23/dist/webcomponent/index.js";
+  import { initializeTLottie } from "https://cdn.jsdelivr.net/npm/tlottie@0.1.23/dist/core/index.js";
+  initializeTLottie();
+  window.__tlottieReady = true;
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tlottie@0.1.23/dist/webcomponent/tlottie.css">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -19056,10 +19066,28 @@ function renderGiftDetailModal(item, context) {
     renderInventoryDetailActions(item);
   }
 
+  // Анимацию подарка рисует tlottie — он понимает градиентные обводки и
+  // маски так же, как движок самого Telegram. Если веб-компонент почему-то
+  // не поднялся, откатываемся на картинку с CDN, чтобы экран не остался пустым.
   const animEl = document.getElementById("marketGiftDetailAnim");
   animEl.innerHTML = "";
   delete animEl.dataset.loaded;
-  loadGiftAnimInto(animEl, item, true);
+  const animSrc = getGiftAnimSource(item);
+  if (animSrc && animSrc.kind === "lottie" && window.customElements && customElements.get("tlottie-player")) {
+    const player = document.createElement("tlottie-player");
+    player.setAttribute("src", animSrc.url);
+    player.setAttribute("loop", "");
+    player.setAttribute("autoplay", "");
+    player.style.cssText = "width:100%; height:100%; display:block;";
+    animEl.appendChild(player);
+  } else {
+    const fallbackUrl = getGiftLargeImageUrl(item);
+    if (fallbackUrl) {
+      animEl.innerHTML = `<img src="${fallbackUrl}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;">`;
+    } else {
+      loadGiftAnimInto(animEl, item, true);
+    }
+  }
 
   const othersWrap = document.getElementById("marketGiftDetailOthers");
   const othersWrapBox = document.getElementById("marketGiftDetailOthersWrap");
