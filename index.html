@@ -18689,15 +18689,8 @@ const marketGiftAnimObserver = new IntersectionObserver((entries) => {
   });
 }, { root: document.getElementById("marketScreen"), threshold: 0.1 });
 
-function ensureMarketGiftAnim(item, viewPrefix) {
-  const el = document.getElementById(`marketAnim_${viewPrefix}_${item.listingId}`);
-  const anim = loadGiftAnimInto(el, item, false);
-  if (anim) {
-    el._lottieAnim = anim;
-    freezeGiftAnimOnFirstFrame(anim);
-  }
-  ensurePatternAnim(item, `marketPattern_${viewPrefix}_${item.listingId}`);
-}
+// Карточки показывают готовую картинку с CDN — никаких плееров в списке.
+function ensureMarketGiftAnim(item, viewPrefix) {}
 
 function buildMarketGiftTileHtml(item, viewPrefix) {
   const meta = GIFT_TYPE_META[item.giftType] || {};
@@ -18719,11 +18712,10 @@ function buildMarketGiftTileHtml(item, viewPrefix) {
           <button type="button" class="market-gift-fav-btn${favActiveClass}" aria-label="${favLabel}" onclick="toggleMarketGiftFavorite(${item.listingId}, event)">
             ${favIconSvg}
           </button>
-          <div class="market-gift-tile-inner" style="${getGiftBackdropStyle(item)}">
-            <div id="${animId}" class="market-gift-anim"></div>
-            <div id="marketPattern_${viewPrefix}_${item.listingId}" class="market-gift-pattern-badge"></div>
+          <div class="market-gift-tile-inner">
+            ${buildGiftImageHtml(item)}
           </div>
-          <div class="market-gift-name">${meta.name || item.giftType}</div>
+          <div class="market-gift-name">${getGiftDisplayName(item)}</div>
           <div class="market-gift-number">#${item.number}</div>
           <div class="market-gift-tile-footer">
             <div class="market-gift-price">${item.price.toFixed(2)} GRAM</div>
@@ -18999,7 +18991,7 @@ function renderGiftDetailModal(item, context) {
 
   giftDetailContext = context;
 
-  document.getElementById("marketGiftDetailTitle").textContent = meta.name || item.giftType;
+  document.getElementById("marketGiftDetailTitle").textContent = getGiftDisplayName(item);
   document.getElementById("marketGiftDetailNumber").textContent = `Коллекционный подарок #${item.number}`;
 
   const priceBadge = document.getElementById("marketGiftDetailPriceBadge");
@@ -19013,14 +19005,12 @@ function renderGiftDetailModal(item, context) {
     priceBadge.style.display = "none";
   }
 
+  // Фон шапки — родной градиент подарка; узор уже нарисован внутри самой
+  // анимации с CDN, отдельно накладывать его не нужно.
   const headerEl = document.getElementById("marketGiftDetailHeader");
   headerEl.style.background = (item.backdropCenterColor && item.backdropEdgeColor)
     ? `radial-gradient(circle at 50% 38%, ${item.backdropCenterColor}, ${item.backdropEdgeColor})`
     : "rgba(255,255,255,0.06)";
-
-  const headerPatternEl = document.getElementById("marketGiftDetailHeaderPattern");
-  headerPatternEl.style.cssText = "position:absolute; inset:0; pointer-events:none;";
-  applyPatternTexture(headerPatternEl, item, 58, 0.22);
 
   const attrsEl = document.getElementById("marketGiftDetailAttrs");
   attrsEl.innerHTML =
@@ -19131,14 +19121,38 @@ function handleMarketGiftOfferSend() {
 }
 window.handleMarketGiftOfferSend = handleMarketGiftOfferSend;
 
+// Публичный CDN коллекционных подарков Telegram отдаёт УЖЕ СОБРАННУЮ
+// композицию (фигурка + фон + узор) — и картинкой, и полной анимацией.
+// Собирать её из отдельных кусков вручную больше не нужно.
+const NFT_CDN = "https://nft.fragment.com/gift";
+
+function getGiftCdnSlug(item) {
+  if (!item.giftType || !item.number) return null;
+  return `${String(item.giftType).replace(/\s+/g, "").toLowerCase()}-${item.number}`;
+}
+
+function getGiftImageUrl(item) {
+  const slug = getGiftCdnSlug(item);
+  return slug ? `${NFT_CDN}/${slug}.medium.jpg` : null;
+}
+
 function getGiftAnimSource(item) {
-  if (item.modelAssetId) {
-    const isVideo = /\.webm$/i.test(item.modelAssetId);
-    return { kind: isVideo ? "video" : "lottie", url: `${SOCKET_SERVER}/gift-assets/${item.modelAssetId}` };
-  }
+  const slug = getGiftCdnSlug(item);
+  if (slug) return { kind: "lottie", url: `${NFT_CDN}/${slug}.lottie.json` };
   const meta = GIFT_TYPE_META[item.giftType] || {};
   if (meta.file) return { kind: "lottie", url: meta.file };
   return null;
+}
+
+function getGiftDisplayName(item) {
+  const meta = GIFT_TYPE_META[item.giftType] || {};
+  return item.giftTitle || meta.name || item.giftType;
+}
+
+function buildGiftImageHtml(item) {
+  const url = getGiftImageUrl(item);
+  if (!url) return "";
+  return `<img src="${url}" alt="" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block;">`;
 }
 
 function getGiftPatternAnimSource(item) {
@@ -19200,15 +19214,7 @@ const inventoryGiftAnimObserver = new IntersectionObserver((entries) => {
   });
 }, { root: document.getElementById("inventoryScreen"), threshold: 0.1 });
 
-function ensureInventoryGiftAnim(item) {
-  const el = document.getElementById(`inventoryAnim_${item.id}`);
-  const anim = loadGiftAnimInto(el, item, false);
-  if (anim) {
-    el._lottieAnim = anim;
-    freezeGiftAnimOnFirstFrame(anim);
-  }
-  ensurePatternAnim(item, `inventoryPattern_${item.id}`);
-}
+function ensureInventoryGiftAnim(item) {}
 
 function buildInventoryGiftTileHtml(item) {
   const meta = GIFT_TYPE_META[item.giftType] || {};
@@ -19225,11 +19231,10 @@ function buildInventoryGiftTileHtml(item) {
   return `
     <div class="market-gift-tile" style="position:relative; cursor:pointer;" onclick="openInventoryGiftDetail(${item.id})">
       ${badge}
-      <div class="market-gift-tile-inner" style="${getGiftBackdropStyle(item)}">
-        <div id="${animId}" class="market-gift-anim"></div>
-        <div id="inventoryPattern_${item.id}" class="market-gift-pattern-badge"></div>
+      <div class="market-gift-tile-inner">
+        ${buildGiftImageHtml(item)}
       </div>
-      <div class="market-gift-name">${meta.name || item.giftType}</div>
+      <div class="market-gift-name">${getGiftDisplayName(item)}</div>
       <div class="market-gift-number">#${item.number}</div>
       <div class="market-gift-tile-footer" style="width:100%;">
         <button type="button" onclick="handleInventoryListToggle(${item.id})" style="width:100%; padding:10px; border-radius:14px; color:#fff; font-weight:700; font-size:12px; ${btnStyle}">${btnLabel}</button>
