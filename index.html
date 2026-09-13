@@ -18685,11 +18685,7 @@ function ensureMarketGiftAnim(item, viewPrefix) {
   const anim = loadGiftAnimInto(el, item, false);
   if (anim) {
     el._lottieAnim = anim;
-    // В карточках подарок показывается статично — Lottie грузится, встаёт на
-    // первый кадр и не проигрывается. Качество векторное (в отличие от
-    // мыльного thumbnail), а нагрузки от движения нет. Анимация играет
-    // только в открытой модалке подарка.
-    anim.addEventListener("DOMLoaded", () => anim.goToAndStop(0, true));
+    freezeGiftAnimOnFirstFrame(anim);
   }
   ensurePatternAnim(item, `marketPattern_${viewPrefix}_${item.listingId}`);
 }
@@ -18971,20 +18967,43 @@ function renderMarketOfferForm(showForm) {
 }
 window.renderMarketOfferForm = renderMarketOfferForm;
 
-function openMarketGiftDetail(listingId) {
-  const item = MARKET_LISTINGS.find((g) => g.listingId === listingId);
-  if (!item) return;
-  marketDetailListingId = listingId;
+// Lottie не досчитывает градиенты, если анимацию ни разу не проиграть —
+// кадр выходит пустым. Поэтому даём ей коротко проиграться и только затем
+// замораживаем на первом кадре: подарок виден полностью и при этом статичен.
+function freezeGiftAnimOnFirstFrame(anim) {
+  if (!anim) return;
+  anim.addEventListener("DOMLoaded", () => {
+    anim.play();
+    setTimeout(() => {
+      try { anim.goToAndStop(0, true); } catch (e) {}
+    }, 700);
+  });
+}
 
+let giftDetailContext = "market";
+let inventoryDetailGiftId = null;
+
+function renderGiftDetailModal(item, context) {
   const meta = GIFT_TYPE_META[item.giftType] || {};
   const overlay = document.getElementById("marketGiftDetailOverlay");
   if (!overlay) return;
 
+  giftDetailContext = context;
+
   document.getElementById("marketGiftDetailTitle").textContent = meta.name || item.giftType;
   document.getElementById("marketGiftDetailNumber").textContent = `Коллекционный подарок #${item.number}`;
-  document.getElementById("marketGiftDetailPriceBadge").textContent = `${item.price.toFixed(2)} GRAM`;
 
-  // Шапка окрашивается в родной градиент подарка и замащивается его узором.
+  const priceBadge = document.getElementById("marketGiftDetailPriceBadge");
+  if (context === "market") {
+    priceBadge.style.display = "";
+    priceBadge.textContent = `${item.price.toFixed(2)} GRAM`;
+  } else if (item.hasActiveListing) {
+    priceBadge.style.display = "";
+    priceBadge.textContent = `${(item.activeListingPrice || 0).toFixed(2)} GRAM`;
+  } else {
+    priceBadge.style.display = "none";
+  }
+
   const headerEl = document.getElementById("marketGiftDetailHeader");
   headerEl.style.background = (item.backdropCenterColor && item.backdropEdgeColor)
     ? `radial-gradient(circle at 50% 38%, ${item.backdropCenterColor}, ${item.backdropEdgeColor})`
@@ -19000,7 +19019,11 @@ function openMarketGiftDetail(listingId) {
     buildMarketAttrRowHtml("Фон", item.backdrop, item.backdropRarity) +
     buildMarketAttrRowHtml("Узор", item.pattern, item.patternRarity);
 
-  renderMarketOfferForm(false);
+  if (context === "market") {
+    renderMarketOfferForm(false);
+  } else {
+    renderInventoryDetailActions(item);
+  }
 
   const animEl = document.getElementById("marketGiftDetailAnim");
   animEl.innerHTML = "";
@@ -19008,8 +19031,11 @@ function openMarketGiftDetail(listingId) {
   loadGiftAnimInto(animEl, item, true);
 
   const othersWrap = document.getElementById("marketGiftDetailOthers");
-  const others = MARKET_LISTINGS.filter((g) => g.giftType === item.giftType && g.listingId !== listingId);
-  document.getElementById("marketGiftDetailOthersWrap").style.display = others.length ? "" : "none";
+  const othersWrapBox = document.getElementById("marketGiftDetailOthersWrap");
+  const others = context === "market"
+    ? MARKET_LISTINGS.filter((g) => g.giftType === item.giftType && g.listingId !== item.listingId)
+    : [];
+  othersWrapBox.style.display = others.length ? "" : "none";
   othersWrap.innerHTML = others.map((g) => `
     <div onclick="openMarketGiftDetail(${g.listingId})" style="flex:0 0 auto; width:84px; padding:8px; border-radius:14px; background:rgba(255,255,255,0.06); text-align:center; cursor:pointer;">
       <div style="font-size:13px; font-weight:700;">${g.price.toFixed(2)}</div>
@@ -19019,7 +19045,36 @@ function openMarketGiftDetail(listingId) {
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
 }
+
+function renderInventoryDetailActions(item) {
+  const actionsEl = document.getElementById("marketGiftDetailActions");
+  if (!actionsEl) return;
+  if (item.hasActiveListing) {
+    actionsEl.innerHTML = `
+      <button type="button" onclick="handleInventoryListToggle(${item.id}); closeMarketGiftDetail();" style="width:100%; padding:16px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:700; font-size:15px;">Снять с продажи</button>`;
+  } else {
+    actionsEl.innerHTML = `
+      <button type="button" onclick="handleInventoryListToggle(${item.id}); closeMarketGiftDetail();" style="width:100%; padding:16px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:15px; border:none; letter-spacing:0.02em;">ВЫСТАВИТЬ НА ПРОДАЖУ</button>`;
+  }
+}
+
+function openMarketGiftDetail(listingId) {
+  const item = MARKET_LISTINGS.find((g) => g.listingId === listingId);
+  if (!item) return;
+  marketDetailListingId = listingId;
+  inventoryDetailGiftId = null;
+  renderGiftDetailModal(item, "market");
+}
 window.openMarketGiftDetail = openMarketGiftDetail;
+
+function openInventoryGiftDetail(giftId) {
+  const item = INVENTORY_GIFTS.find((g) => g.id === giftId);
+  if (!item) return;
+  inventoryDetailGiftId = giftId;
+  marketDetailListingId = null;
+  renderGiftDetailModal(item, "inventory");
+}
+window.openInventoryGiftDetail = openInventoryGiftDetail;
 
 function closeMarketGiftDetail(event) {
   if (event) event.stopPropagation();
@@ -19141,7 +19196,7 @@ function ensureInventoryGiftAnim(item) {
   const anim = loadGiftAnimInto(el, item, false);
   if (anim) {
     el._lottieAnim = anim;
-    anim.addEventListener("DOMLoaded", () => anim.goToAndStop(0, true));
+    freezeGiftAnimOnFirstFrame(anim);
   }
   ensurePatternAnim(item, `inventoryPattern_${item.id}`);
 }
@@ -19159,7 +19214,7 @@ function buildInventoryGiftTileHtml(item) {
     ? "background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14);"
     : "background:linear-gradient(135deg, #8a7cff, #6a5cff); border:none;";
   return `
-    <div class="market-gift-tile" style="position:relative;">
+    <div class="market-gift-tile" style="position:relative; cursor:pointer;" onclick="openInventoryGiftDetail(${item.id})">
       ${badge}
       <div class="market-gift-tile-inner" style="${getGiftBackdropStyle(item)}">
         <div id="${animId}" class="market-gift-anim"></div>
