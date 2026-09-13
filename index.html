@@ -1393,6 +1393,14 @@ body.history-mode .history-panel-header .history-panel-title {
 body.market-mode .market-side-fab {
   display: flex;
 }
+/* Вне самого Маркета (аукцион, инвентарь) кнопки уезжают вниз тем же
+   движением, что и при скролле — и возвращаются при входе в Маркет. */
+body.market-mode:not(.market-screen-active) .market-side-fab {
+  transform: translateY(80px);
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 0s;
+}
 
 /* Скролл вниз: сердце/корзина уходят первыми (без задержки), затем —
    с задержкой 0.18с — уходит сам главный бар и круглая кнопка Market.
@@ -7591,6 +7599,10 @@ function setMenuView(view, options = {}) {
     // кнопка "Игры", пропадали "Скины", а арена с маркетом менялись местами.
     const marketModeActive = (view === "market" || view === "inventory" || view === "auction");
     document.body.classList.toggle("market-mode", marketModeActive);
+    // Кнопки Избранное/Корзина относятся только к самому Маркету, а не ко
+    // всему его "семейству" (аукцион, инвентарь) — этот класс отличает
+    // именно экран Маркета, чтобы на остальных кнопки уезжали вниз.
+    document.body.classList.toggle("market-screen-active", view === "market");
     const navGamesBtn = document.getElementById("navGames");
     const navSkinsBtn = document.getElementById("navSkins");
     if (navGamesBtn) navGamesBtn.style.display = marketModeActive ? "none" : "flex";
@@ -15139,7 +15151,7 @@ function syncMarketSideFabPosition() {
   if (!bar || (!favBtn && !cartBtn)) return;
   const rect = bar.getBoundingClientRect();
   if (rect.top <= 0) return;
-  const bottomOffset = `${Math.round(window.innerHeight - rect.top + 14)}px`;
+  const bottomOffset = `${Math.round(window.innerHeight - rect.top + 9)}px`;
   if (favBtn) favBtn.style.bottom = bottomOffset;
   if (cartBtn) cartBtn.style.bottom = bottomOffset;
 }
@@ -18666,7 +18678,11 @@ function ensureMarketGiftAnim(item, viewPrefix) {
   const anim = loadGiftAnimInto(el, item, false);
   if (anim) {
     el._lottieAnim = anim;
-    marketGiftAnimObserver.observe(el);
+    // В карточках подарок показывается статично — Lottie грузится, встаёт на
+    // первый кадр и не проигрывается. Качество векторное (в отличие от
+    // мыльного thumbnail), а нагрузки от движения нет. Анимация играет
+    // только в открытой модалке подарка.
+    anim.addEventListener("DOMLoaded", () => anim.goToAndStop(0, true));
   }
   ensurePatternAnim(item, `marketPattern_${viewPrefix}_${item.listingId}`);
 }
@@ -18992,7 +19008,8 @@ function ensurePatternAnim(item, containerId) {
     el.innerHTML = `<video src="${src.url}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:contain;"></video>`;
     return;
   }
-  lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: true, path: src.url });
+  const patternAnim = lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: false, path: src.url });
+  patternAnim.addEventListener("DOMLoaded", () => patternAnim.goToAndStop(0, true));
 }
 
 function getGiftBackdropStyle(item) {
@@ -19039,7 +19056,7 @@ function ensureInventoryGiftAnim(item) {
   const anim = loadGiftAnimInto(el, item, false);
   if (anim) {
     el._lottieAnim = anim;
-    inventoryGiftAnimObserver.observe(el);
+    anim.addEventListener("DOMLoaded", () => anim.goToAndStop(0, true));
   }
   ensurePatternAnim(item, `inventoryPattern_${item.id}`);
 }
