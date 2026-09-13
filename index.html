@@ -19058,17 +19058,147 @@ function renderGiftDetailModal(item, context) {
   overlay.removeAttribute("aria-hidden");
 }
 
+const WITHDRAW_FEE_GRAM = 0.3;
+
+// Плашка сверху: съезжает, держится 2 секунды и уезжает обратно.
+let _topToastTimer = null;
+function showTopToast(html, accent) {
+  let el = document.getElementById("appTopToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "appTopToast";
+    el.style.cssText = [
+      "position:fixed",
+      "left:12px",
+      "right:12px",
+      "top:0",
+      "z-index:99999",
+      "padding:14px 16px",
+      "border-radius:18px",
+      "color:#fff",
+      "font-size:14px",
+      "line-height:1.5",
+      "box-shadow:0 10px 30px rgba(0,0,0,0.35)",
+      "transform:translateY(-160%)",
+      "transition:transform 0.35s ease",
+      "pointer-events:none"
+    ].join(";");
+    document.body.appendChild(el);
+  }
+  el.style.background = accent === "warn"
+    ? "linear-gradient(135deg, #d9822b, #b5651d)"
+    : "linear-gradient(135deg, #e0463c, #b5302a)";
+  el.innerHTML = html;
+  el.style.top = `calc(var(--safe-top, 0px) + 10px)`;
+
+  if (_topToastTimer) clearTimeout(_topToastTimer);
+  requestAnimationFrame(() => { el.style.transform = "translateY(0)"; });
+  _topToastTimer = setTimeout(() => {
+    el.style.transform = "translateY(-160%)";
+    _topToastTimer = null;
+  }, 2000);
+}
+window.showTopToast = showTopToast;
+
+function withdrawToastRow(ok, text) {
+  const icon = ok
+    ? '<span style="color:#7ff0a6; font-weight:800;">✓</span>'
+    : '<span style="color:#ffd3d0; font-weight:800;">✕</span>';
+  return `<div style="display:flex; align-items:center; gap:8px;">${icon}<span>${text}</span></div>`;
+}
+
+// Сколько осталось до разблокировки: дни, а когда меньше суток — часы и минуты.
+function formatUnlockLeft(nextTransferDateSec) {
+  const leftMs = Number(nextTransferDateSec) * 1000 - Date.now();
+  if (!(leftMs > 0)) return null;
+  const totalMinutes = Math.ceil(leftMs / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  if (days >= 1) {
+    const word = days % 10 === 1 && days % 100 !== 11 ? "день"
+      : ([2, 3, 4].includes(days % 10) && ![12, 13, 14].includes(days % 100) ? "дня" : "дней");
+    return `${days} ${word}`;
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours >= 1) return `${hours} ч ${minutes} мин`;
+  return `${minutes} мин`;
+}
+
+function isGiftLocked(item) {
+  return !!(item.nextTransferDate && Number(item.nextTransferDate) * 1000 > Date.now());
+}
+
 function renderInventoryDetailActions(item) {
   const actionsEl = document.getElementById("marketGiftDetailActions");
   if (!actionsEl) return;
-  if (item.hasActiveListing) {
-    actionsEl.innerHTML = `
-      <button type="button" onclick="handleInventoryListToggle(${item.id}); closeMarketGiftDetail();" style="width:100%; padding:16px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:700; font-size:15px;">Снять с продажи</button>`;
-  } else {
-    actionsEl.innerHTML = `
-      <button type="button" onclick="handleInventoryListToggle(${item.id}); closeMarketGiftDetail();" style="width:100%; padding:16px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:15px; border:none; letter-spacing:0.02em;">ВЫСТАВИТЬ НА ПРОДАЖУ</button>`;
-  }
+
+  const sellBtn = item.hasActiveListing
+    ? `<button type="button" onclick="handleInventoryListToggle(${item.id}); closeMarketGiftDetail();" style="flex:1; padding:14px 10px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:700; font-size:14px;">Снять с продажи</button>`
+    : `<button type="button" onclick="handleInventoryListToggle(${item.id}); closeMarketGiftDetail();" style="flex:1; padding:14px 10px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:14px; border:none;">ПРОДАТЬ</button>`;
+
+  const withdrawBtn = `
+    <button type="button" onclick="handleGiftWithdraw(${item.id})" style="flex:1; padding:10px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:800; font-size:14px; line-height:1.25;">
+      Вывести
+      <div style="font-size:11px; font-weight:600; opacity:0.65; margin-top:2px;">за ${WITHDRAW_FEE_GRAM} GRAM</div>
+    </button>`;
+
+  const left = isGiftLocked(item) ? formatUnlockLeft(item.nextTransferDate) : null;
+  const lockNote = left
+    ? `<div style="text-align:center; font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:2px;">Вывести можно через ${left}</div>`
+    : "";
+
+  actionsEl.innerHTML = `${lockNote}<div style="display:flex; gap:10px;">${sellBtn}${withdrawBtn}</div>`;
 }
+
+function handleGiftWithdraw(giftId) {
+  const item = INVENTORY_GIFTS.find((g) => g.id === giftId);
+  if (!item) return;
+
+  const balance = Number(window.appUserBalance || 0);
+  const balanceOk = balance >= WITHDRAW_FEE_GRAM;
+  const lockOk = !isGiftLocked(item);
+
+  // Перед отправкой показываем пользователю, что именно мешает выводу.
+  if (!balanceOk || !lockOk) {
+    const left = lockOk ? null : formatUnlockLeft(item.nextTransferDate);
+    showTopToast(
+      withdrawToastRow(balanceOk, balanceOk ? "Баланс достаточно" : "Недостаточно баланса") +
+      withdrawToastRow(lockOk, lockOk ? "Подарок разблокирован" : `Подарок заблокирован${left ? " — " + left : ""}`)
+    );
+    return;
+  }
+
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("market:gift:withdraw", { giftInstanceId: giftId }, (res) => {
+    if (res && res.ok) {
+      showAppNotice(L("Подарок отправлен в твой Telegram", "Gift sent to your Telegram"));
+      closeMarketGiftDetail();
+      fetchInventoryGifts();
+      return;
+    }
+    const code = res && res.code;
+    if (code === "tech") {
+      showTopToast(
+        '<div style="font-weight:800; margin-bottom:2px;">Отклонено</div>' +
+        '<div style="opacity:0.9;">Технические неполадки на стороне сервиса. Попробуй позже.</div>',
+        "warn"
+      );
+      return;
+    }
+    if (code === "locked") {
+      const left = formatUnlockLeft((res && res.nextTransferDate) || item.nextTransferDate);
+      showTopToast(
+        withdrawToastRow(true, "Баланс достаточно") +
+        withdrawToastRow(false, `Подарок заблокирован${left ? " — " + left : ""}`)
+      );
+      return;
+    }
+    showTopToast(
+      withdrawToastRow(false, (res && res.error) || "Не удалось вывести подарок")
+    );
+  });
+}
+window.handleGiftWithdraw = handleGiftWithdraw;
 
 function openMarketGiftDetail(listingId) {
   const item = MARKET_LISTINGS.find((g) => g.listingId === listingId);
