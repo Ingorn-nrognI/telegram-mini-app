@@ -19040,10 +19040,15 @@ function renderGiftDetailModal(item, context) {
     : "rgba(255,255,255,0.06)";
 
   const attrsEl = document.getElementById("marketGiftDetailAttrs");
+  const av = item.availability;
+  const availabilityText = av && av.total
+    ? `${av.issued.toLocaleString("ru-RU")}/${av.total.toLocaleString("ru-RU")} выпущено`
+    : null;
   attrsEl.innerHTML =
     buildMarketAttrRowHtml("Модель", item.model, item.modelRarity) +
     buildMarketAttrRowHtml("Фон", item.backdrop, item.backdropRarity) +
-    buildMarketAttrRowHtml("Узор", item.pattern, item.patternRarity);
+    buildMarketAttrRowHtml("Узор", item.pattern, item.patternRarity) +
+    buildMarketAttrRowHtml("Наличие", availabilityText, null);
 
   if (context === "market") {
     renderMarketOfferForm(false);
