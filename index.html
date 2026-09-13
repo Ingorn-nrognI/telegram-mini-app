@@ -8106,8 +8106,22 @@ function renderHistoryEntries(entries) {
     return;
   }
 
+  // Сервер присылает общую ленту последних раундов приложения, поэтому в
+  // истории оказывались и чужие игры. Оставляем только те, где текущий
+  // игрок реально был среди участников.
+  const _myHistoryId = String(getCurrentPlayer().id || "");
+  const _playedInRound = (item) => {
+    if (!_myHistoryId) return false;
+    const rows = [].concat(
+      Array.isArray(item?.results) ? item.results : [],
+      typeof getScannerHistoryResults === "function" ? (getScannerHistoryResults(item) || []) : []
+    );
+    return rows.some((row) => String(row?.playerId || row?.id || "") === _myHistoryId);
+  };
+
   const items = entries
     .filter((item) => !["canceled", "cancelled"].includes(String(item?.status || "").toLowerCase()))
+    .filter(_playedInRound)
     .map((item, index) => {
       const matchId = String(item.roomId || item.roundId || item.savedAt || index);
       const isExpanded = expandedHistoryMatchId === matchId;
