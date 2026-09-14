@@ -6446,7 +6446,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 
       <!-- Анимация подарка с CDN уже содержит фон и узор, поэтому она
            занимает всю шапку целиком, а не сидит квадратиком по центру. -->
-      <div id="marketGiftDetailAnim" style="position:relative; z-index:1; width:100%; aspect-ratio:1/1;"></div>
+      <div id="marketGiftDetailAnim" style="position:relative; z-index:1; width:100%; aspect-ratio:1/0.72; overflow:hidden;"></div>
 
       <div style="position:absolute; top:14px; left:14px; right:14px; z-index:3; display:flex; align-items:center; justify-content:space-between;">
         <button type="button" onclick="closeMarketGiftDetail(event)" aria-label="Закрыть" style="width:34px; height:34px; border-radius:50%; background:rgba(0,0,0,0.28); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:none; display:flex; align-items:center; justify-content:center; color:#fff;">
@@ -19073,13 +19073,38 @@ function renderGiftDetailModal(item, context) {
   animEl.innerHTML = "";
   delete animEl.dataset.loaded;
   const animSrc = getGiftAnimSource(item);
+  const showGiftImageFallback = () => {
+    const url = getGiftLargeImageUrl(item);
+    if (!url) return;
+    animEl.innerHTML = `<img src="${url}" alt="" style="position:absolute; left:0; top:50%; transform:translateY(-50%); width:100%; display:block;">`;
+  };
   if (animSrc && animSrc.kind === "lottie" && window.customElements && customElements.get("tlottie-player")) {
     const player = document.createElement("tlottie-player");
     player.setAttribute("src", animSrc.url);
     player.setAttribute("loop", "");
     player.setAttribute("autoplay", "");
-    player.style.cssText = "width:100%; height:100%; display:block;";
+    // Композиция квадратная, а шапка ниже — центрируем по вертикали и
+    // подрезаем сверху и снизу, как это делает сам Telegram.
+    player.style.cssText = "position:absolute; left:0; top:50%; transform:translateY(-50%); width:100%; aspect-ratio:1/1; display:block;";
     animEl.appendChild(player);
+
+    // Если движок молча не поднялся, подарок останется невидимым — поэтому
+    // через 3 секунды без сигнала загрузки показываем картинку.
+    let loaded = false;
+    const markLoaded = () => { loaded = true; };
+    try {
+      if (player.tlottie && typeof player.tlottie.on === "function") {
+        player.tlottie.on("load", markLoaded);
+      } else {
+        player.addEventListener("load", markLoaded);
+      }
+    } catch (e) {}
+    setTimeout(() => {
+      if (!loaded && animEl.contains(player)) {
+        console.warn("[gift] tlottie не отрисовал подарок, показываю картинку");
+        showGiftImageFallback();
+      }
+    }, 3000);
   } else {
     const fallbackUrl = getGiftLargeImageUrl(item);
     if (fallbackUrl) {
