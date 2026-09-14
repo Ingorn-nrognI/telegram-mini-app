@@ -19351,6 +19351,11 @@ function getGiftImageUrl(item) {
   return slug ? `${NFT_CDN}/${slug}.medium.jpg` : null;
 }
 
+function getGiftLargeImageUrl(item) {
+  const slug = getGiftCdnSlug(item);
+  return slug ? `${NFT_CDN}/${slug}.large.jpg` : null;
+}
+
 function getGiftAnimSource(item) {
   const slug = getGiftCdnSlug(item);
   if (slug) return { kind: "lottie", url: `${NFT_CDN}/${slug}.lottie.json` };
