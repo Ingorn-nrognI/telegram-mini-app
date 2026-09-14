@@ -6494,7 +6494,17 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   // Файлы движка лежат рядом, в своём репозитории: браузер запрещает
   // создавать Web Worker со стороннего домена, поэтому с CDN он не работал.
   import "./tlottie-dist/webcomponent/index.js";
-  window.__tlottieReady = true;
+  import { initializeTLottie } from "./tlottie-dist/core/index.js";
+  try {
+    initializeTLottie({
+      wasmUrl: new URL("./tlottie-dist/core/tlottie.wasm", document.baseURI).toString()
+    });
+    window.__tlottieReady = true;
+    console.log("[tlottie] движок инициализирован");
+  } catch (err) {
+    window.__tlottieReady = false;
+    console.warn("[tlottie] не удалось инициализировать:", err);
+  }
 </script>
 <link rel="stylesheet" href="./tlottie-dist/webcomponent/tlottie.css">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -19080,6 +19090,28 @@ function renderGiftDetailModal(item, context) {
   animEl.innerHTML = imgUrl
     ? `<img src="${imgUrl}" alt="" style="height:100%; width:auto; max-width:100%; display:block; margin:0 auto; object-fit:contain;">`
     : "";
+
+  // Анимация рисуется поверх картинки. Если движок не отработает —
+  // под ней всё равно останется корректное изображение подарка.
+  const animSrc = getGiftAnimSource(item);
+  if (animSrc && animSrc.kind === "lottie" && window.__tlottieReady && customElements.get("tlottie-player")) {
+    try {
+      const side = Math.round(animEl.clientHeight || animEl.offsetHeight || 300);
+      const player = document.createElement("tlottie-player");
+      player.setAttribute("src", animSrc.url);
+      player.setAttribute("loop", "");
+      player.setAttribute("autoplay", "");
+      player.setAttribute("width", String(side));
+      player.setAttribute("height", String(side));
+      player.style.cssText = `position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:${side}px; height:${side}px; display:block; z-index:2;`;
+      animEl.appendChild(player);
+      console.log("[gift] плеер добавлен, сторона:", side, "px");
+    } catch (err) {
+      console.warn("[gift] плеер не создан:", err);
+    }
+  } else {
+    console.log("[gift] анимация пропущена | движок готов:", !!window.__tlottieReady, "| компонент:", !!customElements.get("tlottie-player"));
+  }
 
   const othersWrap = document.getElementById("marketGiftDetailOthers");
   const othersWrapBox = document.getElementById("marketGiftDetailOthersWrap");
