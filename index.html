@@ -19072,45 +19072,58 @@ function renderGiftDetailModal(item, context) {
   const animEl = document.getElementById("marketGiftDetailAnim");
   animEl.innerHTML = "";
   delete animEl.dataset.loaded;
+  // Картинку показываем сразу — подарок виден при любом раскладе.
+  // Анимация подменяет её только когда движок реально доложил о загрузке.
   const animSrc = getGiftAnimSource(item);
-  const showGiftImageFallback = () => {
-    const url = getGiftLargeImageUrl(item);
-    if (!url) return;
-    animEl.innerHTML = `<img src="${url}" alt="" style="position:absolute; left:0; top:50%; transform:translateY(-50%); width:100%; display:block;">`;
-  };
-  if (animSrc && animSrc.kind === "lottie" && window.customElements && customElements.get("tlottie-player")) {
-    const player = document.createElement("tlottie-player");
-    player.setAttribute("src", animSrc.url);
-    player.setAttribute("loop", "");
-    player.setAttribute("autoplay", "");
-    // Композиция квадратная, а шапка ниже — центрируем по вертикали и
-    // подрезаем сверху и снизу, как это делает сам Telegram.
-    player.style.cssText = "position:absolute; left:0; top:50%; transform:translateY(-50%); width:100%; aspect-ratio:1/1; display:block;";
-    animEl.appendChild(player);
+  const imgUrl = getGiftLargeImageUrl(item);
+  const imgStyle = "position:absolute; left:0; top:50%; transform:translateY(-50%); width:100%; display:block; z-index:1;";
+  if (imgUrl) {
+    animEl.innerHTML = `<img src="${imgUrl}" alt="" style="${imgStyle}">`;
+  }
 
-    // Если движок молча не поднялся, подарок останется невидимым — поэтому
-    // через 3 секунды без сигнала загрузки показываем картинку.
-    let loaded = false;
-    const markLoaded = () => { loaded = true; };
+  if (animSrc && animSrc.kind === "lottie" && window.customElements && customElements.get("tlottie-player")) {
     try {
-      if (player.tlottie && typeof player.tlottie.on === "function") {
-        player.tlottie.on("load", markLoaded);
-      } else {
-        player.addEventListener("load", markLoaded);
+      const player = document.createElement("tlottie-player");
+      player.setAttribute("src", animSrc.url);
+      player.setAttribute("loop", "");
+      player.setAttribute("autoplay", "");
+      // Композиция квадратная, а шапка ниже — центрируем по вертикали и
+      // подрезаем сверху и снизу, как это делает сам Telegram.
+      player.style.cssText = "position:absolute; left:0; top:50%; transform:translateY(-50%); width:100%; aspect-ratio:1/1; display:block; z-index:2; opacity:0; transition:opacity 0.25s ease;";
+      animEl.appendChild(player);
+
+      const revealPlayer = () => {
+        player.style.opacity = "1";
+        const img = animEl.querySelector("img");
+        if (img) img.style.opacity = "0";
+      };
+
+      let attached = false;
+      const attachHandlers = () => {
+        if (attached) return false;
+        const inst = player.tlottie;
+        if (inst && typeof inst.on === "function") {
+          attached = true;
+          inst.on("load", revealPlayer);
+          inst.on("play", revealPlayer);
+          inst.on("frame", revealPlayer);
+          inst.on("error", (e) => console.warn("[gift] ошибка анимации:", e));
+          return true;
+        }
+        return false;
+      };
+
+      // Экземпляр внутри веб-компонента появляется не мгновенно,
+      // поэтому несколько раз проверяем в первые секунды.
+      if (!attachHandlers()) {
+        let tries = 0;
+        const timer = setInterval(() => {
+          tries += 1;
+          if (attachHandlers() || tries > 40) clearInterval(timer);
+        }, 100);
       }
-    } catch (e) {}
-    setTimeout(() => {
-      if (!loaded && animEl.contains(player)) {
-        console.warn("[gift] tlottie не отрисовал подарок, показываю картинку");
-        showGiftImageFallback();
-      }
-    }, 3000);
-  } else {
-    const fallbackUrl = getGiftLargeImageUrl(item);
-    if (fallbackUrl) {
-      animEl.innerHTML = `<img src="${fallbackUrl}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;">`;
-    } else {
-      loadGiftAnimInto(animEl, item, true);
+    } catch (err) {
+      console.warn("[gift] не удалось создать плеер:", err);
     }
   }
 
