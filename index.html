@@ -6446,7 +6446,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 
       <!-- Анимация подарка с CDN уже содержит фон и узор, поэтому она
            занимает всю шапку целиком, а не сидит квадратиком по центру. -->
-      <div id="marketGiftDetailAnim" style="position:relative; z-index:1; width:100%; aspect-ratio:1/0.72; overflow:hidden;"></div>
+      <div id="marketGiftDetailAnim" style="position:relative; z-index:1; width:100%; aspect-ratio:1/0.78; overflow:hidden; display:flex; align-items:center; justify-content:center;"></div>
 
       <div style="position:absolute; top:14px; left:14px; right:14px; z-index:3; display:flex; align-items:center; justify-content:space-between;">
         <button type="button" onclick="closeMarketGiftDetail(event)" aria-label="Закрыть" style="width:34px; height:34px; border-radius:50%; background:rgba(0,0,0,0.28); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:none; display:flex; align-items:center; justify-content:center; color:#fff;">
@@ -19072,65 +19072,14 @@ function renderGiftDetailModal(item, context) {
   const animEl = document.getElementById("marketGiftDetailAnim");
   animEl.innerHTML = "";
   delete animEl.dataset.loaded;
-  // Картинку показываем сразу — подарок виден при любом раскладе.
-  // Анимация подменяет её только когда движок реально доложил о загрузке.
-  const animSrc = getGiftAnimSource(item);
+  // Показываем готовое изображение подарка от Telegram. Пробовали рисовать
+  // анимацию (lottie-web и tlottie/WASM) — оба движка либо искажают контуры,
+  // либо не рисуют вовсе, так что картинка остаётся единственным вариантом,
+  // совпадающим с оригиналом один в один.
   const imgUrl = getGiftLargeImageUrl(item);
-  const imgStyle = "position:absolute; left:0; top:50%; transform:translateY(-50%); width:100%; display:block; z-index:1;";
-  if (imgUrl) {
-    animEl.innerHTML = `<img src="${imgUrl}" alt="" style="${imgStyle}">`;
-  }
-
-  if (animSrc && animSrc.kind === "lottie" && window.customElements && customElements.get("tlottie-player")) {
-    try {
-      const player = document.createElement("tlottie-player");
-      player.setAttribute("src", animSrc.url);
-      player.setAttribute("loop", "");
-      player.setAttribute("autoplay", "");
-      // Композиция квадратная, а шапка ниже — центрируем по вертикали и
-      // подрезаем сверху и снизу, как это делает сам Telegram.
-      // Размер задаём в пикселях: веб-компоненту aspect-ratio не даёт высоту,
-      // холст получается нулевым и подарок не рисуется.
-      const side = Math.round(animEl.clientWidth || animEl.offsetWidth || 320);
-      player.setAttribute("width", String(side));
-      player.setAttribute("height", String(side));
-      player.style.cssText = `position:absolute; left:0; top:50%; transform:translateY(-50%); width:${side}px; height:${side}px; display:block; z-index:2; opacity:0; transition:opacity 0.25s ease;`;
-      animEl.appendChild(player);
-
-      // Картинку НЕ прячем: если плеер нарисует подарок, он закроет её собой,
-      // а если нарисует пустоту — подарок всё равно останется виден.
-      const revealPlayer = () => {
-        player.style.opacity = "1";
-      };
-
-      let attached = false;
-      const attachHandlers = () => {
-        if (attached) return false;
-        const inst = player.tlottie;
-        if (inst && typeof inst.on === "function") {
-          attached = true;
-          inst.on("load", revealPlayer);
-          inst.on("play", revealPlayer);
-          inst.on("frame", revealPlayer);
-          inst.on("error", (e) => console.warn("[gift] ошибка анимации:", e));
-          return true;
-        }
-        return false;
-      };
-
-      // Экземпляр внутри веб-компонента появляется не мгновенно,
-      // поэтому несколько раз проверяем в первые секунды.
-      if (!attachHandlers()) {
-        let tries = 0;
-        const timer = setInterval(() => {
-          tries += 1;
-          if (attachHandlers() || tries > 40) clearInterval(timer);
-        }, 100);
-      }
-    } catch (err) {
-      console.warn("[gift] не удалось создать плеер:", err);
-    }
-  }
+  animEl.innerHTML = imgUrl
+    ? `<img src="${imgUrl}" alt="" style="height:100%; width:auto; max-width:100%; display:block; margin:0 auto; object-fit:contain;">`
+    : "";
 
   const othersWrap = document.getElementById("marketGiftDetailOthers");
   const othersWrapBox = document.getElementById("marketGiftDetailOthersWrap");
