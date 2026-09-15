@@ -19203,9 +19203,12 @@ function renderFilterSectionView(key) {
         oninput="onMarketFilterSearch('${key}', this.value)" onclick="event.stopPropagation()"
         style="width:100%; margin-bottom:8px; padding:9px 11px; border-radius:11px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; font-size:13px; font-family:inherit; box-sizing:border-box; flex-shrink:0;">`;
 
+  // Меню — flex-колонка с max-height, поэтому height:100% у вложенного блока
+  // ни к чему не привязан и список не получает границ. Растягиваем секцию
+  // как flex-элемент — тогда внутренний список знает свою высоту и скроллится.
   return `
-    <div style="display:flex; flex-direction:column; height:100%;">
-      <div style="display:flex; align-items:center; gap:8px; padding:2px 2px 8px;">
+    <div style="display:flex; flex-direction:column; flex:1; min-height:0;">
+      <div style="display:flex; align-items:center; gap:8px; padding:2px 2px 8px; flex-shrink:0;">
         <button type="button" onclick="closeFilterSection(event)" aria-label="Назад" style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.08); border:none; color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6" /></svg>
         </button>
