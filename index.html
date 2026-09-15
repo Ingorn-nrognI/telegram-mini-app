@@ -6493,14 +6493,17 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 <script type="module">
   // Файлы движка лежат рядом, в своём репозитории: браузер запрещает
   // создавать Web Worker со стороннего домена, поэтому с CDN он не работал.
-  import "./tlottie-dist/webcomponent/index.js";
-  import { initializeTLottie } from "./tlottie-dist/core/index.js";
+  // Компонент <tlottie-player> сам себя не регистрирует — это делает
+  // отдельная функция registerTLottiePlayerElement. Без неё браузер создаёт
+  // безымянный элемент, который молча ничего не рисует.
+  import { initializeTLottie, registerTLottiePlayerElement } from "./tlottie-dist/webcomponent/index.js";
   try {
     initializeTLottie({
-      wasmUrl: new URL("./tlottie-dist/core/tlottie.wasm", document.baseURI).toString()
+      wasmUrl: new URL("./tlottie-dist/webcomponent/tlottie.wasm", document.baseURI).toString()
     });
-    window.__tlottieReady = true;
-    console.log("[tlottie] движок инициализирован");
+    registerTLottiePlayerElement("tlottie-player");
+    window.__tlottieReady = !!customElements.get("tlottie-player");
+    console.log("[tlottie] движок инициализирован, компонент зарегистрирован:", window.__tlottieReady);
   } catch (err) {
     window.__tlottieReady = false;
     console.warn("[tlottie] не удалось инициализировать:", err);
