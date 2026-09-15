@@ -1146,8 +1146,8 @@ body.history-mode .history-panel-header .history-panel-title {
   position: relative;
   z-index: 1;
   flex: 1;
-  height: 26px;
-  border-radius: 9px;
+  height: 34px;
+  border-radius: 11px;
   background: transparent;
   border: none;
   color: rgba(227,235,255,0.55);
@@ -1158,6 +1158,48 @@ body.history-mode .history-panel-header .history-panel-title {
 }
 
 .history-tab-btn.is-active {
+  color: #ffffff;
+}
+
+.market-history-tabs {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+.market-history-indicator {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  bottom: 3px;
+  width: calc(50% - 4.5px);
+  border-radius: 9px;
+  background: rgba(255,255,255,0.1);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.market-history-tabs.is-withdraw .market-history-indicator {
+  transform: translateX(calc(100% + 4px));
+}
+.market-history-tab-btn {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  height: 32px;
+  border-radius: 9px;
+  background: transparent;
+  border: none;
+  color: rgba(227,235,255,0.55);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
+.market-history-tab-btn.is-active {
   color: #ffffff;
 }
 
@@ -1806,6 +1848,13 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   border-radius: 20px;
   padding: 10px;
   box-sizing: border-box;
+}
+#auctionScreen.menu-screen {
+  /* Тот же расчёт, что у остальных экранов: 8px между балансом и заголовком. */
+  padding-top: calc(var(--safe-top) + 64px);
+}
+#auctionScreen .screen-inner {
+  gap: 8px;
 }
 #inventoryScreen.menu-screen {
   /* Тот же расчёт, что у #homeScreen и #marketScreen: зазор между балансом
@@ -5672,7 +5721,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
         <h2>🏆 Рейтинг</h2>
         <span class="closeBtn" onclick="closeLeaderboard()">✕</span>
       </div>
-      <div id="ratingModeTitle" style="display:none; font-size:16px; font-weight:800; color:#eaf3ff; padding:0 14px; margin-top:6px;">Турниры</div>
+      <div id="ratingModeTitle" style="font-size:20px; font-weight:800; letter-spacing:-0.02em; color:#ffffff; padding:0 14px; margin-top:8px;">Турниры</div>
       <div style="padding:10px 14px;">
         <div class="tournament-tab-frame">
           <button class="tournament-tab active" data-tab="market" onclick="switchTournamentTab('market')">Market</button>
@@ -5963,9 +6012,9 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 
   <div id="auctionScreen" class="menu-screen">
     <div class="screen-inner">
-      <div class="scanner-inline-section-title" style="margin-top:8px;">Аукцион</div>
-      <div id="auctionEmpty" class="scanner-round-number-muted" style="margin:2px;">
-        Лотов пока нет
+      <div class="market-subview-title">Аукцион</div>
+      <div id="auctionEmpty" class="market-empty-state">
+        Пока что недоступно
       </div>
     </div>
   </div>
@@ -7850,7 +7899,12 @@ function getHistoryPanelHeaderHtml() {
       <button type="button" class="history-tab-btn" data-history-tab="market" onclick="switchHistoryTab('market', event)">Market</button>
     </div>
     <div class="history-scroll-area history-scroll-area-market is-hidden">
-      <div class="history-panel-empty">${L("История сделок в Market появится здесь позже.", "Market trade history will appear here later.")}</div>
+      <div class="market-history-tabs">
+        <div class="market-history-indicator"></div>
+        <button type="button" class="market-history-tab-btn is-active" data-market-tab="deals" onclick="switchMarketHistoryTab('deals', event)">Сделки</button>
+        <button type="button" class="market-history-tab-btn" data-market-tab="withdraw" onclick="switchMarketHistoryTab('withdraw', event)">Вывод</button>
+      </div>
+      <div class="market-history-list"></div>
     </div>
   `;
 }
@@ -7868,7 +7922,77 @@ function switchHistoryTab(tab, event) {
   const marketArea = panel.querySelector(".history-scroll-area-market");
   if (arenaArea) arenaArea.classList.toggle("is-hidden", tab !== "arena");
   if (marketArea) marketArea.classList.toggle("is-hidden", tab !== "market");
+  if (tab === "market") loadMarketHistory();
 }
+
+let marketHistoryTab = "deals";
+
+function switchMarketHistoryTab(tab, event) {
+  if (event) event.stopPropagation();
+  marketHistoryTab = tab;
+  const panel = document.getElementById("historyPanel");
+  if (!panel) return;
+  const bar = panel.querySelector(".market-history-tabs");
+  if (bar) bar.classList.toggle("is-withdraw", tab === "withdraw");
+  panel.querySelectorAll(".market-history-tab-btn").forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.marketTab === tab);
+  });
+  loadMarketHistory();
+}
+window.switchMarketHistoryTab = switchMarketHistoryTab;
+
+function buildMarketHistoryRowHtml(item) {
+  const labels = {
+    buy: { text: "Покупка", color: "#7ff0a6", sign: "−" },
+    sell: { text: "Продажа", color: "#7ff0a6", sign: "+" },
+    withdraw: { text: "Вывод в Telegram", color: "#ffd3d0", sign: "−" },
+    deposit: { text: "Добавлен в маркет", color: "#a99cff", sign: "" }
+  };
+  const meta = labels[item.kind] || { text: item.kind, color: "#fff", sign: "" };
+  const name = item.giftTitle || item.giftSlug || "Подарок";
+  const num = item.number ? ` #${item.number}` : "";
+  const priceHtml = item.price != null
+    ? `<div style="font-size:13px; font-weight:700; color:${meta.color}; white-space:nowrap;">${meta.sign}${Number(item.price).toFixed(2)} GRAM</div>`
+    : "";
+  const dateText = item.at ? formatHistoryDate(item.at) : "";
+  return `
+    <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; background:rgba(255,255,255,0.04); margin-bottom:8px;">
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:13px; font-weight:700; color:#fff;">${name}${num}</div>
+        <div style="font-size:12px; color:rgba(255,255,255,0.5);">${meta.text} · ${dateText}</div>
+      </div>
+      ${priceHtml}
+    </div>`;
+}
+
+function loadMarketHistory() {
+  const panel = document.getElementById("historyPanel");
+  if (!panel) return;
+  const area = panel.querySelector(".market-history-list");
+  if (!area) return;
+
+  if (typeof _socket === "undefined" || !_socket) {
+    area.innerHTML = `<div class="history-panel-empty">${L("Нет соединения с сервером.", "No connection to server.")}</div>`;
+    return;
+  }
+
+  const kinds = marketHistoryTab === "deals" ? ["buy", "sell"] : ["withdraw", "deposit"];
+  area.innerHTML = `<div class="history-panel-empty">${L("Загрузка…", "Loading…")}</div>`;
+
+  _socket.emit("market:history:request", { kinds, limit: 100 }, (res) => {
+    const items = (res && res.ok && res.items) || [];
+    if (!items.length) {
+      area.innerHTML = `<div class="history-panel-empty">${
+        marketHistoryTab === "deals"
+          ? L("Пока нет сделок в маркете.", "No market deals yet.")
+          : L("Пока нет выводов и пополнений.", "No withdrawals or deposits yet.")
+      }</div>`;
+      return;
+    }
+    area.innerHTML = items.map(buildMarketHistoryRowHtml).join("");
+  });
+}
+window.loadMarketHistory = loadMarketHistory;
 
 function formatHistoryDate(value) {
   if (!value) return "—";
