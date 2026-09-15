@@ -19070,6 +19070,21 @@ function fetchGiftCatalog() {
   });
 }
 
+let marketFilterActiveSection = null;
+
+// Высоту меню считаем в пикселях по реальному положению нижней панели:
+// в Telegram единица vh не совпадает с видимой областью, и низ меню
+// уезжал под нижнее меню.
+function syncMarketFilterMenuHeight() {
+  const menu = document.getElementById("marketFilterMenu");
+  if (!menu) return;
+  const bar = document.querySelector(".bottom-bar");
+  const menuTop = menu.getBoundingClientRect().top;
+  const limit = bar ? bar.getBoundingClientRect().top : window.innerHeight;
+  const available = Math.max(220, Math.round(limit - menuTop - 14));
+  menu.style.maxHeight = available + "px";
+}
+
 function toggleMarketFilterMenu(event) {
   if (event) event.stopPropagation();
   closeMarketSortMenu();
@@ -19077,10 +19092,12 @@ function toggleMarketFilterMenu(event) {
   if (!menu) return;
   const willOpen = !menu.classList.contains("open");
   if (willOpen) {
+    marketFilterActiveSection = null;
     fetchGiftCatalog();
     renderMarketFilterMenu();
   }
   menu.classList.toggle("open", willOpen);
+  if (willOpen) requestAnimationFrame(syncMarketFilterMenuHeight);
 }
 
 function closeMarketFilterMenu() {
@@ -19119,8 +19136,6 @@ function filterIconHtml(kind, name) {
 
   if (!url) return `<span style="width:22px; height:22px; flex-shrink:0;"></span>`;
 
-  // Узоры приходят разноцветными силуэтами и на тёмном фоне теряются —
-  // перекрашиваем их в белый.
   const whiten = kind === "patterns"
     ? " filter:brightness(0) invert(1); opacity:0.85;"
     : "";
@@ -19139,54 +19154,69 @@ function filterOptionHtml(kind, name, active) {
     </button>`;
 }
 
-function buildFilterSectionHtml(key, title, names, selectedSet, singleValue, disabledNote) {
-  const isOpen = marketFilterOpenSections.has(key);
-  const chosen = singleValue !== undefined ? (singleValue ? 1 : 0) : selectedSet.size;
-  const counter = chosen
-    ? `<span style="margin-left:6px; padding:1px 7px; border-radius:999px; background:rgba(138,124,255,0.22); color:#a99cff; font-size:11px; font-weight:700;">${chosen}</span>`
-    : "";
+function filterSectionMeta(key) {
+  const cat = GIFT_CATALOG || { collections: [], models: {}, backdrops: [], patterns: [] };
+  if (key === "collection") {
+    return { title: "Коллекция", names: cat.collections || [], single: true };
+  }
+  if (key === "models") {
+    return {
+      title: "Модели",
+      names: marketFilters.collection ? (cat.models[marketFilters.collection] || []) : [],
+      note: marketFilters.collection ? null : "Сначала выбери коллекцию"
+    };
+  }
+  if (key === "backdrops") {
+    return { title: "Фон", names: (cat.backdrops || []).map((b) => b.name) };
+  }
+  return { title: "Узор", names: cat.patterns || [] };
+}
 
-  let body = "";
-  if (disabledNote) {
-    body = `<div style="padding:8px 12px; font-size:12px; color:rgba(255,255,255,0.45);">${disabledNote}</div>`;
-  } else if (!names.length) {
-    body = `<div style="padding:8px 12px; font-size:12px; color:rgba(255,255,255,0.45);">Загрузка…</div>`;
+function filterChosenCount(key) {
+  if (key === "collection") return marketFilters.collection ? 1 : 0;
+  const set = marketFilters[key];
+  return set ? set.size : 0;
+}
+
+// Открытая секция занимает всё меню: сверху кнопка "назад" и поиск,
+// ниже — полный список с прокруткой, без обрезки по количеству.
+function renderFilterSectionView(key) {
+  const meta = filterSectionMeta(key);
+  const query = (marketFilterSearch[key] || "").toLowerCase();
+  const shown = query ? meta.names.filter((n) => String(n).toLowerCase().includes(query)) : meta.names;
+
+  let listHtml;
+  if (meta.note) {
+    listHtml = `<div style="padding:12px; font-size:13px; color:rgba(255,255,255,0.45);">${meta.note}</div>`;
+  } else if (!meta.names.length) {
+    listHtml = `<div style="padding:12px; font-size:13px; color:rgba(255,255,255,0.45);">Загрузка…</div>`;
+  } else if (!shown.length) {
+    listHtml = `<div style="padding:12px; font-size:13px; color:rgba(255,255,255,0.45);">Ничего не найдено</div>`;
   } else {
-    const query = (marketFilterSearch[key] || "").toLowerCase();
-    const shown = query ? names.filter((n) => String(n).toLowerCase().includes(query)) : names;
-    // Списков бывает под сотню-другую, поэтому даём поиск и режем длину.
-    const searchHtml = names.length > 12
-      ? `<input type="text" placeholder="Поиск…" value="${marketFilterSearch[key] || ""}"
-           oninput="onMarketFilterSearch('${key}', this.value)" onclick="event.stopPropagation()"
-           style="width:100%; margin:4px 0 6px; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; font-size:13px; font-family:inherit; box-sizing:border-box;">`
-      : "";
-    const rows = shown.slice(0, 80).map((name) => {
-      const active = singleValue !== undefined ? singleValue === name : selectedSet.has(name);
+    listHtml = shown.map((name) => {
+      const active = meta.single ? marketFilters.collection === name : marketFilters[key].has(name);
       return filterOptionHtml(key, name, active);
     }).join("");
-    const more = shown.length > 80
-      ? `<div style="padding:6px 12px; font-size:12px; color:rgba(255,255,255,0.4);">И ещё ${shown.length - 80}. Уточни поиском.</div>`
-      : "";
-    body = searchHtml + (rows || `<div style="padding:8px 12px; font-size:12px; color:rgba(255,255,255,0.45);">Ничего не найдено</div>`) + more;
   }
 
+  const searchHtml = meta.note ? "" : `<input type="text" id="marketFilterSectionSearch" placeholder="Поиск…" value="${marketFilterSearch[key] || ""}"
+        oninput="onMarketFilterSearch('${key}', this.value)" onclick="event.stopPropagation()"
+        style="width:100%; margin-bottom:8px; padding:9px 11px; border-radius:11px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; font-size:13px; font-family:inherit; box-sizing:border-box; flex-shrink:0;">`;
+
   return `
-    <div style="margin-top:4px;">
-      <button type="button" onclick="toggleMarketFilterSection('${key}', event)" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border-radius:12px; background:rgba(255,255,255,0.05); border:none; color:#fff; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer;">
-        <span style="display:flex; align-items:center;">${title}${counter}</span>
-        <span style="transition:transform 0.2s ease; transform:rotate(${isOpen ? 180 : 0}deg); display:flex;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6l6 -6" /></svg>
-        </span>
-      </button>
-      <div style="display:${isOpen ? "block" : "none"}; margin-top:2px;">${body}</div>
+    <div style="display:flex; flex-direction:column; height:100%;">
+      <div style="display:flex; align-items:center; gap:8px; padding:2px 2px 8px;">
+        <button type="button" onclick="closeFilterSection(event)" aria-label="Назад" style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.08); border:none; color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6" /></svg>
+        </button>
+        <div style="font-size:15px; font-weight:700; color:#fff;">${meta.title}</div>
+      </div>
+      ${searchHtml}
+      <div class="no-scrollbar" style="flex:1; overflow-y:auto; min-height:0;">${listHtml}</div>
     </div>`;
 }
 
-function renderMarketFilterMenu() {
-  const menu = document.getElementById("marketFilterMenu");
-  if (!menu) return;
-  const cat = GIFT_CATALOG || { collections: [], models: {}, backdrops: [], patterns: [] };
-
+function renderFilterRootView() {
   const priceHtml = `
     <div style="padding:4px 2px 8px;">
       <div style="font-size:14px; font-weight:600; color:#fff; padding:0 10px 6px;">Цена</div>
@@ -19200,22 +19230,49 @@ function renderMarketFilterMenu() {
       </div>
     </div>`;
 
-  const backdropNames = (cat.backdrops || []).map((b) => b.name);
-  const modelNames = marketFilters.collection ? (cat.models[marketFilters.collection] || []) : [];
-
-  const sections = [
-    buildFilterSectionHtml("collection", "Коллекция", cat.collections || [], null, marketFilters.collection || ""),
-    buildFilterSectionHtml("models", "Модели", modelNames, marketFilters.models, undefined,
-      marketFilters.collection ? null : "Сначала выбери коллекцию"),
-    buildFilterSectionHtml("backdrops", "Фон", backdropNames, marketFilters.backdrops),
-    buildFilterSectionHtml("patterns", "Узор", cat.patterns || [], marketFilters.patterns)
-  ].join("");
+  const rows = ["collection", "models", "backdrops", "patterns"].map((key) => {
+    const meta = filterSectionMeta(key);
+    const count = filterChosenCount(key);
+    const counter = count
+      ? `<span style="margin-left:6px; padding:1px 7px; border-radius:999px; background:rgba(138,124,255,0.22); color:#a99cff; font-size:11px; font-weight:700;">${count}</span>`
+      : "";
+    return `
+      <button type="button" onclick="openFilterSection('${key}', event)" style="width:100%; margin-top:4px; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:11px 12px; border-radius:12px; background:rgba(255,255,255,0.05); border:none; color:#fff; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer;">
+        <span style="display:flex; align-items:center;">${meta.title}${counter}</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6" /></svg>
+      </button>`;
+  }).join("");
 
   const resetHtml = `
     <button type="button" onclick="resetMarketFilters(event)" style="width:100%; margin-top:8px; padding:10px; border-radius:12px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.75); font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;">Сбросить фильтры</button>`;
 
-  menu.innerHTML = priceHtml + sections + resetHtml;
+  return priceHtml + rows + resetHtml;
 }
+
+function renderMarketFilterMenu() {
+  const menu = document.getElementById("marketFilterMenu");
+  if (!menu) return;
+  menu.innerHTML = marketFilterActiveSection
+    ? renderFilterSectionView(marketFilterActiveSection)
+    : renderFilterRootView();
+  menu.style.overflowY = marketFilterActiveSection ? "hidden" : "auto";
+  syncMarketFilterMenuHeight();
+}
+
+function openFilterSection(key, event) {
+  if (event) event.stopPropagation();
+  marketFilterActiveSection = key;
+  marketFilterSearch[key] = "";
+  renderMarketFilterMenu();
+}
+window.openFilterSection = openFilterSection;
+
+function closeFilterSection(event) {
+  if (event) event.stopPropagation();
+  marketFilterActiveSection = null;
+  renderMarketFilterMenu();
+}
+window.closeFilterSection = closeFilterSection;
 
 function onMarketFilterSearch(key, value) {
   marketFilterSearch[key] = value || "";
