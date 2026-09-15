@@ -2108,9 +2108,12 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 260px;
+  /* Фиксированная ширина, а не min-width: иначе меню фильтров
+     растягивалось по содержимому и было шире меню сортировки. */
+  width: 280px;
   max-width: calc(100vw - 32px);
-  max-height: 60vh;
+  /* Ограничиваем высоту так, чтобы низ меню не уезжал под нижнее меню. */
+  max-height: calc(100vh - var(--safe-top, 0px) - var(--bottom-nav-height) - 190px);
   overflow-y: auto;
   display: none;
   flex-direction: column;
@@ -19096,6 +19099,11 @@ function giftPatternIconUrl(pattern) {
   return `${CHANGES_CDN}/patterns/${encodeURIComponent(col)}/png/${encodeURIComponent(pattern)}.png`;
 }
 
+function giftCollectionIconUrl(collection) {
+  const slug = GIFT_CATALOG && GIFT_CATALOG.slugs && GIFT_CATALOG.slugs[collection];
+  return slug ? `https://fragment.com/file/gifts/${slug}/thumb.webp` : null;
+}
+
 function filterIconHtml(kind, name) {
   if (kind === "backdrops") {
     const bd = (GIFT_CATALOG && GIFT_CATALOG.backdrops || []).find((b) => b.name === name);
@@ -19103,11 +19111,20 @@ function filterIconHtml(kind, name) {
     const edge = (bd && bd.edge) || "#222";
     return `<span style="width:22px; height:22px; border-radius:7px; flex-shrink:0; background:radial-gradient(circle, ${center}, ${edge}); border:1px solid rgba(255,255,255,0.15);"></span>`;
   }
-  const url = kind === "models"
-    ? giftModelIconUrl(marketFilters.collection, name)
-    : (kind === "patterns" ? giftPatternIconUrl(name) : null);
+
+  let url = null;
+  if (kind === "models") url = giftModelIconUrl(marketFilters.collection, name);
+  else if (kind === "patterns") url = giftPatternIconUrl(name);
+  else if (kind === "collection") url = giftCollectionIconUrl(name);
+
   if (!url) return `<span style="width:22px; height:22px; flex-shrink:0;"></span>`;
-  return `<img src="${url}" alt="" loading="lazy" style="width:22px; height:22px; object-fit:contain; flex-shrink:0;">`;
+
+  // Узоры приходят разноцветными силуэтами и на тёмном фоне теряются —
+  // перекрашиваем их в белый.
+  const whiten = kind === "patterns"
+    ? " filter:brightness(0) invert(1); opacity:0.85;"
+    : "";
+  return `<img src="${url}" alt="" loading="lazy" style="width:22px; height:22px; object-fit:contain; flex-shrink:0;${whiten}">`;
 }
 
 function filterOptionHtml(kind, name, active) {
