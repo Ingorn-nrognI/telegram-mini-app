@@ -990,13 +990,15 @@ body.rating-mode #leaderboardModal .leaderboardHeader {
 body.rating-mode .top-bar {
   pointer-events: auto;
 }
+/* Заголовок "Турниры" показываем под карточкой баланса — как на остальных
+   экранах, а не по центру шапки. */
 body.rating-mode #ratingModeTitle {
-  display: none;
+  display: block;
 }
 
-/* В режиме турниров шапка обычная: баланс и кнопка истории на месте,
-   меняется только заголовок по центру. */
-body.rating-mode .history-mode-title,
+body.rating-mode .history-mode-title {
+  opacity: 0;
+}
 body.games-mode .history-mode-title {
   opacity: 1;
 }
@@ -1165,7 +1167,9 @@ body.history-mode .history-panel-header .history-panel-title {
   position: relative;
   display: flex;
   gap: 4px;
-  margin: 0 0 10px;
+  /* Область истории имеет отступ 8px, а верхняя плашка — 14px.
+     Добавляем 6px, чтобы обе плашки были одной ширины. */
+  margin: 0 6px 10px;
   padding: 3px;
   border-radius: 12px;
   background: rgba(255,255,255,0.04);
@@ -1189,7 +1193,7 @@ body.history-mode .history-panel-header .history-panel-title {
   position: relative;
   z-index: 1;
   flex: 1;
-  height: 32px;
+  height: 28px;
   border-radius: 9px;
   background: transparent;
   border: none;
