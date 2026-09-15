@@ -19559,6 +19559,11 @@ function renderGiftDetailModal(item, context) {
   const animSrc = getGiftAnimSource(item);
   if (animSrc && animSrc.kind === "lottie" && window.__tlottieReady && customElements.get("tlottie-player")) {
     try {
+      // Предыдущий плеер продолжал работать в фоне даже после того, как его
+      // убирали из разметки: с каждым открытием модалки их становилось
+      // больше, они нагружали устройство и анимация начинала дёргаться.
+      destroyGiftPlayer();
+
       // Композиция квадратная: вписываем её целиком по меньшей стороне —
       // так фигурка и узор сохраняют пропорции, заданные Telegram.
       const side = Math.round(Math.min(
@@ -19575,11 +19580,13 @@ function renderGiftDetailModal(item, context) {
       player.setAttribute("height", String(side));
       player.style.cssText = `position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:${side}px; height:${side}px; display:block; z-index:2;`;
       animEl.appendChild(player);
+      currentGiftPlayer = player;
 
       // Внутренняя обёртка плеера без своего CSS получает нулевую высоту,
-      // и холст выходит размером 363x1 — то есть подарок рисуется в полоску.
-      // Поэтому задаём размеры вручную, не завися от стилей библиотеки.
-      const fixPlayerSize = () => {
+      // и холст выходит в полоску. Размеры задаём один раз — сразу как
+      // плеер построит холст. Раньше это делалось по таймеру уже во время
+      // проигрывания, из-за чего картинка дёргалась на 100-й и 500-й мс.
+      const applySize = () => {
         const wrap = player.querySelector(".tlottie-player");
         if (wrap) {
           wrap.style.width = side + "px";
@@ -19590,17 +19597,22 @@ function renderGiftDetailModal(item, context) {
         if (canvas) {
           canvas.style.width = side + "px";
           canvas.style.height = side + "px";
+          return true;
         }
+        return false;
       };
-      fixPlayerSize();
-      setTimeout(fixPlayerSize, 100);
-      setTimeout(fixPlayerSize, 500);
-      console.log("[gift] плеер добавлен, сторона:", side, "px");
+
+      if (!applySize()) {
+        const observer = new MutationObserver(() => {
+          if (applySize()) observer.disconnect();
+        });
+        observer.observe(player, { childList: true, subtree: true });
+        player._sizeObserver = observer;
+        setTimeout(() => observer.disconnect(), 5000);
+      }
     } catch (err) {
       console.warn("[gift] плеер не создан:", err);
     }
-  } else {
-    console.log("[gift] анимация пропущена | движок готов:", !!window.__tlottieReady, "| компонент:", !!customElements.get("tlottie-player"));
   }
 
   const othersWrap = document.getElementById("marketGiftDetailOthers");
@@ -19779,8 +19791,30 @@ function openInventoryGiftDetail(giftId) {
 }
 window.openInventoryGiftDetail = openInventoryGiftDetail;
 
+// Плеер подарка живёт в одном экземпляре: старый обязательно выключаем,
+// иначе его рабочий поток продолжает крутиться в фоне после закрытия
+// модалки и накопившиеся плееры начинают тормозить анимацию.
+let currentGiftPlayer = null;
+
+function destroyGiftPlayer() {
+  const player = currentGiftPlayer;
+  currentGiftPlayer = null;
+  if (!player) return;
+  try {
+    if (player._sizeObserver) player._sizeObserver.disconnect();
+    const inst = player.tlottie;
+    if (inst) {
+      if (typeof inst.pause === "function") inst.pause();
+      if (typeof inst.destroy === "function") inst.destroy();
+      else if (typeof inst.dispose === "function") inst.dispose();
+    }
+  } catch (e) {}
+  try { player.remove(); } catch (e) {}
+}
+
 function closeMarketGiftDetail(event) {
   if (event) event.stopPropagation();
+  destroyGiftPlayer();
   const overlay = document.getElementById("marketGiftDetailOverlay");
   if (overlay) {
     overlay.classList.remove("open");
