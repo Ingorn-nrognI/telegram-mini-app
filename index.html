@@ -6446,7 +6446,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 
       <!-- Анимация подарка с CDN уже содержит фон и узор, поэтому она
            занимает всю шапку целиком, а не сидит квадратиком по центру. -->
-      <div id="marketGiftDetailAnim" style="position:relative; z-index:1; width:100%; aspect-ratio:1/0.88; overflow:hidden; display:flex; align-items:center; justify-content:center;"></div>
+      <div id="marketGiftDetailAnim" style="position:relative; z-index:1; width:100%; aspect-ratio:1/1; overflow:hidden; display:flex; align-items:center; justify-content:center;"></div>
 
       <div style="position:absolute; top:14px; left:14px; right:14px; z-index:3; display:flex; align-items:center; justify-content:space-between;">
         <button type="button" onclick="closeMarketGiftDetail(event)" aria-label="Закрыть" style="width:34px; height:34px; border-radius:50%; background:rgba(0,0,0,0.28); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:none; display:flex; align-items:center; justify-content:center; color:#fff;">
@@ -19101,9 +19101,9 @@ function renderGiftDetailModal(item, context) {
   const animSrc = getGiftAnimSource(item);
   if (animSrc && animSrc.kind === "lottie" && window.__tlottieReady && customElements.get("tlottie-player")) {
     try {
-      // Берём большую из сторон, чтобы композиция закрыла область целиком:
-      // при подгонке по высоте по бокам оставались полосы фона шапки.
-      const side = Math.round(Math.max(
+      // Композиция квадратная: вписываем её целиком по меньшей стороне —
+      // так фигурка и узор сохраняют пропорции, заданные Telegram.
+      const side = Math.round(Math.min(
         animEl.clientWidth || animEl.offsetWidth || 300,
         animEl.clientHeight || animEl.offsetHeight || 300
       ));
