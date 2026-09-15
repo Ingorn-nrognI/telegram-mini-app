@@ -19040,7 +19040,11 @@ function toggleMarketViewMode(event) {
 }
 
 // Фильтры маркета: цена, коллекция, модель, фон, узор.
-// Варианты собираются из того, что реально выставлено на продажу.
+// Списки берутся из полного справочника Telegram (грузится с сервера),
+// а не только из того, что сейчас выставлено на продажу.
+const CHANGES_CDN = "https://cdn.changes.tg/gifts";
+let GIFT_CATALOG = null;
+
 const marketFilters = {
   priceMin: null,
   priceMax: null,
@@ -19050,6 +19054,18 @@ const marketFilters = {
   patterns: new Set()
 };
 const marketFilterOpenSections = new Set();
+const marketFilterSearch = { collection: "", models: "", backdrops: "", patterns: "" };
+
+function fetchGiftCatalog() {
+  if (GIFT_CATALOG || typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("market:catalog:request", {}, (res) => {
+    if (res && res.ok && res.catalog) {
+      GIFT_CATALOG = res.catalog;
+      const menu = document.getElementById("marketFilterMenu");
+      if (menu && menu.classList.contains("open")) renderMarketFilterMenu();
+    }
+  });
+}
 
 function toggleMarketFilterMenu(event) {
   if (event) event.stopPropagation();
@@ -19057,7 +19073,10 @@ function toggleMarketFilterMenu(event) {
   const menu = document.getElementById("marketFilterMenu");
   if (!menu) return;
   const willOpen = !menu.classList.contains("open");
-  if (willOpen) renderMarketFilterMenu();
+  if (willOpen) {
+    fetchGiftCatalog();
+    renderMarketFilterMenu();
+  }
   menu.classList.toggle("open", willOpen);
 }
 
@@ -19066,47 +19085,72 @@ function closeMarketFilterMenu() {
   if (menu) menu.classList.remove("open");
 }
 
-function collectMarketFilterOptions() {
-  const collections = {};
-  const models = {};
-  const backdrops = {};
-  const patterns = {};
-  MARKET_LISTINGS.forEach((item) => {
-    const col = getGiftDisplayName(item);
-    if (col) collections[col] = (collections[col] || 0) + 1;
-    // Модели показываем только для выбранной коллекции — у разных
-    // подарков наборы моделей свои.
-    if (!marketFilters.collection || col === marketFilters.collection) {
-      if (item.model) models[item.model] = (models[item.model] || 0) + 1;
-    }
-    if (item.backdrop) backdrops[item.backdrop] = (backdrops[item.backdrop] || 0) + 1;
-    if (item.pattern) patterns[item.pattern] = (patterns[item.pattern] || 0) + 1;
-  });
-  return { collections, models, backdrops, patterns };
+function giftModelIconUrl(collection, model) {
+  if (!collection || !model) return null;
+  return `${CHANGES_CDN}/models/${encodeURIComponent(collection)}/png/${encodeURIComponent(model)}.png`;
 }
 
-function buildFilterSectionHtml(key, title, options, selectedSet, singleValue, disabledNote) {
+function giftPatternIconUrl(pattern) {
+  const col = GIFT_CATALOG && GIFT_CATALOG.patternCollection && GIFT_CATALOG.patternCollection[pattern];
+  if (!col) return null;
+  return `${CHANGES_CDN}/patterns/${encodeURIComponent(col)}/png/${encodeURIComponent(pattern)}.png`;
+}
+
+function filterIconHtml(kind, name) {
+  if (kind === "backdrops") {
+    const bd = (GIFT_CATALOG && GIFT_CATALOG.backdrops || []).find((b) => b.name === name);
+    const center = (bd && bd.center) || "#444";
+    const edge = (bd && bd.edge) || "#222";
+    return `<span style="width:22px; height:22px; border-radius:7px; flex-shrink:0; background:radial-gradient(circle, ${center}, ${edge}); border:1px solid rgba(255,255,255,0.15);"></span>`;
+  }
+  const url = kind === "models"
+    ? giftModelIconUrl(marketFilters.collection, name)
+    : (kind === "patterns" ? giftPatternIconUrl(name) : null);
+  if (!url) return `<span style="width:22px; height:22px; flex-shrink:0;"></span>`;
+  return `<img src="${url}" alt="" loading="lazy" style="width:22px; height:22px; object-fit:contain; flex-shrink:0;">`;
+}
+
+function filterOptionHtml(kind, name, active) {
+  const safe = String(name).replace(/'/g, "\\'");
+  return `
+    <button type="button" class="market-sort-option${active ? " active" : ""}" onclick="toggleMarketFilterValue('${kind}', '${safe}', event)">
+      <span style="display:flex; align-items:center; gap:9px; min-width:0;">
+        ${filterIconHtml(kind, name)}
+        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</span>
+      </span>
+      <span class="market-sort-check">✓</span>
+    </button>`;
+}
+
+function buildFilterSectionHtml(key, title, names, selectedSet, singleValue, disabledNote) {
   const isOpen = marketFilterOpenSections.has(key);
-  const names = Object.keys(options).sort();
-  const chosen = singleValue !== undefined
-    ? (singleValue ? 1 : 0)
-    : selectedSet.size;
-  const counter = chosen ? `<span style="margin-left:6px; padding:1px 7px; border-radius:999px; background:rgba(138,124,255,0.22); color:#a99cff; font-size:11px; font-weight:700;">${chosen}</span>` : "";
+  const chosen = singleValue !== undefined ? (singleValue ? 1 : 0) : selectedSet.size;
+  const counter = chosen
+    ? `<span style="margin-left:6px; padding:1px 7px; border-radius:999px; background:rgba(138,124,255,0.22); color:#a99cff; font-size:11px; font-weight:700;">${chosen}</span>`
+    : "";
 
   let body = "";
   if (disabledNote) {
     body = `<div style="padding:8px 12px; font-size:12px; color:rgba(255,255,255,0.45);">${disabledNote}</div>`;
   } else if (!names.length) {
-    body = `<div style="padding:8px 12px; font-size:12px; color:rgba(255,255,255,0.45);">Пока нет вариантов</div>`;
+    body = `<div style="padding:8px 12px; font-size:12px; color:rgba(255,255,255,0.45);">Загрузка…</div>`;
   } else {
-    body = names.map((name) => {
-      const safe = String(name).replace(/'/g, "\\'");
+    const query = (marketFilterSearch[key] || "").toLowerCase();
+    const shown = query ? names.filter((n) => String(n).toLowerCase().includes(query)) : names;
+    // Списков бывает под сотню-другую, поэтому даём поиск и режем длину.
+    const searchHtml = names.length > 12
+      ? `<input type="text" placeholder="Поиск…" value="${marketFilterSearch[key] || ""}"
+           oninput="onMarketFilterSearch('${key}', this.value)" onclick="event.stopPropagation()"
+           style="width:100%; margin:4px 0 6px; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; font-size:13px; font-family:inherit; box-sizing:border-box;">`
+      : "";
+    const rows = shown.slice(0, 80).map((name) => {
       const active = singleValue !== undefined ? singleValue === name : selectedSet.has(name);
-      return `
-        <button type="button" class="market-sort-option${active ? " active" : ""}" onclick="toggleMarketFilterValue('${key}', '${safe}', event)">
-          <span>${name} <span style="opacity:0.45;">· ${options[name]}</span></span><span class="market-sort-check">✓</span>
-        </button>`;
+      return filterOptionHtml(key, name, active);
     }).join("");
+    const more = shown.length > 80
+      ? `<div style="padding:6px 12px; font-size:12px; color:rgba(255,255,255,0.4);">И ещё ${shown.length - 80}. Уточни поиском.</div>`
+      : "";
+    body = searchHtml + (rows || `<div style="padding:8px 12px; font-size:12px; color:rgba(255,255,255,0.45);">Ничего не найдено</div>`) + more;
   }
 
   return `
@@ -19124,7 +19168,7 @@ function buildFilterSectionHtml(key, title, options, selectedSet, singleValue, d
 function renderMarketFilterMenu() {
   const menu = document.getElementById("marketFilterMenu");
   if (!menu) return;
-  const opts = collectMarketFilterOptions();
+  const cat = GIFT_CATALOG || { collections: [], models: {}, backdrops: [], patterns: [] };
 
   const priceHtml = `
     <div style="padding:4px 2px 8px;">
@@ -19139,12 +19183,15 @@ function renderMarketFilterMenu() {
       </div>
     </div>`;
 
+  const backdropNames = (cat.backdrops || []).map((b) => b.name);
+  const modelNames = marketFilters.collection ? (cat.models[marketFilters.collection] || []) : [];
+
   const sections = [
-    buildFilterSectionHtml("collection", "Коллекция", opts.collections, null, marketFilters.collection || ""),
-    buildFilterSectionHtml("models", "Модели", opts.models, marketFilters.models, undefined,
+    buildFilterSectionHtml("collection", "Коллекция", cat.collections || [], null, marketFilters.collection || ""),
+    buildFilterSectionHtml("models", "Модели", modelNames, marketFilters.models, undefined,
       marketFilters.collection ? null : "Сначала выбери коллекцию"),
-    buildFilterSectionHtml("backdrops", "Фон", opts.backdrops, marketFilters.backdrops),
-    buildFilterSectionHtml("patterns", "Узор", opts.patterns, marketFilters.patterns)
+    buildFilterSectionHtml("backdrops", "Фон", backdropNames, marketFilters.backdrops),
+    buildFilterSectionHtml("patterns", "Узор", cat.patterns || [], marketFilters.patterns)
   ].join("");
 
   const resetHtml = `
@@ -19152,6 +19199,15 @@ function renderMarketFilterMenu() {
 
   menu.innerHTML = priceHtml + sections + resetHtml;
 }
+
+function onMarketFilterSearch(key, value) {
+  marketFilterSearch[key] = value || "";
+  renderMarketFilterMenu();
+  const menu = document.getElementById("marketFilterMenu");
+  const input = menu && menu.querySelector(`input[oninput*="'${key}'"]`);
+  if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+}
+window.onMarketFilterSearch = onMarketFilterSearch;
 
 function toggleMarketFilterSection(key, event) {
   if (event) event.stopPropagation();
@@ -19171,6 +19227,7 @@ function toggleMarketFilterValue(key, value, event) {
     // коллекции, поэтому при смене их выбор сбрасывается.
     marketFilters.collection = marketFilters.collection === value ? null : value;
     marketFilters.models.clear();
+    marketFilterSearch.models = "";
   } else {
     const set = marketFilters[key];
     if (!set) return;
@@ -19202,6 +19259,7 @@ function resetMarketFilters(event) {
   marketFilters.models.clear();
   marketFilters.backdrops.clear();
   marketFilters.patterns.clear();
+  Object.keys(marketFilterSearch).forEach((k) => { marketFilterSearch[k] = ""; });
   renderMarketFilterMenu();
   renderMarketGifts();
 }
