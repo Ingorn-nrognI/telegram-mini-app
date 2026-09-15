@@ -19039,15 +19039,26 @@ function toggleMarketViewMode(event) {
   }
 }
 
-let marketFilterType = "all";
+// Фильтры маркета: цена, коллекция, модель, фон, узор.
+// Варианты собираются из того, что реально выставлено на продажу.
+const marketFilters = {
+  priceMin: null,
+  priceMax: null,
+  collection: null,
+  models: new Set(),
+  backdrops: new Set(),
+  patterns: new Set()
+};
+const marketFilterOpenSections = new Set();
 
 function toggleMarketFilterMenu(event) {
   if (event) event.stopPropagation();
   closeMarketSortMenu();
   const menu = document.getElementById("marketFilterMenu");
   if (!menu) return;
-  if (!menu.classList.contains("open")) renderMarketFilterMenu();
-  menu.classList.toggle("open");
+  const willOpen = !menu.classList.contains("open");
+  if (willOpen) renderMarketFilterMenu();
+  menu.classList.toggle("open", willOpen);
 }
 
 function closeMarketFilterMenu() {
@@ -19055,49 +19066,158 @@ function closeMarketFilterMenu() {
   if (menu) menu.classList.remove("open");
 }
 
-// Список фильтров собираем из того, что реально выставлено на продажу:
-// показывать пустые категории смысла нет.
+function collectMarketFilterOptions() {
+  const collections = {};
+  const models = {};
+  const backdrops = {};
+  const patterns = {};
+  MARKET_LISTINGS.forEach((item) => {
+    const col = getGiftDisplayName(item);
+    if (col) collections[col] = (collections[col] || 0) + 1;
+    // Модели показываем только для выбранной коллекции — у разных
+    // подарков наборы моделей свои.
+    if (!marketFilters.collection || col === marketFilters.collection) {
+      if (item.model) models[item.model] = (models[item.model] || 0) + 1;
+    }
+    if (item.backdrop) backdrops[item.backdrop] = (backdrops[item.backdrop] || 0) + 1;
+    if (item.pattern) patterns[item.pattern] = (patterns[item.pattern] || 0) + 1;
+  });
+  return { collections, models, backdrops, patterns };
+}
+
+function buildFilterSectionHtml(key, title, options, selectedSet, singleValue, disabledNote) {
+  const isOpen = marketFilterOpenSections.has(key);
+  const names = Object.keys(options).sort();
+  const chosen = singleValue !== undefined
+    ? (singleValue ? 1 : 0)
+    : selectedSet.size;
+  const counter = chosen ? `<span style="margin-left:6px; padding:1px 7px; border-radius:999px; background:rgba(138,124,255,0.22); color:#a99cff; font-size:11px; font-weight:700;">${chosen}</span>` : "";
+
+  let body = "";
+  if (disabledNote) {
+    body = `<div style="padding:8px 12px; font-size:12px; color:rgba(255,255,255,0.45);">${disabledNote}</div>`;
+  } else if (!names.length) {
+    body = `<div style="padding:8px 12px; font-size:12px; color:rgba(255,255,255,0.45);">Пока нет вариантов</div>`;
+  } else {
+    body = names.map((name) => {
+      const safe = String(name).replace(/'/g, "\\'");
+      const active = singleValue !== undefined ? singleValue === name : selectedSet.has(name);
+      return `
+        <button type="button" class="market-sort-option${active ? " active" : ""}" onclick="toggleMarketFilterValue('${key}', '${safe}', event)">
+          <span>${name} <span style="opacity:0.45;">· ${options[name]}</span></span><span class="market-sort-check">✓</span>
+        </button>`;
+    }).join("");
+  }
+
+  return `
+    <div style="margin-top:4px;">
+      <button type="button" onclick="toggleMarketFilterSection('${key}', event)" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border-radius:12px; background:rgba(255,255,255,0.05); border:none; color:#fff; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer;">
+        <span style="display:flex; align-items:center;">${title}${counter}</span>
+        <span style="transition:transform 0.2s ease; transform:rotate(${isOpen ? 180 : 0}deg); display:flex;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6l6 -6" /></svg>
+        </span>
+      </button>
+      <div style="display:${isOpen ? "block" : "none"}; margin-top:2px;">${body}</div>
+    </div>`;
+}
+
 function renderMarketFilterMenu() {
   const menu = document.getElementById("marketFilterMenu");
   if (!menu) return;
+  const opts = collectMarketFilterOptions();
 
-  const counts = {};
-  MARKET_LISTINGS.forEach((item) => {
-    const name = getGiftDisplayName(item);
-    counts[name] = (counts[name] || 0) + 1;
-  });
+  const priceHtml = `
+    <div style="padding:4px 2px 8px;">
+      <div style="font-size:14px; font-weight:600; color:#fff; padding:0 10px 6px;">Цена</div>
+      <div style="display:flex; align-items:center; gap:8px; padding:0 10px;">
+        <input id="marketFilterPriceMin" type="number" inputmode="decimal" placeholder="от" value="${marketFilters.priceMin != null ? marketFilters.priceMin : ""}"
+          oninput="onMarketFilterPriceInput()" onclick="event.stopPropagation()"
+          style="width:50%; padding:9px 10px; border-radius:11px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; font-size:13px; font-family:inherit; box-sizing:border-box;">
+        <input id="marketFilterPriceMax" type="number" inputmode="decimal" placeholder="до" value="${marketFilters.priceMax != null ? marketFilters.priceMax : ""}"
+          oninput="onMarketFilterPriceInput()" onclick="event.stopPropagation()"
+          style="width:50%; padding:9px 10px; border-radius:11px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; font-size:13px; font-family:inherit; box-sizing:border-box;">
+      </div>
+    </div>`;
 
-  const rows = [`
-    <button type="button" class="market-sort-option${marketFilterType === "all" ? " active" : ""}" onclick="selectMarketFilter('all', event)">
-      <span>Все подарки</span><span class="market-sort-check">✓</span>
-    </button>`];
+  const sections = [
+    buildFilterSectionHtml("collection", "Коллекция", opts.collections, null, marketFilters.collection || ""),
+    buildFilterSectionHtml("models", "Модели", opts.models, marketFilters.models, undefined,
+      marketFilters.collection ? null : "Сначала выбери коллекцию"),
+    buildFilterSectionHtml("backdrops", "Фон", opts.backdrops, marketFilters.backdrops),
+    buildFilterSectionHtml("patterns", "Узор", opts.patterns, marketFilters.patterns)
+  ].join("");
 
-  Object.keys(counts).sort().forEach((name) => {
-    const safe = String(name).replace(/'/g, "\\'");
-    rows.push(`
-      <button type="button" class="market-sort-option${marketFilterType === name ? " active" : ""}" onclick="selectMarketFilter('${safe}', event)">
-        <span>${name} <span style="opacity:0.5;">· ${counts[name]}</span></span><span class="market-sort-check">✓</span>
-      </button>`);
-  });
+  const resetHtml = `
+    <button type="button" onclick="resetMarketFilters(event)" style="width:100%; margin-top:8px; padding:10px; border-radius:12px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.75); font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;">Сбросить фильтры</button>`;
 
-  if (!MARKET_LISTINGS.length) {
-    rows.push(`<div style="padding:10px 12px; color:rgba(255,255,255,0.5); font-size:13px;">Пока нечего фильтровать</div>`);
-  }
-
-  menu.innerHTML = rows.join("");
+  menu.innerHTML = priceHtml + sections + resetHtml;
 }
 
-function selectMarketFilter(value, event) {
+function toggleMarketFilterSection(key, event) {
   if (event) event.stopPropagation();
-  marketFilterType = value;
-  closeMarketFilterMenu();
+  if (marketFilterOpenSections.has(key)) {
+    marketFilterOpenSections.delete(key);
+  } else {
+    marketFilterOpenSections.add(key);
+  }
+  renderMarketFilterMenu();
+}
+window.toggleMarketFilterSection = toggleMarketFilterSection;
+
+function toggleMarketFilterValue(key, value, event) {
+  if (event) event.stopPropagation();
+  if (key === "collection") {
+    // Коллекция одна: повторный клик снимает выбор. Модели привязаны к
+    // коллекции, поэтому при смене их выбор сбрасывается.
+    marketFilters.collection = marketFilters.collection === value ? null : value;
+    marketFilters.models.clear();
+  } else {
+    const set = marketFilters[key];
+    if (!set) return;
+    if (set.has(value)) set.delete(value); else set.add(value);
+  }
+  renderMarketFilterMenu();
   renderMarketGifts();
 }
-window.selectMarketFilter = selectMarketFilter;
+window.toggleMarketFilterValue = toggleMarketFilterValue;
+
+function onMarketFilterPriceInput() {
+  const minEl = document.getElementById("marketFilterPriceMin");
+  const maxEl = document.getElementById("marketFilterPriceMax");
+  const parse = (el) => {
+    const v = Number(el && el.value);
+    return el && el.value !== "" && Number.isFinite(v) ? v : null;
+  };
+  marketFilters.priceMin = parse(minEl);
+  marketFilters.priceMax = parse(maxEl);
+  renderMarketGifts();
+}
+window.onMarketFilterPriceInput = onMarketFilterPriceInput;
+
+function resetMarketFilters(event) {
+  if (event) event.stopPropagation();
+  marketFilters.priceMin = null;
+  marketFilters.priceMax = null;
+  marketFilters.collection = null;
+  marketFilters.models.clear();
+  marketFilters.backdrops.clear();
+  marketFilters.patterns.clear();
+  renderMarketFilterMenu();
+  renderMarketGifts();
+}
+window.resetMarketFilters = resetMarketFilters;
 
 function applyMarketFilter(list) {
-  if (marketFilterType === "all") return list;
-  return list.filter((item) => getGiftDisplayName(item) === marketFilterType);
+  return list.filter((item) => {
+    const price = Number(item.price);
+    if (marketFilters.priceMin != null && price < marketFilters.priceMin) return false;
+    if (marketFilters.priceMax != null && price > marketFilters.priceMax) return false;
+    if (marketFilters.collection && getGiftDisplayName(item) !== marketFilters.collection) return false;
+    if (marketFilters.models.size && !marketFilters.models.has(item.model)) return false;
+    if (marketFilters.backdrops.size && !marketFilters.backdrops.has(item.backdrop)) return false;
+    if (marketFilters.patterns.size && !marketFilters.patterns.has(item.pattern)) return false;
+    return true;
+  });
 }
 
 function handleMarketFilterClick(event) {
