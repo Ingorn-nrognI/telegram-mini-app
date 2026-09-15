@@ -19493,7 +19493,9 @@ function renderGiftDetailModal(item, context) {
       ));
       const player = document.createElement("tlottie-player");
       player.setAttribute("src", animSrc.url);
-      player.setAttribute("loop", "");
+      // Без зацикливания: у подарков это анимация сборки, и на стыке
+      // повтора картинка дёргалась. Проигрываем один раз и замираем на
+      // финальном кадре — так же ведёт себя сам Telegram.
       player.setAttribute("autoplay", "");
       player.setAttribute("width", String(side));
       player.setAttribute("height", String(side));
