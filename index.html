@@ -2108,7 +2108,10 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 210px;
+  min-width: 260px;
+  max-width: calc(100vw - 32px);
+  max-height: 60vh;
+  overflow-y: auto;
   display: none;
   flex-direction: column;
   gap: 2px;
@@ -6076,6 +6079,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 640 640"><path fill="currentColor" d="M96 144C96 117.5 117.5 96 144 96C170.5 96 192 117.5 192 144C192 170.5 170.5 192 144 192C117.5 192 96 170.5 96 144zM256 144C256 126.3 270.3 112 288 112L512 112C529.7 112 544 126.3 544 144C544 161.7 529.7 176 512 176L288 176C270.3 176 256 161.7 256 144zM96 320C96 293.5 117.5 272 144 272C170.5 272 192 293.5 192 320C192 346.5 170.5 368 144 368C117.5 368 96 346.5 96 320zM256 320C256 302.3 270.3 288 288 288L512 288C529.7 288 544 302.3 544 320C544 337.7 529.7 352 512 352L288 352C270.3 352 256 337.7 256 320zM96 496C96 469.5 117.5 448 144 448C170.5 448 192 469.5 192 496C192 522.5 170.5 544 144 544C117.5 544 96 522.5 96 496zM256 496C256 478.3 270.3 464 288 464L512 464C529.7 464 544 478.3 544 496C544 513.7 529.7 528 512 528L288 528C270.3 528 256 513.7 256 496z"/></svg>
             </span>
           </button>
+          <div id="marketFilterMenu" class="market-sort-menu no-scrollbar" onclick="event.stopPropagation()"></div>
           <div id="marketSortMenu" class="market-sort-menu" onclick="event.stopPropagation()">
             <button type="button" class="market-sort-option active" data-sort="price-asc" onclick="selectMarketSort('price-asc', event)">
               <span>Цена: по возрастанию</span><span class="market-sort-check">✓</span>
@@ -18924,7 +18928,7 @@ function buildMarketGiftTileHtml(item, viewPrefix) {
 function renderMarketGifts() {
   const grid = document.getElementById("marketGiftsGrid");
   if (!grid) return;
-  const sorted = sortMarketGiftsList(MARKET_LISTINGS);
+  const sorted = sortMarketGiftsList(applyMarketFilter(MARKET_LISTINGS));
   grid.innerHTML = sorted.map((item) => buildMarketGiftTileHtml(item, "main")).join("");
   sorted.forEach((item) => ensureMarketGiftAnim(item, "main"));
 }
@@ -19006,6 +19010,8 @@ function toggleMarketSortMenu(event) {
 function closeMarketSortMenu() {
   const menu = document.getElementById("marketSortMenu");
   if (menu) menu.classList.remove("open");
+  const filterMenu = document.getElementById("marketFilterMenu");
+  if (filterMenu && !filterMenu.dataset.keepOpen) filterMenu.classList.remove("open");
 }
 
 function selectMarketSort(mode, event) {
@@ -19033,10 +19039,69 @@ function toggleMarketViewMode(event) {
   }
 }
 
-function handleMarketFilterClick(event) {
+let marketFilterType = "all";
+
+function toggleMarketFilterMenu(event) {
   if (event) event.stopPropagation();
   closeMarketSortMenu();
-  showAppNotice(L("Фильтры появятся позже", "Filters will be added later"));
+  const menu = document.getElementById("marketFilterMenu");
+  if (!menu) return;
+  if (!menu.classList.contains("open")) renderMarketFilterMenu();
+  menu.classList.toggle("open");
+}
+
+function closeMarketFilterMenu() {
+  const menu = document.getElementById("marketFilterMenu");
+  if (menu) menu.classList.remove("open");
+}
+
+// Список фильтров собираем из того, что реально выставлено на продажу:
+// показывать пустые категории смысла нет.
+function renderMarketFilterMenu() {
+  const menu = document.getElementById("marketFilterMenu");
+  if (!menu) return;
+
+  const counts = {};
+  MARKET_LISTINGS.forEach((item) => {
+    const name = getGiftDisplayName(item);
+    counts[name] = (counts[name] || 0) + 1;
+  });
+
+  const rows = [`
+    <button type="button" class="market-sort-option${marketFilterType === "all" ? " active" : ""}" onclick="selectMarketFilter('all', event)">
+      <span>Все подарки</span><span class="market-sort-check">✓</span>
+    </button>`];
+
+  Object.keys(counts).sort().forEach((name) => {
+    const safe = String(name).replace(/'/g, "\\'");
+    rows.push(`
+      <button type="button" class="market-sort-option${marketFilterType === name ? " active" : ""}" onclick="selectMarketFilter('${safe}', event)">
+        <span>${name} <span style="opacity:0.5;">· ${counts[name]}</span></span><span class="market-sort-check">✓</span>
+      </button>`);
+  });
+
+  if (!MARKET_LISTINGS.length) {
+    rows.push(`<div style="padding:10px 12px; color:rgba(255,255,255,0.5); font-size:13px;">Пока нечего фильтровать</div>`);
+  }
+
+  menu.innerHTML = rows.join("");
+}
+
+function selectMarketFilter(value, event) {
+  if (event) event.stopPropagation();
+  marketFilterType = value;
+  closeMarketFilterMenu();
+  renderMarketGifts();
+}
+window.selectMarketFilter = selectMarketFilter;
+
+function applyMarketFilter(list) {
+  if (marketFilterType === "all") return list;
+  return list.filter((item) => getGiftDisplayName(item) === marketFilterType);
+}
+
+function handleMarketFilterClick(event) {
+  toggleMarketFilterMenu(event);
 }
 
 function openMarketFavorites(event) {
