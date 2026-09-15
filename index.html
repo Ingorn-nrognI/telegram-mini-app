@@ -7887,7 +7887,20 @@ function closeHistoryPanel(options = {}) {
   syncPanelBackdrop();
 
   if (wasOpen && !preserveNav && currentBottomNav === "history") {
-    setActiveBottomNav(currentMenuView === "home" ? getPreferredHomeNav() : "pvp");
+    // Раньше при любом экране, кроме "дома", подсвечивался pvp — а в
+    // маркете это кнопка "Аукцион". Из-за этого выход из истории в
+    // инвентаре подсвечивал чужую кнопку. Теперь смотрим на текущий экран.
+    const navByView = {
+      home: null,
+      market: "market",
+      inventory: "skins",
+      auction: "pvp",
+      scanner: "pvp"
+    };
+    const target = currentMenuView === "home"
+      ? getPreferredHomeNav()
+      : (navByView[currentMenuView] || "pvp");
+    setActiveBottomNav(target);
   }
 }
 
