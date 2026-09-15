@@ -6496,14 +6496,16 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   // Компонент <tlottie-player> сам себя не регистрирует — это делает
   // отдельная функция registerTLottiePlayerElement. Без неё браузер создаёт
   // безымянный элемент, который молча ничего не рисует.
-  import { initializeTLottie, registerTLottiePlayerElement } from "./tlottie-dist/webcomponent/index.js";
+  // Внутри Telegram страница открыта с адреса самого Telegram, поэтому
+  // относительные пути ведут на web.telegram.org, а не на наш сайт.
+  // Указываем полный адрес репозитория.
+  const TLOTTIE_BASE = "https://ingorn-nrogni.github.io/telegram-mini-app/tlottie-dist/webcomponent/";
   try {
-    initializeTLottie({
-      wasmUrl: new URL("./tlottie-dist/webcomponent/tlottie.wasm", document.baseURI).toString()
-    });
-    registerTLottiePlayerElement("tlottie-player");
+    const mod = await import(TLOTTIE_BASE + "index.js");
+    mod.initializeTLottie({ wasmUrl: TLOTTIE_BASE + "tlottie.wasm" });
+    mod.registerTLottiePlayerElement("tlottie-player");
     window.__tlottieReady = !!customElements.get("tlottie-player");
-    console.log("[tlottie] движок инициализирован, компонент зарегистрирован:", window.__tlottieReady);
+    console.log("[tlottie] движок готов, компонент зарегистрирован:", window.__tlottieReady);
   } catch (err) {
     window.__tlottieReady = false;
     console.warn("[tlottie] не удалось инициализировать:", err);
