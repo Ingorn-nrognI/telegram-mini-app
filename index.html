@@ -2112,8 +2112,11 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
      растягивалось по содержимому и было шире меню сортировки. */
   width: 280px;
   max-width: calc(100vw - 32px);
-  /* Ограничиваем высоту так, чтобы низ меню не уезжал под нижнее меню. */
-  max-height: calc(100vh - var(--safe-top, 0px) - var(--bottom-nav-height) - 190px);
+  /* Высота фиксированная, а не max-height: иначе экран "Модели" без
+     выбранной коллекции показывал одну строку подсказки, и всё меню
+     сжималось под неё. Точное число пикселей всё равно выставляет
+     syncMarketFilterMenuHeight() при открытии — это просто запасной размер. */
+  height: 420px;
   overflow-y: auto;
   display: none;
   flex-direction: column;
@@ -19228,8 +19231,8 @@ function renderFilterSectionView(key) {
 
 function renderFilterRootView() {
   const priceHtml = `
-    <div style="padding:4px 2px 8px;">
-      <div style="font-size:14px; font-weight:600; color:#fff; padding:0 10px 6px;">Цена</div>
+    <div style="padding:2px 2px 6px;">
+      <div style="font-size:13px; font-weight:600; color:#fff; padding:0 10px 5px;">Цена</div>
       <div style="display:flex; align-items:center; gap:8px; padding:0 10px;">
         <input id="marketFilterPriceMin" type="number" inputmode="decimal" placeholder="от" value="${marketFilters.priceMin != null ? marketFilters.priceMin : ""}"
           oninput="onMarketFilterPriceInput()" onclick="event.stopPropagation()"
@@ -19247,9 +19250,9 @@ function renderFilterRootView() {
       ? `<span style="margin-left:6px; padding:1px 7px; border-radius:999px; background:rgba(138,124,255,0.22); color:#a99cff; font-size:11px; font-weight:700;">${count}</span>`
       : "";
     return `
-      <button type="button" onclick="openFilterSection('${key}', event)" style="width:100%; margin-top:4px; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:11px 12px; border-radius:12px; background:rgba(255,255,255,0.05); border:none; color:#fff; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer;">
+      <button type="button" onclick="openFilterSection('${key}', event)" style="width:100%; margin-top:3px; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 12px; border-radius:11px; background:rgba(255,255,255,0.05); border:none; color:#fff; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;">
         <span style="display:flex; align-items:center;">${meta.title}${counter}</span>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6" /></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6" /></svg>
       </button>`;
   }).join("");
 
