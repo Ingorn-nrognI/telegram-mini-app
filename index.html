@@ -19144,13 +19144,15 @@ function filterIconHtml(kind, name) {
 
 function filterOptionHtml(kind, name, active) {
   const safe = String(name).replace(/'/g, "\\'");
+  // Под галочку всегда зарезервировано место слева, поэтому при выборе
+  // ничего не съезжает вправо и картинка остаётся на своём месте.
   return `
     <button type="button" class="market-sort-option${active ? " active" : ""}" onclick="toggleMarketFilterValue('${kind}', '${safe}', event)">
-      <span style="display:flex; align-items:center; gap:9px; min-width:0;">
+      <span style="display:flex; align-items:center; gap:8px; min-width:0;">
+        <span style="width:14px; flex-shrink:0; text-align:center; font-size:13px; color:#a99cff; visibility:${active ? "visible" : "hidden"};">✓</span>
         ${filterIconHtml(kind, name)}
         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</span>
       </span>
-      <span class="market-sort-check">✓</span>
     </button>`;
 }
 
@@ -19183,7 +19185,12 @@ function filterChosenCount(key) {
 function renderFilterSectionView(key) {
   const meta = filterSectionMeta(key);
   const query = (marketFilterSearch[key] || "").toLowerCase();
-  const shown = query ? meta.names.filter((n) => String(n).toLowerCase().includes(query)) : meta.names;
+  const filtered = query ? meta.names.filter((n) => String(n).toLowerCase().includes(query)) : meta.names;
+  // Выбранные поднимаем в начало списка, порядок остальных не трогаем.
+  const isChosen = (n) => meta.single
+    ? marketFilters.collection === n
+    : (marketFilters[key] && marketFilters[key].has(n));
+  const shown = [...filtered].sort((a, b) => (isChosen(b) ? 1 : 0) - (isChosen(a) ? 1 : 0));
 
   let listHtml;
   if (meta.note) {
@@ -19215,7 +19222,7 @@ function renderFilterSectionView(key) {
         <div style="font-size:15px; font-weight:700; color:#fff;">${meta.title}</div>
       </div>
       ${searchHtml}
-      <div class="no-scrollbar" style="flex:1; overflow-y:auto; min-height:0;">${listHtml}</div>
+      <div class="no-scrollbar market-filter-list" style="flex:1; overflow-y:auto; min-height:0;">${listHtml}</div>
     </div>`;
 }
 
@@ -19255,11 +19262,20 @@ function renderFilterRootView() {
 function renderMarketFilterMenu() {
   const menu = document.getElementById("marketFilterMenu");
   if (!menu) return;
+
+  // Список перерисовывается целиком, поэтому запоминаем прокрутку и
+  // возвращаем её — иначе после выбора пункта список прыгал в начало.
+  const prevList = menu.querySelector(".market-filter-list");
+  const prevScroll = prevList ? prevList.scrollTop : 0;
+
   menu.innerHTML = marketFilterActiveSection
     ? renderFilterSectionView(marketFilterActiveSection)
     : renderFilterRootView();
   menu.style.overflowY = marketFilterActiveSection ? "hidden" : "auto";
   syncMarketFilterMenuHeight();
+
+  const nextList = menu.querySelector(".market-filter-list");
+  if (nextList && prevScroll) nextList.scrollTop = prevScroll;
 }
 
 function openFilterSection(key, event) {
