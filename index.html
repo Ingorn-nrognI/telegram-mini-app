@@ -19635,6 +19635,12 @@ function renderGiftDetailModal(item, context) {
         }
         const canvas = player.querySelector("canvas");
         if (canvas) {
+          // CSS-размер только растягивал уже нарисованную картинку — а её
+          // настоящее разрешение (атрибуты width/height у самого canvas)
+          // могло остаться неверным (мы находили холст 363×1). Отсюда
+          // смазанность и "прыгающие" детали. Задаём оба значения явно.
+          if (canvas.width !== side) canvas.width = side;
+          if (canvas.height !== side) canvas.height = side;
           canvas.style.width = side + "px";
           canvas.style.height = side + "px";
           return true;
@@ -20252,6 +20258,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 document.addEventListener("click", closeMarketSortMenu);
+document.addEventListener("click", closeMarketFilterMenu);
 
 window.toggleMarketSortMenu = toggleMarketSortMenu;
 window.selectMarketSort = selectMarketSort;
