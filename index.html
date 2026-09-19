@@ -2112,11 +2112,9 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
      растягивалось по содержимому и было шире меню сортировки. */
   width: 280px;
   max-width: calc(100vw - 32px);
-  /* Высота фиксированная, а не max-height: иначе экран "Модели" без
-     выбранной коллекции показывал одну строку подсказки, и всё меню
-     сжималось под неё. Точное число пикселей всё равно выставляет
-     syncMarketFilterMenuHeight() при открытии — это просто запасной размер. */
-  height: 420px;
+  /* Класс общий для сортировки и фильтров, поэтому высоту тут не задаём —
+     иначе меню сортировки растягивалось на пустое место. */
+  max-height: calc(100vh - var(--safe-top, 0px) - var(--bottom-nav-height) - 190px);
   overflow-y: auto;
   display: none;
   flex-direction: column;
@@ -2131,6 +2129,20 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 
 .market-sort-menu.open {
   display: flex;
+}
+
+/* Только меню фильтров держит постоянную высоту: иначе раздел "Модели"
+   без выбранной коллекции показывал одну строку и меню сжималось. */
+#marketFilterMenu {
+  height: 400px;
+}
+
+/* Пока открыты фильтры, кнопки избранного и корзины уезжают вниз,
+   чтобы не перекрывать список. */
+body.market-filter-open .market-side-fab {
+  transform: translateY(90px);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .market-sort-option {
@@ -19100,12 +19112,14 @@ function toggleMarketFilterMenu(event) {
     renderMarketFilterMenu();
   }
   menu.classList.toggle("open", willOpen);
+  document.body.classList.toggle("market-filter-open", willOpen);
   if (willOpen) requestAnimationFrame(syncMarketFilterMenuHeight);
 }
 
 function closeMarketFilterMenu() {
   const menu = document.getElementById("marketFilterMenu");
   if (menu) menu.classList.remove("open");
+  document.body.classList.remove("market-filter-open");
 }
 
 function giftModelIconUrl(collection, model) {
