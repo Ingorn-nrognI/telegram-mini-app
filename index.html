@@ -2131,14 +2131,6 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   display: flex;
 }
 
-/* Только меню фильтров держит постоянную высоту: иначе раздел "Модели"
-   без выбранной коллекции показывал одну строку и меню сжималось. */
-#marketFilterMenu {
-  /* Подогнано под фактическую высоту содержимого при компактных
-     размерах строк — раньше здесь оставалось пустое место снизу. */
-  height: 300px;
-}
-
 /* Пока открыты фильтры, кнопки избранного и корзины уезжают вниз,
    чтобы не перекрывать список. */
 body.market-filter-open .market-side-fab {
@@ -19291,6 +19283,10 @@ function renderMarketFilterMenu() {
     ? renderFilterSectionView(marketFilterActiveSection)
     : renderFilterRootView();
   menu.style.overflowY = marketFilterActiveSection ? "hidden" : "auto";
+  // Фиксированная высота нужна только открытому списку — там она даёт
+  // область для прокрутки. На главном экране фильтров модалка сама
+  // подстраивается под содержимое, без лишнего пустого места.
+  menu.style.height = marketFilterActiveSection ? "320px" : "";
   syncMarketFilterMenuHeight();
 
   const nextList = menu.querySelector(".market-filter-list");
@@ -19620,7 +19616,9 @@ function renderGiftDetailModal(item, context) {
       player.setAttribute("autoplay", "");
       player.setAttribute("width", String(side));
       player.setAttribute("height", String(side));
-      player.style.cssText = `position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:${side}px; height:${side}px; display:block; z-index:2; pointer-events:none;`;
+      // Клик по холсту и так всплывает к animEl.onclick — pointer-events:none
+      // тут был не нужен и, судя по всему, вызывал артефакт в отрисовке.
+      player.style.cssText = `position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:${side}px; height:${side}px; display:block; z-index:2;`;
       animEl.appendChild(player);
       currentGiftPlayer = player;
 
