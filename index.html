@@ -19634,11 +19634,14 @@ function renderGiftDetailModal(item, context) {
     try {
       destroyGiftPlayer();
 
+      // Размер задаём в пикселях, а не в процентах: при процентах любое
+      // микроизменение контейнера пересчитывает холст и сбивает отрисовку.
+      const side = Math.round(animEl.clientWidth || animEl.offsetWidth || 260);
       const wrap = document.createElement("div");
       wrap.className = "tlottie-player";
-      wrap.style.cssText = "position:absolute; left:0; top:0; width:100%; height:100%; z-index:2;";
+      wrap.style.cssText = `position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:${side}px; height:${side}px; z-index:2;`;
       const canvas = document.createElement("canvas");
-      canvas.style.cssText = "width:100%; height:100%; display:block;";
+      canvas.style.cssText = `width:${side}px; height:${side}px; display:block;`;
       wrap.appendChild(canvas);
       animEl.appendChild(wrap);
 
@@ -19678,7 +19681,31 @@ function renderGiftDetailModal(item, context) {
     }
   };
 
-  playGiftAnimation();
+  // Модалка выезжает снизу анимацией transform длительностью 0.26с.
+  // Плеер при старте измеряет холст через getBoundingClientRect и следит
+  // за размером через ResizeObserver — пока окно едет, размеры меняются
+  // каждый кадр, наблюдатель шлёт пересчёты в рабочий поток, и отрисовка
+  // перестраивается на ходу. Это и давало дрожание в начале.
+  // Поэтому запускаем плеер, когда окно уже встало на место.
+  const sheet = animEl.closest(".app-settings-sheet");
+  if (sheet && getComputedStyle(sheet).transform !== "none") {
+    let started = false;
+    const startOnce = () => {
+      if (started) return;
+      started = true;
+      sheet.removeEventListener("transitionend", onEnd);
+      playGiftAnimation();
+    };
+    const onEnd = (e) => {
+      if (e.propertyName === "transform") startOnce();
+    };
+    sheet.addEventListener("transitionend", onEnd);
+    // Страховка, если событие не придёт (окно уже было открыто).
+    setTimeout(startOnce, 340);
+  } else {
+    playGiftAnimation();
+  }
+
   animEl.style.cursor = (animSrc && animSrc.kind === "lottie") ? "pointer" : "";
   animEl.onclick = playGiftAnimation;
 
