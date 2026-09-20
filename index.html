@@ -6590,6 +6590,16 @@ body.market-filter-open .market-side-fab {
   .tlottie-player > .tlottie-shimmer {
     display: none !important;
   }
+  /* В стилях движка у внутренней обёртки нет размера, поэтому она
+     схлопывалась в ноль вместе с холстом. Размер берём от самого
+     элемента плеера, которому мы задаём ширину и высоту в пикселях. */
+  tlottie-player {
+    display: block;
+  }
+  tlottie-player > .tlottie-player {
+    width: 100%;
+    height: 100%;
+  }
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
