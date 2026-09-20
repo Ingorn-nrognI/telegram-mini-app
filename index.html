@@ -7034,12 +7034,18 @@ const referralGiftAnims = [];
 
 const _prefetchedAnimUrls = new Set();
 
+// Загруженные анимации держим прямо в памяти: кеша браузера мало —
+// движок всё равно обращался к адресу и ждал ответа, из-за чего при
+// открытии модалки был виден пустой фон до появления фигурки.
+const GIFT_ANIM_DATA = {};
+
 function prefetchAnimUrl(url) {
   if (!url || _prefetchedAnimUrls.has(url)) return Promise.resolve();
   _prefetchedAnimUrls.add(url);
-  // Ответ кладётся в кеш браузера — когда файл понадобится плееру,
-  // он возьмётся оттуда мгновенно, без обращения к сети.
-  return fetch(url, { cache: "force-cache" }).catch(() => {});
+  return fetch(url)
+    .then((r) => r.text())
+    .then((text) => { GIFT_ANIM_DATA[url] = text; })
+    .catch(() => { _prefetchedAnimUrls.delete(url); });
 }
 
 // Статуэтки в реферальной программе: держим разобранные данные у себя,
@@ -19700,12 +19706,18 @@ function renderGiftDetailModal(item, context) {
       wrap.appendChild(canvas);
       animEl.appendChild(wrap);
 
-      const anim = new window.__DotLottie({
+      // Если анимация уже прогрета — отдаём данные напрямую, тогда плеер
+      // стартует в том же кадре, без обращения к сети.
+      const preloaded = GIFT_ANIM_DATA[animSrc.url];
+      const anim = new window.__DotLottie(Object.assign({
         canvas,
-        src: animSrc.url,
         autoplay: true,
         loop: false
-      });
+      }, preloaded ? { data: preloaded } : { src: animSrc.url }));
+
+      // Если файл ещё не был прогрет — догружаем его в память, чтобы
+      // следующее открытие уже было мгновенным.
+      if (!preloaded) prefetchAnimUrl(animSrc.url);
 
       wrap._dotlottie = anim;
       currentGiftPlayer = wrap;
