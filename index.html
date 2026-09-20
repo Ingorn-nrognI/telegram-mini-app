@@ -6586,6 +6586,18 @@ body.market-filter-open .market-side-fab {
   }
 </script>
 <link rel="stylesheet" href="https://ingorn-nrogni.github.io/telegram-mini-app/tlottie-dist/webcomponent/tlottie.css">
+<script type="module">
+  // Движок dotLottie на ThorVG — зрелая библиотека с отлаженной отрисовкой.
+  // Файл wasm она подтягивает сама, рабочий поток создаёт через blob,
+  // поэтому запрета на чужой домен, как у tlottie, здесь не возникает.
+  try {
+    const { DotLottie } = await import("https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web@0.80.0/+esm");
+    window.__DotLottie = DotLottie;
+    console.log("[dotlottie] движок готов");
+  } catch (err) {
+    console.warn("[dotlottie] не удалось загрузить:", err);
+  }
+</script>
 <style>
   /* У движка есть встроенный эффект загрузки: серый слой с бегущим бликом
      под холстом, который крутится бесконечно. Он не скрывался и просвечивал
@@ -19613,68 +19625,57 @@ function renderGiftDetailModal(item, context) {
   // под ней всё равно останется корректное изображение подарка.
   const animSrc = getGiftAnimSource(item);
 
-  // Плеер создаётся напрямую через класс TLottie, а не через веб-компонент:
-  // компонент не умеет передавать настройки качества, а по умолчанию там
-  // грубое приближение кривых (curveTolerance 0.125). Из-за него овальные
-  // контуры — прежде всего голова фигурки — пересчитывались каждый кадр с
-  // большой погрешностью и заметно подрагивали.
+  // Движок dotLottie (ThorVG) — зрелая библиотека, в отличие от tlottie,
+  // на которой контуры фигурки подрагивали при отрисовке.
   const playGiftAnimation = () => {
-    // Повторный запуск: не пересоздаём плеер, а перематываем в начало.
-    // Раньше каждый тап заново качал файл и поднимал плеер, из-за чего
-    // всё мигало — холст стартует прозрачным и плавно проявляется.
-    if (currentGiftPlayer && currentGiftPlayer._tlottie) {
+    if (currentGiftPlayer && currentGiftPlayer._dotlottie) {
       try {
-        currentGiftPlayer._tlottie.seek(0);
-        currentGiftPlayer._tlottie.play();
+        currentGiftPlayer._dotlottie.setFrame(0);
+        currentGiftPlayer._dotlottie.play();
         return;
       } catch (e) {}
     }
 
-    if (!(animSrc && animSrc.kind === "lottie" && window.__TLottie)) return;
+    if (!(animSrc && animSrc.kind === "lottie" && window.__DotLottie)) return;
     try {
       destroyGiftPlayer();
 
-      // Размер задаём в пикселях, а не в процентах: при процентах любое
-      // микроизменение контейнера пересчитывает холст и сбивает отрисовку.
       const side = Math.round(animEl.clientWidth || animEl.offsetWidth || 260);
+      const dpr = window.devicePixelRatio || 1;
+
       const wrap = document.createElement("div");
-      wrap.className = "tlottie-player";
       wrap.style.cssText = `position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:${side}px; height:${side}px; z-index:2;`;
       const canvas = document.createElement("canvas");
+      // Внутреннее разрешение — под плотность экрана, видимый размер — в px.
+      canvas.width = Math.round(side * dpr);
+      canvas.height = Math.round(side * dpr);
       canvas.style.cssText = `width:${side}px; height:${side}px; display:block;`;
       wrap.appendChild(canvas);
       animEl.appendChild(wrap);
 
-      const anim = new window.__TLottie({
+      const anim = new window.__DotLottie({
         canvas,
         src: animSrc.url,
         autoplay: true,
-        loop: false,
-        quality: { antialias: true, curveTolerance: 0.008 }
+        loop: false
       });
 
-      wrap._tlottie = anim;
+      wrap._dotlottie = anim;
       currentGiftPlayer = wrap;
 
-      // Пока плеер не отрисовал первый кадр, под ним видна статичная
-      // картинка; как только кадр готов — прячем её, иначе неподвижная
-      // фигурка просвечивает сквозь анимацию.
+      // Картинку прячем через пару кадров после готовности: между
+      // «загружено» и «первый кадр нарисован» есть зазор, в котором
+      // подарок пропадал и получалась вспышка.
       const img = animEl.querySelector("img");
-      anim.on("load", () => {
-        canvas.classList.add("tlottie-ready");
-        if (img) img.style.visibility = "hidden";
+      anim.addEventListener("load", () => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (img) img.style.visibility = "hidden";
+          });
+        });
       });
-      anim.on("error", () => {
+      anim.addEventListener("loadError", () => {
         if (img) img.style.visibility = "";
-      });
-
-      // В конце библиотека жёстко ставит кадр frameCount-1:
-      //   this.frame = this.direction === 1 ? this.frameCount - 1 : 0;
-      // У подарков анимация зациклена, и её спокойная поза — это кадр 0
-      // (он же последний кадр цикла). Остановка на кадр раньше давала
-      // микро-смещение головы ровно под конец. Доводим до нужной позы.
-      anim.on("complete", () => {
-        try { anim.seek(0); } catch (e) {}
       });
     } catch (err) {
       console.warn("[gift] плеер не создан:", err);
@@ -19896,7 +19897,7 @@ function destroyGiftPlayer() {
   if (!player) return;
   try {
     if (player._sizeObserver) player._sizeObserver.disconnect();
-    const inst = player._tlottie || player.tlottie;
+    const inst = player._dotlottie || player._tlottie || player.tlottie;
     if (inst) {
       if (typeof inst.pause === "function") inst.pause();
       if (typeof inst.destroy === "function") inst.destroy();
