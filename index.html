@@ -6574,6 +6574,9 @@ body.market-filter-open .market-side-fab {
   try {
     const mod = await import(TLOTTIE_BASE + "index.js");
     mod.initializeTLottie({ wasmUrl: TLOTTIE_BASE + "tlottie.wasm" });
+    // Веб-компонент не умеет передавать настройки качества отрисовки,
+    // поэтому плеер подарка создаём напрямую через этот класс.
+    window.__TLottie = mod.TLottie;
     mod.registerTLottiePlayerElement("tlottie-player");
     window.__tlottieReady = !!customElements.get("tlottie-player");
     console.log("[tlottie] движок готов, компонент зарегистрирован:", window.__tlottieReady);
@@ -19610,65 +19613,63 @@ function renderGiftDetailModal(item, context) {
   // под ней всё равно останется корректное изображение подарка.
   const animSrc = getGiftAnimSource(item);
 
-  // Вынесено в отдельную функцию, чтобы повторный тап по фигурке проигрывал
-  // анимацию заново — раньше она запускалась только один раз при открытии.
+  // Плеер создаётся напрямую через класс TLottie, а не через веб-компонент:
+  // компонент не умеет передавать настройки качества, а по умолчанию там
+  // грубое приближение кривых (curveTolerance 0.125). Из-за него овальные
+  // контуры — прежде всего голова фигурки — пересчитывались каждый кадр с
+  // большой погрешностью и заметно подрагивали.
   const playGiftAnimation = () => {
-    if (!(animSrc && animSrc.kind === "lottie" && window.__tlottieReady && customElements.get("tlottie-player"))) return;
+    // Повторный запуск: не пересоздаём плеер, а перематываем в начало.
+    // Раньше каждый тап заново качал файл и поднимал плеер, из-за чего
+    // всё мигало — холст стартует прозрачным и плавно проявляется.
+    if (currentGiftPlayer && currentGiftPlayer._tlottie) {
+      try {
+        currentGiftPlayer._tlottie.seek(0);
+        currentGiftPlayer._tlottie.play();
+        return;
+      } catch (e) {}
+    }
+
+    if (!(animSrc && animSrc.kind === "lottie" && window.__TLottie)) return;
     try {
-      // Предыдущий плеер продолжал работать в фоне даже после того, как его
-      // убирали из разметки: с каждым открытием модалки их становилось
-      // больше, они нагружали устройство и анимация начинала дёргаться.
       destroyGiftPlayer();
 
-      // Композиция квадратная: вписываем её целиком по меньшей стороне —
-      // так фигурка и узор сохраняют пропорции, заданные Telegram.
-      const side = Math.round(Math.min(
-        animEl.clientWidth || animEl.offsetWidth || 300,
-        animEl.clientHeight || animEl.offsetHeight || 300
-      ));
-      const player = document.createElement("tlottie-player");
-      player.setAttribute("src", animSrc.url);
-      // Без зацикливания: у подарков это анимация сборки, и на стыке
-      // повтора картинка дёргалась. Проигрываем один раз и замираем на
-      // финальном кадре — так же ведёт себя сам Telegram.
-      player.setAttribute("autoplay", "");
-      player.setAttribute("width", String(side));
-      player.setAttribute("height", String(side));
-      // Клик по холсту и так всплывает к animEl.onclick — pointer-events:none
-      // тут был не нужен и, судя по всему, вызывал артефакт в отрисовке.
-      player.style.cssText = `position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:${side}px; height:${side}px; display:block; z-index:2;`;
-      animEl.appendChild(player);
-      currentGiftPlayer = player;
+      const wrap = document.createElement("div");
+      wrap.className = "tlottie-player";
+      wrap.style.cssText = "position:absolute; left:0; top:0; width:100%; height:100%; z-index:2;";
+      const canvas = document.createElement("canvas");
+      canvas.style.cssText = "width:100%; height:100%; display:block;";
+      wrap.appendChild(canvas);
+      animEl.appendChild(wrap);
 
-      // Под плеером лежит статичная картинка подарка — страховка на случай,
-      // если плеер не заведётся. Но пока анимация играет, неподвижная фигурка
-      // просвечивала снизу, и выглядело это как дёрганье и раздвоение головы.
-      // Поэтому прячем картинку, как только плеер реально начал рисовать.
+      const anim = new window.__TLottie({
+        canvas,
+        src: animSrc.url,
+        autoplay: true,
+        loop: false,
+        quality: { antialias: true, curveTolerance: 0.008 }
+      });
+
+      wrap._tlottie = anim;
+      currentGiftPlayer = wrap;
+
+      // Пока плеер не отрисовал первый кадр, под ним видна статичная
+      // картинка; как только кадр готов — прячем её, иначе неподвижная
+      // фигурка просвечивает сквозь анимацию.
       const img = animEl.querySelector("img");
-      if (img) {
-        const hideImage = () => { img.style.visibility = "hidden"; };
-        const canvas = player.querySelector("canvas");
-        if (canvas && canvas.classList.contains("tlottie-ready")) {
-          hideImage();
-        } else {
-          const observer = new MutationObserver(() => {
-            const c = player.querySelector("canvas.tlottie-ready");
-            if (c) { hideImage(); observer.disconnect(); }
-          });
-          observer.observe(player, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
-          player._sizeObserver = observer;
-          // Если за 4 секунды плеер так и не отрисовал — картинка остаётся.
-          setTimeout(() => observer.disconnect(), 4000);
-        }
-      }
+      anim.on("load", () => {
+        canvas.classList.add("tlottie-ready");
+        if (img) img.style.visibility = "hidden";
+      });
+      anim.on("error", () => {
+        if (img) img.style.visibility = "";
+      });
     } catch (err) {
       console.warn("[gift] плеер не создан:", err);
     }
   };
 
   playGiftAnimation();
-  // pointer-events:none у самого плеера — клик обрабатывает контейнер,
-  // иначе тап попадал бы в canvas, а не всплывал до animEl.
   animEl.style.cursor = (animSrc && animSrc.kind === "lottie") ? "pointer" : "";
   animEl.onclick = playGiftAnimation;
 
@@ -19859,7 +19860,7 @@ function destroyGiftPlayer() {
   if (!player) return;
   try {
     if (player._sizeObserver) player._sizeObserver.disconnect();
-    const inst = player.tlottie;
+    const inst = player._tlottie || player.tlottie;
     if (inst) {
       if (typeof inst.pause === "function") inst.pause();
       if (typeof inst.destroy === "function") inst.destroy();
