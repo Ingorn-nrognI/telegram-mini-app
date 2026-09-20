@@ -19664,6 +19664,15 @@ function renderGiftDetailModal(item, context) {
       anim.on("error", () => {
         if (img) img.style.visibility = "";
       });
+
+      // В конце библиотека жёстко ставит кадр frameCount-1:
+      //   this.frame = this.direction === 1 ? this.frameCount - 1 : 0;
+      // У подарков анимация зациклена, и её спокойная поза — это кадр 0
+      // (он же последний кадр цикла). Остановка на кадр раньше давала
+      // микро-смещение головы ровно под конец. Доводим до нужной позы.
+      anim.on("complete", () => {
+        try { anim.seek(0); } catch (e) {}
+      });
     } catch (err) {
       console.warn("[gift] плеер не создан:", err);
     }
