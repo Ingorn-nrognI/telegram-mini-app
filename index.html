@@ -19640,12 +19640,27 @@ function renderGiftDetailModal(item, context) {
       animEl.appendChild(player);
       currentGiftPlayer = player;
 
-      // Раньше мы вручную задавали размеры внутренней обёртке и холсту —
-      // это была подпорка на время, когда стили движка не подключались
-      // (путь был относительный и уезжал на адрес Telegram). Путь давно
-      // починен, а подпорки остались и мешали плееру рисовать: менять
-      // разрешение холста снаружи нельзя, он рисуется в отдельном потоке.
-      // Размер задаётся только самому элементу плеера, остальное он делает сам.
+      // Под плеером лежит статичная картинка подарка — страховка на случай,
+      // если плеер не заведётся. Но пока анимация играет, неподвижная фигурка
+      // просвечивала снизу, и выглядело это как дёрганье и раздвоение головы.
+      // Поэтому прячем картинку, как только плеер реально начал рисовать.
+      const img = animEl.querySelector("img");
+      if (img) {
+        const hideImage = () => { img.style.visibility = "hidden"; };
+        const canvas = player.querySelector("canvas");
+        if (canvas && canvas.classList.contains("tlottie-ready")) {
+          hideImage();
+        } else {
+          const observer = new MutationObserver(() => {
+            const c = player.querySelector("canvas.tlottie-ready");
+            if (c) { hideImage(); observer.disconnect(); }
+          });
+          observer.observe(player, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+          player._sizeObserver = observer;
+          // Если за 4 секунды плеер так и не отрисовал — картинка остаётся.
+          setTimeout(() => observer.disconnect(), 4000);
+        }
+      }
     } catch (err) {
       console.warn("[gift] плеер не создан:", err);
     }
