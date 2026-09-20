@@ -6583,6 +6583,14 @@ body.market-filter-open .market-side-fab {
   }
 </script>
 <link rel="stylesheet" href="https://ingorn-nrogni.github.io/telegram-mini-app/tlottie-dist/webcomponent/tlottie.css">
+<style>
+  /* У движка есть встроенный эффект загрузки: серый слой с бегущим бликом
+     под холстом, который крутится бесконечно. Он не скрывался и просвечивал
+     сквозь подарок — именно это выглядело как мерцание и дёрганье фигурки. */
+  .tlottie-player > .tlottie-shimmer {
+    display: none !important;
+  }
+</style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -19622,40 +19630,12 @@ function renderGiftDetailModal(item, context) {
       animEl.appendChild(player);
       currentGiftPlayer = player;
 
-      // Внутренняя обёртка плеера без своего CSS получает нулевую высоту,
-      // и холст выходит в полоску. Размеры задаём один раз — сразу как
-      // плеер построит холст. Раньше это делалось по таймеру уже во время
-      // проигрывания, из-за чего картинка дёргалась на 100-й и 500-й мс.
-      const applySize = () => {
-        const wrap = player.querySelector(".tlottie-player");
-        if (wrap) {
-          wrap.style.width = side + "px";
-          wrap.style.height = side + "px";
-          wrap.style.display = "block";
-        }
-        const canvas = player.querySelector("canvas");
-        if (canvas) {
-          // CSS-размер только растягивал уже нарисованную картинку — а её
-          // настоящее разрешение (атрибуты width/height у самого canvas)
-          // могло остаться неверным (мы находили холст 363×1). Отсюда
-          // смазанность и "прыгающие" детали. Задаём оба значения явно.
-          if (canvas.width !== side) canvas.width = side;
-          if (canvas.height !== side) canvas.height = side;
-          canvas.style.width = side + "px";
-          canvas.style.height = side + "px";
-          return true;
-        }
-        return false;
-      };
-
-      if (!applySize()) {
-        const observer = new MutationObserver(() => {
-          if (applySize()) observer.disconnect();
-        });
-        observer.observe(player, { childList: true, subtree: true });
-        player._sizeObserver = observer;
-        setTimeout(() => observer.disconnect(), 5000);
-      }
+      // Раньше мы вручную задавали размеры внутренней обёртке и холсту —
+      // это была подпорка на время, когда стили движка не подключались
+      // (путь был относительный и уезжал на адрес Telegram). Путь давно
+      // починен, а подпорки остались и мешали плееру рисовать: менять
+      // разрешение холста снаружи нельзя, он рисуется в отдельном потоке.
+      // Размер задаётся только самому элементу плеера, остальное он делает сам.
     } catch (err) {
       console.warn("[gift] плеер не создан:", err);
     }
