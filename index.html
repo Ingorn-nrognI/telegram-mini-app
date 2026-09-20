@@ -7027,6 +7027,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const referralGiftAnims = [];
 
+// === Предзагрузка анимаций ===
+// Файлы анимаций весят сотни килобайт. Если грузить их в момент открытия
+// экрана, пользователь видит, как элементы появляются один за другим.
+// Поэтому прогреваем их заранее, сразу после запуска приложения.
+
+const _prefetchedAnimUrls = new Set();
+
+function prefetchAnimUrl(url) {
+  if (!url || _prefetchedAnimUrls.has(url)) return Promise.resolve();
+  _prefetchedAnimUrls.add(url);
+  // Ответ кладётся в кеш браузера — когда файл понадобится плееру,
+  // он возьмётся оттуда мгновенно, без обращения к сети.
+  return fetch(url, { cache: "force-cache" }).catch(() => {});
+}
+
+// Статуэтки в реферальной программе: держим разобранные данные у себя,
+// чтобы плеер стартовал без обращения к файлу вообще.
+const REFERRAL_GIFT_FILES = [
+  { id: "giftKingOfRock", file: "kingofrock_noBG.json" },
+  { id: "giftHulaGirl", file: "hula_girl_noBG.json" },
+  { id: "giftMoonwalker", file: "moonwalker_noBG.json" },
+  { id: "giftStreetBeast", file: "streetbeast_noBG.json" },
+  { id: "giftJordan", file: "jordan_noBG.json" }
+];
+const REFERRAL_GIFT_DATA = {};
+
+function preloadReferralGiftAnims() {
+  REFERRAL_GIFT_FILES.forEach((g) => {
+    if (REFERRAL_GIFT_DATA[g.file]) return;
+    fetch(g.file)
+      .then((r) => r.json())
+      .then((data) => { REFERRAL_GIFT_DATA[g.file] = data; })
+      .catch(() => {});
+  });
+}
+
+// Анимации подарков маркета и инвентаря — прогреваем по мере того,
+// как приходят списки.
+function prefetchGiftAnimations(items) {
+  (items || []).forEach((item) => {
+    const src = getGiftAnimSource(item);
+    if (src && src.kind === "lottie") prefetchAnimUrl(src.url);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  preloadReferralGiftAnims();
+});
+
 function ensureReferralGiftAnimsLoaded() {
   if (referralGiftAnims.length) return;
   const _giftsConfig = [
@@ -7040,13 +7089,15 @@ function ensureReferralGiftAnimsLoaded() {
     const el = document.getElementById(g.id);
     if (el && !el.dataset.loaded) {
       el.dataset.loaded = "1";
-      const anim = lottie.loadAnimation({
+      // Если файл уже загружен при старте — отдаём данные напрямую,
+      // тогда статуэтка появляется мгновенно, без обращения к сети.
+      const preloaded = REFERRAL_GIFT_DATA[g.file];
+      const anim = lottie.loadAnimation(Object.assign({
         container: el,
         renderer: "svg",
         loop: true,
-        autoplay: false,
-        path: g.file
-      });
+        autoplay: false
+      }, preloaded ? { animationData: preloaded } : { path: g.file }));
       referralGiftAnims.push(anim);
     }
   });
@@ -18905,6 +18956,7 @@ function fetchMarketListings() {
     if (res && res.ok) {
       MARKET_LISTINGS = res.items || [];
       refreshMarketViews();
+      prefetchGiftAnimations(MARKET_LISTINGS);
     }
   });
 }
@@ -19606,20 +19658,15 @@ function renderGiftDetailModal(item, context) {
     renderInventoryDetailActions(item);
   }
 
-  // Анимацию подарка рисует tlottie — он понимает градиентные обводки и
-  // маски так же, как движок самого Telegram. Если веб-компонент почему-то
-  // не поднялся, откатываемся на картинку с CDN, чтобы экран не остался пустым.
+  // Анимации прогреваются заранее, при запуске приложения, поэтому к моменту
+  // открытия модалки файл уже в кеше и плеер стартует сразу — без картинки
+  // и без заметной подмены одного изображения другим.
   const animEl = document.getElementById("marketGiftDetailAnim");
-  animEl.innerHTML = "";
   delete animEl.dataset.loaded;
-  // Показываем готовое изображение подарка от Telegram. Пробовали рисовать
-  // анимацию (lottie-web и tlottie/WASM) — оба движка либо искажают контуры,
-  // либо не рисуют вовсе, так что картинка остаётся единственным вариантом,
-  // совпадающим с оригиналом один в один.
-  const imgUrl = getGiftLargeImageUrl(item);
-  animEl.innerHTML = imgUrl
-    ? `<img src="${imgUrl}" alt="" style="height:100%; width:auto; max-width:100%; display:block; margin:0 auto; object-fit:contain;">`
+  animEl.style.background = (item.backdropCenterColor && item.backdropEdgeColor)
+    ? `radial-gradient(circle at 50% 42%, ${item.backdropCenterColor}, ${item.backdropEdgeColor})`
     : "";
+  animEl.innerHTML = "";
 
   // Анимация рисуется поверх картинки. Если движок не отработает —
   // под ней всё равно останется корректное изображение подарка.
@@ -20086,6 +20133,7 @@ function fetchInventoryGifts() {
     if (res && res.ok) {
       INVENTORY_GIFTS = res.items || [];
       renderInventoryGifts();
+      prefetchGiftAnimations(INVENTORY_GIFTS);
     }
   });
 }
