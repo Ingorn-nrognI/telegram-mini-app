@@ -19732,7 +19732,10 @@ function renderGiftDetailModal(item, context) {
         canvas,
         autoplay: true,
         loop: false,
-        segment: [0, 158],
+        // Отрезок до 158-го кадра больше не нужен: рывок в конце давала
+        // межкадровая интерполяция, а не сам файл. Анимация сделана петлёй —
+        // к последнему кадру фигурка возвращается в исходную позу, ту же,
+        // что показывает Telegram. Обрезка останавливала её на полпути.
         useFrameInterpolation: false
       }, preloaded ? { data: preloaded } : { src: animSrc.url }));
 
