@@ -19681,9 +19681,15 @@ function renderGiftDetailModal(item, context) {
   // Движок dotLottie (ThorVG) — зрелая библиотека, в отличие от tlottie,
   // на которой контуры фигурки подрагивали при отрисовке.
   const playGiftAnimation = () => {
+    // Повтор делаем через stop(), а не setFrame(0). По документации движка
+    // setFrame — это перемотка для ползунков: рисует кадр, но не сбрасывает
+    // внутренний таймер. После завершения таймер оставался в состоянии
+    // "доиграли", и каждый повтор шёл с расхождением между таймером и
+    // кадрами — рывки, которых становилось больше с каждым тапом.
+    // stop() полностью останавливает цикл и возвращает в начало отрезка.
     if (currentGiftPlayer && currentGiftPlayer._dotlottie) {
       try {
-        currentGiftPlayer._dotlottie.setFrame(0);
+        currentGiftPlayer._dotlottie.stop();
         currentGiftPlayer._dotlottie.play();
         return;
       } catch (e) {}
