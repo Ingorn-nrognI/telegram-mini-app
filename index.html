@@ -19709,10 +19709,13 @@ function renderGiftDetailModal(item, context) {
       // Если анимация уже прогрета — отдаём данные напрямую, тогда плеер
       // стартует в том же кадре, без обращения к сети.
       const preloaded = GIFT_ANIM_DATA[animSrc.url];
+      // Telegram крутит анимации подарков по кругу: их конец плавно
+      // переходит в начало. Останавливаясь на последнем кадре, мы
+      // обрывали движение на полпути — отсюда и рывок лица под конец.
       const anim = new window.__DotLottie(Object.assign({
         canvas,
         autoplay: true,
-        loop: false
+        loop: true
       }, preloaded ? { data: preloaded } : { src: animSrc.url }));
 
       // Если файл ещё не был прогрет — догружаем его в память, чтобы
@@ -19741,30 +19744,10 @@ function renderGiftDetailModal(item, context) {
     }
   };
 
-  // Модалка выезжает снизу анимацией transform длительностью 0.26с.
-  // Плеер при старте измеряет холст через getBoundingClientRect и следит
-  // за размером через ResizeObserver — пока окно едет, размеры меняются
-  // каждый кадр, наблюдатель шлёт пересчёты в рабочий поток, и отрисовка
-  // перестраивается на ходу. Это и давало дрожание в начале.
-  // Поэтому запускаем плеер, когда окно уже встало на место.
-  const sheet = animEl.closest(".app-settings-sheet");
-  if (sheet && getComputedStyle(sheet).transform !== "none") {
-    let started = false;
-    const startOnce = () => {
-      if (started) return;
-      started = true;
-      sheet.removeEventListener("transitionend", onEnd);
-      playGiftAnimation();
-    };
-    const onEnd = (e) => {
-      if (e.propertyName === "transform") startOnce();
-    };
-    sheet.addEventListener("transitionend", onEnd);
-    // Страховка, если событие не придёт (окно уже было открыто).
-    setTimeout(startOnce, 340);
-  } else {
-    playGiftAnimation();
-  }
+  // Запускаем сразу: ожидание конца выезда окна было нужно прежнему
+  // движку, который пересчитывал отрисовку при каждом изменении размера.
+  // Нынешний так не делает, а задержка оставалась видна как пустой фон.
+  playGiftAnimation();
 
   animEl.style.cursor = (animSrc && animSrc.kind === "lottie") ? "pointer" : "";
   animEl.onclick = playGiftAnimation;
