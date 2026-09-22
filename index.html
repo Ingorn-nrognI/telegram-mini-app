@@ -7040,10 +7040,10 @@ const _prefetchedAnimUrls = new Set();
 const GIFT_ANIM_DATA = {};
 
 // === Движок rlottie ===
-// Тот же движок, которым Telegram рисует анимации в своих приложениях
-// (собран нами из исходников Samsung/rlottie под браузер, лицензия MIT).
-// Только он даёт полное совпадение контуров и деталей с оригиналом.
-const RLOTTIE_BASE = "https://bobrworld.com/gift-assets/rlottie/";
+// Сборка из форка Telegram (TelegramMessenger/rlottie), а не оригинала
+// Samsung: в оригинале нет доработок, которые используют анимации
+// подарков, — голова и часть деталей фигурки не отрисовывались.
+const RLOTTIE_BASE = "https://bobrworld.com/gift-assets/rlottie-tg/";
 let _rlottieLoading = null;
 
 function loadRlottieEngine() {
