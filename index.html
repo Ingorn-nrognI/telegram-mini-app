@@ -2142,11 +2142,15 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 /* Пока открыты фильтры или сортировка, кнопки избранного и корзины
    уезжают вниз тем же движением, что и меню, — синхронно, без задержки
    между появлением меню и уходом кнопок. */
+/* !important — иначе это правило конкурирует по каскаду с задержкой
+   0.18с из правила про скролл (та же сила селектора), и побеждала не
+   та задержка. */
 body.market-filter-open .market-side-fab {
-  transform: translateY(90px);
-  opacity: 0;
-  pointer-events: none;
-  transition-delay: 0s;
+  transform: translateY(90px) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition-delay: 0s !important;
+  transition-duration: 0.25s !important;
 }
 
 .market-sort-option {
