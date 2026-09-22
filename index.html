@@ -2153,6 +2153,12 @@ body.market-filter-open .market-side-fab {
   transition-duration: 0.25s !important;
 }
 
+#amountSheetInput::-webkit-outer-spin-button,
+#amountSheetInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .market-sort-option {
   display: flex;
   align-items: center;
@@ -6572,7 +6578,17 @@ body.market-filter-open .market-side-fab {
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
       </button>
     </div>
-    <input id="amountSheetInput" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="" onkeydown="if(event.key==='Enter')confirmAmountSheet(event)" style="width:100%; padding:14px; border-radius:16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:17px; box-sizing:border-box; margin-bottom:12px;">
+    <div style="display:flex; align-items:stretch; gap:8px; margin-bottom:12px;">
+      <input id="amountSheetInput" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="" onkeydown="if(event.key==='Enter')confirmAmountSheet(event)" style="flex:1; min-width:0; padding:14px; border-radius:16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:17px; box-sizing:border-box; -moz-appearance:textfield; appearance:textfield;">
+      <div style="display:flex; flex-direction:column; gap:8px; flex-shrink:0;">
+        <button type="button" onclick="stepAmountSheet(1)" aria-label="Плюс" style="width:44px; height:38px; border-radius:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; display:flex; align-items:center; justify-content:center; padding:0;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M17 11v6l-5 -4l-5 4v-6l5 -4l5 4" /></svg>
+        </button>
+        <button type="button" onclick="stepAmountSheet(-1)" aria-label="Минус" style="width:44px; height:38px; border-radius:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; display:flex; align-items:center; justify-content:center; padding:0;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M17 13v-6l-5 4l-5 -4v6l5 4l5 -4" /></svg>
+        </button>
+      </div>
+    </div>
     <button type="button" id="amountSheetConfirmBtn" onclick="confirmAmountSheet(event)" style="width:100%; padding:15px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:15px; border:none;"></button>
   </div>
 </div>
@@ -19082,6 +19098,16 @@ let marketOfferMode = false;
 // браузерного prompt() (на телефоне он не всегда открывает цифровую
 // раскладку и выглядит чужеродно) и вместо формы внутри самой карточки.
 let _amountSheetResolve = null;
+
+function stepAmountSheet(direction) {
+  const input = document.getElementById("amountSheetInput");
+  if (!input) return;
+  const current = Number(input.value) || 0;
+  const next = Math.max(0, current + direction);
+  input.value = Number.isInteger(next) ? next : next.toFixed(2);
+  input.focus();
+}
+window.stepAmountSheet = stepAmountSheet;
 
 function openAmountSheet(title, placeholder, confirmText) {
   return new Promise((resolve) => {
