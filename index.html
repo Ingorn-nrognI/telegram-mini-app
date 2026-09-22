@@ -2116,7 +2116,6 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
      иначе меню сортировки растягивалось на пустое место. */
   max-height: calc(100vh - var(--safe-top, 0px) - var(--bottom-nav-height) - 190px);
   overflow-y: auto;
-  display: none;
   flex-direction: column;
   gap: 2px;
   padding: 8px;
@@ -2125,18 +2124,29 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   border: 1px solid rgba(255,255,255,0.1);
   box-shadow: var(--shadow-main);
   z-index: 40;
+  /* Меню всегда в разметке, но скрыто сдвигом и прозрачностью — так оно
+     может плавно выезжать и задвигаться, а не появляться мгновенно. */
+  transform-origin: top right;
+  transform: translateY(-8px) scale(0.96);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.22s ease, opacity 0.2s ease;
 }
 
 .market-sort-menu.open {
-  display: flex;
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
 }
 
-/* Пока открыты фильтры, кнопки избранного и корзины уезжают вниз,
-   чтобы не перекрывать список. */
+/* Пока открыты фильтры или сортировка, кнопки избранного и корзины
+   уезжают вниз тем же движением, что и меню, — синхронно, без задержки
+   между появлением меню и уходом кнопок. */
 body.market-filter-open .market-side-fab {
   transform: translateY(90px);
   opacity: 0;
   pointer-events: none;
+  transition-delay: 0s;
 }
 
 .market-sort-option {
