@@ -6559,6 +6559,24 @@ body.market-filter-open .market-side-fab {
   </div>
 </div>
 
+<div
+  id="amountSheetOverlay"
+  class="app-settings-overlay"
+  onclick="cancelAmountSheet(event)"
+  aria-hidden="true"
+>
+  <div class="app-settings-sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="amountSheetTitle" style="padding:18px 16px calc(18px + env(safe-area-inset-bottom, 0px));">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+      <div id="amountSheetTitle" style="font-size:16px; font-weight:800; color:#fff;"></div>
+      <button type="button" onclick="cancelAmountSheet(event)" aria-label="Закрыть" style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.08); border:none; display:flex; align-items:center; justify-content:center; color:#fff;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+      </button>
+    </div>
+    <input id="amountSheetInput" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="" onkeydown="if(event.key==='Enter')confirmAmountSheet(event)" style="width:100%; padding:14px; border-radius:16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:17px; box-sizing:border-box; margin-bottom:12px;">
+    <button type="button" id="amountSheetConfirmBtn" onclick="confirmAmountSheet(event)" style="width:100%; padding:15px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:15px; border:none;"></button>
+  </div>
+</div>
+
 <div id="roomsModal" class="app-modal" onclick="handleModalBackdropClick('roomsModal', event)">
   <div class="app-modal-card" onclick="event.stopPropagation()">
     <div class="roomsHeader">
@@ -19059,6 +19077,81 @@ const marketFavoriteIds = new Set();
 let marketDetailListingId = null;
 let marketOfferMode = false;
 
+// Общая модалка ввода суммы: используется и для "Продать", и для
+// "Отправить оффер" — одна маленькая модалка, выезжающая снизу, вместо
+// браузерного prompt() (на телефоне он не всегда открывает цифровую
+// раскладку и выглядит чужеродно) и вместо формы внутри самой карточки.
+let _amountSheetResolve = null;
+
+function openAmountSheet(title, placeholder, confirmText) {
+  return new Promise((resolve) => {
+    _amountSheetResolve = resolve;
+    const overlay = document.getElementById("amountSheetOverlay");
+    const input = document.getElementById("amountSheetInput");
+    if (!overlay || !input) { resolve(null); return; }
+    document.getElementById("amountSheetTitle").textContent = title;
+    document.getElementById("amountSheetConfirmBtn").textContent = confirmText;
+    input.value = "";
+    input.placeholder = placeholder;
+    overlay.classList.add("open");
+    overlay.removeAttribute("aria-hidden");
+    // Фокус — после того как модалка доедет снизу: раскладка на телефоне
+    // выезжает вместе с курсором и не дёргает саму анимацию появления.
+    setTimeout(() => input.focus(), 280);
+  });
+}
+
+function closeAmountSheet(result) {
+  const overlay = document.getElementById("amountSheetOverlay");
+  const input = document.getElementById("amountSheetInput");
+  if (input) input.blur();
+  if (overlay) {
+    overlay.classList.remove("open");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+  const resolve = _amountSheetResolve;
+  _amountSheetResolve = null;
+  if (resolve) resolve(result);
+}
+
+function confirmAmountSheet(event) {
+  if (event) event.stopPropagation();
+  const input = document.getElementById("amountSheetInput");
+  const value = Number(input && input.value);
+  if (!(value > 0)) {
+    if (input) input.focus();
+    return;
+  }
+  closeAmountSheet(value);
+}
+window.confirmAmountSheet = confirmAmountSheet;
+
+function cancelAmountSheet(event) {
+  if (event) event.stopPropagation();
+  closeAmountSheet(null);
+}
+window.cancelAmountSheet = cancelAmountSheet;
+
+async function handleMarketOfferButtonClick() {
+  const listingId = marketDetailListingId;
+  if (!listingId || typeof _socket === "undefined" || !_socket) return;
+  const price = await openAmountSheet(
+    L("Укажи сумму оффера", "Enter offer amount"),
+    L("Сумма в GRAM", "Amount in GRAM"),
+    L("Отправить", "Send")
+  );
+  if (!(price > 0)) return;
+  _socket.emit("market:offer:send", { listingId, price }, (res) => {
+    if (res && res.ok) {
+      showAppNotice(L("Оффер отправлен", "Offer sent"));
+      closeMarketGiftDetail();
+    } else {
+      showAppNotice((res && res.error) || L("Не удалось отправить оффер", "Failed to send offer"));
+    }
+  });
+}
+window.handleMarketOfferButtonClick = handleMarketOfferButtonClick;
+
 const MARKET_HEART_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></svg>';
 const MARKET_CART_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M4 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M15 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M17 17h-11v-14h-2" /><path d="M6 5l14 1l-1 7h-13" /></svg>';
 const MARKET_BACK_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l-6 6l6 6" /><path d="M3 12h18" /></svg>';
@@ -19700,7 +19793,7 @@ function renderMarketOfferForm(showForm) {
   if (!showForm) {
     actionsEl.innerHTML = `
       <button type="button" onclick="handleMarketGiftBuy()" style="width:100%; padding:16px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:15px; border:none; letter-spacing:0.02em;">КУПИТЬ ЗА ${item.price.toFixed(2)} GRAM</button>
-      <button type="button" onclick="renderMarketOfferForm(true)" style="width:100%; padding:14px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:700; font-size:14px;">Отправить оффер</button>`;
+      <button type="button" onclick="handleMarketOfferButtonClick()" style="width:100%; padding:14px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:700; font-size:14px;">Отправить оффер</button>`;
   } else {
     actionsEl.innerHTML = `
       <input id="marketOfferPriceInput" type="number" step="0.01" min="0.01" placeholder="Твоя цена в GRAM" style="width:100%; padding:14px; border-radius:16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:15px; box-sizing:border-box;">
@@ -19932,9 +20025,13 @@ function renderInventoryDetailActions(item) {
   const actionsEl = document.getElementById("marketGiftDetailActions");
   if (!actionsEl) return;
 
+  // У "Снять с продажи" закрытие карточки идёт сразу в клике — там нет
+  // ввода суммы. У "Продать" карточку закрывает сама функция, и только
+  // после того как продажа реально прошла — модалка суммы должна успеть
+  // появиться поверх карточки.
   const sellBtn = item.hasActiveListing
     ? `<button type="button" onclick="handleInventoryListToggle(${item.id}); closeMarketGiftDetail();" style="flex:1; padding:14px 10px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:700; font-size:14px;">Снять с продажи</button>`
-    : `<button type="button" onclick="handleInventoryListToggle(${item.id}); closeMarketGiftDetail();" style="flex:1; padding:14px 10px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:14px; border:none;">ПРОДАТЬ</button>`;
+    : `<button type="button" onclick="handleInventoryListToggle(${item.id})" style="flex:1; padding:14px 10px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:14px; border:none;">ПРОДАТЬ</button>`;
 
   const withdrawBtn = `
     <button type="button" onclick="handleGiftWithdraw(${item.id})" style="flex:1; padding:10px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:800; font-size:14px; line-height:1.25;">
@@ -20233,7 +20330,7 @@ function renderInventoryGifts() {
   INVENTORY_GIFTS.forEach(ensureInventoryGiftAnim);
 }
 
-function handleInventoryListToggle(giftId) {
+async function handleInventoryListToggle(giftId) {
   const item = INVENTORY_GIFTS.find((g) => g.id === giftId);
   if (!item || typeof _socket === "undefined" || !_socket) return;
 
@@ -20250,12 +20347,17 @@ function handleInventoryListToggle(giftId) {
     return;
   }
 
-  const priceStr = prompt(L("Укажи цену в GRAM", "Enter price in GRAM"));
-  const price = Number(priceStr);
+  const price = await openAmountSheet(
+    L("Укажи сумму продажи", "Enter sale amount"),
+    L("Сумма в GRAM", "Amount in GRAM"),
+    L("Выставить", "List")
+  );
   if (!(price > 0)) return;
+
   _socket.emit("market:listing:create", { giftInstanceId: giftId, price }, (res) => {
     if (res && res.ok) {
       showAppNotice(L("Подарок выставлен на продажу", "Listed for sale"));
+      closeMarketGiftDetail();
       fetchInventoryGifts();
       fetchMarketListings();
     } else {
