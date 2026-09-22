@@ -7039,6 +7039,99 @@ const _prefetchedAnimUrls = new Set();
 // открытии модалки был виден пустой фон до появления фигурки.
 const GIFT_ANIM_DATA = {};
 
+// === Движок rlottie ===
+// Тот же движок, которым Telegram рисует анимации в своих приложениях
+// (собран нами из исходников Samsung/rlottie под браузер, лицензия MIT).
+// Только он даёт полное совпадение контуров и деталей с оригиналом.
+const RLOTTIE_BASE = "https://bobrworld.com/gift-assets/rlottie/";
+let _rlottieLoading = null;
+
+function loadRlottieEngine() {
+  if (_rlottieLoading) return _rlottieLoading;
+  _rlottieLoading = new Promise((resolve) => {
+    // Сборка обычная (не модульная): она берёт настройки из глобального
+    // Module — адрес wasm-файла и сигнал готовности.
+    window.Module = {
+      locateFile: (path) => RLOTTIE_BASE + path,
+      onRuntimeInitialized: () => {
+        window.__rlottieReady = true;
+        resolve(true);
+      }
+    };
+    const script = document.createElement("script");
+    script.src = RLOTTIE_BASE + "rlottie-wasm.js";
+    script.async = true;
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+  return _rlottieLoading;
+}
+
+// Плеер: рисует строго целые кадры в родной частоте анимации — так же,
+// как Telegram. Проигрывает один раз и замирает на последнем кадре.
+function createRlottiePlayer(canvas, jsonText) {
+  if (!window.__rlottieReady || !window.Module || !window.Module.RlottieWasm) return null;
+
+  let inst;
+  try {
+    inst = new window.Module.RlottieWasm();
+    if (!inst.load(jsonText)) { inst.delete(); return null; }
+  } catch (e) {
+    console.warn("[rlottie] не удалось загрузить анимацию:", e);
+    return null;
+  }
+
+  const total = inst.frames();
+  const fpsMatch = /"fr"\s*:\s*([\d.]+)/.exec(jsonText);
+  const fps = fpsMatch ? Number(fpsMatch[1]) : 60;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  let raf = 0;
+  let startedAt = 0;
+  let destroyed = false;
+  let lastDrawn = -1;
+
+  const draw = (frame) => {
+    if (frame === lastDrawn) return;
+    lastDrawn = frame;
+    const view = inst.render(frame, w, h);
+    // render отдаёт окно в память движка — копируем сразу, до следующего
+    // вызова, иначе данные будут перезаписаны.
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(view), w, h), 0, 0);
+  };
+
+  const tick = (now) => {
+    if (destroyed) return;
+    if (!startedAt) startedAt = now;
+    // +0.5 защищает от погрешности вещественных чисел: без него кадры
+    // изредка "проскакивали" на частоте экрана, совпадающей с частотой анимации.
+    const frame = Math.min(total - 1, Math.floor((now - startedAt) * fps / 1000 + 0.5));
+    draw(frame);
+    if (frame < total - 1) raf = requestAnimationFrame(tick);
+  };
+
+  return {
+    play() {
+      if (destroyed) return;
+      cancelAnimationFrame(raf);
+      startedAt = 0;
+      lastDrawn = -1;
+      raf = requestAnimationFrame(tick);
+    },
+    destroy() {
+      destroyed = true;
+      cancelAnimationFrame(raf);
+      try { inst.delete(); } catch (e) {}
+    }
+  };
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadRlottieEngine();
+});
+
 function prefetchAnimUrl(url) {
   if (!url || _prefetchedAnimUrls.has(url)) return Promise.resolve();
   _prefetchedAnimUrls.add(url);
@@ -19681,93 +19774,55 @@ function renderGiftDetailModal(item, context) {
   // Движок dotLottie (ThorVG) — зрелая библиотека, в отличие от tlottie,
   // на которой контуры фигурки подрагивали при отрисовке.
   const playGiftAnimation = () => {
-    // Повтор делаем через stop(), а не setFrame(0). По документации движка
-    // setFrame — это перемотка для ползунков: рисует кадр, но не сбрасывает
-    // внутренний таймер. После завершения таймер оставался в состоянии
-    // "доиграли", и каждый повтор шёл с расхождением между таймером и
-    // кадрами — рывки, которых становилось больше с каждым тапом.
-    // stop() полностью останавливает цикл и возвращает в начало отрезка.
-    if (currentGiftPlayer && currentGiftPlayer._dotlottie) {
-      try {
-        currentGiftPlayer._dotlottie.stop();
-        currentGiftPlayer._dotlottie.play();
-        return;
-      } catch (e) {}
+    // Повтор по тапу: наш цикл отрисовки детерминированный — просто
+    // запускаем его заново с нулевого кадра.
+    if (currentGiftPlayer && currentGiftPlayer._rlottie) {
+      currentGiftPlayer._rlottie.play();
+      return;
     }
+    if (!(animSrc && animSrc.kind === "lottie")) return;
 
-    if (!(animSrc && animSrc.kind === "lottie" && window.__DotLottie)) return;
-    try {
-      destroyGiftPlayer();
+    const side = Math.round(animEl.clientWidth || animEl.offsetWidth || 260);
+    const dpr = window.devicePixelRatio || 1;
 
-      const side = Math.round(animEl.clientWidth || animEl.offsetWidth || 260);
-      const dpr = window.devicePixelRatio || 1;
-
+    const mount = (jsonText) => {
+      if (!window.__rlottieReady || !jsonText) return false;
+      const px = Math.round(side * dpr);
       const wrap = document.createElement("div");
       wrap.style.cssText = `position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:${side}px; height:${side}px; z-index:2;`;
       const canvas = document.createElement("canvas");
-      // Внутреннее разрешение — под плотность экрана, видимый размер — в px.
-      canvas.width = Math.round(side * dpr);
-      canvas.height = Math.round(side * dpr);
+      canvas.width = px;
+      canvas.height = px;
       canvas.style.cssText = `width:${side}px; height:${side}px; display:block;`;
       wrap.appendChild(canvas);
+
+      const player = createRlottiePlayer(canvas, jsonText);
+      if (!player) return false;
+
+      destroyGiftPlayer();
       animEl.appendChild(wrap);
-
-      // Если анимация уже прогрета — отдаём данные напрямую, тогда плеер
-      // стартует в том же кадре, без обращения к сети.
-      const preloaded = GIFT_ANIM_DATA[animSrc.url];
-      // В самом файле анимации в кадрах 160–179 голова делает резкий отскок:
-      // сплющивание 110/90, вытягивание 90/110 и наклон на 6–8°. Исходник
-      // был длиннее (там есть ключевые кадры 190 и 213 — за концом), и в
-      // Telegram этот отскок — часть непрерывного круга. У нас анимация
-      // играет один раз, и обрыв приходился ровно на отскок — отсюда
-      // подёргивание головы под конец. Поэтому играем отрезок до отскока
-      // и замираем на спокойной позе.
-      // Анимации подарков собраны на мгновенной подмене слоёв: в файле есть
-      // резкие переключения видимости (кадры 15, 71, 86, 89, 97, 103, 111,
-      // 117, 134). Движок Telegram рисует строго целые кадры, и подмена
-      // незаметна. Наш по умолчанию включает межкадровую интерполяцию и
-      // рисует дробные моменты — вокруг точек подмены появлялись состояния,
-      // которых в оригинале нет, отсюда рывки в случайных местах.
-      const anim = new window.__DotLottie(Object.assign({
-        canvas,
-        autoplay: true,
-        loop: false,
-        // Отрезок до 158-го кадра больше не нужен: рывок в конце давала
-        // межкадровая интерполяция, а не сам файл. Анимация сделана петлёй —
-        // к последнему кадру фигурка возвращается в исходную позу, ту же,
-        // что показывает Telegram. Обрезка останавливала её на полпути.
-        useFrameInterpolation: false
-      }, preloaded ? { data: preloaded } : { src: animSrc.url }));
-
-      // Если файл ещё не был прогрет — догружаем его в память, чтобы
-      // следующее открытие уже было мгновенным.
-      if (!preloaded) prefetchAnimUrl(animSrc.url);
-
-      wrap._dotlottie = anim;
+      wrap._rlottie = player;
       currentGiftPlayer = wrap;
+      player.play();
+      return true;
+    };
 
-      // Картинку прячем через пару кадров после готовности: между
-      // «загружено» и «первый кадр нарисован» есть зазор, в котором
-      // подарок пропадал и получалась вспышка.
-      const img = animEl.querySelector("img");
-      anim.addEventListener("load", () => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (img) img.style.visibility = "hidden";
-          });
-        });
-      });
-      anim.addEventListener("loadError", () => {
-        if (img) img.style.visibility = "";
-      });
-    } catch (err) {
-      console.warn("[gift] плеер не создан:", err);
-    }
+    // Анимация уже в памяти — стартуем сразу.
+    if (mount(GIFT_ANIM_DATA[animSrc.url])) return;
+
+    // Иначе догружаем файл и движок, потом запускаем.
+    Promise.all([
+      loadRlottieEngine(),
+      GIFT_ANIM_DATA[animSrc.url]
+        ? Promise.resolve()
+        : prefetchAnimUrl(animSrc.url)
+    ]).then(() => {
+      // Пока грузилось, пользователь мог уже открыть другой подарок.
+      if (!animEl.isConnected) return;
+      mount(GIFT_ANIM_DATA[animSrc.url]);
+    });
   };
 
-  // Запускаем сразу: ожидание конца выезда окна было нужно прежнему
-  // движку, который пересчитывал отрисовку при каждом изменении размера.
-  // Нынешний так не делает, а задержка оставалась видна как пустой фон.
   playGiftAnimation();
 
   animEl.style.cursor = (animSrc && animSrc.kind === "lottie") ? "pointer" : "";
@@ -19960,7 +20015,7 @@ function destroyGiftPlayer() {
   if (!player) return;
   try {
     if (player._sizeObserver) player._sizeObserver.disconnect();
-    const inst = player._dotlottie || player._tlottie || player.tlottie;
+    const inst = player._rlottie || player._dotlottie || player._tlottie || player.tlottie;
     if (inst) {
       if (typeof inst.pause === "function") inst.pause();
       if (typeof inst.destroy === "function") inst.destroy();
