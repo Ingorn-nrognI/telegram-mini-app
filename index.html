@@ -1180,14 +1180,17 @@ body.history-mode .history-panel-header .history-panel-title {
   top: 3px;
   left: 3px;
   bottom: 3px;
-  width: calc(50% - 4.5px);
+  width: calc(33.333% - 5.33px);
   border-radius: 9px;
   background: rgba(255,255,255,0.1);
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
   transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.market-history-tabs.is-withdraw .market-history-indicator {
+.market-history-tabs[data-active-index="1"] .market-history-indicator {
   transform: translateX(calc(100% + 4px));
+}
+.market-history-tabs[data-active-index="2"] .market-history-indicator {
+  transform: translateX(calc(200% + 8px));
 }
 .market-history-tab-btn {
   position: relative;
@@ -8167,6 +8170,7 @@ function getHistoryPanelHeaderHtml() {
         <div class="market-history-indicator"></div>
         <button type="button" class="market-history-tab-btn is-active" data-market-tab="deals" onclick="switchMarketHistoryTab('deals', event)">Сделки</button>
         <button type="button" class="market-history-tab-btn" data-market-tab="withdraw" onclick="switchMarketHistoryTab('withdraw', event)">Вывод</button>
+        <button type="button" class="market-history-tab-btn" data-market-tab="offers" onclick="switchMarketHistoryTab('offers', event)">Офферы</button>
       </div>
       <div class="market-history-list"></div>
     </div>
@@ -8191,13 +8195,15 @@ function switchHistoryTab(tab, event) {
 
 let marketHistoryTab = "deals";
 
+const MARKET_HISTORY_TAB_ORDER = ["deals", "withdraw", "offers"];
+
 function switchMarketHistoryTab(tab, event) {
   if (event) event.stopPropagation();
   marketHistoryTab = tab;
   const panel = document.getElementById("historyPanel");
   if (!panel) return;
   const bar = panel.querySelector(".market-history-tabs");
-  if (bar) bar.classList.toggle("is-withdraw", tab === "withdraw");
+  if (bar) bar.dataset.activeIndex = String(MARKET_HISTORY_TAB_ORDER.indexOf(tab));
   panel.querySelectorAll(".market-history-tab-btn").forEach((btn) => {
     btn.classList.toggle("is-active", btn.dataset.marketTab === tab);
   });
@@ -8240,9 +8246,23 @@ function loadMarketHistory() {
     return;
   }
 
-  const kinds = marketHistoryTab === "deals" ? ["buy", "sell"] : ["withdraw", "deposit"];
   area.innerHTML = `<div class="history-panel-empty">${L("Загрузка…", "Loading…")}</div>`;
 
+  // Вкладка "Офферы" — отдельный запрос: завершённые (принятые/отклонённые/
+  // отменённые/просроченные) офферы, а не журнал сделок/выводов.
+  if (marketHistoryTab === "offers") {
+    _socket.emit("market:offers:history:request", {}, (res) => {
+      const items = (res && res.ok && res.items) || [];
+      if (!items.length) {
+        area.innerHTML = `<div class="history-panel-empty">${L("Пока нет завершённых офферов.", "No completed offers yet.")}</div>`;
+        return;
+      }
+      area.innerHTML = items.map((o) => buildOfferRowHtml(o, o.direction === "sent" ? "sent" : "received", true)).join("");
+    });
+    return;
+  }
+
+  const kinds = marketHistoryTab === "deals" ? ["buy", "sell"] : ["withdraw", "deposit"];
   _socket.emit("market:history:request", { kinds, limit: 100 }, (res) => {
     const items = (res && res.ok && res.items) || [];
     if (!items.length) {
@@ -20425,8 +20445,7 @@ function switchInventoryOffersTab(tab) {
 }
 window.switchInventoryOffersTab = switchInventoryOffersTab;
 
-function buildOfferRowHtml(offer, role) {
-  const meta = GIFT_TYPE_META[offer.gift_type] || {};
+function buildOfferRowHtml(offer, role, isHistory) {
   const statusLabels = {
     pending: L("Ожидает", "Pending"),
     accepted: L("Принят", "Accepted"),
@@ -20436,7 +20455,7 @@ function buildOfferRowHtml(offer, role) {
   };
   const statusText = statusLabels[offer.status] || offer.status;
   let actionsHtml = "";
-  if (offer.status === "pending") {
+  if (!isHistory && offer.status === "pending") {
     if (role === "sent") {
       actionsHtml = `<button type="button" onclick="handleOfferCancel(${offer.id})" style="padding:8px 14px; border-radius:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12px; font-weight:700;">Отменить</button>`;
     } else {
@@ -20445,12 +20464,17 @@ function buildOfferRowHtml(offer, role) {
         <button type="button" onclick="handleOfferDecline(${offer.id})" style="padding:8px 14px; border-radius:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12px; font-weight:700;">Отклонить</button>`;
     }
   }
+  // Сервер теперь отдаёт giftType/number (а не gift_type/collectible_number) —
+  // это и есть поля, которые понимает buildGiftImageHtml для сборки настоящей
+  // картинки подарка (модель+фон+узор), а не просто цветного квадрата.
+  const name = GIFT_TYPE_META[offer.giftType]?.name || offer.giftType;
+  const directionLabel = isHistory ? (offer.direction === "sent" ? L("Ты отправил", "You sent") : L("Тебе прислали", "Sent to you")) : "";
   return `
-    <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:16px; background:rgba(255,255,255,0.04);">
-      <div style="width:44px; height:44px; border-radius:12px; flex-shrink:0; ${getGiftBackdropStyle({ backdropCenterColor: offer.backdrop_center_color, backdropEdgeColor: offer.backdrop_edge_color })}"></div>
+    <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:16px; background:rgba(255,255,255,0.04); margin-bottom:${isHistory ? "8px" : "0"};">
+      <div style="width:44px; height:44px; border-radius:12px; overflow:hidden; flex-shrink:0;">${buildGiftImageHtml(offer)}</div>
       <div style="flex:1; min-width:0;">
-        <div style="font-size:13px; font-weight:700;">${meta.name || offer.gift_type} #${offer.collectible_number}</div>
-        <div style="font-size:12px; color:rgba(255,255,255,0.5);">${Number(offer.price).toFixed(2)} GRAM · ${statusText}</div>
+        <div style="font-size:13px; font-weight:700;">${name} #${offer.number}</div>
+        <div style="font-size:12px; color:rgba(255,255,255,0.5);">${Number(offer.price).toFixed(2)} GRAM · ${statusText}${directionLabel ? " · " + directionLabel : ""}</div>
       </div>
       <div style="display:flex; gap:8px; flex-shrink:0;">${actionsHtml}</div>
     </div>`;
