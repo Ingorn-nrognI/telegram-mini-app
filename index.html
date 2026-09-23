@@ -5177,13 +5177,25 @@ body.market-filter-open .market-side-fab {
   margin-bottom: 14px;
 }
 .referral-level-card-name {
-  font-size: 15px;
+  font-size: 30px;
   font-weight: 700;
 }
-.referral-level-card-percent {
-  font-size: 13px;
-  font-weight: 700;
+.referral-level-card-rates {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: auto;
+}
+.referral-level-card-rate-row {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  white-space: nowrap;
+}
+.referral-level-card-rate-row b {
   color: #2fe07a;
+  font-weight: 700;
 }
 .referral-level-track {
   position: relative;
@@ -9774,7 +9786,10 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
       <div class="referral-level-card" style="${isCurrent ? "border-color:rgba(47,224,122,0.5);" : ""}">
         <div class="referral-level-card-header">
           <span class="referral-level-card-name">${escapeHtml(displayName)}</span>
-          <span class="referral-level-card-percent">${level.percent}%</span>
+          <div class="referral-level-card-rates">
+            <div class="referral-level-card-rate-row">Реф. процент <b>${level.percent}%</b></div>
+            <div class="referral-level-card-rate-row">Ком. маркет <b>1.5%</b></div>
+          </div>
         </div>
         <div class="referral-level-track">
           <div class="referral-level-fill" style="width:${percent}%;"></div>
