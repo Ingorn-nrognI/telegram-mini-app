@@ -5231,6 +5231,153 @@ body.market-filter-open .market-side-fab {
   padding: 2px 6px;
   border-radius: 6px;
 }
+/* ===== Карточка уровня «Профи»: волны от круга + свечение вокруг текста ===== */
+.pro-level-card {
+  position: relative;
+  flex: 0 0 82%;
+  max-width: 340px;
+  aspect-ratio: 340 / 178;
+  border-radius: 20px;
+  background: #1E1E1E;
+  border: 1px solid transparent;
+  overflow: hidden;
+  isolation: isolate;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 14px rgba(199,169,0,.55), inset 0 0 2px rgba(199,169,0,.8);
+  --p: 1.3s;        /* скорость удара */
+  --strength: .5;   /* яркость волн */
+  --reach: 5;       /* дальность волн */
+}
+.pro-level-card .plc-origin {
+  position: absolute;
+  left: calc(277 / 340 * 100%);
+  top: calc(34 / 150 * 100%);
+  width: 0; height: 0;
+  z-index: 0;
+}
+.pro-level-card .plc-ring {
+  position: absolute;
+  width: 150px; height: 150px;
+  left: -75px; top: -75px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(199,169,0,0) 52%,
+    rgba(230,196,0,.95) 64%,
+    rgba(199,169,0,.35) 70%,
+    rgba(199,169,0,0) 76%);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.pro-level-card .plc-drop {
+  position: absolute;
+  width: 190px; height: 190px;
+  left: -95px; top: -95px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFD900 0%, #C7A900 50%, rgba(199,169,0,.6) 58%, rgba(199,169,0,0) 70%);
+  will-change: transform, filter;
+  animation: plcPulse var(--p) infinite;
+  z-index: 2;
+}
+@keyframes plcPulse {
+  0%   { transform: scale(1);    filter: brightness(1);    animation-timing-function: cubic-bezier(.5,0,.75,.35); }
+  26%  { transform: scale(.88);  filter: brightness(.88);  animation-timing-function: cubic-bezier(.15,.85,.25,1); }
+  42%  { transform: scale(1.12); filter: brightness(1.45); animation-timing-function: cubic-bezier(.4,0,.2,1); }
+  62%  { transform: scale(1.0);  filter: brightness(.78); }
+  100% { transform: scale(1);    filter: brightness(1); }
+}
+.pro-level-card .plc-glass {
+  position: absolute; inset: 0; z-index: 3;
+  background: linear-gradient(90deg, rgba(30,30,30,.55) 0%, rgba(30,30,30,.15) 55%, rgba(30,30,30,0) 75%);
+  pointer-events: none;
+}
+.pro-level-card .plc-halo,
+.pro-level-card .plc-content {
+  position: absolute; inset: 0;
+  padding: 12px 20px 12px 22px;
+  display: flex; flex-direction: column;
+  box-sizing: border-box;
+}
+.pro-level-card .plc-halo {
+  z-index: 3;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(transparent, transparent);
+          mask-image: linear-gradient(transparent, transparent);
+}
+.pro-level-card .plc-content { z-index: 4; }
+.pro-level-card .plc-title {
+  color: #fff;
+  font-size: 36px; font-weight: 500; letter-spacing: -.01em; line-height: 1.1;
+}
+.pro-level-card .plc-stats {
+  margin-top: 8px;
+  display: grid; grid-template-columns: auto auto;
+  column-gap: 8px;
+  width: max-content;
+  font-size: 14px; font-weight: 700; line-height: 1.25;
+}
+.pro-level-card .plc-dt { color: #7C7C7C; }
+.pro-level-card .plc-dd { color: #2BFF00; text-align: right; }
+.pro-level-card .plc-progress {
+  margin-top: auto;
+  position: relative;
+  padding-top: 14px;
+  padding-bottom: 26px;
+}
+.pro-level-card .plc-track {
+  position: relative;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255,255,255,.12);
+}
+.pro-level-card .plc-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  border-radius: 3px;
+  background: #FFD900;
+  box-shadow: 0 0 6px rgba(255,217,0,.7);
+}
+.pro-level-card .plc-thumb {
+  position: absolute; top: 50%;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #FFD900;
+  box-shadow: 0 0 6px rgba(255,217,0,.9);
+  transform: translate(-50%, -50%);
+}
+.pro-level-card .plc-readout {
+  position: absolute; left: 0; right: 0;
+  top: 23px; height: 14px;
+  font-size: 11px; font-weight: 700;
+}
+.pro-level-card .plc-min,
+.pro-level-card .plc-max {
+  position: absolute; top: 0;
+  color: #5E5E5E; font-weight: 600; font-size: 10.5px;
+  white-space: nowrap;
+}
+.pro-level-card .plc-min { left: 0; }
+.pro-level-card .plc-max { right: 0; }
+.pro-level-card .plc-bubble {
+  position: absolute; top: 0; left: 0;
+  transform: translateX(-50%);
+  color: #FFD900;
+  white-space: nowrap;
+}
+/* слой свечения: жёлтые копии текста и полоски, видны только там, где идёт волна */
+.pro-level-card .plc-halo .plc-title,
+.pro-level-card .plc-halo .plc-dt,
+.pro-level-card .plc-halo .plc-dd,
+.pro-level-card .plc-halo .plc-min,
+.pro-level-card .plc-halo .plc-max,
+.pro-level-card .plc-halo .plc-bubble { color: rgb(230,196,0); }
+.pro-level-card .plc-halo .plc-track { background: transparent; }
+.pro-level-card .plc-halo .plc-thumb { background: rgb(230,196,0); }
+.pro-level-card .plc-halo .plc-seg { position: absolute; top: 0; height: 100%; background: rgb(230,196,0); }
+.pro-level-card .plc-halo .plc-title { filter: blur(2.5px); }
+.pro-level-card .plc-halo .plc-stats { filter: blur(1.6px); }
+.pro-level-card .plc-halo .plc-progress { filter: blur(1.4px); }
+@media (prefers-reduced-motion: reduce) {
+  .pro-level-card .plc-drop { animation: none; }
+}
+
 #referralLevelsModal.open {
   display: flex;
 }
@@ -9739,6 +9886,200 @@ function toggleReferralMarketColumn() {
 }
 window.toggleReferralMarketColumn = toggleReferralMarketColumn;
 
+// ===== Карточка уровня «Профи»: волны от круга + свечение вокруг текста =====
+// Кольца волны и свечение считаются одной функцией в одном кадре, поэтому
+// свечение всегда идёт вместе с волной. Фаза берётся из анимации круга
+// (.plc-drop), поэтому волна рождается ровно в момент толчка.
+const PRO_CARD_GLOW = "rgb(230,196,0)";
+const PRO_CARD_GLOW8 = "rgba(230,196,0,.8)";
+let _proLevelCardsLoopStarted = false;
+
+function renderProLevelCard(d) {
+  const part = (isHalo) => `
+      <div class="plc-title">${escapeHtml(d.name)}</div>
+      <div class="plc-stats">
+        <span class="plc-dt">${L("Реф. процент", "Ref. rate")}</span><span class="plc-dd">${d.percent}%</span>
+        <span class="plc-dt">${L("Ком. Маркет", "Market fee")}</span><span class="plc-dd">${d.marketCommission}%</span>
+      </div>
+      <div class="plc-progress">
+        <div class="plc-track">
+          ${isHalo ? "" : `<div class="plc-fill" style="width:${d.fill}%;"></div>`}
+          <div class="plc-thumb" style="left:${d.fill}%;"></div>
+        </div>
+        <div class="plc-readout">
+          <span class="plc-min">${d.startLabel}</span>
+          <span class="plc-bubble">${d.currentLabel}</span>
+          <span class="plc-max">${d.endLabel}</span>
+        </div>
+      </div>`;
+  return `
+    <div class="pro-level-card" data-fill="${d.fill}" style="${d.isCurrent ? "border-color:rgba(47,224,122,0.5);" : ""}">
+      <div class="plc-origin">
+        <span class="plc-ring"></span><span class="plc-ring"></span><span class="plc-ring"></span><span class="plc-ring"></span><span class="plc-ring"></span>
+        <span class="plc-drop"></span>
+      </div>
+      <div class="plc-halo">${part(true)}</div>
+      <div class="plc-glass"></div>
+      <div class="plc-content">${part(false)}</div>
+    </div>`;
+}
+
+function proCardBezier(x1, y1, x2, y2) { // то же, что cubic-bezier() в CSS
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const X = t => ((ax * t + bx) * t + cx) * t;
+  const Y = t => ((ay * t + by) * t + cy) * t;
+  const dX = t => (3 * ax * t + 2 * bx) * t + cx;
+  return x => {
+    let t = x;
+    for (let n = 0; n < 8; n++) {
+      const d = X(t) - x;
+      if (Math.abs(d) < 1e-5) break;
+      const dd = dX(t);
+      if (Math.abs(dd) < 1e-6) break;
+      t -= d / dd;
+    }
+    return Y(Math.min(1, Math.max(0, t)));
+  };
+}
+const _proCardEaseGrow = proCardBezier(.15, .7, .35, 1);
+const _proCardEaseDefault = proCardBezier(.25, .1, .25, 1);
+
+function proCardTextGlow([ux, uy], back, fwd, side) {
+  const f = n => n.toFixed(1);
+  const px = -uy, py = ux;
+  const list = [
+    `${f(ux * back * .45)}px ${f(uy * back * .45)}px 3px ${PRO_CARD_GLOW}`,
+    `${f(ux * back)}px ${f(uy * back)}px ${f(back * .6)}px ${PRO_CARD_GLOW8}`,
+    `${f(-ux * fwd)}px ${f(-uy * fwd)}px 3px ${PRO_CARD_GLOW}`,
+    `0 0 3px ${PRO_CARD_GLOW}`
+  ];
+  if (side) list.push(`${f(px * side)}px ${f(py * side)}px 5px ${PRO_CARD_GLOW}`, `${f(-px * side)}px ${f(-py * side)}px 5px ${PRO_CARD_GLOW}`);
+  return list.join(",");
+}
+
+function proCardBoxGlow([ux, uy], back, fwd) {
+  const f = n => n.toFixed(1);
+  return [
+    `${f(ux * back * .45)}px ${f(uy * back * .45)}px 4px 1px ${PRO_CARD_GLOW}`,
+    `${f(ux * back)}px ${f(uy * back)}px ${f(back * .7)}px 1px ${PRO_CARD_GLOW8}`,
+    `${f(-ux * fwd)}px ${f(-uy * fwd)}px 3px ${PRO_CARD_GLOW}`
+  ].join(",");
+}
+
+// Раскладка: число у ползунка не вылезает за края линии, подписи краёв
+// прячутся, если на них наезжает число; направление свечения для каждого
+// элемента — вдоль движения волны в этой точке (к кругу).
+function layoutProLevelCard(card) {
+  const fill = Number(card.dataset.fill) || 0;
+  const content = card.querySelector(".plc-content");
+  const halo = card.querySelector(".plc-halo");
+  const track = content.querySelector(".plc-track");
+  const trackWidth = track.clientWidth;
+  const bubble = content.querySelector(".plc-bubble");
+  const half = bubble.offsetWidth / 2;
+  const center = Math.max(half, Math.min(trackWidth - half, trackWidth * fill / 100));
+  const gap = 10;
+  const hideMin = center - half - gap < content.querySelector(".plc-min").offsetWidth;
+  const hideMax = center + half + gap > trackWidth - content.querySelector(".plc-max").offsetWidth;
+  [content, halo].forEach(root => {
+    root.querySelector(".plc-bubble").style.left = center + "px";
+    root.querySelector(".plc-min").style.opacity = hideMin ? "0" : "1";
+    root.querySelector(".plc-max").style.opacity = hideMax ? "0" : "1";
+  });
+
+  const hTrack = halo.querySelector(".plc-track");
+  if (!hTrack.querySelector(".plc-seg")) {
+    const SEGS = 24;
+    for (let i = 0; i < SEGS; i++) {
+      const seg = document.createElement("div");
+      seg.className = "plc-seg";
+      seg.style.left = (i * 100 / SEGS) + "%";
+      seg.style.width = (100 / SEGS + .5) + "%";
+      hTrack.insertBefore(seg, hTrack.firstChild);
+    }
+  }
+
+  const c = card.getBoundingClientRect();
+  const o = card.querySelector(".plc-origin").getBoundingClientRect();
+  const ox = o.left - c.left;
+  const oy = o.top - c.top;
+  const dirTo = (el) => {
+    const r = el.getBoundingClientRect();
+    const dx = ox - (r.left + r.width / 2 - c.left);
+    const dy = oy - (r.top + r.height / 2 - c.top);
+    const len = Math.hypot(dx, dy) || 1;
+    return [dx / len, dy / len];
+  };
+  halo.querySelectorAll(".plc-title, .plc-dt, .plc-dd, .plc-readout span").forEach(el => {
+    const isTitle = el.classList.contains("plc-title");
+    const isStat = el.classList.contains("plc-dt") || el.classList.contains("plc-dd");
+    el.style.textShadow = proCardTextGlow(dirTo(el), isTitle ? 10 : isStat ? 6 : 5, isTitle ? 3 : 2, isTitle ? 5 : 0);
+  });
+  halo.querySelectorAll(".plc-seg").forEach(el => { el.style.boxShadow = proCardBoxGlow(dirTo(el), 6, 2); });
+  const hThumb = halo.querySelector(".plc-thumb");
+  hThumb.style.boxShadow = proCardBoxGlow(dirTo(hThumb), 6, 2);
+
+  const cs = getComputedStyle(card);
+  const num = (name, def) => { const v = parseFloat(cs.getPropertyValue(name)); return isNaN(v) ? def : v; };
+  card._plc = {
+    ox: ox.toFixed(1), oy: oy.toFixed(1),
+    rings: Array.from(card.querySelectorAll(".plc-ring")),
+    drop: card.querySelector(".plc-drop"),
+    halo,
+    P: num("--p", 1.3) * 1000,
+    reach: num("--reach", 5),
+    strength: num("--strength", .5)
+  };
+  card._plcLaidW = Math.round(c.width);
+}
+
+function animateProLevelCard(card) {
+  const s = card._plc;
+  const anim = s.drop.getAnimations()[0];
+  const now = anim && anim.currentTime != null ? anim.currentTime : performance.now();
+  const D = s.P * 5;
+  const layers = [];
+  s.rings.forEach((el, i) => {
+    const delay = s.P * (0.42 - i);
+    let t = ((now - delay) % D + D) % D / D;
+    if (now - delay < 0) t = -1;
+    let sc = .95, op = 0;
+    if (t >= 0) {
+      sc = .95 + (s.reach - .95) * _proCardEaseGrow(t);
+      op = t < .04 ? s.strength * _proCardEaseGrow(t / .04) : s.strength * (1 - _proCardEaseDefault((t - .04) / .96));
+    }
+    el.style.transform = `scale(${sc})`;
+    el.style.opacity = op;
+
+    const a = Math.min(1, op * 1.3);
+    if (a < 0.02) return;
+    const k = sc * 75 * Math.SQRT2;
+    const peak = k * .64, TAIL = 60;
+    const t0 = Math.max(0, peak - TAIL), t1 = Math.max(0, peak - TAIL * .55), t2 = Math.max(0, peak - TAIL * .2);
+    layers.push(`radial-gradient(circle at ${s.ox}px ${s.oy}px, rgba(0,0,0,0) ${t0.toFixed(1)}px, rgba(0,0,0,${(a * .35).toFixed(2)}) ${t1.toFixed(1)}px, rgba(0,0,0,${(a * .8).toFixed(2)}) ${t2.toFixed(1)}px, rgba(0,0,0,${(a * .95).toFixed(2)}) ${peak.toFixed(1)}px, rgba(0,0,0,${(a * .35).toFixed(2)}) ${(k * .70).toFixed(1)}px, rgba(0,0,0,0) ${(k * .75).toFixed(1)}px)`);
+  });
+  const mask = layers.length ? layers.join(",") : "linear-gradient(transparent, transparent)";
+  s.halo.style.webkitMaskImage = mask;
+  s.halo.style.maskImage = mask;
+}
+
+function proLevelCardsTick() {
+  document.querySelectorAll(".pro-level-card").forEach(card => {
+    const r = card.getBoundingClientRect();
+    if (r.width === 0 || r.right < 0 || r.left > window.innerWidth || r.bottom < 0 || r.top > window.innerHeight) return;
+    if (!card._plc || card._plcLaidW !== Math.round(r.width)) layoutProLevelCard(card);
+    animateProLevelCard(card);
+  });
+  requestAnimationFrame(proLevelCardsTick);
+}
+
+function startProLevelCards() {
+  if (_proLevelCardsLoopStarted) return;
+  _proLevelCardsLoopStarted = true;
+  requestAnimationFrame(proLevelCardsTick);
+}
+
 function renderReferralLevelCards(levels, turnover, levelKey) {
   const row = document.getElementById("referralLevelsRow");
   if (!row || !Array.isArray(levels) || !levels.length) return;
@@ -9782,6 +10123,20 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
 
     const isCurrent = level.key === levelKey;
 
+    // «Профи» — последний уровень (у него нет следующего): рисуем анимированную карточку
+    if (!nextLevel) {
+      return renderProLevelCard({
+        name: displayName,
+        percent: level.percent,
+        marketCommission: level.marketCommission,
+        fill: percent,
+        startLabel,
+        endLabel,
+        currentLabel: formatCompactNumber(Math.round(currentValueInRange)),
+        isCurrent
+      });
+    }
+
     return `
       <div class="referral-level-card" style="${isCurrent ? "border-color:rgba(47,224,122,0.5);" : ""}">
         <div class="referral-level-card-header">
@@ -9800,6 +10155,7 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
       </div>
     `;
   }).join("");
+  startProLevelCards();
 }
 
 function openReferralLevelsModal() {
