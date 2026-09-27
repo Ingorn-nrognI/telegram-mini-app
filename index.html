@@ -5236,7 +5236,6 @@ body.market-filter-open .market-side-fab {
   position: relative;
   flex: 0 0 82%;
   max-width: 340px;
-  aspect-ratio: 340 / 178;
   border-radius: 20px;
   background: #1E1E1E;
   border: 1px solid transparent;
@@ -5251,7 +5250,7 @@ body.market-filter-open .market-side-fab {
 .pro-level-card .plc-origin {
   position: absolute;
   left: calc(277 / 340 * 100%);
-  top: calc(34 / 150 * 100%);
+  top: 40px;
   width: 0; height: 0;
   z-index: 0;
 }
@@ -5292,18 +5291,18 @@ body.market-filter-open .market-side-fab {
 }
 .pro-level-card .plc-halo,
 .pro-level-card .plc-content {
-  position: absolute; inset: 0;
-  padding: 12px 20px 12px 22px;
+  padding: 12px 20px 8px 22px;
   display: flex; flex-direction: column;
   box-sizing: border-box;
 }
+.pro-level-card .plc-halo { position: absolute; inset: 0; }
 .pro-level-card .plc-halo {
   z-index: 3;
   pointer-events: none;
   -webkit-mask-image: linear-gradient(transparent, transparent);
           mask-image: linear-gradient(transparent, transparent);
 }
-.pro-level-card .plc-content { z-index: 4; }
+.pro-level-card .plc-content { position: relative; z-index: 4; }
 .pro-level-card .plc-title {
   color: #fff;
   font-size: 36px; font-weight: 500; letter-spacing: -.01em; line-height: 1.1;
@@ -5318,10 +5317,10 @@ body.market-filter-open .market-side-fab {
 .pro-level-card .plc-dt { color: #7C7C7C; }
 .pro-level-card .plc-dd { color: #2BFF00; text-align: right; }
 .pro-level-card .plc-progress {
-  margin-top: auto;
+  margin-top: 0;
   position: relative;
-  padding-top: 14px;
-  padding-bottom: 26px;
+  padding-top: 12px;
+  padding-bottom: 20px;
 }
 .pro-level-card .plc-track {
   position: relative;
@@ -5344,7 +5343,7 @@ body.market-filter-open .market-side-fab {
 }
 .pro-level-card .plc-readout {
   position: absolute; left: 0; right: 0;
-  top: 23px; height: 14px;
+  top: 21px; height: 14px;
   font-size: 11px; font-weight: 700;
 }
 .pro-level-card .plc-min,
