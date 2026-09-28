@@ -5231,6 +5231,133 @@ body.market-filter-open .market-side-fab {
   padding: 2px 6px;
   border-radius: 6px;
 }
+/* ===== Карточка уровня «Мастер»: вращающиеся лучи + импульсы + свечение вокруг текста ===== */
+.master-level-card {
+  position: relative;
+  flex: 0 0 82%;
+  max-width: 340px;
+  border-radius: 20px;
+  background: #1B1622;
+  border: 1px solid transparent;
+  overflow: hidden;
+  isolation: isolate;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 14px rgba(140,60,255,.55), inset 0 0 2px rgba(160,90,255,.9);
+}
+.master-level-card .mlc-raylayer { position: absolute; inset: 0; z-index: 0; }
+.master-level-card .mlc-origin {
+  position: absolute;
+  left: calc(277 / 340 * 100%);
+  top: 40px;
+  width: 0; height: 0;
+}
+.master-level-card .mlc-rays {
+  position: absolute; left: 0; top: 0; width: 0; height: 0;
+  filter: blur(2.5px);
+  will-change: transform;
+}
+.master-level-card .mlc-ray {
+  position: absolute; left: 0;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, rgba(145,72,230,.9) 0%, rgba(108,40,200,.58) 38%, rgba(88,30,178,.2) 75%, rgba(88,30,178,0) 100%);
+  clip-path: polygon(0 42%, 100% 0, 100% 100%, 0 58%); /* конус: у круга узкий, к концу шире */
+}
+.master-level-card .mlc-pkt {
+  position: absolute; top: 0; left: 0;
+  width: 95px; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, rgba(230,200,255,0) 0%, rgba(235,210,255,.9) 60%, #fff 82%, rgba(230,200,255,0) 100%);
+  box-shadow: 0 0 10px rgba(220,180,255,.9);
+  opacity: 0;
+}
+.master-level-card .mlc-circle {
+  position: absolute; left: -95px; top: -95px; width: 190px; height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #9A58EE 0%, #6420C8 42%, rgba(88,24,188,.75) 55%, rgba(88,24,188,0) 70%);
+  z-index: 2;
+  will-change: transform, filter;
+}
+.master-level-card .mlc-sheen {
+  position: absolute; inset: 22%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(255,255,255,0) 0deg, rgba(235,210,255,.35) 40deg, rgba(255,255,255,0) 90deg, rgba(255,255,255,0) 200deg, rgba(235,210,255,.22) 250deg, rgba(255,255,255,0) 300deg);
+  filter: blur(6px);
+}
+.master-level-card .mlc-glass {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(90deg, rgba(27,22,34,.6) 0%, rgba(27,22,34,.2) 55%, rgba(27,22,34,0) 78%);
+}
+.master-level-card .mlc-halo,
+.master-level-card .mlc-content {
+  padding: 12px 20px 8px 22px;
+  display: flex; flex-direction: column;
+  box-sizing: border-box;
+}
+.master-level-card .mlc-halo {
+  position: absolute; inset: 0; z-index: 3;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(transparent, transparent);
+          mask-image: linear-gradient(transparent, transparent);
+}
+.master-level-card .mlc-content { position: relative; z-index: 4; }
+.master-level-card .mlc-title {
+  color: #fff;
+  font-size: 36px; font-weight: 500; letter-spacing: -.01em; line-height: 1.1;
+}
+.master-level-card .mlc-stats {
+  margin-top: 8px;
+  display: grid; grid-template-columns: auto auto;
+  column-gap: 8px;
+  width: max-content;
+  font-size: 14px; font-weight: 700; line-height: 1.25;
+}
+.master-level-card .mlc-dt { color: #7C7C7C; }
+.master-level-card .mlc-dd { color: #2BFF00; text-align: right; }
+.master-level-card .mlc-progress { position: relative; padding-top: 12px; padding-bottom: 20px; }
+.master-level-card .mlc-track { position: relative; height: 5px; border-radius: 3px; background: #2B2533; }
+.master-level-card .mlc-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px;
+  background: #C08BFF; box-shadow: 0 0 6px rgba(192,139,255,.85);
+}
+.master-level-card .mlc-thumb {
+  position: absolute; top: 50%;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #C08BFF; box-shadow: 0 0 7px rgba(192,139,255,.95);
+  transform: translate(-50%, -50%);
+}
+.master-level-card .mlc-readout {
+  position: absolute; left: 0; right: 0;
+  top: 21px; height: 14px;
+  font-size: 11px; font-weight: 700;
+}
+.master-level-card .mlc-min,
+.master-level-card .mlc-max {
+  position: absolute; top: 0;
+  color: #5E5E5E; font-weight: 600; font-size: 10.5px;
+  white-space: nowrap;
+}
+.master-level-card .mlc-min { left: 0; }
+.master-level-card .mlc-max { right: 0; }
+.master-level-card .mlc-content .mlc-max { color: #767676; }
+.master-level-card .mlc-bubble {
+  position: absolute; top: 0; left: 0;
+  transform: translateX(-50%);
+  color: #C08BFF;
+  white-space: nowrap;
+}
+/* слой свечения: копии текста цвета луча, видны только там, где луч только что прошёл */
+.master-level-card .mlc-halo .mlc-title,
+.master-level-card .mlc-halo .mlc-dt,
+.master-level-card .mlc-halo .mlc-dd,
+.master-level-card .mlc-halo .mlc-min,
+.master-level-card .mlc-halo .mlc-max,
+.master-level-card .mlc-halo .mlc-bubble { color: rgb(104,38,196); }
+.master-level-card .mlc-halo .mlc-title { filter: blur(2.2px); }
+.master-level-card .mlc-halo .mlc-stats { filter: blur(1.6px); }
+.master-level-card .mlc-halo .mlc-progress { filter: blur(1.4px); }
+.master-level-card .mlc-halo .mlc-track { background: transparent; }
+.master-level-card .mlc-halo .mlc-fill,
+.master-level-card .mlc-halo .mlc-thumb { display: none; }
+
 /* ===== Карточка уровня «Профи»: волны от круга + свечение вокруг текста ===== */
 .pro-level-card {
   position: relative;
@@ -9885,6 +10012,239 @@ function toggleReferralMarketColumn() {
 }
 window.toggleReferralMarketColumn = toggleReferralMarketColumn;
 
+// ===== Карточка уровня «Мастер»: вращающиеся лучи + импульсы + свечение вокруг текста =====
+// Лучи, импульсы и свечение считаются одной функцией в одном кадре. Раскладка
+// (центр круга, число у ползунка, направления свечения) пересчитывается, когда
+// карточка получает реальный размер или меняет ширину.
+const MASTER_CARD_GLOW = "rgb(104,38,196)";
+const MASTER_CARD_GLOW8 = "rgba(104,38,196,.85)";
+const MASTER_CARD_RAYS = 18, MASTER_CARD_RAY_LEN = 430, MASTER_CARD_RAY_W = 46;
+const MASTER_CARD_HALF_AT_TEXT = (MASTER_CARD_RAY_W * (.1 + .9 * 200 / MASTER_CARD_RAY_LEN) * .8 / 2) / 200 * 180 / Math.PI;
+let _masterLevelCardsLoopStarted = false;
+
+function renderMasterLevelCard(d) {
+  const part = (isHalo) => `
+      <div class="mlc-title">${escapeHtml(d.name)}</div>
+      <div class="mlc-stats">
+        <span class="mlc-dt">${L("Реф. процент", "Ref. rate")}</span><span class="mlc-dd">${d.percent}%</span>
+        <span class="mlc-dt">${L("Ком. Маркет", "Market fee")}</span><span class="mlc-dd">${d.marketCommission}%</span>
+      </div>
+      <div class="mlc-progress">
+        <div class="mlc-track">
+          ${isHalo ? "" : `<div class="mlc-fill" style="width:${d.fill}%;"></div>`}
+          ${d.showThumb ? `<div class="mlc-thumb" style="left:${d.fill}%;"></div>` : ""}
+        </div>
+        <div class="mlc-readout">
+          <span class="mlc-min">${d.startLabel}</span>
+          ${d.showThumb ? `<span class="mlc-bubble">${d.currentLabel}</span>` : ""}
+          <span class="mlc-max">${d.endLabel}</span>
+        </div>
+      </div>`;
+  return `
+    <div class="master-level-card" data-fill="${d.fill}" style="${d.isCurrent ? "border-color:rgba(47,224,122,0.5);" : ""}">
+      <div class="mlc-raylayer">
+        <div class="mlc-origin">
+          <div class="mlc-rays"></div>
+          <div class="mlc-circle"><div class="mlc-sheen"></div></div>
+        </div>
+      </div>
+      <div class="mlc-halo">${part(true)}</div>
+      <div class="mlc-glass"></div>
+      <div class="mlc-content">${part(false)}</div>
+    </div>`;
+}
+
+const _masterEase = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const _masterNorm = a => ((a % 360) + 360) % 360;
+
+function masterCardTextGlow([ux, uy], back, side) {
+  const f = n => n.toFixed(1);
+  const px = -uy, py = ux;
+  const list = [
+    `${f(ux * back * .45)}px ${f(uy * back * .45)}px 3px ${MASTER_CARD_GLOW}`,
+    `${f(ux * back * .75)}px ${f(uy * back * .75)}px ${f(back * .4)}px ${MASTER_CARD_GLOW}`,
+    `${f(ux * back)}px ${f(uy * back)}px ${f(back * .6)}px ${MASTER_CARD_GLOW8}`,
+    `0 0 2px ${MASTER_CARD_GLOW}`
+  ];
+  if (side) list.push(`${f(px * side)}px ${f(py * side)}px 5px ${MASTER_CARD_GLOW}`, `${f(-px * side)}px ${f(-py * side)}px 5px ${MASTER_CARD_GLOW}`);
+  return list.join(",");
+}
+
+// Полоса свечения под каждым лучом: передний край — центр луча, дальше хвост назад
+// по ходу вращения. Хвост обрезается там, где начинается следующий луч.
+function masterCardConicMask(ox, oy, bands, TAIL) {
+  const segs = [];
+  bands.forEach(b => {
+    const c = _masterNorm(b.a + 90);
+    const s0 = c - .2, e0 = c + b.half * 2 + TAIL;
+    if (s0 < 0 || e0 > 360) return;
+    segs.push({ s0, s1: c + b.half * .6, s2: c + b.half * 2, s3: c + b.half * 2 + TAIL * .4, e0, k: b.alpha });
+  });
+  segs.sort((p, q) => p.s0 - q.s0);
+  const stops = ["rgba(0,0,0,0) 0deg"];
+  let last = 0;
+  segs.forEach((g, idx) => {
+    const next = segs[idx + 1];
+    const lim = next ? next.s0 : 360;
+    const clamp = v => Math.max(last, Math.min(v, lim));
+    const p0 = clamp(g.s0), p1 = clamp(g.s1), p2 = clamp(g.s2), p3 = clamp(g.s3), p4 = clamp(g.e0);
+    stops.push(`rgba(0,0,0,0) ${p0.toFixed(2)}deg`, `rgba(0,0,0,${g.k.toFixed(2)}) ${p1.toFixed(2)}deg`,
+               `rgba(0,0,0,${g.k.toFixed(2)}) ${p2.toFixed(2)}deg`, `rgba(0,0,0,${(g.k * .4).toFixed(2)}) ${p3.toFixed(2)}deg`,
+               `rgba(0,0,0,0) ${p4.toFixed(2)}deg`);
+    last = p4;
+  });
+  stops.push("rgba(0,0,0,0) 360deg");
+  return `conic-gradient(at ${ox}px ${oy}px, ${stops.join(",")})`;
+}
+
+function layoutMasterLevelCard(card) {
+  const fill = Number(card.dataset.fill) || 0;
+  const content = card.querySelector(".mlc-content");
+  const halo = card.querySelector(".mlc-halo");
+  const trackWidth = content.querySelector(".mlc-track").clientWidth;
+  const bubble = content.querySelector(".mlc-bubble");
+  if (bubble) {
+    const half = bubble.offsetWidth / 2;
+    const center = Math.max(half, Math.min(trackWidth - half, trackWidth * fill / 100));
+    const gap = 10;
+    const hideMin = center - half - gap < content.querySelector(".mlc-min").offsetWidth;
+    const hideMax = center + half + gap > trackWidth - content.querySelector(".mlc-max").offsetWidth;
+    [content, halo].forEach(root => {
+      root.querySelector(".mlc-bubble").style.left = center + "px";
+      root.querySelector(".mlc-min").style.opacity = hideMin ? "0" : "1";
+      root.querySelector(".mlc-max").style.opacity = hideMax ? "0" : "1";
+    });
+  } else {
+    [content, halo].forEach(root => {
+      root.querySelector(".mlc-min").style.opacity = "1";
+      root.querySelector(".mlc-max").style.opacity = "1";
+    });
+  }
+
+  const c = card.getBoundingClientRect();
+  const o = card.querySelector(".mlc-origin").getBoundingClientRect();
+  const ox = o.left - c.left, oy = o.top - c.top;
+
+  // след свечения — назад по касательной к кругу (откуда луч пришёл)
+  halo.querySelectorAll(".mlc-title, .mlc-dt, .mlc-dd, .mlc-readout span").forEach(el => {
+    const r = el.getBoundingClientRect();
+    const th = Math.atan2(r.top + r.height / 2 - c.top - oy, r.left + r.width / 2 - c.left - ox);
+    const dir = [-Math.sin(th), Math.cos(th)];
+    const isTitle = el.classList.contains("mlc-title");
+    const isStat = el.classList.contains("mlc-dt") || el.classList.contains("mlc-dd");
+    el.style.textShadow = masterCardTextGlow(dir, isTitle ? 14 : isStat ? 9 : 7, isTitle ? 7 : 3);
+  });
+
+  let s = card._mlc;
+  if (!s) {
+    const group = card.querySelector(".mlc-rays");
+    const rays = [];
+    for (let i = 0; i < MASTER_CARD_RAYS; i++) {
+      const el = document.createElement("div");
+      el.className = "mlc-ray";
+      el.style.width = MASTER_CARD_RAY_LEN + "px";
+      el.style.height = MASTER_CARD_RAY_W + "px";
+      el.style.top = (-MASTER_CARD_RAY_W / 2) + "px";
+      const a = i * 360 / MASTER_CARD_RAYS;
+      el.style.transform = `rotate(${a}deg)`;
+      const pkt = document.createElement("div");
+      pkt.className = "mlc-pkt";
+      el.appendChild(pkt);
+      group.appendChild(el);
+      rays.push({ el, pkt, a, delay: -1 });
+    }
+    s = card._mlc = {
+      group, rays,
+      circle: card.querySelector(".mlc-circle"),
+      sheen: card.querySelector(".mlc-sheen"),
+      halo,
+      t0: performance.now(),
+      lastCycle: -1
+    };
+  }
+  s.ox = ox; s.oy = oy;
+  card._mlcLaidW = Math.round(c.width);
+}
+
+function animateMasterLevelCard(card, now) {
+  const s = card._mlc;
+  const PERIOD = 48000, CYCLE = 3000, CHARGE = 900, FLY = 1000;
+  const T = now - s.t0;
+  const rot = -(T / PERIOD) * 360;            // лучи проворачиваются: слева сверху вниз
+  s.group.style.transform = `rotate(${rot}deg)`;
+  s.sheen.style.transform = `rotate(${T / 40}deg)`;
+
+  const cycle = Math.floor(T / CYCLE), t = T % CYCLE;
+  if (cycle !== s.lastCycle) {                // порядок выстрела — сверху вниз по левой стороне
+    s.lastCycle = cycle;
+    s.rays.forEach(r => {
+      const a = _masterNorm(r.a + rot - (CHARGE / PERIOD) * 360);
+      r.delay = (a >= 60 && a <= 260) ? (260 - a) * 2.2 : -1;
+    });
+  }
+
+  // круг: заряд и сжатие, затем пружинящий толчок; лучи дышат вместе с ним
+  let sc, br, sx, sy;
+  if (t < CHARGE) {
+    const k = _masterEase(t / CHARGE);
+    sc = 1 - .1 * k; br = 1 + .35 * k;
+    sx = 1 - .16 * k; sy = 1 - .4 * k;
+  } else {
+    const k = Math.min(1, (t - CHARGE) / 700);
+    const kick = Math.exp(-k * 5) * Math.cos(k * 9);
+    const snap = _masterEase(Math.min(1, k * 6));
+    sc = 1 + .14 * kick; br = 1.35 - .5 * k + .15 * Math.max(0, kick);
+    sx = .84 + ((1 + .14 * kick) - .84) * snap;
+    sy = .6 + ((1 + .35 * kick) - .6) * snap;
+  }
+  s.circle.style.transform = `scale(${sc.toFixed(3)})`;
+  s.circle.style.filter = `brightness(${br.toFixed(3)})`;
+
+  const spots = [];
+  s.rays.forEach(r => {
+    const tt = t - CHARGE - r.delay;
+    let op = .9, pOp = 0;
+    if (r.delay >= 0 && tt >= 0 && tt < FLY) {
+      const k = tt / FLY;
+      const d = 40 + (MASTER_CARD_RAY_LEN - 20) * (1 - Math.pow(1 - k, 2.2));
+      pOp = k < .1 ? k / .1 : 1 - Math.pow((k - .1) / .9, 1.6);
+      r.pkt.style.transform = `translateX(${(d - 80).toFixed(1)}px)`;
+      op = .9 + .1 * Math.max(0, 1 - k * 1.3);
+      const rad = (r.a + rot) * Math.PI / 180;
+      spots.push({ x: s.ox + Math.cos(rad) * d * sx, y: s.oy + Math.sin(rad) * d * sx, a: pOp });
+    }
+    r.pkt.style.opacity = pOp.toFixed(3);
+    r.el.style.opacity = op.toFixed(3);
+    r.el.style.transform = `rotate(${r.a}deg) scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
+  });
+
+  const layers = spots.filter(p => p.a > .03).map(p =>
+    `radial-gradient(circle 30px at ${p.x.toFixed(1)}px ${p.y.toFixed(1)}px, rgba(0,0,0,${p.a.toFixed(2)}) 0%, rgba(0,0,0,${(p.a * .5).toFixed(2)}) 55%, rgba(0,0,0,0) 100%)`);
+  const fade = `radial-gradient(circle ${(MASTER_CARD_RAY_LEN * sx).toFixed(1)}px at ${s.ox.toFixed(1)}px ${s.oy.toFixed(1)}px, #000 0%, rgba(0,0,0,.75) 38%, rgba(0,0,0,.28) 75%, rgba(0,0,0,0) 100%)`;
+  const cone = masterCardConicMask(s.ox.toFixed(1), s.oy.toFixed(1), s.rays.map(r => ({ a: r.a + rot, half: MASTER_CARD_HALF_AT_TEXT * sy, alpha: 1 })), 9);
+  const mask = [...layers, fade, cone].join(",");
+  s.halo.style.webkitMaskImage = mask;
+  s.halo.style.maskImage = mask;
+  s.halo.style.maskComposite = [...layers.map(() => "add"), "intersect", "add"].join(",");
+  s.halo.style.webkitMaskComposite = [...layers.map(() => "source-over"), "source-in", "source-over"].join(",");
+}
+
+function masterLevelCardsTick(now) {
+  document.querySelectorAll(".master-level-card").forEach(card => {
+    const r = card.getBoundingClientRect();
+    if (r.width === 0 || r.right < 0 || r.left > window.innerWidth || r.bottom < 0 || r.top > window.innerHeight) return;
+    if (!card._mlc || card._mlcLaidW !== Math.round(r.width)) layoutMasterLevelCard(card);
+    animateMasterLevelCard(card, now);
+  });
+  requestAnimationFrame(masterLevelCardsTick);
+}
+
+function startMasterLevelCards() {
+  if (_masterLevelCardsLoopStarted) return;
+  _masterLevelCardsLoopStarted = true;
+  requestAnimationFrame(masterLevelCardsTick);
+}
+
 // ===== Карточка уровня «Профи»: волны от круга + свечение вокруг текста =====
 // Кольца волны и свечение считаются одной функцией в одном кадре, поэтому
 // свечение всегда идёт вместе с волной. Фаза берётся из анимации круга
@@ -9903,11 +10263,11 @@ function renderProLevelCard(d) {
       <div class="plc-progress">
         <div class="plc-track">
           ${isHalo ? "" : `<div class="plc-fill" style="width:${d.fill}%;"></div>`}
-          <div class="plc-thumb" style="left:${d.fill}%;"></div>
+          ${d.showThumb ? `<div class="plc-thumb" style="left:${d.fill}%;"></div>` : ""}
         </div>
         <div class="plc-readout">
           <span class="plc-min">${d.startLabel}</span>
-          <span class="plc-bubble">${d.currentLabel}</span>
+          ${d.showThumb ? `<span class="plc-bubble">${d.currentLabel}</span>` : ""}
           <span class="plc-max">${d.endLabel}</span>
         </div>
       </div>`;
@@ -9976,16 +10336,23 @@ function layoutProLevelCard(card) {
   const track = content.querySelector(".plc-track");
   const trackWidth = track.clientWidth;
   const bubble = content.querySelector(".plc-bubble");
-  const half = bubble.offsetWidth / 2;
-  const center = Math.max(half, Math.min(trackWidth - half, trackWidth * fill / 100));
-  const gap = 10;
-  const hideMin = center - half - gap < content.querySelector(".plc-min").offsetWidth;
-  const hideMax = center + half + gap > trackWidth - content.querySelector(".plc-max").offsetWidth;
-  [content, halo].forEach(root => {
-    root.querySelector(".plc-bubble").style.left = center + "px";
-    root.querySelector(".plc-min").style.opacity = hideMin ? "0" : "1";
-    root.querySelector(".plc-max").style.opacity = hideMax ? "0" : "1";
-  });
+  if (bubble) {
+    const half = bubble.offsetWidth / 2;
+    const center = Math.max(half, Math.min(trackWidth - half, trackWidth * fill / 100));
+    const gap = 10;
+    const hideMin = center - half - gap < content.querySelector(".plc-min").offsetWidth;
+    const hideMax = center + half + gap > trackWidth - content.querySelector(".plc-max").offsetWidth;
+    [content, halo].forEach(root => {
+      root.querySelector(".plc-bubble").style.left = center + "px";
+      root.querySelector(".plc-min").style.opacity = hideMin ? "0" : "1";
+      root.querySelector(".plc-max").style.opacity = hideMax ? "0" : "1";
+    });
+  } else {
+    [content, halo].forEach(root => {
+      root.querySelector(".plc-min").style.opacity = "1";
+      root.querySelector(".plc-max").style.opacity = "1";
+    });
+  }
 
   const hTrack = halo.querySelector(".plc-track");
   if (!hTrack.querySelector(".plc-seg")) {
@@ -10017,7 +10384,7 @@ function layoutProLevelCard(card) {
   });
   halo.querySelectorAll(".plc-seg").forEach(el => { el.style.boxShadow = proCardBoxGlow(dirTo(el), 6, 2); });
   const hThumb = halo.querySelector(".plc-thumb");
-  hThumb.style.boxShadow = proCardBoxGlow(dirTo(hThumb), 6, 2);
+  if (hThumb) hThumb.style.boxShadow = proCardBoxGlow(dirTo(hThumb), 6, 2);
 
   const cs = getComputedStyle(card);
   const num = (name, def) => { const v = parseFloat(cs.getPropertyValue(name)); return isNaN(v) ? def : v; };
@@ -10132,7 +10499,23 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
         startLabel,
         endLabel,
         currentLabel: formatCompactNumber(Math.round(currentValueInRange)),
-        isCurrent
+        isCurrent,
+        showThumb: isCurrent
+      });
+    }
+
+    // «Мастер» — предпоследний уровень (следующий за ним — последний): рисуем карточку с лучами
+    if (nextLevel && !levels[index + 2]) {
+      return renderMasterLevelCard({
+        name: displayName,
+        percent: level.percent,
+        marketCommission: level.marketCommission,
+        fill: percent,
+        startLabel,
+        endLabel,
+        currentLabel: formatCompactNumber(Math.round(currentValueInRange)),
+        isCurrent,
+        showThumb: isCurrent
       });
     }
 
@@ -10155,6 +10538,7 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
     `;
   }).join("");
   startProLevelCards();
+  startMasterLevelCards();
 }
 
 function openReferralLevelsModal() {
