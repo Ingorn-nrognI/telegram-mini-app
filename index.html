@@ -5231,6 +5231,108 @@ body.market-filter-open .market-side-fab {
   padding: 2px 6px;
   border-radius: 6px;
 }
+/* ===== Карточки уровней «Новичок» и «Работяга»: эффекты на canvas (пузырьки / частицы) ===== */
+.canvas-level-card {
+  position: relative;
+  flex: 0 0 82%;
+  max-width: 340px;
+  border-radius: 20px;
+  background: var(--clc-bg);
+  border: 1px solid transparent;
+  overflow: hidden;
+  isolation: isolate;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 14px var(--clc-edge), inset 0 0 2px var(--clc-edge2);
+}
+.canvas-level-card.clc-novice {   /* зелёный: спокойный старт */
+  --clc-bg: #141C1A;
+  --clc-edge: rgba(40,200,150,.45); --clc-edge2: rgba(70,230,180,.8);
+  --clc-circle: radial-gradient(circle, #5FE8BE 0%, #1FA67E 42%, rgba(18,140,105,.75) 55%, rgba(18,140,105,0) 70%);
+  --clc-glass: rgba(20,28,26,.62); --clc-glass-mid: rgba(20,28,26,.2);
+  --clc-track: #22302C; --clc-accent: #5FE8BE;
+}
+.canvas-level-card.clc-worker {   /* синий: энергия, работа */
+  --clc-bg: #131826;
+  --clc-edge: rgba(50,120,255,.5); --clc-edge2: rgba(90,150,255,.85);
+  --clc-circle: radial-gradient(circle, #6FA8FF 0%, #2A62E0 42%, rgba(30,80,200,.75) 55%, rgba(30,80,200,0) 70%);
+  --clc-glass: rgba(19,24,38,.62); --clc-glass-mid: rgba(19,24,38,.2);
+  --clc-track: #232B3D; --clc-accent: #7FB2FF;
+}
+.canvas-level-card canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+.canvas-level-card .clc-back { z-index: 0; }
+.canvas-level-card .clc-front { z-index: 2; }
+.canvas-level-card .clc-origin {
+  position: absolute;
+  left: calc(277 / 340 * 100%);
+  top: 40px;
+  width: 0; height: 0;
+  z-index: 1;
+}
+.canvas-level-card .clc-circle {
+  position: absolute; left: -95px; top: -95px; width: 190px; height: 190px;
+  border-radius: 50%;
+  background: var(--clc-circle);
+  will-change: transform, filter;
+}
+.canvas-level-card .clc-glass {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(90deg, var(--clc-glass) 0%, var(--clc-glass-mid) 55%, rgba(0,0,0,0) 78%);
+}
+.canvas-level-card .clc-content {
+  position: relative; z-index: 4;
+  padding: 12px 20px 8px 22px;
+  display: flex; flex-direction: column;
+  box-sizing: border-box;
+}
+.canvas-level-card .clc-title {
+  color: #fff;
+  font-size: 36px; font-weight: 500; letter-spacing: -.01em; line-height: 1.1;
+}
+.canvas-level-card .clc-stats {
+  margin-top: 8px;
+  display: grid; grid-template-columns: auto auto;
+  column-gap: 8px;
+  width: max-content;
+  font-size: 14px; font-weight: 700; line-height: 1.25;
+}
+.canvas-level-card .clc-dt { color: #7C7C7C; }
+.canvas-level-card .clc-dd { color: #2BFF00; text-align: right; }
+.canvas-level-card .clc-progress { position: relative; padding-top: 12px; padding-bottom: 20px; }
+.canvas-level-card .clc-track { position: relative; height: 5px; border-radius: 3px; background: var(--clc-track); }
+.canvas-level-card .clc-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px;
+  background: var(--clc-accent); box-shadow: 0 0 6px var(--clc-accent);
+}
+.canvas-level-card .clc-thumb {
+  position: absolute; top: 50%;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--clc-accent); box-shadow: 0 0 7px var(--clc-accent);
+  transform: translate(-50%, -50%);
+}
+.canvas-level-card .clc-readout {
+  position: absolute; left: 0; right: 0;
+  top: 21px; height: 14px;
+  font-size: 11px; font-weight: 700;
+}
+.canvas-level-card .clc-min,
+.canvas-level-card .clc-max {
+  position: absolute; top: 0;
+  color: #5E5E5E; font-weight: 600; font-size: 10.5px;
+  white-space: nowrap;
+}
+.canvas-level-card .clc-min { left: 0; }
+.canvas-level-card .clc-max { right: 0; color: #767676; }
+.canvas-level-card .clc-bubble {
+  position: absolute; top: 0; left: 0;
+  transform: translateX(-50%);
+  color: var(--clc-accent);
+  white-space: nowrap;
+}
+
 /* ===== Карточка уровня «Мастер»: вращающиеся лучи + импульсы + свечение вокруг текста ===== */
 .master-level-card {
   position: relative;
@@ -10012,6 +10114,261 @@ function toggleReferralMarketColumn() {
 }
 window.toggleReferralMarketColumn = toggleReferralMarketColumn;
 
+// ===== Карточки уровней «Новичок» и «Работяга»: эффекты на canvas =====
+// «Новичок» — пузырьки, «Работяга» — частицы стягиваются в круг и выбрасываются.
+// Рисуется на двух canvas (под кругом и над ним). Анимация идёт, только когда
+// карточка видна; раскладка пересчитывается, когда карточка получает размер
+// или меняет ширину.
+const _LC_TAU = Math.PI * 2;
+const _lcRnd = (a, b) => a + Math.random() * (b - a);
+const _lcEase = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+let _canvasLevelCardsLoopStarted = false;
+
+const LEVEL_CANVAS_FX = {
+  bubbles: {
+    init(st) { st.items = []; st.next = 0; },
+    frame(st, t, dt) {
+      const bk = st.bctx, W = st.W, H = st.H;
+      bk.clearRect(0, 0, W, H);
+      if (t > st.next) { st.items.push({ x: _lcRnd(10, W - 10), y: H + 8, r: _lcRnd(2, 6.5), vy: _lcRnd(14, 28), ph: _lcRnd(0, _LC_TAU), life: 0 }); st.next = t + _lcRnd(180, 420); }
+      st.items = st.items.filter(b => b.y > -10);
+      st.items.forEach(b => {
+        b.y -= b.vy * dt; b.life += dt;
+        const x = b.x + Math.sin(b.life * 1.6 + b.ph) * 6;
+        const top = Math.max(0, Math.min(1, b.y / (H * .5)));             // гаснут в верхней части
+        const a = Math.min(1, b.life * 2) * (.25 + .75 * top);
+        bk.beginPath(); bk.arc(x, b.y, b.r, 0, _LC_TAU);
+        bk.strokeStyle = `rgba(110,240,200,${(.55 * a).toFixed(3)})`; bk.lineWidth = 1.2; bk.stroke();
+        bk.fillStyle = `rgba(95,232,190,${(.12 * a).toFixed(3)})`; bk.fill();
+        bk.beginPath(); bk.arc(x - b.r * .35, b.y - b.r * .35, b.r * .28, 0, _LC_TAU);
+        bk.fillStyle = `rgba(230,255,248,${(.6 * a).toFixed(3)})`; bk.fill();
+      });
+      const br = (Math.sin(t / 2800 * _LC_TAU) + 1) / 2;
+      st.circle.style.transform = `scale(${(1 + br * .05).toFixed(3)})`;
+      st.circle.style.filter = `brightness(${(.95 + br * .2).toFixed(3)})`;
+    }
+  },
+  gather: {
+    init(st) {
+      const N = 38;
+      st.parts = [];
+      for (let i = 0; i < N; i++) {
+        // размеры разные: самый крупный — как точка на орбите (≈9px свечения)
+        const r = i === 0 ? 9 : _lcRnd(3, 8);
+        st.parts.push({ r, x: 0, y: 0, wx: 0, wy: 0, sx: 0, sy: 0, tx: 0, ty: 0, delay: 0, dur: 1, trail: [], state: "wait",
+                        f1: _lcRnd(.5, 1.1), f2: _lcRnd(.4, .9), ph1: _lcRnd(0, _LC_TAU), ph2: _lcRnd(0, _LC_TAU), wob: _lcRnd(4, 9) });
+      }
+      st.phase = "scatter"; st.pt = 0; st.charge = 0; st.kick = 0; st.first = true;
+    },
+    scatterTargets(st) {
+      st.parts.forEach(p => {
+        let x, y;
+        do { x = _lcRnd(10, st.W - 10); y = _lcRnd(10, st.H - 10); } while (Math.hypot(x - st.ox, y - st.oy) < 75);
+        p.tx = x; p.ty = y;
+      });
+    },
+    frame(st, t, dt) {
+      const bk = st.bctx, fr = st.fctx, W = st.W, H = st.H;
+      bk.clearRect(0, 0, W, H); fr.clearRect(0, 0, W, H);
+      const P = st.parts;
+      st.pt += dt;
+
+      // Каждая частица всё время «блуждает»: её собственное плавное движение (wx, wy)
+      // продолжается и во время притяжения, и после выброса. Поэтому частица никогда
+      // не замирает — притяжение просто постепенно перебарывает её блуждание.
+      const s1 = t / 1000;
+      const wander = p => {
+        p.wx += (Math.sin(s1 * p.f1 + p.ph1) + .5 * Math.sin(s1 * p.f2 * 2.3 + p.ph2)) * 16 * dt;
+        p.wy += (Math.cos(s1 * p.f2 + p.ph2) + .5 * Math.cos(s1 * p.f1 * 1.9 + p.ph1)) * 12 * dt;
+        p.wx = Math.max(6, Math.min(W - 6, p.wx)); p.wy = Math.max(6, Math.min(H - 6, p.wy));
+      };
+
+      if (st.first) {                         // старт: частицы уже разбросаны по карточке
+        this.scatterTargets(st);
+        P.forEach(p => { p.x = p.wx = p.tx; p.y = p.wy = p.ty; p.state = "idle"; });
+        st.first = false; st.phase = "drift"; st.pt = 0;
+      }
+
+      if (st.phase === "drift") {
+        P.forEach(p => { wander(p); p.x = p.wx; p.y = p.wy; });
+        if (st.pt > 1.4) {                                  // → стягивание
+          st.phase = "gather"; st.pt = 0;
+          P.forEach(p => { p.delay = _lcRnd(0, .9); p.dur = _lcRnd(1, 1.35); p.bend = _lcRnd(-45, 45); p.state = "in"; });
+        }
+      } else if (st.phase === "gather") {
+        let done = 0;
+        P.forEach(p => {
+          if (p.state === "gone") { done++; return; }
+          wander(p);                                          // продолжает блуждать
+          const k = (st.pt - p.delay) / p.dur;
+          if (k < 0) { p.x = p.wx; p.y = p.wy; return; }      // ещё не притягивается — просто плавает
+          if (k >= 1) { p.state = "gone"; done++; return; }
+          const e = k * k;                                    // притяжение нарастает
+          const dx = st.ox - p.wx, dy = st.oy - p.wy, L = Math.hypot(dx, dy) || 1;
+          const nx = -dy / L, ny = dx / L;                    // поперёк пути
+          // покачивание включается плавно с нуля (иначе в момент начала притяжения
+          // частица сразу смещалась на несколько пикселей — тот самый рывок)
+          const ramp = Math.min(1, k / .3), rampS = ramp * ramp * (3 - 2 * ramp);
+          const side = p.bend * Math.sin(Math.PI * e) + Math.sin(s1 * _LC_TAU * p.f1 * 1.6 + p.ph1) * p.wob * rampS * (1 - k);
+          p.x = p.wx + dx * e + nx * side;
+          p.y = p.wy + dy * e + ny * side;
+        });
+        st.charge = done / P.length;
+        if (done === P.length) { st.phase = "hold"; st.pt = 0; }
+      } else if (st.phase === "hold") {
+        if (st.pt > .35) {                                  // → выброс тех же частиц
+          st.phase = "burst"; st.pt = 0; st.kick = 1;
+          this.scatterTargets(st);
+          P.forEach(p => {
+            const a = Math.atan2(p.ty - st.oy, p.tx - st.ox);
+            p.sx = st.ox + Math.cos(a) * 20; p.sy = st.oy + Math.sin(a) * 20;
+            p.ox2 = 0; p.oy2 = 0;
+            p.delay = _lcRnd(0, .08); p.dur = _lcRnd(.7, 1.05); p.state = "out"; p.trail = [];
+          });
+        }
+      } else if (st.phase === "burst") {
+        let done = 0;
+        P.forEach(p => {
+          // смещение от блуждания копится с самого вылета, чтобы после торможения не было остановки
+          p.ox2 += (Math.sin(s1 * p.f1 + p.ph1) + .5 * Math.sin(s1 * p.f2 * 2.3 + p.ph2)) * 16 * dt;
+          p.oy2 += (Math.cos(s1 * p.f2 + p.ph2) + .5 * Math.cos(s1 * p.f1 * 1.9 + p.ph1)) * 12 * dt;
+          const k = Math.min(1, Math.max(0, (st.pt - p.delay) / p.dur));
+          const e = 1 - Math.pow(1 - k, 3);                  // вылетают быстро и тормозят
+          // держим в тех же границах, что и блуждание, — иначе при переходе к плаванию был бы скачок
+          p.x = Math.max(6, Math.min(W - 6, p.sx + (p.tx - p.sx) * e + p.ox2 * k));
+          p.y = Math.max(6, Math.min(H - 6, p.sy + (p.ty - p.sy) * e + p.oy2 * k));
+          if (k >= 1) done++;
+        });
+        st.charge = Math.max(0, 1 - st.pt / .25);
+        if (done === P.length) {
+          st.phase = "drift"; st.pt = 0;
+          P.forEach(p => { p.wx = p.x; p.wy = p.y; p.state = "idle"; });
+        }
+      }
+
+      // отрисовка: светящиеся точки со шлейфом (как на орбите у «Новичка»)
+      P.forEach((p, i) => {
+        if (p.state === "gone") { p.trail = []; return; }
+        p.trail.unshift([p.x, p.y]); if (p.trail.length > 12) p.trail.pop();
+        // у круга частица плавно гаснет (при стягивании) или проявляется (при выбросе):
+        // начинает исчезать примерно за 90px до центра и пропадает полностью у ~25px
+        const fadeAt = (x, y) => Math.max(0, Math.min(1, (Math.hypot(x - st.ox, y - st.oy) - 25) / 65));
+        p.trail.forEach(([x, y], j) => {
+          if (!j) return;
+          const q = 1 - j / p.trail.length;
+          const fa = fadeAt(x, y);
+          if (fa <= 0) return;
+          bk.beginPath(); bk.arc(x, y, p.r * .36 * q + .4, 0, _LC_TAU);
+          bk.fillStyle = `rgba(140,185,255,${(.5 * q * q * fa).toFixed(3)})`; bk.fill();
+        });
+        const fa = fadeAt(p.x, p.y);
+        if (fa <= 0) return;
+        const g = bk.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0, `rgba(240,248,255,${fa.toFixed(3)})`); g.addColorStop(.35, `rgba(130,180,255,${(.9 * fa).toFixed(3)})`); g.addColorStop(1, "rgba(130,180,255,0)");
+        bk.fillStyle = g; bk.beginPath(); bk.arc(p.x, p.y, p.r, 0, _LC_TAU); bk.fill();
+      });
+
+      // круг растёт вместе с зарядом, при выбросе — пружинящий толчок
+      st.kick = Math.max(0, st.kick - dt * 1.6);
+      const kick = st.kick > 0 ? Math.exp(-(1 - st.kick) * 5) * Math.cos((1 - st.kick) * 9) * st.kick : 0;
+      const ch = _lcEase(st.charge);
+      st.circle.style.transform = `scale(${(1 + ch * .1 + kick * .08).toFixed(3)})`;
+      st.circle.style.filter = `brightness(${(.9 + ch * .55 + Math.max(0, kick) * .3).toFixed(3)})`;
+    }
+  }
+};
+
+// theme: "novice" | "worker"; fx: ключ из LEVEL_CANVAS_FX
+function renderCanvasLevelCard(d) {
+  return `
+    <div class="canvas-level-card clc-${d.theme}" data-fx="${d.fx}" data-fill="${d.fill}" style="${d.isCurrent ? "border-color:rgba(47,224,122,0.5);" : ""}">
+      <canvas class="clc-back"></canvas>
+      <div class="clc-origin"><div class="clc-circle"></div></div>
+      <canvas class="clc-front"></canvas>
+      <div class="clc-glass"></div>
+      <div class="clc-content">
+        <div class="clc-title">${escapeHtml(d.name)}</div>
+        <div class="clc-stats">
+          <span class="clc-dt">${L("Реф. процент", "Ref. rate")}</span><span class="clc-dd">${d.percent}%</span>
+          <span class="clc-dt">${L("Ком. Маркет", "Market fee")}</span><span class="clc-dd">${d.marketCommission}%</span>
+        </div>
+        <div class="clc-progress">
+          <div class="clc-track">
+            <div class="clc-fill" style="width:${d.fill}%;"></div>
+            ${d.showThumb ? `<div class="clc-thumb" style="left:${d.fill}%;"></div>` : ""}
+          </div>
+          <div class="clc-readout">
+            <span class="clc-min">${d.startLabel}</span>
+            ${d.showThumb ? `<span class="clc-bubble">${d.currentLabel}</span>` : ""}
+            <span class="clc-max">${d.endLabel}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function layoutCanvasLevelCard(card) {
+  const c = card.getBoundingClientRect();
+  let st = card._clc;
+  if (!st) {
+    const back = card.querySelector(".clc-back"), front = card.querySelector(".clc-front");
+    st = card._clc = {
+      back, front,
+      bctx: back.getContext("2d"), fctx: front.getContext("2d"),
+      circle: card.querySelector(".clc-circle"),
+      fx: LEVEL_CANVAS_FX[card.dataset.fx],
+      t0: performance.now(), last: performance.now()
+    };
+    st.fx.init(st);
+  }
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  [st.back, st.front].forEach(cv => {
+    cv.width = Math.round(c.width * dpr);
+    cv.height = Math.round(c.height * dpr);
+    cv.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
+  });
+  const o = card.querySelector(".clc-origin").getBoundingClientRect();
+  st.W = c.width; st.H = c.height;
+  st.ox = o.left - c.left; st.oy = o.top - c.top;
+
+  // число под ползунком не вылезает за края линии, подписи краёв прячутся при наезде
+  const fill = Number(card.dataset.fill) || 0;
+  const trackWidth = card.querySelector(".clc-track").clientWidth;
+  const minEl = card.querySelector(".clc-min"), maxEl = card.querySelector(".clc-max");
+  const bubble = card.querySelector(".clc-bubble");
+  if (bubble) {
+    const half = bubble.offsetWidth / 2;
+    const center = Math.max(half, Math.min(trackWidth - half, trackWidth * fill / 100));
+    bubble.style.left = center + "px";
+    minEl.style.opacity = center - half - 10 < minEl.offsetWidth ? "0" : "1";
+    maxEl.style.opacity = center + half + 10 > trackWidth - maxEl.offsetWidth ? "0" : "1";
+  } else {
+    minEl.style.opacity = "1";
+    maxEl.style.opacity = "1";
+  }
+  card._clcLaidW = Math.round(c.width);
+}
+
+function canvasLevelCardsTick(now) {
+  document.querySelectorAll(".canvas-level-card").forEach(card => {
+    const r = card.getBoundingClientRect();
+    const visible = r.width > 0 && r.right >= 0 && r.left <= window.innerWidth && r.bottom >= 0 && r.top <= window.innerHeight;
+    if (!visible) { if (card._clc) card._clc.last = now; return; }
+    if (!card._clc || card._clcLaidW !== Math.round(r.width)) layoutCanvasLevelCard(card);
+    const st = card._clc;
+    const dt = Math.min(.05, (now - st.last) / 1000);
+    st.last = now;
+    st.fx.frame(st, now - st.t0, dt);
+  });
+  requestAnimationFrame(canvasLevelCardsTick);
+}
+
+function startCanvasLevelCards() {
+  if (_canvasLevelCardsLoopStarted) return;
+  _canvasLevelCardsLoopStarted = true;
+  requestAnimationFrame(canvasLevelCardsTick);
+}
+
 // ===== Карточка уровня «Мастер»: вращающиеся лучи + импульсы + свечение вокруг текста =====
 // Лучи, импульсы и свечение считаются одной функцией в одном кадре. Раскладка
 // (центр круга, число у ползунка, направления свечения) пересчитывается, когда
@@ -10519,6 +10876,25 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
       });
     }
 
+    // «Работяга» и «Новичок» — третий и четвёртый уровни с конца: карточки с эффектами на canvas
+    const fromEnd = levels.length - 1 - index;
+    if (fromEnd === 2 || fromEnd === 3) {
+      const isWorker = fromEnd === 2;
+      return renderCanvasLevelCard({
+        theme: isWorker ? "worker" : "novice",
+        fx: isWorker ? "gather" : "bubbles",
+        name: displayName,
+        percent: level.percent,
+        marketCommission: level.marketCommission,
+        fill: percent,
+        startLabel,
+        endLabel,
+        currentLabel: formatCompactNumber(Math.round(currentValueInRange)),
+        isCurrent,
+        showThumb: isCurrent
+      });
+    }
+
     return `
       <div class="referral-level-card" style="${isCurrent ? "border-color:rgba(47,224,122,0.5);" : ""}">
         <div class="referral-level-card-header">
@@ -10539,6 +10915,7 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
   }).join("");
   startProLevelCards();
   startMasterLevelCards();
+  startCanvasLevelCards();
 }
 
 function openReferralLevelsModal() {
