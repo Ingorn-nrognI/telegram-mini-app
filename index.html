@@ -1456,10 +1456,10 @@ body.market-mode:not(.market-screen-active) .market-side-fab {
    Скролл вверх: бар с круглой кнопкой появляются первыми, сердце/корзина —
    следом, с той же задержкой. Эффект получается за счёт разных
    transition-delay у "верхнего" и "нижнего" яруса кнопок. */
-body.market-mode.market-nav-hidden .market-side-fab {
-  transform: translateY(80px);
-  opacity: 0;
-  pointer-events: none;
+/* Скролл вниз в Маркете: главный бар уезжает, а сердце и корзина остаются
+   на экране — просто опускаются на место бара. */
+body.market-mode.market-screen-active.market-nav-hidden .market-side-fab {
+  transform: translateY(var(--bottom-nav-height));
   transition-delay: 0s;
 }
 body.market-mode:not(.market-nav-hidden) .market-side-fab {
@@ -1846,6 +1846,30 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+/* Строка поиска с кнопками прилипает к верху экрана Маркета, как только
+   баннер уезжает за край. Подложка цвета фона включается только в этот
+   момент — чтобы подарки не просвечивали сквозь строку при прокрутке. */
+#marketMainView .market-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+#marketMainView .market-toolbar::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  top: -8px;
+  bottom: -8px;
+  background: var(--bg-1);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+#marketMainView .market-toolbar.is-stuck::before {
+  opacity: 1;
 }
 
 .market-gift-tile {
@@ -8454,7 +8478,6 @@ function setMenuView(view, options = {}) {
     // Кнопки Избранное/Корзина относятся только к самому Маркету, а не ко
     // всему его "семейству" (аукцион, инвентарь) — этот класс отличает
     // именно экран Маркета, чтобы на остальных кнопки уезжали вниз.
-    document.body.classList.toggle("market-screen-active", view === "market");
     const navGamesBtn = document.getElementById("navGames");
     const navSkinsBtn = document.getElementById("navSkins");
     if (navGamesBtn) navGamesBtn.style.display = marketModeActive ? "none" : "flex";
@@ -8468,6 +8491,12 @@ function setMenuView(view, options = {}) {
       navArenaMarketStateMarket.style.display = marketModeActive ? "flex" : "none";
     }
   }
+  // Кнопки Избранное/Корзина — только на самом экране Маркета. Раньше этот
+  // класс выставлялся внутри блока выше, который для профиля пропускается, —
+  // поэтому при входе в профиль из маркета кнопки оставались на экране.
+  document.body.classList.toggle("market-screen-active", view === "market");
+  // Ушли с Маркета — главный бар всегда возвращаем (он мог быть спрятан скроллом).
+  if (view !== "market") document.body.classList.remove("market-nav-hidden");
   // Профиль не относится ни к арене, ни к маркету — при входе/выходе из
   // него нижний бар остаётся ровно таким, каким был на исходном экране.
   if (modePopup) modePopup.classList.remove("open");
@@ -21957,6 +21986,16 @@ function handleMarketScreenScroll() {
   const el = document.getElementById("marketScreen");
   if (!el) return;
   const scrollTop = el.scrollTop;
+  // Состояние берём из самого класса: его могли снять при уходе с Маркета.
+  _marketNavHiddenState = document.body.classList.contains("market-nav-hidden");
+
+  // Строка поиска прилипла к верху → включаем под ней подложку цвета фона.
+  const toolbar = document.querySelector("#marketMainView .market-toolbar");
+  if (toolbar) {
+    const stickTop = el.getBoundingClientRect().top + (parseFloat(getComputedStyle(el).paddingTop) || 0);
+    const stuck = scrollTop > 0 && toolbar.getBoundingClientRect().top <= stickTop + 0.5;
+    toolbar.classList.toggle("is-stuck", stuck);
+  }
   const delta = scrollTop - _marketNavLastScrollTop;
 
   if (scrollTop <= 10) {
