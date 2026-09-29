@@ -7610,12 +7610,23 @@ const REFERRAL_GIFT_FILES = [
 const REFERRAL_GIFT_DATA = {};
 
 function preloadReferralGiftAnims() {
-  REFERRAL_GIFT_FILES.forEach((g) => {
-    if (REFERRAL_GIFT_DATA[g.file]) return;
-    fetch(g.file)
-      .then((r) => r.json())
-      .then((data) => { REFERRAL_GIFT_DATA[g.file] = data; })
+  // Храним исходный текст файла: движку в отдельном потоке его и нужно передать
+  // (без лишнего JSON.parse/JSON.stringify в основном потоке).
+  const loads = REFERRAL_GIFT_FILES.map((g) => {
+    if (REFERRAL_GIFT_DATA[g.file]) return Promise.resolve();
+    return fetch(g.file)
+      .then((r) => r.text())
+      .then((text) => { REFERRAL_GIFT_DATA[g.file] = text; })
       .catch(() => {});
+  });
+  // Как только файлы скачаны — заранее, в свободное время, создаём плееры статуэток.
+  // Экран рефералов закрыт (он просто прозрачный и уехал вниз), поэтому плееры
+  // стоят на паузе, но движок уже запущен, файлы разобраны и первый кадр готов:
+  // при открытии экрана статуэтки появляются сразу.
+  Promise.all(loads).then(() => {
+    const warm = () => ensureReferralGiftAnimsLoaded();
+    if ("requestIdleCallback" in window) requestIdleCallback(warm, { timeout: 2000 });
+    else setTimeout(warm, 300);
   });
 }
 
@@ -7671,7 +7682,7 @@ function createReferralGiftPlayer(el, file, index) {
           devicePixelRatio: Math.min(referralFxIsLite() ? 1.5 : 2, window.devicePixelRatio || 1),
           autoResize: true
         }
-      }, preloaded ? { data: JSON.stringify(preloaded) } : { src: new URL(file, location.href).href }));
+      }, preloaded ? { data: preloaded } : { src: new URL(file, location.href).href }));
       player.addEventListener("load", () => syncReferralGiftPlayback());
       return player;
     } catch (e) {
@@ -7684,7 +7695,7 @@ function createReferralGiftPlayer(el, file, index) {
     renderer: "svg",
     loop: true,
     autoplay: false
-  }, preloaded ? { animationData: preloaded } : { path: file }));
+  }, preloaded ? { animationData: JSON.parse(preloaded) } : { path: file }));
   // кадры только в родной частоте анимации, а не на каждый кадр экрана (120 Гц → вдвое меньше работы)
   anim.setSubframe(false);
   return anim;
