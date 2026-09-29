@@ -5231,6 +5231,21 @@ body.market-filter-open .market-side-fab {
   padding: 2px 6px;
   border-radius: 6px;
 }
+/* ===== Производительность анимированных карточек уровней ===== */
+/* Размытые копии текста в слое свечения — отдельные слои: размытие считается
+   один раз, а каждый кадр меняется только маска поверх них. */
+.pro-level-card .plc-halo .plc-title,
+.pro-level-card .plc-halo .plc-stats,
+.pro-level-card .plc-halo .plc-progress,
+.master-level-card .mlc-halo .mlc-title,
+.master-level-card .mlc-halo .mlc-stats,
+.master-level-card .mlc-halo .mlc-progress {
+  will-change: transform;
+}
+/* Слабые устройства: без размытия вращающихся лучей «Мастера» — это самая
+   дорогая часть кадра (размытие большой области пересчитывается каждый кадр). */
+.referral-fx-lite .master-level-card .mlc-rays { filter: none; }
+
 /* ===== Карточки уровней «Новичок» и «Работяга»: эффекты на canvas (пузырьки / частицы) ===== */
 .canvas-level-card {
   position: relative;
@@ -7635,13 +7650,37 @@ function ensureReferralGiftAnimsLoaded() {
         loop: true,
         autoplay: false
       }, preloaded ? { animationData: preloaded } : { path: g.file }));
+      // кадры только в родной частоте анимации, а не на каждый кадр экрана (120 Гц → вдвое меньше работы)
+      anim.setSubframe(false);
       referralGiftAnims.push(anim);
     }
   });
 }
 
+// Статуэтки играют только когда реально видны: экран рефералов открыт,
+// блок со статуэтками на экране (не прокручен за край) и приложение активно.
+let _referralGiftsInView = true;
+let _referralGiftsObserver = null;
+
+function setupReferralGiftsVisibility() {
+  if (_referralGiftsObserver || typeof IntersectionObserver === "undefined") return;
+  const box = document.getElementById("referralLinkCard");
+  if (!box) return;
+  _referralGiftsObserver = new IntersectionObserver((entries) => {
+    _referralGiftsInView = entries[entries.length - 1].isIntersecting;
+    syncReferralGiftPlayback();
+  });
+  _referralGiftsObserver.observe(box);
+}
+
+function syncReferralGiftPlayback() {
+  const shouldPlay = isReferralsOverlayOpen() && _referralGiftsInView && !document.hidden;
+  referralGiftAnims.forEach((anim) => (shouldPlay ? anim.play() : anim.pause()));
+}
+
 function playReferralGiftAnims() {
-  referralGiftAnims.forEach((anim) => anim.play());
+  setupReferralGiftsVisibility();
+  syncReferralGiftPlayback();
 }
 
 function pauseReferralGiftAnims() {
@@ -9960,6 +9999,7 @@ function openReferrals() {
   renderReferralsScreen();
   ensureReferralGiftAnimsLoaded();
   playReferralGiftAnims();
+  startReferralFx();
   if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   syncAppBackButton({ forceShow: true, onClick: closeReferrals });
 }
@@ -9970,6 +10010,7 @@ function closeReferrals() {
   overlay.classList.remove("open");
   overlay.setAttribute("aria-hidden", "true");
   pauseReferralGiftAnims();
+  stopReferralFx();
   if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   syncAppBackButton();
 }
@@ -10113,6 +10154,108 @@ function toggleReferralMarketColumn() {
   renderReferralTableRows(_lastReferralItems);
 }
 window.toggleReferralMarketColumn = toggleReferralMarketColumn;
+
+// ===== Планировщик анимаций карточек уровней (реферальный экран) =====
+// Раньше у каждого типа карточек был свой вечный цикл requestAnimationFrame:
+// он крутился всё время работы приложения (даже на арене) и каждый кадр
+// вызывал getBoundingClientRect() — это заставляло браузер пересчитывать
+// раскладку страницы. Теперь один общий цикл:
+//  • работает только пока открыт экран рефералов и приложение на переднем плане;
+//  • видимость карточек отслеживает IntersectionObserver, размер — ResizeObserver
+//    (без замеров раскладки в каждом кадре);
+//  • частота кадров ограничена: 60 к/с (на 120-герцовых экранах это вдвое меньше
+//    работы), на слабых устройствах — 30 к/с.
+const REFERRAL_FX = { running: false, raf: 0, last: 0, cards: new Set(), io: null, ro: null };
+
+function referralFxIsLite() {
+  return typeof getEffectiveQualityTier === "function" && getEffectiveQualityTier() === "low";
+}
+
+function referralFxEnsureObservers() {
+  if (!REFERRAL_FX.io && typeof IntersectionObserver !== "undefined") {
+    REFERRAL_FX.io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { e.target._fxVisible = e.isIntersecting; });
+    });
+  }
+  if (!REFERRAL_FX.ro && typeof ResizeObserver !== "undefined") {
+    REFERRAL_FX.ro = new ResizeObserver((entries) => {
+      entries.forEach((e) => { e.target._fxResized = true; });
+    });
+  }
+}
+
+// Вызывается после каждой отрисовки ленты уровней: подхватывает новые карточки,
+// старые (удалённые при перерисовке) выбрасывает.
+function referralFxRegisterCards() {
+  referralFxEnsureObservers();
+  REFERRAL_FX.cards.forEach((card) => {
+    if (!card.isConnected) {
+      if (REFERRAL_FX.io) REFERRAL_FX.io.unobserve(card);
+      if (REFERRAL_FX.ro) REFERRAL_FX.ro.unobserve(card);
+      REFERRAL_FX.cards.delete(card);
+    }
+  });
+  document.querySelectorAll(".pro-level-card, .master-level-card, .canvas-level-card").forEach((card) => {
+    if (REFERRAL_FX.cards.has(card)) return;
+    REFERRAL_FX.cards.add(card);
+    card._fxResized = true;
+    card._fxVisible = !REFERRAL_FX.io;          // без IntersectionObserver считаем видимой
+    if (REFERRAL_FX.io) REFERRAL_FX.io.observe(card);
+    if (REFERRAL_FX.ro) REFERRAL_FX.ro.observe(card);
+  });
+}
+
+function referralFxFrame(now) {
+  if (!REFERRAL_FX.running) { REFERRAL_FX.raf = 0; return; }
+  REFERRAL_FX.raf = requestAnimationFrame(referralFxFrame);
+  const minGap = referralFxIsLite() ? 1000 / 30 - 3 : 1000 / 60 - 3;
+  if (now - REFERRAL_FX.last < minGap) return;
+  REFERRAL_FX.last = now;
+
+  REFERRAL_FX.cards.forEach((card) => {
+    if (!card._fxVisible || !card.isConnected) return;
+    if (card.classList.contains("pro-level-card")) {
+      if (!card._plc || card._fxResized) { layoutProLevelCard(card); card._fxResized = false; }
+      animateProLevelCard(card);
+    } else if (card.classList.contains("master-level-card")) {
+      if (!card._mlc || card._fxResized) { layoutMasterLevelCard(card); card._fxResized = false; }
+      animateMasterLevelCard(card, now);
+    } else {
+      if (!card._clc || card._fxResized) { layoutCanvasLevelCard(card); card._fxResized = false; }
+      const st = card._clc;
+      const dt = Math.min(.05, (now - st.last) / 1000);
+      st.last = now;
+      st.fx.frame(st, now - st.t0, dt);
+    }
+  });
+}
+
+function startReferralFx() {
+  document.documentElement.classList.toggle("referral-fx-lite", referralFxIsLite());
+  referralFxRegisterCards();
+  if (REFERRAL_FX.running) return;
+  REFERRAL_FX.running = true;
+  REFERRAL_FX.last = 0;
+  REFERRAL_FX.cards.forEach((card) => { if (card._clc) card._clc.last = performance.now(); });
+  if (!REFERRAL_FX.raf) REFERRAL_FX.raf = requestAnimationFrame(referralFxFrame);
+}
+
+function stopReferralFx() {
+  REFERRAL_FX.running = false;
+  if (REFERRAL_FX.raf) { cancelAnimationFrame(REFERRAL_FX.raf); REFERRAL_FX.raf = 0; }
+}
+
+function isReferralsOverlayOpen() {
+  const overlay = document.getElementById("appReferralsOverlay");
+  return !!overlay && overlay.classList.contains("open");
+}
+
+// Приложение свернули — всё стоит; вернули на экран рефералов — запускаем снова.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopReferralFx();
+  else if (isReferralsOverlayOpen()) startReferralFx();
+  if (typeof syncReferralGiftPlayback === "function") syncReferralGiftPlayback();
+});
 
 // ===== Карточки уровней «Новичок» и «Работяга»: эффекты на canvas =====
 // «Новичок» — пузырьки, «Работяга» — частицы стягиваются в круг и выбрасываются.
@@ -10321,7 +10464,7 @@ function layoutCanvasLevelCard(card) {
     };
     st.fx.init(st);
   }
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(referralFxIsLite() ? 1 : 2, window.devicePixelRatio || 1);   // на слабых — 1x, вдвое меньше пикселей
   [st.back, st.front].forEach(cv => {
     cv.width = Math.round(c.width * dpr);
     cv.height = Math.round(c.height * dpr);
@@ -10349,24 +10492,8 @@ function layoutCanvasLevelCard(card) {
   card._clcLaidW = Math.round(c.width);
 }
 
-function canvasLevelCardsTick(now) {
-  document.querySelectorAll(".canvas-level-card").forEach(card => {
-    const r = card.getBoundingClientRect();
-    const visible = r.width > 0 && r.right >= 0 && r.left <= window.innerWidth && r.bottom >= 0 && r.top <= window.innerHeight;
-    if (!visible) { if (card._clc) card._clc.last = now; return; }
-    if (!card._clc || card._clcLaidW !== Math.round(r.width)) layoutCanvasLevelCard(card);
-    const st = card._clc;
-    const dt = Math.min(.05, (now - st.last) / 1000);
-    st.last = now;
-    st.fx.frame(st, now - st.t0, dt);
-  });
-  requestAnimationFrame(canvasLevelCardsTick);
-}
-
 function startCanvasLevelCards() {
-  if (_canvasLevelCardsLoopStarted) return;
-  _canvasLevelCardsLoopStarted = true;
-  requestAnimationFrame(canvasLevelCardsTick);
+  referralFxRegisterCards();
 }
 
 // ===== Карточка уровня «Мастер»: вращающиеся лучи + импульсы + свечение вокруг текста =====
@@ -10586,20 +10713,8 @@ function animateMasterLevelCard(card, now) {
   s.halo.style.webkitMaskComposite = [...layers.map(() => "source-over"), "source-in", "source-over"].join(",");
 }
 
-function masterLevelCardsTick(now) {
-  document.querySelectorAll(".master-level-card").forEach(card => {
-    const r = card.getBoundingClientRect();
-    if (r.width === 0 || r.right < 0 || r.left > window.innerWidth || r.bottom < 0 || r.top > window.innerHeight) return;
-    if (!card._mlc || card._mlcLaidW !== Math.round(r.width)) layoutMasterLevelCard(card);
-    animateMasterLevelCard(card, now);
-  });
-  requestAnimationFrame(masterLevelCardsTick);
-}
-
 function startMasterLevelCards() {
-  if (_masterLevelCardsLoopStarted) return;
-  _masterLevelCardsLoopStarted = true;
-  requestAnimationFrame(masterLevelCardsTick);
+  referralFxRegisterCards();
 }
 
 // ===== Карточка уровня «Профи»: волны от круга + свечение вокруг текста =====
@@ -10787,20 +10902,8 @@ function animateProLevelCard(card) {
   s.halo.style.maskImage = mask;
 }
 
-function proLevelCardsTick() {
-  document.querySelectorAll(".pro-level-card").forEach(card => {
-    const r = card.getBoundingClientRect();
-    if (r.width === 0 || r.right < 0 || r.left > window.innerWidth || r.bottom < 0 || r.top > window.innerHeight) return;
-    if (!card._plc || card._plcLaidW !== Math.round(r.width)) layoutProLevelCard(card);
-    animateProLevelCard(card);
-  });
-  requestAnimationFrame(proLevelCardsTick);
-}
-
 function startProLevelCards() {
-  if (_proLevelCardsLoopStarted) return;
-  _proLevelCardsLoopStarted = true;
-  requestAnimationFrame(proLevelCardsTick);
+  referralFxRegisterCards();
 }
 
 function renderReferralLevelCards(levels, turnover, levelKey) {
