@@ -5362,6 +5362,7 @@ body.market-filter-open .market-side-fab {
   box-shadow: inset 0 0 14px rgba(140,60,255,.55), inset 0 0 2px rgba(160,90,255,.9);
 }
 .master-level-card .mlc-raylayer { position: absolute; inset: 0; z-index: 0; }
+.master-level-card .mlc-rays-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .master-level-card .mlc-origin {
   position: absolute;
   left: calc(277 / 340 * 100%);
@@ -7044,12 +7045,15 @@ body.market-filter-open .market-side-fab {
   // Файл wasm она подтягивает сама, рабочий поток создаёт через blob,
   // поэтому запрета на чужой домен, как у tlottie, здесь не возникает.
   try {
-    const { DotLottie } = await import("https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web@0.80.0/+esm");
+    const { DotLottie, DotLottieWorker } = await import("https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web@0.80.0/+esm");
     window.__DotLottie = DotLottie;
+    window.__DotLottieWorker = DotLottieWorker;
     console.log("[dotlottie] движок готов");
   } catch (err) {
+    window.__dotLottieFailed = true;
     console.warn("[dotlottie] не удалось загрузить:", err);
   }
+  window.dispatchEvent(new Event("dotlottie-ready"));
 </script>
 <style>
   /* У движка есть встроенный эффект загрузки: серый слой с бегущим бликом
@@ -7628,8 +7632,67 @@ document.addEventListener("DOMContentLoaded", () => {
   preloadReferralGiftAnims();
 });
 
+// Статуэтки рисуются движком dotLottie в отдельном потоке (DotLottieWorker):
+// вся тяжёлая отрисовка идёт вне основного потока, поэтому интерфейс и
+// карточки уровней не подтормаживают. Раньше 5 фигурок рисовал lottie-web
+// через SVG прямо в основном потоке — на телефоне это занимало почти всё
+// время кадра. Если поток недоступен (старый WebView без OffscreenCanvas
+// или движок не загрузился) — как раньше, через lottie-web.
+let _referralGiftsBuilding = false;
+
+function waitForDotLottieWorker(timeoutMs) {
+  if (window.__DotLottieWorker || window.__dotLottieFailed) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => { window.removeEventListener("dotlottie-ready", done); resolve(); };
+    window.addEventListener("dotlottie-ready", done);
+    setTimeout(done, timeoutMs);
+  });
+}
+
+function canUseDotLottieWorker() {
+  return !!window.__DotLottieWorker
+    && typeof HTMLCanvasElement !== "undefined"
+    && "transferControlToOffscreen" in HTMLCanvasElement.prototype;
+}
+
+function createReferralGiftPlayer(el, file, index) {
+  const preloaded = REFERRAL_GIFT_DATA[file];
+  if (canUseDotLottieWorker()) {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.style.cssText = "width:100%; height:100%; display:block;";
+      el.appendChild(canvas);
+      const player = new window.__DotLottieWorker(Object.assign({
+        canvas,
+        loop: true,
+        autoplay: false,
+        workerId: "referral-gifts-" + (index % 2),     // 5 фигурок на 2 потока
+        renderConfig: {
+          devicePixelRatio: Math.min(referralFxIsLite() ? 1.5 : 2, window.devicePixelRatio || 1),
+          autoResize: true
+        }
+      }, preloaded ? { data: JSON.stringify(preloaded) } : { src: new URL(file, location.href).href }));
+      player.addEventListener("load", () => syncReferralGiftPlayback());
+      return player;
+    } catch (e) {
+      console.warn("[referral gifts] поток dotLottie недоступен, рисуем через lottie-web:", e);
+      el.innerHTML = "";
+    }
+  }
+  const anim = lottie.loadAnimation(Object.assign({
+    container: el,
+    renderer: "svg",
+    loop: true,
+    autoplay: false
+  }, preloaded ? { animationData: preloaded } : { path: file }));
+  // кадры только в родной частоте анимации, а не на каждый кадр экрана (120 Гц → вдвое меньше работы)
+  anim.setSubframe(false);
+  return anim;
+}
+
 function ensureReferralGiftAnimsLoaded() {
-  if (referralGiftAnims.length) return;
+  if (referralGiftAnims.length || _referralGiftsBuilding) return;
+  _referralGiftsBuilding = true;
   const _giftsConfig = [
     { id: "giftKingOfRock", file: "kingofrock_noBG.json" },
     { id: "giftHulaGirl", file: "hula_girl_noBG.json" },
@@ -7637,23 +7700,16 @@ function ensureReferralGiftAnimsLoaded() {
     { id: "giftStreetBeast", file: "streetbeast_noBG.json" },
     { id: "giftJordan", file: "jordan_noBG.json" }
   ];
-  _giftsConfig.forEach((g) => {
-    const el = document.getElementById(g.id);
-    if (el && !el.dataset.loaded) {
-      el.dataset.loaded = "1";
-      // Если файл уже загружен при старте — отдаём данные напрямую,
-      // тогда статуэтка появляется мгновенно, без обращения к сети.
-      const preloaded = REFERRAL_GIFT_DATA[g.file];
-      const anim = lottie.loadAnimation(Object.assign({
-        container: el,
-        renderer: "svg",
-        loop: true,
-        autoplay: false
-      }, preloaded ? { animationData: preloaded } : { path: g.file }));
-      // кадры только в родной частоте анимации, а не на каждый кадр экрана (120 Гц → вдвое меньше работы)
-      anim.setSubframe(false);
-      referralGiftAnims.push(anim);
-    }
+  // движок dotLottie грузится модулем асинхронно — ждём его не дольше 2.5 с
+  waitForDotLottieWorker(2500).then(() => {
+    _giftsConfig.forEach((g, i) => {
+      const el = document.getElementById(g.id);
+      if (el && !el.dataset.loaded) {
+        el.dataset.loaded = "1";
+        referralGiftAnims.push(createReferralGiftPlayer(el, g.file, i));
+      }
+    });
+    syncReferralGiftPlayback();
   });
 }
 
@@ -10267,6 +10323,43 @@ const _lcRnd = (a, b) => a + Math.random() * (b - a);
 const _lcEase = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 let _canvasLevelCardsLoopStarted = false;
 
+// Готовые картинки («спрайты») для частиц и пузырьков: рисуются один раз,
+// дальше каждый кадр только копируются. Раньше на каждую частицу в каждом
+// кадре создавался новый градиент — это самая дорогая операция canvas.
+const _lcSpriteCache = {};
+function getLevelCanvasSprites(dpr) {
+  const key = String(dpr);
+  if (_lcSpriteCache[key]) return _lcSpriteCache[key];
+  const make = (size, draw) => {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = Math.ceil(size * dpr);
+    const g = cv.getContext("2d");
+    g.scale(dpr, dpr);
+    draw(g, size / 2);
+    return cv;
+  };
+  // светящаяся точка «Работяги» (как на орбите): рисуется в размере 2r
+  const glow = make(40, (g, c) => {
+    const gr = g.createRadialGradient(c, c, 0, c, c, c);
+    gr.addColorStop(0, "rgba(240,248,255,1)"); gr.addColorStop(.35, "rgba(130,180,255,.9)"); gr.addColorStop(1, "rgba(130,180,255,0)");
+    g.fillStyle = gr; g.beginPath(); g.arc(c, c, c, 0, _LC_TAU); g.fill();
+  });
+  // точка шлейфа — сплошной кружок
+  const dot = make(16, (g, c) => { g.fillStyle = "rgb(140,185,255)"; g.beginPath(); g.arc(c, c, c - .5, 0, _LC_TAU); g.fill(); });
+  // пузырьки «Новичка»: по спрайту на каждые 0.5px радиуса (толщина обводки как раньше)
+  const bubbles = {};
+  for (let r = 2; r <= 6.5; r += .5) {
+    bubbles[r] = make(r * 2 + 4, (g, c) => {
+      g.beginPath(); g.arc(c, c, r, 0, _LC_TAU);
+      g.strokeStyle = "rgba(110,240,200,.55)"; g.lineWidth = 1.2; g.stroke();
+      g.fillStyle = "rgba(95,232,190,.12)"; g.fill();
+      g.beginPath(); g.arc(c - r * .35, c - r * .35, r * .28, 0, _LC_TAU);
+      g.fillStyle = "rgba(230,255,248,.6)"; g.fill();
+    });
+  }
+  return (_lcSpriteCache[key] = { glow, dot, bubbles });
+}
+
 const LEVEL_CANVAS_FX = {
   bubbles: {
     init(st) { st.items = []; st.next = 0; },
@@ -10280,12 +10373,11 @@ const LEVEL_CANVAS_FX = {
         const x = b.x + Math.sin(b.life * 1.6 + b.ph) * 6;
         const top = Math.max(0, Math.min(1, b.y / (H * .5)));             // гаснут в верхней части
         const a = Math.min(1, b.life * 2) * (.25 + .75 * top);
-        bk.beginPath(); bk.arc(x, b.y, b.r, 0, _LC_TAU);
-        bk.strokeStyle = `rgba(110,240,200,${(.55 * a).toFixed(3)})`; bk.lineWidth = 1.2; bk.stroke();
-        bk.fillStyle = `rgba(95,232,190,${(.12 * a).toFixed(3)})`; bk.fill();
-        bk.beginPath(); bk.arc(x - b.r * .35, b.y - b.r * .35, b.r * .28, 0, _LC_TAU);
-        bk.fillStyle = `rgba(230,255,248,${(.6 * a).toFixed(3)})`; bk.fill();
+        const rr = Math.round(b.r * 2) / 2, spr = st.sprites.bubbles[rr], half = rr + 2;
+        bk.globalAlpha = a;
+        bk.drawImage(spr, x - half, b.y - half, half * 2, half * 2);
       });
+      bk.globalAlpha = 1;
       const br = (Math.sin(t / 2800 * _LC_TAU) + 1) / 2;
       st.circle.style.transform = `scale(${(1 + br * .05).toFixed(3)})`;
       st.circle.style.filter = `brightness(${(.95 + br * .2).toFixed(3)})`;
@@ -10311,8 +10403,8 @@ const LEVEL_CANVAS_FX = {
       });
     },
     frame(st, t, dt) {
-      const bk = st.bctx, fr = st.fctx, W = st.W, H = st.H;
-      bk.clearRect(0, 0, W, H); fr.clearRect(0, 0, W, H);
+      const bk = st.bctx, W = st.W, H = st.H;
+      bk.clearRect(0, 0, W, H);
       const P = st.parts;
       st.pt += dt;
 
@@ -10396,21 +10488,23 @@ const LEVEL_CANVAS_FX = {
         // у круга частица плавно гаснет (при стягивании) или проявляется (при выбросе):
         // начинает исчезать примерно за 90px до центра и пропадает полностью у ~25px
         const fadeAt = (x, y) => Math.max(0, Math.min(1, (Math.hypot(x - st.ox, y - st.oy) - 25) / 65));
+        const sp = st.sprites;
         p.trail.forEach(([x, y], j) => {
           if (!j) return;
           const q = 1 - j / p.trail.length;
           const fa = fadeAt(x, y);
           if (fa <= 0) return;
-          bk.beginPath(); bk.arc(x, y, p.r * .36 * q + .4, 0, _LC_TAU);
-          bk.fillStyle = `rgba(140,185,255,${(.5 * q * q * fa).toFixed(3)})`; bk.fill();
+          const rr = p.r * .36 * q + .4;
+          bk.globalAlpha = .5 * q * q * fa;
+          bk.drawImage(sp.dot, x - rr, y - rr, rr * 2, rr * 2);
         });
         const fa = fadeAt(p.x, p.y);
         if (fa <= 0) return;
-        const g = bk.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, `rgba(240,248,255,${fa.toFixed(3)})`); g.addColorStop(.35, `rgba(130,180,255,${(.9 * fa).toFixed(3)})`); g.addColorStop(1, "rgba(130,180,255,0)");
-        bk.fillStyle = g; bk.beginPath(); bk.arc(p.x, p.y, p.r, 0, _LC_TAU); bk.fill();
+        bk.globalAlpha = fa;
+        bk.drawImage(sp.glow, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
       });
 
+      bk.globalAlpha = 1;
       // круг растёт вместе с зарядом, при выбросе — пружинящий толчок
       st.kick = Math.max(0, st.kick - dt * 1.6);
       const kick = st.kick > 0 ? Math.exp(-(1 - st.kick) * 5) * Math.cos((1 - st.kick) * 9) * st.kick : 0;
@@ -10470,6 +10564,7 @@ function layoutCanvasLevelCard(card) {
     cv.height = Math.round(c.height * dpr);
     cv.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
   });
+  st.sprites = getLevelCanvasSprites(dpr);
   const o = card.querySelector(".clc-origin").getBoundingClientRect();
   st.W = c.width; st.H = c.height;
   st.ox = o.left - c.left; st.oy = o.top - c.top;
@@ -10527,8 +10622,8 @@ function renderMasterLevelCard(d) {
   return `
     <div class="master-level-card" data-fill="${d.fill}" style="${d.isCurrent ? "border-color:rgba(47,224,122,0.5);" : ""}">
       <div class="mlc-raylayer">
+        <canvas class="mlc-rays-cv"></canvas>
         <div class="mlc-origin">
-          <div class="mlc-rays"></div>
           <div class="mlc-circle"><div class="mlc-sheen"></div></div>
         </div>
       </div>
@@ -10581,6 +10676,55 @@ function masterCardConicMask(ox, oy, bands, TAIL) {
   return `conic-gradient(at ${ox}px ${oy}px, ${stops.join(",")})`;
 }
 
+// Лучи и импульсы рисуются на canvas готовыми «спрайтами»: один раз заранее
+// отрисованный и размытый луч, дальше каждый кадр он только поворачивается и
+// масштабируется. Раньше 18 DOM-лучей лежали в группе с filter: blur — браузер
+// каждый кадр заново размывал огромную область, это и тормозило на телефонах.
+const _masterSpriteCache = {};
+function getMasterRaySprites(dpr) {
+  const key = String(dpr);
+  if (_masterSpriteCache[key]) return _masterSpriteCache[key];
+  const LEN = MASTER_CARD_RAY_LEN, W = MASTER_CARD_RAY_W, PAD = 10;
+  const blurred = (w, h, drawShape, paint, blurPx) => {
+    const cv = document.createElement("canvas");
+    cv.width = Math.ceil((w + PAD * 2) * dpr);
+    cv.height = Math.ceil((h + PAD * 2) * dpr);
+    const g = cv.getContext("2d");
+    const OFF = cv.width + 40;                    // фигуру рисуем за краем, на холст попадает только её размытая тень
+    g.shadowColor = "#fff";
+    g.shadowBlur = blurPx * 2 * dpr;
+    g.shadowOffsetX = -OFF;
+    g.beginPath();
+    drawShape(g, (x) => (x + PAD) * dpr + OFF, (y) => (y + PAD) * dpr);
+    g.fillStyle = "#fff";
+    g.fill();
+    g.shadowColor = "transparent";
+    g.globalCompositeOperation = "source-in";     // красим размытую форму нужным градиентом
+    paint(g, (x) => (x + PAD) * dpr, cv);
+    return cv;
+  };
+  const ray = blurred(LEN, W, (g, X, Y) => {
+    g.moveTo(X(0), Y(W * .42)); g.lineTo(X(LEN), Y(0)); g.lineTo(X(LEN), Y(W)); g.lineTo(X(0), Y(W * .58)); g.closePath();
+  }, (g, X, cv) => {
+    const gr = g.createLinearGradient(X(0), 0, X(LEN), 0);
+    gr.addColorStop(0, "rgba(145,72,230,.9)"); gr.addColorStop(.38, "rgba(108,40,200,.58)");
+    gr.addColorStop(.75, "rgba(88,30,178,.2)"); gr.addColorStop(1, "rgba(88,30,178,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, cv.width, cv.height);
+  }, 2.5);
+  const PL = 95;
+  const pkt = blurred(PL, W, (g, X, Y) => {
+    const r = W / 2;
+    g.moveTo(X(r), Y(0)); g.lineTo(X(PL - r), Y(0)); g.arc(X(PL - r), Y(r), r * dpr, -Math.PI / 2, Math.PI / 2);
+    g.lineTo(X(r), Y(W)); g.arc(X(r), Y(r), r * dpr, Math.PI / 2, Math.PI * 1.5); g.closePath();
+  }, (g, X, cv) => {
+    const gr = g.createLinearGradient(X(0), 0, X(PL), 0);
+    gr.addColorStop(0, "rgba(230,200,255,0)"); gr.addColorStop(.6, "rgba(235,210,255,.9)");
+    gr.addColorStop(.82, "#fff"); gr.addColorStop(1, "rgba(230,200,255,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, cv.width, cv.height);
+  }, 5);
+  return (_masterSpriteCache[key] = { ray, pkt, PAD, LEN, W, PL });
+}
+
 function layoutMasterLevelCard(card) {
   const fill = Number(card.dataset.fill) || 0;
   const content = card.querySelector(".mlc-content");
@@ -10621,24 +10765,11 @@ function layoutMasterLevelCard(card) {
 
   let s = card._mlc;
   if (!s) {
-    const group = card.querySelector(".mlc-rays");
     const rays = [];
-    for (let i = 0; i < MASTER_CARD_RAYS; i++) {
-      const el = document.createElement("div");
-      el.className = "mlc-ray";
-      el.style.width = MASTER_CARD_RAY_LEN + "px";
-      el.style.height = MASTER_CARD_RAY_W + "px";
-      el.style.top = (-MASTER_CARD_RAY_W / 2) + "px";
-      const a = i * 360 / MASTER_CARD_RAYS;
-      el.style.transform = `rotate(${a}deg)`;
-      const pkt = document.createElement("div");
-      pkt.className = "mlc-pkt";
-      el.appendChild(pkt);
-      group.appendChild(el);
-      rays.push({ el, pkt, a, delay: -1 });
-    }
+    for (let i = 0; i < MASTER_CARD_RAYS; i++) rays.push({ a: i * 360 / MASTER_CARD_RAYS, delay: -1 });
+    const cv = card.querySelector(".mlc-rays-cv");
     s = card._mlc = {
-      group, rays,
+      cv, ctx: cv.getContext("2d"), rays,
       circle: card.querySelector(".mlc-circle"),
       sheen: card.querySelector(".mlc-sheen"),
       halo,
@@ -10646,6 +10777,12 @@ function layoutMasterLevelCard(card) {
       lastCycle: -1
     };
   }
+  const dpr = Math.min(referralFxIsLite() ? 1 : 2, window.devicePixelRatio || 1);
+  s.dpr = dpr;
+  s.W = c.width; s.H = c.height;
+  s.cv.width = Math.round(c.width * dpr);
+  s.cv.height = Math.round(c.height * dpr);
+  s.sprites = getMasterRaySprites(dpr);
   s.ox = ox; s.oy = oy;
   card._mlcLaidW = Math.round(c.width);
 }
@@ -10655,7 +10792,6 @@ function animateMasterLevelCard(card, now) {
   const PERIOD = 48000, CYCLE = 3000, CHARGE = 900, FLY = 1000;
   const T = now - s.t0;
   const rot = -(T / PERIOD) * 360;            // лучи проворачиваются: слева сверху вниз
-  s.group.style.transform = `rotate(${rot}deg)`;
   s.sheen.style.transform = `rotate(${T / 40}deg)`;
 
   const cycle = Math.floor(T / CYCLE), t = T % CYCLE;
@@ -10685,22 +10821,37 @@ function animateMasterLevelCard(card, now) {
   s.circle.style.filter = `brightness(${br.toFixed(3)})`;
 
   const spots = [];
+  const ctx = s.ctx, sp = s.sprites;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, s.cv.width, s.cv.height);
   s.rays.forEach(r => {
     const tt = t - CHARGE - r.delay;
-    let op = .9, pOp = 0;
+    let op = .9, pOp = 0, d = 0;
     if (r.delay >= 0 && tt >= 0 && tt < FLY) {
       const k = tt / FLY;
-      const d = 40 + (MASTER_CARD_RAY_LEN - 20) * (1 - Math.pow(1 - k, 2.2));
+      d = 40 + (MASTER_CARD_RAY_LEN - 20) * (1 - Math.pow(1 - k, 2.2));
       pOp = k < .1 ? k / .1 : 1 - Math.pow((k - .1) / .9, 1.6);
-      r.pkt.style.transform = `translateX(${(d - 80).toFixed(1)}px)`;
       op = .9 + .1 * Math.max(0, 1 - k * 1.3);
       const rad = (r.a + rot) * Math.PI / 180;
       spots.push({ x: s.ox + Math.cos(rad) * d * sx, y: s.oy + Math.sin(rad) * d * sx, a: pOp });
     }
-    r.pkt.style.opacity = pOp.toFixed(3);
-    r.el.style.opacity = op.toFixed(3);
-    r.el.style.transform = `rotate(${r.a}deg) scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
+    // луч: поворот вокруг центра круга, «дыхание» — масштаб по длине и ширине
+    const ang = (r.a + rot) * Math.PI / 180;
+    ctx.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
+    ctx.translate(s.ox, s.oy);
+    ctx.rotate(ang);
+    ctx.scale(sx, sy);
+    ctx.globalAlpha = op;
+    ctx.drawImage(sp.ray, -sp.PAD, -sp.W / 2 - sp.PAD, sp.LEN + sp.PAD * 2, sp.W + sp.PAD * 2);
+    if (pOp > .01) {
+      // импульс внутри конуса: высота — как ширина конуса в этом месте
+      const x0 = d - 80, xc = x0 + sp.PL / 2;
+      const h = sp.W * Math.max(.16, Math.min(1, .16 + .84 * xc / sp.LEN));
+      ctx.globalAlpha = pOp;
+      ctx.drawImage(sp.pkt, x0 - sp.PAD, -h / 2 - sp.PAD * h / sp.W, sp.PL + sp.PAD * 2, h + sp.PAD * 2 * h / sp.W);
+    }
   });
+  ctx.globalAlpha = 1;
 
   const layers = spots.filter(p => p.a > .03).map(p =>
     `radial-gradient(circle 30px at ${p.x.toFixed(1)}px ${p.y.toFixed(1)}px, rgba(0,0,0,${p.a.toFixed(2)}) 0%, rgba(0,0,0,${(p.a * .5).toFixed(2)}) 55%, rgba(0,0,0,0) 100%)`);
