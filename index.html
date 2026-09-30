@@ -6435,7 +6435,7 @@ body.market-filter-open .market-side-fab {
         </div>
 
         <div class="profile-action-grid">
-          <button type="button" class="profile-action-btn primary" onclick="openWallet()">💼 Кошелёк</button>
+          <button type="button" class="profile-action-btn primary" onclick="openWallet()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" class="btn-inline-icon" aria-hidden="true"><path d="M494.422,238.219v-72.281c-0.016-34.063-23.641-62.5-55.422-70.063c-3.063-37-33.969-66.125-71.781-66.125H108.156C53.984,29.766,9.297,69.594,1.406,121.547H0v16.359v42.125v194.063c0.016,59.75,48.422,108.156,108.156,108.156h314.125c39.844,0,72.125-32.281,72.141-72.141v-45.672c10.141-2.891,17.563-12.109,17.578-23.156v-79.875C511.984,250.344,504.563,241.125,494.422,238.219z M470.219,410.109c-0.016,13.266-5.344,25.172-14.047,33.891c-8.703,8.688-20.609,14.031-33.891,14.031H108.156c-23.219,0-44.125-9.375-59.359-24.578c-15.203-15.234-24.578-36.141-24.578-59.359V180.031v-41.156l0.203-4.688c1.953-44.625,38.641-80.25,83.734-80.219h259.063c23.719-0.016,43.328,17.219,47.156,39.844H65.938c-6.688,0-12.125,5.406-12.125,12.094s5.438,12.109,12.125,12.109h357.828l2.484,0.203c24.594,2.031,43.969,22.609,43.969,47.719v71.25H358.406c-17.688,0-33.766,7.203-45.344,18.781l-0.016,0.016c-11.578,11.578-18.797,27.656-18.766,45.359c-0.031,17.688,7.188,33.75,18.781,45.344l0,0c11.578,11.594,27.656,18.797,45.344,18.781h111.813V410.109z M487.781,341.266H358.406c-11.141-0.016-20.875-4.406-28.219-11.703c-7.313-7.344-11.688-17.094-11.703-28.219c0.016-11.141,4.391-20.891,11.703-28.25l-0.094,0.094l0.078-0.094h0.016c7.344-7.281,17.078-11.656,28.219-11.688h129.375V341.266z"/><path d="M341.969,301.344c0,9.578,7.75,17.344,17.344,17.344c9.563,0,17.344-7.766,17.344-17.344c0-9.594-7.781-17.359-17.344-17.359C349.719,283.984,341.969,291.75,341.969,301.344z"/></svg>Кошелёк</button>
           <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('topup')">Пополнить</button>
           <button type="button" class="profile-action-btn" onclick="showProfilePlaceholderAction('withdraw')">Вывести</button>
         </div>
@@ -6881,23 +6881,18 @@ body.market-filter-open .market-side-fab {
       </div>
     </div>
 
-    <div class="referral-earned-pill" style="display:flex; flex-direction:column; gap:2px; padding:16px; margin-bottom:14px; background:linear-gradient(135deg, #0a4a5e, #178a9e); border:none; border-radius:26px; box-shadow:var(--shadow-main);">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="36" height="36" aria-hidden="true" style="color:#ffffff; flex-shrink:0;">
+    <!-- Сетка 3 ряда: подпись сверху, большая сумма ровно по центру карточки, «Всего» снизу.
+         Кнопка «Забрать» — тоже по центру, под ней примечание. -->
+    <div class="referral-earned-pill" style="display:grid; grid-template-columns:36px minmax(0,1fr) auto; grid-template-rows:1fr auto 1fr; column-gap:12px; align-items:center; padding:14px 16px; margin-bottom:14px; background:linear-gradient(135deg, #0a4a5e, #178a9e); border:none; border-radius:26px; box-shadow:var(--shadow-main);">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="36" height="36" aria-hidden="true" style="grid-column:1; grid-row:1 / 4; align-self:center; color:#ffffff;">
             <path fill="currentColor" d="M494.422,238.219v-72.281c-0.016-34.063-23.641-62.5-55.422-70.063c-3.063-37-33.969-66.125-71.781-66.125H108.156C53.984,29.766,9.297,69.594,1.406,121.547H0v16.359v42.125v194.063c0.016,59.75,48.422,108.156,108.156,108.156h314.125c39.844,0,72.125-32.281,72.141-72.141v-45.672c10.141-2.891,17.563-12.109,17.578-23.156v-79.875C511.984,250.344,504.563,241.125,494.422,238.219z M470.219,410.109c-0.016,13.266-5.344,25.172-14.047,33.891c-8.703,8.688-20.609,14.031-33.891,14.031H108.156c-23.219,0-44.125-9.375-59.359-24.578c-15.203-15.234-24.578-36.141-24.578-59.359V180.031v-41.156l0.203-4.688c1.953-44.625,38.641-80.25,83.734-80.219h259.063c23.719-0.016,43.328,17.219,47.156,39.844H65.938c-6.688,0-12.125,5.406-12.125,12.094s5.438,12.109,12.125,12.109h357.828l2.484,0.203c24.594,2.031,43.969,22.609,43.969,47.719v71.25H358.406c-17.688,0-33.766,7.203-45.344,18.781l-0.016,0.016c-11.578,11.578-18.797,27.656-18.766,45.359c-0.031,17.688,7.188,33.75,18.781,45.344l0,0c11.578,11.594,27.656,18.797,45.344,18.781h111.813V410.109z M487.781,341.266H358.406c-11.141-0.016-20.875-4.406-28.219-11.703c-7.313-7.344-11.688-17.094-11.703-28.219c0.016-11.141,4.391-20.891,11.703-28.25l-0.094,0.094l0.078-0.094h0.016c7.344-7.281,17.078-11.656,28.219-11.688h129.375V341.266z"/>
             <path fill="currentColor" d="M341.969,301.344c0,9.578,7.75,17.344,17.344,17.344c9.563,0,17.344-7.766,17.344-17.344c0-9.594-7.781-17.359-17.344-17.359C349.719,283.984,341.969,291.75,341.969,301.344z"/>
           </svg>
-          <div>
-            <div id="referralEarnedLabel" style="font-size:18px; font-weight:700; color:#ffffff;">Заработано</div>
-            <span id="referralEarnedAmount" style="font-size:26px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:6px;">0.00 GRAM</span>
-          </div>
-        </div>
-        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex-shrink:0;">
-          <button id="claimReferralBtn" onclick="claimReferralEarnings()" style="background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; transition:background 0.2s, color 0.2s, box-shadow 0.2s;">Забрать</button>
-          <div id="referralClaimMinNote" style="font-size:11px; opacity:0.5;">Мин. 1 gram</div>
-        </div>
-      </div>
+          <div id="referralEarnedLabel" style="grid-column:2; grid-row:1; align-self:end; font-size:18px; font-weight:700; line-height:1.2; color:#ffffff;">Заработано</div>
+          <span id="referralEarnedAmount" style="grid-column:2; grid-row:2; font-size:26px; font-weight:800; line-height:1.2; color:#ffffff; display:flex; align-items:center; gap:6px;">0.00 GRAM</span>
+          <div style="grid-column:2; grid-row:3; align-self:start; margin-top:2px; font-size:12px; font-weight:600; line-height:1.3; color:rgba(255,255,255,0.72);"><span id="referralTotalLabel">Всего</span> <span id="referralTotalAmount" style="color:#ffffff;">0.00 GRAM</span></div>
+          <button id="claimReferralBtn" onclick="claimReferralEarnings()" style="grid-column:3; grid-row:2; justify-self:center; background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; transition:background 0.2s, color 0.2s, box-shadow 0.2s;">Забрать</button>
+          <div id="referralClaimMinNote" style="grid-column:3; grid-row:3; align-self:start; justify-self:center; margin-top:4px; font-size:11px; opacity:0.5;">Мин. 1 gram</div>
     </div>
 
     <div id="referralLevelsRow" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:14px; -webkit-overflow-scrolling:touch; scrollbar-width:none;">
@@ -9759,7 +9754,12 @@ function applyAppLanguage(lang) {
 
   // Profile action buttons
   const profileActions = document.querySelectorAll(".profile-action-btn");
-  if (profileActions[0]) profileActions[0].innerHTML = "💼 " + t.wallet;
+  if (profileActions[0]) {
+    // иконку кошелька сохраняем, меняем только подпись (как у кнопки «Настройки»)
+    const walletIcon = profileActions[0].querySelector(".btn-inline-icon");
+    profileActions[0].textContent = t.wallet;
+    if (walletIcon) profileActions[0].prepend(walletIcon);
+  }
   if (profileActions[1]) profileActions[1].textContent = t.deposit;
   if (profileActions[2]) profileActions[2].textContent = t.withdraw;
 
@@ -9889,6 +9889,7 @@ function applyAppLanguage(lang) {
     if (_cnt) refSectionTitles[1].appendChild(_cnt);
   }
   set("#referralEarnedLabel", L("Заработано", "Earned"));
+  set("#referralTotalLabel", L("Всего", "Total"));
   set("#claimReferralBtn", L("Забрать", "Claim"));
   set("#inviteFriendsBtnText", L("Пригласить", "Invite"));
   const inviteBtnEl = document.getElementById("inviteFriendsBtn");
@@ -10206,6 +10207,36 @@ function updateClaimButtonState(amount) {
 }
 window.updateClaimButtonState = updateClaimButtonState;
 
+// «Всего» на карточке «Заработано»: сколько получено с рефералов за всё время.
+// Большая сумма выше — только то, что можно забрать прямо сейчас; после «Забрать»
+// она обнуляется, а «Всего» остаётся.
+let _referralUnclaimedShown = 0;   // сколько сейчас можно забрать
+let _referralLifetimeTotal = 0;    // сколько заработано за всё время
+
+function renderReferralLifetimeTotal() {
+  const el = document.getElementById("referralTotalAmount");
+  if (el) el.textContent = formatTon(_referralLifetimeTotal);
+}
+
+// Задать «Всего» целиком (ответ сервера). Оно не бывает меньше того, что можно забрать.
+function setReferralLifetimeTotal(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return;
+  _referralLifetimeTotal = Math.max(n, _referralUnclaimedShown);
+  renderReferralLifetimeTotal();
+}
+
+// Пришло новое начисление (referral:earningsUpdate): всё, что прибавилось к
+// «можно забрать», прибавляем и к «Всего».
+function applyReferralEarningsUpdate(newUnclaimed) {
+  const amount = Number(newUnclaimed);
+  if (!Number.isFinite(amount)) return;
+  if (amount > _referralUnclaimedShown) _referralLifetimeTotal += amount - _referralUnclaimedShown;
+  _referralUnclaimedShown = amount;
+  _referralLifetimeTotal = Math.max(_referralLifetimeTotal, amount);
+  renderReferralLifetimeTotal();
+}
+
 function claimReferralEarnings() {
   const btn = document.getElementById("claimReferralBtn");
   if (btn && btn.disabled) return;
@@ -10218,6 +10249,7 @@ function claimReferralEarnings() {
       const earnedAmountEl = document.getElementById("referralEarnedAmount");
       if (earnedAmountEl) earnedAmountEl.textContent = formatTon(0);
       updateClaimButtonState(0);
+      _referralUnclaimedShown = 0;   // «Всего» при этом не меняется
       if (response.claimed > 0) {
         showAppNotice(L(`Зачислено ${formatTon(response.claimed)}`, `Credited ${formatTon(response.claimed)}`));
       } else {
@@ -11331,7 +11363,15 @@ async function renderReferralsScreen() {
       if (earnedAmountEl && referralsResponse.unclaimedTotal != null) {
         earnedAmountEl.textContent = formatTon(referralsResponse.unclaimedTotal);
         updateClaimButtonState(referralsResponse.unclaimedTotal);
+        _referralUnclaimedShown = Number(referralsResponse.unclaimedTotal) || 0;
       }
+      // «Всего» — сколько заработано за всё время. Если сервер пришлёт готовое поле
+      // earnedTotal / totalEarned — берём его; иначе суммируем колонку «Всего»
+      // из таблицы приглашённых.
+      const _serverTotal = Number(referralsResponse.earnedTotal ?? referralsResponse.totalEarned);
+      setReferralLifetimeTotal(Number.isFinite(_serverTotal)
+        ? _serverTotal
+        : items.reduce((sum, it) => sum + (Number(it.totalEarn) || 0), 0));
     }
 
     if (countEl) countEl.textContent = String(items.length);
@@ -11540,6 +11580,18 @@ function setAppFps(level) {
   ensureScannerVisualLoop();
 }
 
+// Профиль не меняет режим нижней панели: если его открыли из маркета, аукциона
+// или инвентаря, панель остаётся «маркетной» (Market / Arena на кнопках). Значит,
+// и нажатия надо трактовать так же — иначе currentMenuView === "profile" не
+// похож на маркет, и кнопка Market уводила в арену.
+function isMarketFamilyView(view) {
+  return view === "market" || view === "inventory" || view === "auction";
+}
+function isMarketFamilyActive() {
+  if (isMarketFamilyView(currentMenuView)) return true;
+  return currentMenuView === "profile" && isMarketFamilyView(_profileReturnView);
+}
+
 function handleBottomNav(action, event) {
   if (event) event.stopPropagation();
   userHasNavigatedManually = true;
@@ -11605,7 +11657,7 @@ function handleBottomNav(action, event) {
       closeHistoryPanel({ preserveNav: true });
       closeLeaderboard();
       closeBobrRunRooms();
-      const isInMarketFamily = (currentMenuView === "market" || currentMenuView === "inventory" || currentMenuView === "auction");
+      const isInMarketFamily = isMarketFamilyActive();
       if (isInMarketFamily) {
         setMenuView("home");
       } else {
@@ -11627,7 +11679,7 @@ function handleArenaMarketNavClick(event) {
   closeLeaderboard();
   closeBobrRunRooms();
 
-  const marketModeActive = (currentMenuView === "market" || currentMenuView === "inventory" || currentMenuView === "auction");
+  const marketModeActive = isMarketFamilyActive();
   if (marketModeActive) {
     setMenuView("market");
   } else {
@@ -14937,6 +14989,7 @@ function initSocketConnection() {
     const earnedAmountEl = document.getElementById("referralEarnedAmount");
     if (earnedAmountEl) earnedAmountEl.textContent = formatTon(amount);
     updateClaimButtonState(amount);
+    applyReferralEarningsUpdate(amount);
   });
 
   // Полный список истории раундов, присылается сервером в ответ
