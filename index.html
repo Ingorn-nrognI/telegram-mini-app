@@ -1887,6 +1887,77 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 #auctionScreen .screen-inner {
   gap: 8px;
 }
+#casesScreen.menu-screen {
+  /* Тот же расчёт, что у остальных экранов: 8px между балансом и заголовком. */
+  padding-top: calc(var(--safe-top) + 64px);
+}
+#casesScreen .screen-inner {
+  gap: 8px;
+}
+/* Экран «Кейсы»: сетка карточек кейсов (пока заготовки — см. CASES_CATALOG в скрипте) */
+.cases-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.case-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(13, 21, 46, 0.96), rgba(7, 10, 24, 0.94));
+  box-shadow: var(--shadow-main);
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.case-tile::before {
+  /* мягкое свечение цвета редкости за иконкой */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 120px;
+  height: 90px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, var(--case-color) 0%, transparent 70%);
+  opacity: 0.28;
+  pointer-events: none;
+}
+.case-tile-icon {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  color: var(--case-color);
+}
+.case-tile-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.case-tile-name {
+  position: relative;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  text-align: center;
+}
+.case-tile-soon {
+  position: relative;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.08);
+}
+.case-tile:active {
+  transform: scale(0.98);
+}
 #inventoryScreen.menu-screen {
   /* Тот же расчёт, что у #homeScreen и #marketScreen: зазор между балансом
      и первым блоком экрана — 8px, как между балансом и кнопкой История. */
@@ -6522,6 +6593,13 @@ body.market-filter-open .market-side-fab {
     </div>
   </div>
 
+  <div id="casesScreen" class="menu-screen">
+    <div class="screen-inner">
+      <div id="casesTitle" class="market-subview-title">Кейсы</div>
+      <div id="casesGrid" class="cases-grid"></div>
+    </div>
+  </div>
+
   <div id="marketScreen" class="menu-screen">
     <div class="screen-inner">
 
@@ -8489,6 +8567,8 @@ function setMenuView(view, options = {}) {
   if (marketScreen) marketScreen.classList.toggle("active", view === "market");
   const auctionScreen = document.getElementById("auctionScreen");
   if (auctionScreen) auctionScreen.classList.toggle("active", view === "auction");
+  const casesScreen = document.getElementById("casesScreen");
+  if (casesScreen) casesScreen.classList.toggle("active", view === "cases");
 
   // Панель в приложении одна, поэтому кнопка PvP в маркете и на аукционе
   // показывает молоток с подписью "Аукцион", а на остальных экранах
@@ -8556,7 +8636,7 @@ function setMenuView(view, options = {}) {
     // Экран аукциона открывается кнопкой PvP (в маркете она показана как
     // "Аукцион"), поэтому подсвечивать надо именно её. Без этой строки
     // подсветка снималась со всех кнопок сразу после перехода.
-    const navForView = { scannerScreen: "pvp", inventory: "skins", bobrRun: "games", market: "market", auction: "pvp" };
+    const navForView = { scannerScreen: "pvp", inventory: "skins", bobrRun: "games", market: "market", auction: "pvp", cases: "cases" };
     setActiveBottomNav(view === "home" ? getPreferredHomeNav() : (navForView[view] || ""));
   }
 
@@ -9392,6 +9472,44 @@ function showBobrRunComingSoon(event) {
   showAppNotice(L("Игра на стадии разработки", "The game is under development"), { timeoutMs: 2600, closeModeMenu: true });
 }
 
+// Каталог кейсов для экрана «Кейсы». Пока это заготовки: когда появится серверная
+// часть (цены, содержимое, открытие), список будет приходить с сервера и заменит этот.
+const CASES_CATALOG = [
+  { id: "common",    ru: "Обычный кейс",     en: "Common case",    color: "#9fb2d6" },
+  { id: "rare",      ru: "Редкий кейс",      en: "Rare case",      color: "#4b9bff" },
+  { id: "epic",      ru: "Эпический кейс",   en: "Epic case",      color: "#a45cff" },
+  { id: "legendary", ru: "Легендарный кейс", en: "Legendary case", color: "#ffb23d" }
+];
+
+const CASE_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="1 -0.2 22 22" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M3.6 6h16.8a1.6 1.6 0 0 1 1.6 1.6v1.8a1.6 1.6 0 0 1 -1.6 1.6h-16.8a1.6 1.6 0 0 1 -1.6 -1.6v-1.8a1.6 1.6 0 0 1 1.6 -1.6z M4.6 12h14.8a1.6 1.6 0 0 1 1.6 1.6v5.8a1.6 1.6 0 0 1 -1.6 1.6h-14.8a1.6 1.6 0 0 1 -1.6 -1.6v-5.8a1.6 1.6 0 0 1 1.6 -1.6z M12.00 13.20L12.79 15.31L15.04 15.41L13.28 16.82L13.88 18.99L12.00 17.75L10.12 18.99L10.72 16.82L8.96 15.41L11.21 15.31z M19.4 0.6Q19.8 2.4 21.6 2.8Q19.8 3.2 19.4 5.0Q19 3.2 17.2 2.8Q19 2.4 19.4 0.6z"/></svg>';
+
+function renderCasesScreen() {
+  const title = document.getElementById("casesTitle");
+  if (title) title.textContent = L("Кейсы", "Cases");
+  const grid = document.getElementById("casesGrid");
+  if (!grid) return;
+  grid.innerHTML = CASES_CATALOG.map((c) => `
+    <div class="case-tile" style="--case-color:${c.color};" onclick="onCaseTileClick('${c.id}')">
+      <div class="case-tile-icon">${CASE_ICON_SVG}</div>
+      <div class="case-tile-name">${escapeHtml(L(c.ru, c.en))}</div>
+      <div class="case-tile-soon">${escapeHtml(L("Скоро", "Soon"))}</div>
+    </div>`).join("");
+}
+
+function onCaseTileClick(caseId) {
+  showAppNotice(L("Открытие кейсов скоро появится", "Opening cases is coming soon"));
+}
+
+function openCases(event) {
+  if (event) event.stopPropagation();
+  closeModePopup();
+  closeHistoryPanel({ preserveNav: true });
+  closeLeaderboard();
+  closeBobrRunRooms();
+  renderCasesScreen();
+  setMenuView("cases");
+}
+
 function openSkins(event) {
   if (event) event.stopPropagation();
   closeModePopup();
@@ -9734,6 +9852,7 @@ function applyAppLanguage(lang) {
   // Bottom nav
   set("#navLeaderboard .nav-label", t.tabLeaderboard);
   set("#navCases .nav-label", L("Кейсы", "Cases"));
+  if (typeof renderCasesScreen === "function") renderCasesScreen();
   if (currentMenuView !== "market" && currentMenuView !== "auction") set("#navPvp .nav-label", t.tabPvp);
   set("#navSkins .nav-label", t.tabSkins);
   set("#navHistory .nav-label", t.tabHistory);
@@ -11658,10 +11777,8 @@ function handleBottomNav(action, event) {
       openLeaderboard();
       break;
 
-    // Раздел «Кейсы» пока не готов — кнопка показывает уведомление.
-    // Когда раздел появится, здесь откроется его экран.
     case "cases":
-      showAppNotice(L("Кейсы скоро появятся", "Cases are coming soon"));
+      openCases();
       break;
 
     case "games": {
