@@ -5180,6 +5180,70 @@ body.market-filter-open .market-side-fab {
   transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
 }
 
+/* ===== Выключение анимаций ===== */
+/* Не "none", а ~0 мс: так анимации сразу приходят в конечное состояние (ничего не
+   остаётся невидимым), а события transitionend по-прежнему срабатывают. */
+html.no-animations *,
+html.no-animations *::before,
+html.no-animations *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
+
+/* ===== Переключатель как в iOS (Анимация, Вибрация) ===== */
+.app-settings-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.app-settings-switch-row .app-settings-section-title {
+  margin-bottom: 0;
+}
+.app-switch {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: #131a2b;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+  transition: background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+.app-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #8791b0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.45);
+  transition: transform 0.22s cubic-bezier(0.3, 0.7, 0.3, 1), background 0.22s ease;
+}
+.app-switch.on {
+  background: linear-gradient(135deg, rgba(104, 152, 255, 0.98), rgba(45, 225, 255, 0.92));
+  border-color: rgba(255,255,255,0.28);
+  box-shadow: 0 0 14px rgba(45, 225, 255, 0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.app-switch.on .app-switch-knob {
+  transform: translateX(22px);
+  background: #ffffff;
+}
+.app-switch:active .app-switch-knob {
+  width: 28px;
+}
+.app-switch.on:active .app-switch-knob {
+  transform: translateX(18px);
+}
 .app-settings-chip.active {
   background: linear-gradient(135deg, rgba(104, 152, 255, 0.96), rgba(45, 225, 255, 0.88));
   border-color: rgba(255,255,255,0.18);
@@ -6929,10 +6993,16 @@ body.market-filter-open .market-side-fab {
       </div>
 
       <div class="app-settings-section">
-        <div class="app-settings-section-title">Вибрация</div>
-        <div class="app-settings-chips">
-          <button id="settingsVibOn" class="app-settings-chip" onclick="setAppVibration(true)">Вкл</button>
-          <button id="settingsVibOff" class="app-settings-chip" onclick="setAppVibration(false)">Выкл</button>
+        <div class="app-settings-switch-row">
+          <div class="app-settings-section-title">Анимация</div>
+          <button type="button" id="settingsAnimSwitch" class="app-switch on" role="switch" aria-checked="true" aria-label="Анимация" onclick="toggleAppAnimations()"><span class="app-switch-knob"></span></button>
+        </div>
+      </div>
+
+      <div class="app-settings-section">
+        <div class="app-settings-switch-row">
+          <div class="app-settings-section-title">Вибрация</div>
+          <button type="button" id="settingsVibSwitch" class="app-switch on" role="switch" aria-checked="true" aria-label="Вибрация" onclick="toggleAppVibration()"><span class="app-switch-knob"></span></button>
         </div>
       </div>
     </div>
@@ -7705,6 +7775,8 @@ function createRlottiePlayer(canvas, jsonText) {
       cancelAnimationFrame(raf);
       startedAt = 0;
       lastDrawn = -1;
+      // анимации выключены — сразу показываем последний кадр (в нём подарок виден целиком)
+      if (typeof animationsEnabled === "function" && !animationsEnabled()) { draw(total - 1); return; }
       raf = requestAnimationFrame(tick);
     },
     destroy() {
@@ -7871,8 +7943,18 @@ function setupReferralGiftsVisibility() {
 }
 
 function syncReferralGiftPlayback() {
-  const shouldPlay = isReferralsOverlayOpen() && _referralGiftsInView && !document.hidden;
-  referralGiftAnims.forEach((anim) => (shouldPlay ? anim.play() : anim.pause()));
+  const shouldPlay = isReferralsOverlayOpen() && _referralGiftsInView && !document.hidden && animationsEnabled();
+  referralGiftAnims.forEach((anim) => {
+    if (shouldPlay) { anim.play(); return; }
+    anim.pause();
+    if (!animationsEnabled()) {
+      // анимации выключены — статуэтка стоит в исходной позе, а не замирает посреди движения
+      try {
+        if (typeof anim.setFrame === "function") anim.setFrame(0);
+        else if (typeof anim.goToAndStop === "function") anim.goToAndStop(0, true);
+      } catch (e) { /* плеер ещё не готов — поза выставится после загрузки */ }
+    }
+  });
 }
 
 function playReferralGiftAnims() {
@@ -9538,10 +9620,19 @@ const appSettings = {
   language: window._savedAppSettings?.language || "ru",
   quality: window._savedAppSettings?.quality || "auto",
   vibration: window._savedAppSettings?.vibration !== undefined ? window._savedAppSettings.vibration : true,
+  animations: window._savedAppSettings?.animations !== undefined ? window._savedAppSettings.animations : true,
   fps: window._savedAppSettings?.fps || "auto",
   liveBg: window._savedAppSettings?.liveBg || "auto",
 };
 delete window._savedAppSettings;
+
+// Глобальный выключатель анимаций (Настройки → Анимация). Выключен — на <html> стоит
+// класс no-animations: CSS-анимации и переходы мгновенны, а подарки, карточки уровней
+// и фоновые эффекты показывают статичный кадр. Игровое поле сканера не затрагивается.
+function animationsEnabled() {
+  return appSettings.animations !== false;
+}
+document.documentElement.classList.toggle("no-animations", !animationsEnabled());
 
 // Возвращает строку на текущем языке интерфейса. Используется для всех
 // пользовательских текстов, которые строятся в JS динамически.
@@ -9698,11 +9789,11 @@ function isScannerScreenActive() {
   let rafScheduled = false;
 
   function parallaxEnabled() {
-    return (_liveBgTierCache === "mid" || _liveBgTierCache === "high") && !isScannerScreenActive();
+    return animationsEnabled() && (_liveBgTierCache === "mid" || _liveBgTierCache === "high") && !isScannerScreenActive();
   }
 
   function rippleEnabled() {
-    return _liveBgTierCache === "high" && !isScannerScreenActive();
+    return animationsEnabled() && _liveBgTierCache === "high" && !isScannerScreenActive();
   }
 
   function flushParallax() {
@@ -9860,7 +9951,7 @@ function applyAppLanguage(lang) {
   // Settings overlay
   set("#appSettingsTitle", t.settingsTitle);
   const settingsSections = document.querySelectorAll(".app-settings-section-title");
-  const sectionKeys = [t.language, t.graphicsQuality, t.fpsLabel, t.vibration];
+  const sectionKeys = [t.language, t.graphicsQuality, t.fpsLabel, L("АНИМАЦИЯ", "ANIMATION"), t.vibration];
   settingsSections.forEach((el, i) => { if (sectionKeys[i]) el.textContent = sectionKeys[i]; });
 
   // Settings chips labels
@@ -10169,13 +10260,19 @@ function renderAppSettings() {
     settingsFpsMid: appSettings.fps === "mid",
     settingsFpsHigh: appSettings.fps === "high",
     settingsFpsUltra: appSettings.fps === "ultra",
-    settingsVibOn: appSettings.vibration === true,
-    settingsVibOff: appSettings.vibration === false,
   };
   for (const [id, active] of Object.entries(chipMap)) {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("active", active);
   }
+
+  // Переключатели «Анимация» и «Вибрация»
+  [["settingsAnimSwitch", animationsEnabled()], ["settingsVibSwitch", appSettings.vibration !== false]].forEach(([id, on]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle("on", on);
+    el.setAttribute("aria-checked", on ? "true" : "false");
+  });
 
   const qualityAutoHintMap = { low: "settingsQualityLow", mid: "settingsQualityMid", high: "settingsQualityHigh" };
   const fpsAutoHintMap = { low: "settingsFpsLow", mid: "settingsFpsMid", high: "settingsFpsHigh", ultra: "settingsFpsUltra" };
@@ -10484,6 +10581,7 @@ function referralFxEnsureObservers() {
   if (!REFERRAL_FX.ro && typeof ResizeObserver !== "undefined") {
     REFERRAL_FX.ro = new ResizeObserver((entries) => {
       entries.forEach((e) => { e.target._fxResized = true; });
+      if (!animationsEnabled()) referralFxScheduleStill();   // при выключенных анимациях перерисуем статичный кадр
     });
   }
 }
@@ -10506,6 +10604,41 @@ function referralFxRegisterCards() {
     card._fxVisible = !REFERRAL_FX.io;          // без IntersectionObserver считаем видимой
     if (REFERRAL_FX.io) REFERRAL_FX.io.observe(card);
     if (REFERRAL_FX.ro) REFERRAL_FX.ro.observe(card);
+  });
+  if (!animationsEnabled()) referralFxScheduleStill();
+}
+
+// Анимации выключены: каждая карточка рисуется один раз в заранее выбранный
+// красивый момент (волны видны, лучи на месте, частицы разбросаны) и стоит.
+let _referralFxStillQueued = false;
+function referralFxScheduleStill() {
+  if (_referralFxStillQueued) return;
+  _referralFxStillQueued = true;
+  requestAnimationFrame(() => { _referralFxStillQueued = false; referralFxRenderStill(); });
+}
+
+function referralFxRenderStill() {
+  if (animationsEnabled()) return;
+  REFERRAL_FX.cards.forEach((card) => {
+    if (!card.isConnected || !card.getBoundingClientRect().width) return;   // скрыта — нарисуем, когда покажут
+    try {
+      if (card.classList.contains("pro-level-card")) {
+        layoutProLevelCard(card);
+        animateProLevelCard(card, card._plc.P * 1.2);
+      } else if (card.classList.contains("master-level-card")) {
+        card._mlc = null;
+        layoutMasterLevelCard(card);
+        animateMasterLevelCard(card, card._mlc.t0);
+      } else {
+        card._clc = null;
+        layoutCanvasLevelCard(card);
+        const st = card._clc;
+        const total = card.dataset.fx === "bubbles" ? 3000 : 1000;
+        st.last = performance.now();
+        for (let t = 50; t <= total; t += 50) st.fx.frame(st, t, 0.05);
+      }
+      card._fxResized = false;
+    } catch (e) { console.warn("[level cards] не удалось нарисовать статичный кадр:", e); }
   });
 }
 
@@ -10537,6 +10670,7 @@ function referralFxFrame(now) {
 function startReferralFx() {
   document.documentElement.classList.toggle("referral-fx-lite", referralFxIsLite());
   referralFxRegisterCards();
+  if (!animationsEnabled()) { REFERRAL_FX.running = false; return; }   // анимации выключены — только статичный кадр
   if (REFERRAL_FX.running) return;
   REFERRAL_FX.running = true;
   REFERRAL_FX.last = 0;
@@ -11271,10 +11405,10 @@ function layoutProLevelCard(card) {
   card._plcLaidW = Math.round(c.width);
 }
 
-function animateProLevelCard(card) {
+function animateProLevelCard(card, nowOverride) {
   const s = card._plc;
   const anim = s.drop.getAnimations()[0];
-  const now = anim && anim.currentTime != null ? anim.currentTime : performance.now();
+  const now = nowOverride != null ? nowOverride : (anim && anim.currentTime != null ? anim.currentTime : performance.now());
   const D = s.P * 5;
   const layers = [];
   s.rings.forEach((el, i) => {
@@ -11660,6 +11794,71 @@ function setAppVibration(enabled) {
   appSettings.vibration = enabled;
   saveAppSettings();
   renderAppSettings();
+  if (enabled) appHaptic("medium");   // короткий отклик: сразу чувствуется, что вибрация включена
+}
+
+function toggleAppVibration() {
+  setAppVibration(appSettings.vibration === false);
+}
+
+// Вибрация-отклик. Уважает настройку «Вибрация». В Telegram — родная тактильная отдача,
+// вне Telegram — navigator.vibrate. kind: light | medium | heavy | success | warning | error
+function appHaptic(kind = "light") {
+  if (appSettings.vibration === false) return;
+  try {
+    const haptic = window.Telegram?.WebApp?.HapticFeedback;
+    if (haptic) {
+      if (kind === "success" || kind === "warning" || kind === "error") haptic.notificationOccurred(kind);
+      else haptic.impactOccurred(kind);
+      return;
+    }
+    if (navigator.vibrate) navigator.vibrate(kind === "heavy" ? 30 : 12);
+  } catch (e) { /* вибрация недоступна — молча пропускаем */ }
+}
+
+function toggleAppAnimations() {
+  setAppAnimations(!animationsEnabled());
+}
+
+function setAppAnimations(enabled) {
+  appSettings.animations = !!enabled;
+  saveAppSettings();
+  applyAnimationsSetting();
+  renderAppSettings();
+  appHaptic("light");
+}
+
+// Привести всё приложение в соответствие с настройкой: CSS, подарки, карточки уровней.
+function applyAnimationsSetting() {
+  const on = animationsEnabled();
+  document.documentElement.classList.toggle("no-animations", !on);
+
+  // статуэтки в реферальной программе
+  if (typeof syncReferralGiftPlayback === "function") syncReferralGiftPlayback();
+
+  // карточки уровней: перерисовываем — получаем свежее состояние (живое или статичный кадр)
+  if (typeof _lastReferralLevelsData !== "undefined" && _lastReferralLevelsData && Array.isArray(_lastReferralLevelsData.levels)) {
+    renderReferralLevelCards(_lastReferralLevelsData.levels, Number(_lastReferralLevelsData.turnover || 0), _lastReferralLevelsData.levelKey);
+  }
+  if (on) { if (isReferralsOverlayOpen()) startReferralFx(); }
+  else stopReferralFx();
+
+  // подарки в маркете и инвентаре
+  document.querySelectorAll("[data-loaded]").forEach((el) => {
+    const anim = el._lottieAnim;
+    if (!anim) return;
+    try {
+      if (!on) { anim.pause(); anim.goToAndStop(0, true); }
+      else {
+        const r = el.getBoundingClientRect();
+        const visible = r.width > 0 && r.bottom > 0 && r.top < window.innerHeight;
+        if (visible) anim.play();
+      }
+    } catch (e) { /* плеер ещё не загрузился */ }
+  });
+  document.querySelectorAll("video").forEach((v) => {
+    try { if (on) v.play().catch(() => {}); else v.pause(); } catch (e) {}
+  });
 }
 
 function detectOptimalQuality() {
@@ -20887,7 +21086,7 @@ const marketGiftAnimObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     const anim = entry.target._lottieAnim;
     if (!anim) return;
-    if (entry.isIntersecting) {
+    if (entry.isIntersecting && animationsEnabled()) {
       anim.play();
     } else {
       anim.pause();
@@ -21959,10 +22158,13 @@ function loadGiftAnimInto(el, item, autoplay) {
   if (!src) return null;
   el.dataset.loaded = "1";
   if (src.kind === "video") {
-    el.innerHTML = `<video src="${src.url}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:contain;"></video>`;
+    el.innerHTML = `<video src="${src.url}" ${animationsEnabled() ? "autoplay" : ""} loop muted playsinline preload="metadata" style="width:100%; height:100%; object-fit:contain;"></video>`;
     return null;
   }
-  return lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: !!autoplay, path: src.url });
+  const giftAnim = lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: !!autoplay && animationsEnabled(), path: src.url });
+  // анимации выключены — показываем подарок статичным кадром (как и раньше для неигровых плиток)
+  if (!animationsEnabled()) freezeGiftAnimOnFirstFrame(giftAnim);
+  return giftAnim;
 }
 
 // === Инвентарь: подарки пользователя + офферы ===
@@ -21977,7 +22179,7 @@ const inventoryGiftAnimObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     const anim = entry.target._lottieAnim;
     if (!anim) return;
-    if (entry.isIntersecting) {
+    if (entry.isIntersecting && animationsEnabled()) {
       anim.play();
     } else {
       anim.pause();
@@ -22277,6 +22479,9 @@ window.handleAppSettingsBackdrop = handleAppSettingsBackdrop;
 window.setAppLanguage = setAppLanguage;
 window.setAppQuality = setAppQuality;
 window.setAppVibration = setAppVibration;
+window.toggleAppVibration = toggleAppVibration;
+window.toggleAppAnimations = toggleAppAnimations;
+window.setAppAnimations = setAppAnimations;
 window.setAppFps = setAppFps;
 window.getEffectiveFps = getEffectiveFps;
 window.getEffectiveQuality = getEffectiveQuality;
