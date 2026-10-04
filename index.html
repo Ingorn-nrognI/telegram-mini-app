@@ -4641,6 +4641,74 @@ body.market-filter-open .market-side-fab {
   margin-right: 8px;
   vertical-align: middle;
 }
+/* Профиль: карточка текущего уровня рефералов слева, три квадратные кнопки справа,
+   «Рефералы» — под ними. Сетка 2×2 из прошлой версии больше не нужна. */
+.profile-settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.profile-level-row {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+}
+.profile-level-slot {
+  flex: 0 0 auto;
+  /* ровно столько же, сколько занимает карточка в реферальной программе
+     (там лента шириной экран − 50px, карточка 82% от неё, но не больше 340px) */
+  width: min(340px, calc((100vw - 50px) * 0.82));
+  min-height: 142px;
+  border-radius: 20px;
+  word-break: normal;
+}
+.profile-level-slot:empty {
+  /* пока уровни не пришли с сервера — тихая заглушка того же размера */
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.profile-level-slot > .pro-level-card,
+.profile-level-slot > .master-level-card,
+.profile-level-slot > .canvas-level-card,
+.profile-level-slot > .referral-level-card {
+  flex: none;
+  width: 100%;
+  max-width: none;
+}
+.profile-side-buttons {
+  flex: none;
+  width: 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.profile-square-btn {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  color: #eaf5ff;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  -webkit-tap-highlight-color: transparent;
+}
+.profile-square-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+.profile-square-btn:active {
+  transform: scale(0.94);
+}
+#profileReferralsBtn {
+  width: 100%;
+}
 .btn-inline-icon {
   width: 16px;
   height: 16px;
@@ -6539,21 +6607,23 @@ body.market-filter-open .market-side-fab {
       </section>
 
       <section class="profile-settings-card">
-        <button type="button" id="profileSettingsBtn" class="profile-settings-btn" onclick="openSettings()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="btn-inline-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>
-          Настройки
-        </button>
-        <button type="button" class="profile-settings-btn" onclick="openReferrals()">
+        <div class="profile-level-row">
+          <div id="profileLevelCardSlot" class="profile-level-slot"></div>
+          <div class="profile-side-buttons">
+            <button type="button" id="profileSettingsBtn" class="profile-square-btn" onclick="openSettings()" aria-label="Настройки" title="Настройки">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>
+            </button>
+            <button type="button" id="profileSupportBtn" class="profile-square-btn" onclick="openSupport()" aria-label="Поддержка" title="Поддержка">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14v-3a8 8 0 1 1 16 0v3" /><path d="M18 19c0 1.657 -2.686 3 -6 3" /><path d="M4 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3" /><path d="M15 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3" /></svg>
+            </button>
+            <button type="button" id="profileChatBtn" class="profile-square-btn" onclick="openChat()" aria-label="Чат" title="Чат">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" /></svg>
+            </button>
+          </div>
+        </div>
+        <button type="button" id="profileReferralsBtn" class="profile-settings-btn" onclick="openReferrals()">
           <svg xmlns="http://www.w3.org/2000/svg" class="btn-inline-icon" viewBox="0 0 640 640" aria-hidden="true"><path fill="currentColor" d="M96 192C96 130.1 146.1 80 208 80C269.9 80 320 130.1 320 192C320 253.9 269.9 304 208 304C146.1 304 96 253.9 96 192zM32 528C32 430.8 110.8 352 208 352C305.2 352 384 430.8 384 528L384 534C384 557.2 365.2 576 342 576L74 576C50.8 576 32 557.2 32 534L32 528zM464 128C517 128 560 171 560 224C560 277 517 320 464 320C411 320 368 277 368 224C368 171 411 128 464 128zM464 368C543.5 368 608 432.5 608 512L608 534.4C608 557.4 589.4 576 566.4 576L421.6 576C428.2 563.5 432 549.2 432 534L432 528C432 476.5 414.6 429.1 385.5 391.3C408.1 376.6 435.1 368 464 368z"/></svg>
           Рефералы
-        </button>
-        <button type="button" id="profileSupportBtn" class="profile-settings-btn secondary" onclick="openSupport()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-inline-icon" aria-hidden="true"><path d="M4 14v-3a8 8 0 1 1 16 0v3" /><path d="M18 19c0 1.657 -2.686 3 -6 3" /><path d="M4 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3" /><path d="M15 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3" /></svg>
-          Поддержка
-        </button>
-        <button type="button" id="profileChatBtn" class="profile-settings-btn secondary" onclick="openChat()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-inline-icon" aria-hidden="true"><path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" /></svg>
-          Чат
         </button>
       </section>
     </div>
@@ -8306,6 +8376,7 @@ function openProfileScreen(event) {
   closeBobrRunRooms();
   currentProfileBestRoundWin = 0;
   renderProfileScreen({ reloadBestWin: true });
+  refreshProfileLevelCard();
   // Профиль — не раздел нижней панели, поэтому подсветку снимаем полностью.
   // Заодно запоминаем, откуда пришли, чтобы вернуть туда же по "назад".
   _profileReturnView = (currentMenuView === "profile") ? _profileReturnView : currentMenuView;
@@ -8642,6 +8713,16 @@ function setMenuView(view, options = {}) {
 
   syncAppBackButton();
   forceScannerBetBarVisibilityRefresh();
+  syncReferralFxRunning();
+}
+
+// Анимации карточек уровней нужны, пока открыт экран рефералов ИЛИ профиль
+// (в нём тоже стоит карточка уровня). Во всех остальных местах приложения стоят.
+function syncReferralFxRunning() {
+  try {
+    const needed = !document.hidden && (isReferralsOverlayOpen() || currentMenuView === "profile");
+    if (needed) startReferralFx(); else stopReferralFx();
+  } catch (e) { /* при самом старте планировщик ещё не создан */ }
 }
 
 function closeModePopup() {
@@ -9933,12 +10014,11 @@ function applyAppLanguage(lang) {
   if (profileActions[2]) profileActions[2].textContent = t.withdraw;
 
   // Settings button in profile
-  const profileSettingsBtn = document.getElementById("profileSettingsBtn");
-  if (profileSettingsBtn) {
-    const iconEl = profileSettingsBtn.querySelector(".btn-inline-icon");
-    profileSettingsBtn.textContent = t.settings;
-    if (iconEl) profileSettingsBtn.prepend(iconEl);
-  }
+  // Квадратные кнопки профиля без текста — подпись только для скринридеров и подсказки
+  [["profileSettingsBtn", t.settings], ["profileSupportBtn", L("Поддержка", "Support")], ["profileChatBtn", L("Чат", "Chat")]].forEach(([id, label]) => {
+    const btn = document.getElementById(id);
+    if (btn) { btn.setAttribute("aria-label", label); btn.title = label; }
+  });
 
   // Stake settings sheet
   set(".scanner-stake-settings-title", t.stakeSettings);
@@ -10077,19 +10157,12 @@ function applyAppLanguage(lang) {
   set("#roomsModal .roomsHeader h2", "🎮 " + L("Комнаты Bobr Run", "Bobr Run rooms"));
   set("#createRoomBtn", L("Создать комнату Bobr Run", "Create a Bobr Run room"));
 
-  const profileReferralsBtn = document.querySelectorAll("#profileScreen .profile-settings-btn")[1];
+  const profileReferralsBtn = document.getElementById("profileReferralsBtn");
   if (profileReferralsBtn) {
     const _refIcon = profileReferralsBtn.querySelector(".btn-inline-icon");
     profileReferralsBtn.textContent = L("Рефералы", "Referrals");
     if (_refIcon) profileReferralsBtn.prepend(_refIcon);
   }
-  [["profileSupportBtn", L("Поддержка", "Support")], ["profileChatBtn", L("Чат", "Chat")]].forEach(([id, label]) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    const icon = btn.querySelector(".btn-inline-icon");
-    btn.textContent = label;
-    if (icon) btn.prepend(icon);
-  });
 
   // ---- aria-label / placeholder localization ----
   const _ariaMap = [
@@ -10283,7 +10356,7 @@ function closeReferrals() {
   overlay.classList.remove("open");
   overlay.setAttribute("aria-hidden", "true");
   pauseReferralGiftAnims();
-  stopReferralFx();
+  syncReferralFxRunning();
   if (typeof syncHistoryModeState === "function") syncHistoryModeState();
   syncAppBackButton();
 }
@@ -10557,7 +10630,7 @@ function isReferralsOverlayOpen() {
 // Приложение свернули — всё стоит; вернули на экран рефералов — запускаем снова.
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) stopReferralFx();
-  else if (isReferralsOverlayOpen()) startReferralFx();
+  else syncReferralFxRunning();
   if (typeof syncReferralGiftPlayback === "function") syncReferralGiftPlayback();
 });
 
@@ -11305,11 +11378,10 @@ function startProLevelCards() {
   referralFxRegisterCards();
 }
 
-function renderReferralLevelCards(levels, turnover, levelKey) {
-  const row = document.getElementById("referralLevelsRow");
-  if (!row || !Array.isArray(levels) || !levels.length) return;
-
-  row.innerHTML = levels.map((level, index) => {
+// HTML одной карточки уровня — ею пользуются и лента в реферальной программе,
+// и карточка текущего уровня в профиле.
+function buildReferralLevelCardHtml(levels, index, turnover, levelKey) {
+    const level = levels[index];
     const nextLevel = levels[index + 1];
     const rangeStart = level.threshold;
     const rangeEnd = nextLevel ? nextLevel.threshold : null; // у "Профи" верхней границы нет
@@ -11414,10 +11486,46 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
         </div>
       </div>
     `;
-  }).join("");
+}
+
+function renderReferralLevelCards(levels, turnover, levelKey) {
+  const row = document.getElementById("referralLevelsRow");
+  if (!row || !Array.isArray(levels) || !levels.length) return;
+
+  row.innerHTML = levels.map((level, index) => buildReferralLevelCardHtml(levels, index, turnover, levelKey)).join("");
+  renderProfileLevelCard();
   startProLevelCards();
   startMasterLevelCards();
   startCanvasLevelCards();
+}
+
+// ===== Карточка текущего уровня в профиле =====
+// Рисуется из тех же данных, что и лента в реферальной программе
+// (_lastReferralLevelsData), поэтому всегда совпадает с ней.
+function renderProfileLevelCard() {
+  const slot = document.getElementById("profileLevelCardSlot");
+  if (!slot) return;
+  const data = _lastReferralLevelsData;
+  if (!data || !Array.isArray(data.levels) || !data.levels.length) { slot.innerHTML = ""; return; }
+  let index = data.levels.findIndex((l) => l.key === data.levelKey);
+  if (index < 0) index = 0;
+  slot.innerHTML = buildReferralLevelCardHtml(data.levels, index, Number(data.turnover || 0), data.levelKey);
+  referralFxRegisterCards();
+  syncReferralFxRunning();
+}
+
+// При открытии профиля: показываем то, что уже есть, и тихо обновляем данные.
+let _profileLevelsFetchedAt = 0;
+function refreshProfileLevelCard() {
+  renderProfileLevelCard();
+  if (typeof _socket === "undefined" || !_socket || !_socket.connected) return;
+  if (Date.now() - _profileLevelsFetchedAt < 5000) return;
+  _profileLevelsFetchedAt = Date.now();
+  _socket.emit("referrals:request", {}, (response) => {
+    if (!response || !response.levels) return;
+    _lastReferralLevelsData = response;
+    renderReferralLevelCards(response.levels, Number(response.turnover || 0), response.levelKey);
+  });
 }
 
 function openReferralLevelsModal() {
