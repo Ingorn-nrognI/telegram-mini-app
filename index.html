@@ -7274,30 +7274,8 @@ html.no-animations *::after {
   }
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCxJb69UOCu38RvSbJVnf6jtD8VYDVHPD4",
-  authDomain: "web3-bobrup.firebaseapp.com",
-  projectId: "web3-bobrup",
-  storageBucket: "web3-bobrup.firebasestorage.app",
-  messagingSenderId: "947085067200",
-  appId: "1:947085067200:web:35299668725de1c965be25",
-  measurementId: "G-HPXPGC87TB"
-};
-
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
-const db = firebase.firestore();
-firebase.auth().signInAnonymously().catch((err) => {
-  console.error("Анонимная авторизация не удалась:", err);
-});
 const DEMO_TON_START_BALANCE = 1000;
-const DEMO_TON_RESET_MIGRATION_COLLECTION = "system";
-const DEMO_TON_RESET_MIGRATION_DOC = "demo_ton_balance_reset_to_1000_v2";
 const DEMO_TON_RESET_MIGRATION_TARGET = 1000;
 const DEMO_TON_RESET_MIGRATION_BATCH_SIZE = 450;
 const INSUFFICIENT_BALANCE_MESSAGE = "Для ставки не хватает баланса. Пополните свой баланс и повторите попытку.";
@@ -7433,17 +7411,6 @@ function getNetworkTimeHighRes() {
   return performance.now() + _perfTimeEpochMs + socketOffset;
 }
 
-function syncServerTime() {
-  if (typeof firebase !== 'undefined' && firebase.database) {
-    const offsetRef = firebase.database().ref(".info/serverTimeOffset");
-    offsetRef.on("value", (snap) => {
-      serverTimestampOffset = snap.val() || 0;
-      console.log("System: Смещение времени сервера обновлено:", serverTimestampOffset);
-    });
-  }
-}
-// Запускаем синхронизацию
-syncServerTime();
 
 let scannerQuickStakeValues = SCANNER_DEFAULT_QUICK_STAKES.slice();
 const scannerStakeSettingsState = {
@@ -8043,10 +8010,6 @@ function formatBalance(value) {
   return number.toFixed(2);
 }
 
-function getUserRef(playerId = getCurrentPlayer().id) {
-  return db.collection("users").doc(String(playerId));
-}
-
 function getUserDemoBalanceFromData(data) {
   const rawBalance = data?.demoTonBalance ?? data?.demoBalance ?? data?.balance ?? 0;
   return normalizeMoneyValue(rawBalance);
@@ -8065,12 +8028,6 @@ function syncLocalDemoBalance(value) {
   }
   renderTopProfile();
   renderScannerBetBar();
-}
-
-function getDemoTonResetMigrationRef() {
-  return db
-    .collection(DEMO_TON_RESET_MIGRATION_COLLECTION)
-    .doc(DEMO_TON_RESET_MIGRATION_DOC);
 }
 
 function hasDemoTonBalanceField(data) {
@@ -8309,43 +8266,6 @@ async function loadProfileBestRoundWin() {
   // и лучший выигрыш навсегда застывал на доперенесённом значении.
   requestScannerHistoryFromServer();
   return;
-
-  const requestSeq = profileBestWinRequestSeq + 1;
-  profileBestWinRequestSeq = requestSeq;
-  const player = getCurrentPlayer();
-  let bestWin = 0;
-
-  try {
-    const userHistorySnapshot = await getHistoryCollectionRef(player.id)
-      .orderBy("savedAt", "desc")
-      .limit(80)
-      .get();
-
-    userHistorySnapshot.forEach((doc) => {
-      bestWin = Math.max(bestWin, getProfileBestWinCandidate(doc.data() || {}, player.id));
-    });
-  } catch (error) {
-    console.warn("Не удалось загрузить пользовательскую историю для профиля:", error);
-  }
-
-  if (bestWin <= 0) {
-    try {
-      const scannerHistorySnapshot = await scannerHistoryCollection()
-        .where("winnerPlayerId", "==", player.id)
-        .limit(80)
-        .get();
-
-      scannerHistorySnapshot.forEach((doc) => {
-        bestWin = Math.max(bestWin, getProfileBestWinCandidate(doc.data() || {}, player.id));
-      });
-    } catch (error) {
-      console.warn("Не удалось загрузить историю выигрышей Сканера:", error);
-    }
-  }
-
-  if (requestSeq !== profileBestWinRequestSeq) return;
-  currentProfileBestRoundWin = normalizeMoneyValue(bestWin);
-  renderProfileBestWinValue();
 }
 
 function renderProfileScreen(options = {}) {
@@ -9020,10 +8940,6 @@ function formatHistoryDate(value) {
   });
 }
 
-function getHistoryCollectionRef(playerId) {
-  return db.collection("users").doc(String(playerId)).collection("history");
-}
-
 function getHistoryResultMeta(item) {
   const winnerValue = String(item?.winner || "").trim().toLowerCase();
 
@@ -9442,10 +9358,6 @@ function closeLeaderboard() {
 }
 
 const BOBR_RUN_ROOMS_COLLECTION = "bobr_run_rooms";
-
-function getBobrRunRoomsCollectionRef() {
-  return db.collection(BOBR_RUN_ROOMS_COLLECTION);
-}
 
 function renderBobrRunRooms() {
   const roomsList = document.getElementById("roomsList");
@@ -12141,26 +12053,6 @@ function shouldRenderScannerCanvasLive() {
   return (currentMenuView === "home" || currentMenuView === "scannerScreen") && !document.hidden;
 }
 
-function scannerRuntimeRef() {
-  return db.collection(SCANNER_RUNTIME_COLLECTION).doc(SCANNER_RUNTIME_DOC);
-}
-
-function scannerRoundsCollection() {
-  return db.collection(SCANNER_ROUNDS_COLLECTION);
-}
-
-function scannerRoundRef(roundId) {
-  return scannerRoundsCollection().doc(String(roundId));
-}
-
-function scannerParticipantsCollection(roundId) {
-  return scannerRoundRef(roundId).collection("participants");
-}
-
-function scannerHistoryCollection() {
-  return db.collection(SCANNER_HISTORY_COLLECTION);
-}
-
 function hashString(value) {
   const text = String(value || "");
   let hash = 0;
@@ -12275,10 +12167,6 @@ function tsToMs(value) {
   }
   const parsed = new Date(value).getTime();
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function createTimestampFromNow(offsetMs = 0) {
-  return firebase.firestore.Timestamp.fromMillis(getNetworkTime() + offsetMs);
 }
 
 function getScannerColorById(id, scopeKey = "") {
@@ -16421,34 +16309,6 @@ async function ensureScannerRoundHistoryPersisted() {
   // Историю раунда теперь пишет сервер в SQLite сразу после выплаты.
   // Клиентская запись отключена: она дублировала бы серверную, тратила
   // квоту Firestore и позволяла нарисовать себе фейковую победу из консоли.
-  const _clientHistoryWriteDisabled = true;
-  if (!_clientHistoryWriteDisabled) await Promise.all([
-    getHistoryCollectionRef(currentPlayer.id).doc(round.id).set(summary, { merge: true }),
-    scannerHistoryCollection().doc(round.id).set({
-      roundId: round.id,
-      roundNumber: _histRoundNumber,
-      mode: "Сканер-сетка",
-      status: round.status,
-      finishedAt: round.finishedAt || createTimestampFromNow(0),
-      totalPot: Number(scannerGridState.totalPot || 0),
-      participantCount: Number(scannerGridState.totalPlayers || 0),
-      maxPlayers: Number(round.maxPlayers || 0),
-      winnerPlayerId: scannerGridState.winningPlayer.id,
-      winnerName: scannerGridState.winningPlayer.name,
-      winnerAvatar: scannerGridState.winningPlayer.avatar || null,
-      winnerColor: scannerGridState.winningPlayer.color || getScannerColorById(scannerGridState.winningPlayer.id, round.id || round.entropySeed || "history_round"),
-      winnerStake: Number(scannerGridState.winningPlayer.stake || 0),
-      commissionPercent: Number(round.commissionPercent || 0),
-      commissionAmount: Number(round.commissionAmount || 0),
-      winnerGrossProfit: Number(round.winnerGrossProfit || Math.max(0, Number(scannerGridState.totalPot || 0) - Number(scannerGridState.winningPlayer.stake || 0))),
-      winnerNetProfit: Number(round.winnerNetProfit || Math.max(0, Number(round.winnerPayout || 0) - Number(scannerGridState.winningPlayer.stake || 0))),
-      winnerPayout: Number(round.winnerPayout || 0),
-      payoutProcessed: round.payoutProcessed === true,
-      winningCellIndex: Number(scannerGridState.winningCellIndex || 0),
-      resultSource: round.resultSource || "firestore-deterministic",
-      results: summary.results
-    }, { merge: true })
-  ]);
 
   scannerRealtime.lastPersistedRoundId = round.id;
 }
@@ -20330,25 +20190,6 @@ function subscribeScannerParticipants(roundId) {
   syncScannerDerivedState();
   renderScannerRound();
   return;
-
-  scannerRealtime.unsubParticipants = scannerParticipantsCollection(nextRoundId)
-    .orderBy("joinedAt", "asc")
-    .onSnapshot((snapshot) => {
-      const items = [];
-      snapshot.forEach((doc) => items.push({ id: doc.id, ...(doc.data() || {}) }));
-      items.forEach((p) => { if (p.avatar) getScannerAvatarEntry(p.avatar); });
-      scannerRealtime.participants = items;
-      scannerRealtime.participantsReady = true;
-      scannerRealtime.participantsError = false;
-      syncScannerDerivedState();
-      renderScannerRound();
-    }, (error) => {
-      console.error("Ошибка подписки на участников раунда:", error);
-      scannerRealtime.participantsReady = false;
-      scannerRealtime.participantsError = true;
-      syncScannerDerivedState();
-      renderScannerRound();
-    });
 }
 function preserveTimingField(existingMs, firestoreRawValue) {
   const firestoreMs = tsToMs(firestoreRawValue);
@@ -20365,176 +20206,12 @@ function subscribeScannerRound(roundId) {
   scannerRealtime.roundReady = true;
   scannerRealtime.participantsReady = true;
   return;
-
-  if (scannerRealtime.unsubRound) {
-    scannerRealtime.unsubRound();
-    scannerRealtime.unsubRound = null;
-  }
-
-  if (!roundId) {
-    if (scannerLastKnownRoundNumber) {
-      scannerDisplayRoundNumber = scannerLastKnownRoundNumber + 1;
-      scannerLastKnownRoundNumber = null;
-    }
-    scannerRealtime.roundData = null;
-  } else if (String(scannerRealtime.roundData?.id || "") !== String(roundId)) {
-    // Новый раунд — обязательно сбрасываем старые данные (включая version).
-    // Иначе version-защита от устаревших снэпшотов Firestore сравнивает версию
-    // НОВОГО раунда (который стартует с 1) со старой версией ПРЕДЫДУЩЕГО раунда
-    // (например 4) — и все настоящие снэпшоты нового раунда отбрасываются как
-    // "устаревшие" до конца раунда, включая поле countdownLatchSample.
-    scannerRealtime.roundData = null;
-  }
-  scannerRealtime.roundReady = !roundId;
-  scannerRealtime.activeRoundId = roundId || null;
-  if (roundId) {
-    scannerRealtime.fallbackRoundId = String(roundId) === String(scannerRealtime.runtimeData?.activeRoundId || "")
-      ? null
-      : scannerRealtime.fallbackRoundId;
-  }
-
-  if (!roundId) {
-    scannerRealtime.fallbackRoundId = null;
-    subscribeScannerParticipants(null);
-    syncScannerDerivedState();
-    renderScannerRound();
-    return;
-  }
-
-  subscribeScannerParticipants(roundId);
-
-  const roundRef = scannerRoundRef(roundId);
-  scannerRealtime.unsubRound = roundRef.onSnapshot((snapshot) => {
-    // Защита от "эха мёртвого раунда": сокет-патч о сбросе обнуляет activeRoundId
-    // сразу, а Firestore-подписка на документ старого раунда живёт ещё 1-2 секунды.
-    // За это время прилетает запоздалый снэпшот старого раунда (например эхо
-    // записи о возврате ставки) — он воскрешал roundData уже сброшенного раунда,
-    // статус откатывался, и луч на кадры дёргался к точке мёртвого раунда и
-    // обратно ("через секунду-две после сброса тепехается назад и возвращается").
-    // Снэпшоты раунда, который больше не активен, просто игнорируем.
-    if (String(scannerRealtime.activeRoundId || "") !== String(roundId)) return;
-    scannerRealtime.roundReady = true;
-    if (snapshot.exists) {
-      const firestoreData = { id: snapshot.id, ...(snapshot.data() || {}) };
-      // Защищаем countdownEndsAt от перезаписи Firestore — берём максимальное
-      const existingCountdownEndsAt = scannerRealtime.roundData?.countdownEndsAt || 0;
-      const firestoreCountdownEndsAt = tsToMs(firestoreData.countdownEndsAt);
-      firestoreData.countdownEndsAt = Math.max(existingCountdownEndsAt, firestoreCountdownEndsAt) || firestoreData.countdownEndsAt;
-      // Защищаем timing-поля фаз от перезаписи Firestore (сокет даёт точные значения)
-      const rd = scannerRealtime.roundData;
-      firestoreData.shuffleStartedAt = preserveTimingField(tsToMs(rd?.shuffleStartedAt), firestoreData.shuffleStartedAt);
-      firestoreData.shuffleEndsAt = preserveTimingField(tsToMs(rd?.shuffleEndsAt), firestoreData.shuffleEndsAt);
-      firestoreData.activeStartedAt = preserveTimingField(tsToMs(rd?.activeStartedAt), firestoreData.activeStartedAt);
-      firestoreData.activeEndsAt = preserveTimingField(tsToMs(rd?.activeEndsAt), firestoreData.activeEndsAt);
-      firestoreData.preparingStartedAt = preserveTimingField(tsToMs(rd?.preparingStartedAt), firestoreData.preparingStartedAt);
-      firestoreData.preparingEndsAt = preserveTimingField(tsToMs(rd?.preparingEndsAt), firestoreData.preparingEndsAt);
-      // lobbyStartSample сервер вообще никогда не пишет в Firestore-документ раунда
-      // (сохраняется только в памяти сервера и передаётся клиенту через сокет-патч) —
-      // поэтому firestoreData.lobbyStartSample всегда undefined. Без этой защиты
-      // каждый снэпшот из Firestore стирал уже правильно полученное от сокета
-      // значение, от которого зависит вся физика countdown/active — тот же класс
-      // бага, что уже чинили в applySocketRoundState, только в другом месте.
-      if (!firestoreData.lobbyStartSample && rd?.lobbyStartSample) {
-        firestoreData.lobbyStartSample = rd.lobbyStartSample;
-      }
-      // Та же история с countdownLatchSample: если в этом конкретном снэпшоте его нет
-      // (не успело записаться / не пишется вовсе), а у нас уже есть правильное значение
-      // из более раннего сокет-патча — не даём его стереть. Раньше это стирание
-      // происходило на КАЖДОЕ добавление ставки (новый снэпшот участников), из-за чего
-      // ключ кэша траектории countdown переключался с "latched" на "nolatch" и луч
-      // резко прыгал на другую, посчитанную заново случайную траекторию.
-      if (!firestoreData.countdownLatchSample && rd?.countdownLatchSample) {
-        firestoreData.countdownLatchSample = rd.countdownLatchSample;
-      }
-      const existingVersion = Number(scannerRealtime.roundData?.version || 0);
-      const incomingVersion = Number(firestoreData.version || 0);
-      if (incomingVersion < existingVersion) {
-        console.warn("[ScannerRound] Игнорирую устаревший снэпшот Firestore (версия " + incomingVersion + " < текущей " + existingVersion + ")");
-        // countdownLatchSample — статичное поле, пишется один раз в начале раунда и
-        // больше никогда не меняется. Оно не может быть "устаревшим" по смыслу, но
-        // раньше терялось навсегда, если снэпшот с ним отклонялся защитой по версии —
-        // из-за этого позиция лазера при старте active не совпадала с тем, что видел игрок.
-        if (
-          !scannerRealtime.roundData?.countdownLatchSample &&
-          firestoreData.countdownLatchSample &&
-          Number.isFinite(firestoreData.countdownLatchSample.x) &&
-          Number.isFinite(firestoreData.countdownLatchSample.y)
-        ) {
-          if (!scannerRealtime.roundData) scannerRealtime.roundData = {};
-          scannerRealtime.roundData.countdownLatchSample = firestoreData.countdownLatchSample;
-        }
-      } else {
-        scannerRealtime.roundData = firestoreData;
-        if (firestoreData.roundNumber) {
-          scannerLastKnownRoundNumber = firestoreData.roundNumber;
-          scannerDisplayRoundNumber = firestoreData.roundNumber;
-        }
-      }
-    } else {
-      scannerRealtime.roundData = null;
-    }
-
-    if (!snapshot.exists) {
-      subscribeScannerParticipants(null);
-    } else if (scannerRealtime.participantsRoundId !== String(roundId)) {
-      subscribeScannerParticipants(roundId);
-    }
-
-    syncScannerDerivedState();
-    renderScannerRound();
-  }, (error) => {
-    console.error("Ошибка подписки на общий раунд:", error);
-    scannerRealtime.roundReady = true;
-    scannerRealtime.roundData = null;
-    subscribeScannerParticipants(null);
-    syncScannerDerivedState();
-    renderScannerRound();
-  });
 }
 function subscribeScannerRuntime() {
   // ОТКЛЮЧЕНО после переезда на SQLite — см. комментарий в subscribeScannerRound.
   // Состояние арены целиком приходит по сокету.
   scannerRealtime.runtimeReady = true;
   return;
-
-  if (scannerRealtime.unsubRuntime) {
-    scannerRealtime.unsubRuntime();
-    scannerRealtime.unsubRuntime = null;
-  }
-
-  scannerRealtime.runtimeReady = false;
-
-  scannerRealtime.unsubRuntime = scannerRuntimeRef().onSnapshot((snapshot) => {
-    scannerRealtime.runtimeReady = true;
-    const data = snapshot.exists ? (snapshot.data() || {}) : {};
-    // Сохраняем наш idleBeamMotion если он свежий (установлен нами при сбросе раунда)
-    const prevIdleMotion = scannerRealtime.runtimeData?.idleBeamMotion;
-    const now = getNetworkTime();
-    const ourMotionIsFresh = prevIdleMotion &&
-      Number.isFinite(prevIdleMotion.x) &&
-      Number.isFinite(prevIdleMotion.vx) &&
-      Math.abs((prevIdleMotion.anchorAt || 0) - now) < 30000;
-    scannerRealtime.runtimeData = data;
-    // Восстанавливаем наш idleBeamMotion — он точнее чем тот что в Firestore
-    if (ourMotionIsFresh) {
-      scannerRealtime.runtimeData.idleBeamMotion = prevIdleMotion;
-    }
-    const activeRoundId = data.activeRoundId || null;
-    if (scannerRealtime.activeRoundId !== activeRoundId) {
-      subscribeScannerRound(activeRoundId);
-    } else {
-      if (!activeRoundId) {
-        syncScannerDerivedState();
-        renderScannerRound();
-      }
-      syncScannerDerivedState();
-      renderScannerRound();
-    }
-  }, (error) => {
-    console.error("Ошибка подписки на runtime общего раунда:", error);
-    scannerRealtime.runtimeReady = true;
-    renderScannerRound();
-  });
 }
 
 function isScannerBootstrapCandidate(round) {
@@ -20590,70 +20267,6 @@ async function bootstrapScannerRoundFromRecentState(options = {}) {
   // при подключении сокета, так что резерв больше не нужен.
   scannerRealtime.roundReady = true;
   return;
-
-  const { force = false } = options;
-  // Раньше эта функция дёргалась при каждом сворачивании/разворачивании
-  // приложения (handleVisibilityChange) — включая моменты, когда раунд уже
-  // естественно завершился и сбросился на idle через живой сокет. Firestore-
-  // документ раунда не обновляется на idle, поэтому резерв иногда снова
-  // подхватывал уже мёртвый раунд, и арена "зависала" на нём вместо сброса.
-  // Теперь: если сокет хоть раз в этой сессии уже прислал реальное состояние
-  // раунда — доверяем только ему и резерв из Firestore больше не трогаем.
-  if (scannerRealtime.hasLiveRoundUpdate) return;
-  if (scannerRealtime.bootstrappingRound) return;
-  if (!force && scannerRealtime.runtimeData?.activeRoundId) return;
-  if (scannerRealtime.fallbackRoundId === '__cleared__') return;
-
-  scannerRealtime.bootstrappingRound = true;
-
-  try {
-    const snapshot = await scannerRoundsCollection()
-      .orderBy("updatedAt", "desc")
-      .limit(8)
-      .get();
-
-    let fallbackRound = null;
-    snapshot.forEach((doc) => {
-      if (fallbackRound) return;
-      const candidate = { id: doc.id, ...(doc.data() || {}) };
-      if (isScannerBootstrapCandidate(candidate)) {
-        fallbackRound = candidate;
-      }
-    });
-
-    if (scannerRealtime.runtimeData?.activeRoundId) {
-      return;
-    }
-
-    if (fallbackRound) {
-      scannerRealtime.fallbackRoundId = fallbackRound.id;
-      if (scannerRealtime.activeRoundId !== fallbackRound.id) {
-        if (!scannerRealtime.roundData) {
-          scannerRealtime.roundData = fallbackRound;
-          syncScannerDerivedState();
-          renderScannerRound();
-        }
-        subscribeScannerRound(fallbackRound.id);
-      } else {
-        scannerRealtime.roundData = scannerRealtime.roundData || fallbackRound;
-        syncScannerDerivedState();
-        renderScannerRound();
-      }
-      return;
-    }
-
-    if (!scannerRealtime.activeRoundId || scannerRealtime.fallbackRoundId === scannerRealtime.activeRoundId) {
-      scannerRealtime.fallbackRoundId = null;
-      scannerRealtime.roundData = null;
-      scannerRealtime.roundReady = true;
-      scannerRealtime.participants = [];
-      scannerRealtime.participantsReady = true;
-      scannerRealtime.participantsError = false;
-      subscribeScannerRound(null);
-    }
-  } finally {
-    scannerRealtime.bootstrappingRound = false;
-  }
 }
 
 // Запрашивает историю раундов у сервера через сокет.
@@ -20885,7 +20498,6 @@ window.createBobrRunRoom = createBobrRunRoom;
 window.joinBobrRunRoom = joinBobrRunRoom;
 window.leaveBobrRunRoom = leaveBobrRunRoom;
 window.renderBobrRunRooms = renderBobrRunRooms;
-window.getBobrRunRoomsCollectionRef = getBobrRunRoomsCollectionRef;
 window.showAppNotice = showAppNotice;
 window.hideAppNotice = hideAppNotice;
 window.showBobrRunComingSoon = showBobrRunComingSoon;
