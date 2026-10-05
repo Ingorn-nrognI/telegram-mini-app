@@ -3869,7 +3869,6 @@ body.market-filter-open .market-side-fab {
   /* Цвет как у чипов банк/таймер/шансы (.scanner-panel-chip). */
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.08);
-  border-bottom: none;
   box-shadow:
     0 -10px 24px rgba(0, 0, 0, 0.32),
     inset 0 0 0 1px rgba(255,255,255,0.02);
@@ -3903,7 +3902,6 @@ body.market-filter-open .market-side-fab {
   /* Цвет как у чипов банк/таймер/шансы (.scanner-panel-chip). */
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.08);
-  border-bottom: none;
   box-shadow:
     0 -10px 24px rgba(0, 0, 0, 0.32),
     inset 0 0 0 1px rgba(255,255,255,0.02);
@@ -17258,14 +17256,26 @@ function updateScannerBetBarVisibility() {
     const navRect = bottomBar.getBoundingClientRect();
     const menuEl = document.getElementById("menu");
     const containerBottom = menuEl ? menuEl.getBoundingClientRect().bottom : window.innerHeight;
-    const padBottom = parseFloat(getComputedStyle(bar).paddingBottom) || 0;
     const gapAboveNav = 4;
-    const barBottom = Math.max(0, (containerBottom - navRect.top) + gapAboveNav - padBottom);
+    // Стекло бара тянется до НИЗА главного меню: нижний край бара совпадает
+    // с нижним краем меню, а нижний отступ равен высоте меню + зазор, поэтому
+    // кнопки ставок остаются ровно на прежнем месте над меню.
+    const barBottom = Math.max(0, containerBottom - navRect.bottom);
+    const barBorderBottom = parseFloat(getComputedStyle(bar).borderBottomWidth) || 0;
+    const barPadBottom = Math.max(0, (containerBottom - navRect.top) + gapAboveNav - barBottom - barBorderBottom);
     bar.style.bottom = `${barBottom}px`;
-    if (editFab) editFab.style.bottom = `${barBottom}px`;
+    bar.style.paddingBottom = `${barPadBottom}px`;
+    if (editFab) {
+      editFab.style.bottom = `${barBottom}px`;
+      editFab.style.paddingBottom = `${barPadBottom}px`;
+    }
   } else {
     bar.style.bottom = "";
-    if (editFab) editFab.style.bottom = "";
+    bar.style.paddingBottom = "";
+    if (editFab) {
+      editFab.style.bottom = "";
+      editFab.style.paddingBottom = "";
+    }
   }
   bar.style.transform = "";
   const floatBtn = document.getElementById("navProfileFloat");
