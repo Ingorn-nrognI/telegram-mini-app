@@ -1958,6 +1958,537 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 .case-tile:active {
   transform: scale(0.98);
 }
+/* ===== PvP-сундук (тестовый режим, см. блок "PvP-СУНДУК" в скрипте) ===== */
+.case-tile.case-tile-pvp {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+}
+.case-tile.case-tile-pvp::before {
+  left: 52px;
+  top: 0;
+}
+.case-tile-pvp .case-tile-icon {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 auto;
+}
+.case-tile-pvp-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.case-tile-pvp-text .case-tile-name {
+  text-align: left;
+  font-size: 16px;
+}
+.case-tile-pvp-sub {
+  font-size: 12px;
+  color: var(--text-soft);
+  line-height: 1.35;
+}
+.case-tile-pvp .case-tile-soon {
+  color: #06140b;
+  background: var(--accent);
+  flex: 0 0 auto;
+}
+
+.pvpc-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  background: linear-gradient(180deg, #07101f 0%, #050813 42%, #05070e 100%);
+  padding: calc(var(--safe-top) + 10px) 10px calc(var(--safe-bottom) + 10px);
+  gap: 8px;
+  overflow: hidden;
+}
+.pvpc-overlay.open {
+  display: flex;
+}
+.pvpc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.pvpc-back {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 20px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.pvpc-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.pvpc-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #1b1400;
+  background: var(--warning);
+  flex: 0 0 auto;
+}
+.pvpc-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: none;
+}
+.pvpc-scroll::-webkit-scrollbar {
+  display: none;
+}
+.pvpc-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.pvpc-stat {
+  padding: 9px 8px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  text-align: center;
+  min-width: 0;
+}
+.pvpc-stat-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+.pvpc-stat-value {
+  margin-top: 2px;
+  font-size: 16px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pvpc-stage {
+  position: relative;
+  flex: 0 0 auto;
+  height: 236px;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(13, 21, 46, 0.96), rgba(7, 10, 24, 0.94));
+  box-shadow: var(--shadow-main);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+.pvpc-stage-chest {
+  width: 96px;
+  height: 96px;
+  color: var(--accent);
+  filter: drop-shadow(0 0 22px rgba(117, 245, 156, 0.35));
+}
+.pvpc-stage-chest svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.pvpc-stage-chest.is-shaking {
+  animation: pvpcShake 0.5s ease-in-out infinite;
+}
+@keyframes pvpcShake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-4deg) scale(1.03); }
+  75% { transform: rotate(4deg) scale(1.03); }
+}
+.pvpc-stage-main {
+  font-size: 22px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.pvpc-stage-sub {
+  font-size: 12px;
+  color: var(--text-soft);
+  padding: 0 16px;
+  line-height: 1.4;
+}
+.pvpc-stage-caption {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-soft);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Лента сундука */
+.pvpc-reel-window {
+  position: relative;
+  width: 100%;
+  height: 116px;
+  overflow: hidden;
+}
+.pvpc-reel-window::before,
+.pvpc-reel-window::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 54px;
+  z-index: 2;
+  pointer-events: none;
+}
+.pvpc-reel-window::before {
+  left: 0;
+  background: linear-gradient(90deg, rgba(9, 14, 32, 1), rgba(9, 14, 32, 0));
+}
+.pvpc-reel-window::after {
+  right: 0;
+  background: linear-gradient(270deg, rgba(9, 14, 32, 1), rgba(9, 14, 32, 0));
+}
+.pvpc-reel-pointer {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #ffffff;
+  box-shadow: 0 0 10px rgba(255,255,255,0.8);
+  z-index: 3;
+  pointer-events: none;
+}
+.pvpc-reel-strip {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  display: flex;
+  gap: 8px;
+  will-change: transform;
+}
+.pvpc-card {
+  flex: 0 0 auto;
+  width: 88px;
+  height: 104px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 3px solid var(--tier);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.pvpc-card-icon {
+  width: 34px;
+  height: 34px;
+  color: var(--tier);
+}
+.pvpc-card-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.pvpc-card-mult {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--tier);
+}
+.pvpc-card-value {
+  font-size: 13px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.pvpc-card.is-won {
+  background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05));
+  border-color: var(--tier);
+  box-shadow: 0 0 22px var(--tier);
+}
+
+/* Круг победителя */
+.pvpc-wheel-wrap {
+  position: relative;
+  width: 176px;
+  height: 176px;
+  margin-top: 22px;
+}
+.pvpc-wheel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4px solid rgba(255,255,255,0.14);
+  box-sizing: border-box;
+  will-change: transform;
+}
+.pvpc-wheel-hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  margin: -29px 0 0 -29px;
+  border-radius: 50%;
+  background: #080d1e;
+  border: 2px solid rgba(255,255,255,0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.pvpc-wheel-pointer {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  margin-left: -9px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 16px solid #ffffff;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  z-index: 2;
+}
+
+/* Итог */
+.pvpc-result-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-soft);
+}
+.pvpc-result-name {
+  font-size: 24px;
+  font-weight: 900;
+  padding: 0 14px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.pvpc-result-prize {
+  font-size: 15px;
+  font-weight: 800;
+}
+.pvpc-result-net {
+  margin-top: 4px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255,255,255,0.08);
+}
+.pvpc-result-net.is-plus { color: var(--accent); }
+.pvpc-result-net.is-minus { color: var(--danger); }
+
+/* Игроки */
+.pvpc-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-dim);
+  padding: 2px 4px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pvpc-players {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.pvpc-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.pvpc-player.is-me {
+  border-color: rgba(117, 245, 156, 0.4);
+}
+.pvpc-player.is-winner {
+  background: rgba(255, 216, 107, 0.12);
+  border-color: rgba(255, 216, 107, 0.6);
+}
+.pvpc-player-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.pvpc-player-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pvpc-player-stake {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pvpc-player-chance {
+  width: 52px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+.pvpc-empty {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255,255,255,0.12);
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* Таблица шансов */
+.pvpc-odds-toggle {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--blue-1);
+  padding: 4px 0;
+}
+.pvpc-odds {
+  display: none;
+  flex-direction: column;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.pvpc-odds.open {
+  display: flex;
+}
+.pvpc-odds-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 72px;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.pvpc-odds-row:first-child {
+  border-top: none;
+}
+.pvpc-odds-mult {
+  font-weight: 900;
+  color: var(--tier);
+}
+.pvpc-odds-value {
+  font-weight: 700;
+  color: var(--text-soft);
+}
+.pvpc-odds-chance {
+  text-align: right;
+  font-weight: 800;
+}
+.pvpc-odds-note {
+  padding: 8px 12px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-dim);
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Нижняя панель ставок */
+.pvpc-controls {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.pvpc-chips {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.pvpc-chip {
+  height: 42px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #ecf7ff;
+  background: linear-gradient(180deg, rgba(20, 33, 75, 0.92), rgba(10, 16, 35, 0.94));
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.pvpc-chip.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.pvpc-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.pvpc-main-btn {
+  height: 50px;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 900;
+  color: #06140b;
+  background: linear-gradient(180deg, #8dffb0, #4fd97b);
+}
+.pvpc-main-btn:active {
+  transform: scale(0.98);
+}
+.pvpc-main-btn:disabled {
+  color: rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.08);
+  cursor: default;
+  transform: none;
+}
+.pvpc-hint {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-dim);
+  text-align: center;
+}
 #inventoryScreen.menu-screen {
   /* Тот же расчёт, что у #homeScreen и #marketScreen: зазор между балансом
      и первым блоком экрана — 8px, как между балансом и кнопкой История. */
@@ -6662,6 +7193,23 @@ html.no-animations *::after {
     </div>
   </div>
 
+  <!-- PvP-сундук (тестовый режим). Содержимое рисует скрипт, см. блок "PvP-СУНДУК". -->
+  <div id="pvpCaseOverlay" class="pvpc-overlay" aria-hidden="true" onclick="event.stopPropagation()">
+    <div class="pvpc-head">
+      <button type="button" class="pvpc-back" onclick="closePvpCase()" aria-label="Назад">←</button>
+      <div id="pvpcTitle" class="pvpc-title">PvP сундук</div>
+      <div id="pvpcBadge" class="pvpc-badge">ТЕСТ</div>
+    </div>
+    <div class="pvpc-scroll">
+      <div id="pvpcStats" class="pvpc-stats"></div>
+      <div id="pvpcStage" class="pvpc-stage"></div>
+      <div id="pvpcPlayersTitle" class="pvpc-section-title"></div>
+      <div id="pvpcPlayers" class="pvpc-players"></div>
+      <div id="pvpcOdds" class="pvpc-odds"></div>
+    </div>
+    <div id="pvpcControls" class="pvpc-controls"></div>
+  </div>
+
   <div id="marketScreen" class="menu-screen">
     <div class="screen-inner">
 
@@ -9467,6 +10015,7 @@ function showBobrRunComingSoon(event) {
 // Каталог кейсов для экрана «Кейсы». Пока это заготовки: когда появится серверная
 // часть (цены, содержимое, открытие), список будет приходить с сервера и заменит этот.
 const CASES_CATALOG = [
+  { id: "pvp",       ru: "PvP сундук",       en: "PvP chest",      color: "#75f59c", pvp: true },
   { id: "common",    ru: "Обычный кейс",     en: "Common case",    color: "#9fb2d6" },
   { id: "rare",      ru: "Редкий кейс",      en: "Rare case",      color: "#4b9bff" },
   { id: "epic",      ru: "Эпический кейс",   en: "Epic case",      color: "#a45cff" },
@@ -9480,7 +10029,15 @@ function renderCasesScreen() {
   if (title) title.textContent = L("Кейсы", "Cases");
   const grid = document.getElementById("casesGrid");
   if (!grid) return;
-  grid.innerHTML = CASES_CATALOG.map((c) => `
+  grid.innerHTML = CASES_CATALOG.map((c) => c.pvp ? `
+    <div class="case-tile case-tile-pvp" style="--case-color:${c.color};" onclick="onCaseTileClick('${c.id}')">
+      <div class="case-tile-icon">${CASE_ICON_SVG}</div>
+      <div class="case-tile-pvp-text">
+        <div class="case-tile-name">${escapeHtml(L(c.ru, c.en))}</div>
+        <div class="case-tile-pvp-sub">${escapeHtml(L("Общий банк, один приз, круг выбирает победителя", "Shared pot, one prize, the wheel picks the winner"))}</div>
+      </div>
+      <div class="case-tile-soon">${escapeHtml(L("Тест", "Test"))}</div>
+    </div>` : `
     <div class="case-tile" style="--case-color:${c.color};" onclick="onCaseTileClick('${c.id}')">
       <div class="case-tile-icon">${CASE_ICON_SVG}</div>
       <div class="case-tile-name">${escapeHtml(L(c.ru, c.en))}</div>
@@ -9489,8 +10046,565 @@ function renderCasesScreen() {
 }
 
 function onCaseTileClick(caseId) {
+  if (caseId === "pvp") {
+    openPvpCase();
+    return;
+  }
   showAppNotice(L("Открытие кейсов скоро появится", "Opening cases is coming soon"));
 }
+
+// ===================== PvP-СУНДУК (ТЕСТОВЫЙ РЕЖИМ) =====================
+// Один общий сундук на раунд: игроки делают ставки, банк минус комиссия
+// становится ценой сундука, из сундука выпадает ОДИН приз, затем круг по
+// долям ставок выбирает, кому он достаётся.
+// Сейчас всё считается на клиенте: баланс не списывается, соперники — боты.
+// Когда появится серверная часть, розыгрыш (приз и победитель) должен
+// переехать на сервер, а этот блок будет только показывать готовый результат.
+const PVP_CASE_CONFIG = {
+  minStake: 1,          // минимальная ставка, GRAM
+  maxStake: 25,         // максимум на одного игрока за раунд, GRAM
+  stakeChips: [1, 5, 10, 25],
+  countdownMs: 20000,   // таймер приёма ставок (стартует со вторым игроком)
+  lockMs: 3000,         // за сколько до конца таймера ставки закрываются
+  maxPlayers: 5,
+  // Таблица сундука: множитель от цены сундука и шанс в процентах.
+  // Сумма шансов = 100, средний возврат ≈ 95% цены сундука.
+  table: [
+    { mult: 0.4, chance: 41.8, color: "#9fb2d6" },
+    { mult: 0.6, chance: 25,   color: "#9fb2d6" },
+    { mult: 0.9, chance: 15,   color: "#4b9bff" },
+    { mult: 1.3, chance: 8.5,  color: "#4b9bff" },
+    { mult: 2,   chance: 5,    color: "#a45cff" },
+    { mult: 3.5, chance: 3,    color: "#ff5cc8" },
+    { mult: 7,   chance: 1.2,  color: "#ff5a5a" },
+    { mult: 20,  chance: 0.5,  color: "#ffb23d" }
+  ]
+};
+
+const PVP_CASE_BOT_NAMES = ["Bobr_Max", "lazerkot", "TonHunter", "mira", "Zub", "nord", "Kesha"];
+const PVP_CASE_BOT_STAKES = [1, 2, 3, 5, 5, 8, 10, 15, 25];
+const PVP_CASE_COLORS = ["#75f59c", "#5fa8ff", "#ff7a59", "#c47bff", "#ffd86b", "#2de1ff"];
+
+const pvpCase = {
+  open: false,
+  phase: "idle",      // idle | waiting | countdown | locked | chest | wheel | result
+  players: [],
+  selectedStake: 5,
+  endsAt: 0,
+  prize: null,        // { mult, chance, color, value }
+  winnerId: null,
+  summary: null,      // { bank, commissionPct, commission, chest }
+  oddsOpen: false,
+  timers: [],
+  ticker: null
+};
+
+function pvpCaseRandom() {
+  // Равномерное число [0, 1). crypto даёт распределение лучше, чем Math.random.
+  try {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return buf[0] / 4294967296;
+  } catch (error) {
+    return Math.random();
+  }
+}
+
+function pvpCasePick(items, weightOf) {
+  const total = items.reduce((sum, item) => sum + weightOf(item), 0);
+  let roll = pvpCaseRandom() * total;
+  for (const item of items) {
+    roll -= weightOf(item);
+    if (roll < 0) return item;
+  }
+  return items[items.length - 1];
+}
+
+function pvpCaseFmt(value) {
+  const number = Math.round(Number(value || 0) * 100) / 100;
+  return String(Number(number.toFixed(2)));
+}
+
+function pvpCaseMultLabel(mult) {
+  return "×" + String(mult);
+}
+
+function pvpCaseLater(fn, ms) {
+  const id = setTimeout(() => {
+    pvpCase.timers = pvpCase.timers.filter((t) => t !== id);
+    if (pvpCase.open) fn();
+  }, ms);
+  pvpCase.timers.push(id);
+  return id;
+}
+
+function pvpCaseClearTimers() {
+  pvpCase.timers.forEach((id) => clearTimeout(id));
+  pvpCase.timers = [];
+  if (pvpCase.ticker) {
+    clearInterval(pvpCase.ticker);
+    pvpCase.ticker = null;
+  }
+}
+
+function pvpCaseDuration(ms) {
+  // С выключенными анимациями прокрутки не тянем — сразу показываем итог.
+  return (typeof animationsEnabled === "function" && !animationsEnabled()) ? 300 : ms;
+}
+
+function pvpCaseBank() {
+  return pvpCase.players.reduce((sum, p) => sum + p.stake, 0);
+}
+
+function pvpCaseSummary() {
+  const bank = pvpCaseBank();
+  const commissionPct = bank > 0 ? getScannerCommissionPercent(bank) : 0;
+  const commission = bank * commissionPct / 100;
+  return { bank, commissionPct, commission, chest: bank - commission };
+}
+
+function pvpCaseMe() {
+  return pvpCase.players.find((p) => p.isMe) || null;
+}
+
+function pvpCaseBettingOpen() {
+  return pvpCase.phase === "idle" || pvpCase.phase === "waiting" || pvpCase.phase === "countdown";
+}
+
+function pvpCaseResetRound() {
+  pvpCaseClearTimers();
+  pvpCase.phase = "idle";
+  pvpCase.players = [];
+  pvpCase.endsAt = 0;
+  pvpCase.prize = null;
+  pvpCase.winnerId = null;
+  pvpCase.summary = null;
+}
+
+function openPvpCase() {
+  const overlay = document.getElementById("pvpCaseOverlay");
+  if (!overlay) return;
+  pvpCaseResetRound();
+  pvpCase.open = true;
+  overlay.classList.add("open");
+  overlay.removeAttribute("aria-hidden");
+  pvpCaseRenderAll();
+}
+
+function closePvpCase() {
+  const overlay = document.getElementById("pvpCaseOverlay");
+  pvpCase.open = false;
+  pvpCaseResetRound();
+  if (!overlay) return;
+  overlay.classList.remove("open");
+  overlay.setAttribute("aria-hidden", "true");
+}
+
+// ---------- ставки ----------
+
+function pvpCaseSelectStake(amount) {
+  if (!pvpCaseBettingOpen()) return;
+  pvpCase.selectedStake = amount;
+  pvpCaseRenderControls();
+}
+
+function pvpCaseAddPlayer(player) {
+  player.color = PVP_CASE_COLORS[pvpCase.players.length % PVP_CASE_COLORS.length];
+  pvpCase.players.push(player);
+}
+
+function pvpCaseJoin() {
+  if (!pvpCaseBettingOpen()) return;
+  const cfg = PVP_CASE_CONFIG;
+  const me = pvpCaseMe();
+  const already = me ? me.stake : 0;
+  const amount = Math.min(pvpCase.selectedStake, cfg.maxStake - already);
+  if (amount < cfg.minStake) return;
+
+  if (me) {
+    me.stake += amount;
+  } else {
+    const current = getCurrentPlayer();
+    pvpCaseAddPlayer({ id: "me", name: current.name || L("Игрок", "Player"), stake: amount, isMe: true });
+  }
+
+  if (pvpCase.phase === "idle") {
+    // Таймер не стартует, пока игрок один: ждём соперника.
+    pvpCase.phase = "waiting";
+    pvpCaseLater(pvpCaseBotJoin, 1200 + pvpCaseRandom() * 1600);
+  }
+  pvpCaseRenderAll();
+}
+
+function pvpCaseBotJoin() {
+  const cfg = PVP_CASE_CONFIG;
+  if (pvpCase.phase !== "waiting" && pvpCase.phase !== "countdown") return;
+  if (pvpCase.players.length >= cfg.maxPlayers) return;
+  const used = new Set(pvpCase.players.map((p) => p.name));
+  const names = PVP_CASE_BOT_NAMES.filter((n) => !used.has(n));
+  if (!names.length) return;
+  const name = names[Math.floor(pvpCaseRandom() * names.length)];
+  const stake = PVP_CASE_BOT_STAKES[Math.floor(pvpCaseRandom() * PVP_CASE_BOT_STAKES.length)];
+  pvpCaseAddPlayer({ id: "bot_" + name, name, stake, isMe: false });
+
+  if (pvpCase.phase === "waiting" && pvpCase.players.length >= 2) {
+    pvpCaseStartCountdown();
+  }
+  pvpCaseRenderAll();
+}
+
+function pvpCaseStartCountdown() {
+  const cfg = PVP_CASE_CONFIG;
+  pvpCase.phase = "countdown";
+  pvpCase.endsAt = Date.now() + cfg.countdownMs;
+
+  // Ещё от одного до трёх ботов заходят в случайные моменты до закрытия ставок.
+  const extraBots = 1 + Math.floor(pvpCaseRandom() * 3);
+  const span = cfg.countdownMs - cfg.lockMs - 1000;
+  for (let i = 0; i < extraBots; i++) {
+    pvpCaseLater(pvpCaseBotJoin, 1000 + pvpCaseRandom() * span);
+  }
+
+  pvpCase.ticker = setInterval(pvpCaseTick, 200);
+}
+
+function pvpCaseTick() {
+  if (!pvpCase.open) return;
+  const left = pvpCase.endsAt - Date.now();
+  if (pvpCase.phase === "countdown" && left <= PVP_CASE_CONFIG.lockMs) {
+    pvpCase.phase = "locked";
+    pvpCaseRenderAll();
+    return;
+  }
+  if (pvpCase.phase === "locked" && left <= 0) {
+    clearInterval(pvpCase.ticker);
+    pvpCase.ticker = null;
+    pvpCaseStartChest();
+    return;
+  }
+  pvpCaseRenderStats();
+}
+
+// ---------- розыгрыш ----------
+
+function pvpCaseStartChest() {
+  // Оба исхода определяются в момент закрытия ставок — анимации ниже только
+  // показывают уже готовый результат.
+  const summary = pvpCaseSummary();
+  const row = pvpCasePick(PVP_CASE_CONFIG.table, (r) => r.chance);
+  const winner = pvpCasePick(pvpCase.players, (p) => p.stake);
+  pvpCase.summary = summary;
+  pvpCase.prize = Object.assign({}, row, { value: summary.chest * row.mult });
+  pvpCase.winnerId = winner.id;
+  pvpCase.phase = "chest";
+  pvpCaseRenderAll();
+  pvpCaseSpinReel();
+}
+
+function pvpCaseCardHtml(row, chestValue, extraClass) {
+  return `
+    <div class="pvpc-card ${extraClass || ""}" style="--tier:${row.color};">
+      <div class="pvpc-card-icon">${CASE_ICON_SVG}</div>
+      <div class="pvpc-card-mult">${pvpCaseMultLabel(row.mult)}</div>
+      <div class="pvpc-card-value">${pvpCaseFmt(chestValue * row.mult)}</div>
+    </div>`;
+}
+
+function pvpCaseSpinReel() {
+  const strip = document.getElementById("pvpcReelStrip");
+  const win = document.getElementById("pvpcReelWindow");
+  if (!strip || !win) return;
+
+  const CARD = 88;
+  const STEP = 96;
+  const WIN_INDEX = 40;
+  const table = PVP_CASE_CONFIG.table;
+  const chest = pvpCase.summary.chest;
+
+  // На ленте редкие призы мелькают чаще, чем выпадают (корень из шанса) —
+  // это только картинка, исход уже выбран по настоящим шансам.
+  const cards = [];
+  for (let i = 0; i < WIN_INDEX + 6; i++) {
+    cards.push(i === WIN_INDEX ? pvpCase.prize : pvpCasePick(table, (r) => Math.sqrt(r.chance)));
+  }
+  strip.innerHTML = cards.map((row, i) => pvpCaseCardHtml(row, chest, i === WIN_INDEX ? "pvpc-card-target" : "")).join("");
+
+  const offsetInCard = (pvpCaseRandom() - 0.5) * (CARD - 20);
+  const target = WIN_INDEX * STEP + CARD / 2 + offsetInCard - win.clientWidth / 2;
+  const duration = pvpCaseDuration(5200);
+
+  strip.style.transition = "none";
+  strip.style.transform = "translateX(0px)";
+  strip.getBoundingClientRect();
+  strip.style.transition = `transform ${duration}ms cubic-bezier(0.12, 0.75, 0.12, 1)`;
+  strip.style.transform = `translateX(${-target}px)`;
+
+  pvpCaseLater(() => {
+    const wonCard = strip.querySelector(".pvpc-card-target");
+    if (wonCard) wonCard.classList.add("is-won");
+    const caption = document.getElementById("pvpcStageSub");
+    if (caption) {
+      caption.textContent = L(
+        `Выпал приз ${pvpCaseMultLabel(pvpCase.prize.mult)} — ${pvpCaseFmt(pvpCase.prize.value)} GRAM`,
+        `Prize ${pvpCaseMultLabel(pvpCase.prize.mult)} — ${pvpCaseFmt(pvpCase.prize.value)} GRAM`
+      );
+    }
+    pvpCaseLater(pvpCaseStartWheel, pvpCaseDuration(1600));
+  }, duration + 150);
+}
+
+function pvpCaseWheelSectors() {
+  const bank = pvpCaseBank();
+  let from = 0;
+  return pvpCase.players.map((p) => {
+    const size = bank > 0 ? (p.stake / bank) * 360 : 0;
+    const sector = { player: p, from, to: from + size };
+    from += size;
+    return sector;
+  });
+}
+
+function pvpCaseStartWheel() {
+  pvpCase.phase = "wheel";
+  pvpCaseRenderAll();
+
+  const wheel = document.getElementById("pvpcWheel");
+  if (!wheel) return;
+  const sectors = pvpCaseWheelSectors();
+  const sector = sectors.find((s) => s.player.id === pvpCase.winnerId) || sectors[0];
+  // Останавливаемся внутри сектора победителя, не вплотную к границе.
+  const size = sector.to - sector.from;
+  const pad = Math.min(size * 0.15, 6);
+  const landing = sector.from + pad + pvpCaseRandom() * (size - pad * 2);
+  // Указатель сверху (0°). Чтобы точка landing оказалась под ним, круг
+  // поворачивается на -landing; полные обороты добавляют разгон.
+  const rotation = 360 * 6 + (360 - landing);
+  const duration = pvpCaseDuration(5600);
+
+  wheel.style.transition = "none";
+  wheel.style.transform = "rotate(0deg)";
+  wheel.getBoundingClientRect();
+  wheel.style.transition = `transform ${duration}ms cubic-bezier(0.1, 0.7, 0.1, 1)`;
+  wheel.style.transform = `rotate(${rotation}deg)`;
+
+  pvpCaseLater(() => {
+    pvpCase.phase = "result";
+    pvpCaseRenderAll();
+  }, duration + 500);
+}
+
+// ---------- отрисовка ----------
+
+function pvpCaseRenderAll() {
+  if (!pvpCase.open) return;
+  const title = document.getElementById("pvpcTitle");
+  if (title) title.textContent = L("PvP сундук", "PvP chest");
+  const badge = document.getElementById("pvpcBadge");
+  if (badge) badge.textContent = L("ТЕСТ", "TEST");
+  pvpCaseRenderStats();
+  pvpCaseRenderStage();
+  pvpCaseRenderPlayers();
+  pvpCaseRenderOdds();
+  pvpCaseRenderControls();
+}
+
+function pvpCaseTimerText() {
+  if (pvpCase.phase === "idle") return "—";
+  if (pvpCase.phase === "waiting") return L("ждём", "waiting");
+  if (pvpCase.phase === "countdown" || pvpCase.phase === "locked") {
+    const left = Math.max(0, Math.ceil((pvpCase.endsAt - Date.now()) / 1000));
+    return left + L(" с", " s");
+  }
+  if (pvpCase.phase === "result") return L("итог", "done");
+  return L("идёт", "live");
+}
+
+function pvpCaseRenderStats() {
+  const el = document.getElementById("pvpcStats");
+  if (!el) return;
+  const s = pvpCase.summary || pvpCaseSummary();
+  const stat = (label, value) => `
+    <div class="pvpc-stat">
+      <div class="pvpc-stat-label">${escapeHtml(label)}</div>
+      <div class="pvpc-stat-value">${escapeHtml(value)}</div>
+    </div>`;
+  el.innerHTML =
+    stat(L("Банк", "Pot"), pvpCaseFmt(s.bank) + " GRAM") +
+    stat(L("Таймер", "Timer"), pvpCaseTimerText()) +
+    stat(L("Комиссия", "Fee"), s.bank > 0 ? pvpCaseFmt(s.commissionPct) + "%" : "—");
+}
+
+function pvpCaseRenderStage() {
+  const el = document.getElementById("pvpcStage");
+  if (!el) return;
+  const phase = pvpCase.phase;
+  const s = pvpCase.summary || pvpCaseSummary();
+
+  if (phase === "chest") {
+    el.innerHTML = `
+      <div class="pvpc-stage-caption">${escapeHtml(L("Открываем сундук", "Opening the chest"))}</div>
+      <div id="pvpcReelWindow" class="pvpc-reel-window">
+        <div class="pvpc-reel-pointer"></div>
+        <div id="pvpcReelStrip" class="pvpc-reel-strip"></div>
+      </div>
+      <div id="pvpcStageSub" class="pvpc-stage-sub">${escapeHtml(L(
+        `Сундук на ${pvpCaseFmt(s.chest)} GRAM`, `Chest worth ${pvpCaseFmt(s.chest)} GRAM`))}</div>`;
+    return;
+  }
+
+  if (phase === "wheel") {
+    const stops = pvpCaseWheelSectors()
+      .map((sec) => `${sec.player.color} ${sec.from.toFixed(3)}deg ${sec.to.toFixed(3)}deg`)
+      .join(", ");
+    el.innerHTML = `
+      <div class="pvpc-stage-caption">${escapeHtml(L("Кому достанется приз", "Who gets the prize"))}</div>
+      <div class="pvpc-wheel-wrap">
+        <div class="pvpc-wheel-pointer"></div>
+        <div id="pvpcWheel" class="pvpc-wheel" style="background:conic-gradient(${stops});"></div>
+        <div class="pvpc-wheel-hub" style="color:${pvpCase.prize.color};">${pvpCaseFmt(pvpCase.prize.value)}<br>GRAM</div>
+      </div>`;
+    return;
+  }
+
+  if (phase === "result") {
+    const winner = pvpCase.players.find((p) => p.id === pvpCase.winnerId);
+    const me = pvpCaseMe();
+    const myStake = me ? me.stake : 0;
+    const net = (winner && winner.isMe ? pvpCase.prize.value : 0) - myStake;
+    const netText = (net >= 0 ? "+" : "−") + pvpCaseFmt(Math.abs(net)) + " GRAM";
+    el.innerHTML = `
+      <div class="pvpc-result-title">${escapeHtml(winner && winner.isMe ? L("Ты забрал приз", "You took the prize") : L("Приз забрал", "Prize goes to"))}</div>
+      <div class="pvpc-result-name" style="color:${winner ? winner.color : "#fff"};">${escapeHtml(winner ? winner.name : "—")}</div>
+      <div class="pvpc-result-prize" style="color:${pvpCase.prize.color};">${escapeHtml(L("Приз", "Prize"))} ${pvpCaseMultLabel(pvpCase.prize.mult)} · ${pvpCaseFmt(pvpCase.prize.value)} GRAM</div>
+      <div class="pvpc-stage-sub">${escapeHtml(L(
+        `Банк ${pvpCaseFmt(s.bank)} − комиссия ${pvpCaseFmt(s.commission)} = сундук ${pvpCaseFmt(s.chest)} GRAM`,
+        `Pot ${pvpCaseFmt(s.bank)} − fee ${pvpCaseFmt(s.commission)} = chest ${pvpCaseFmt(s.chest)} GRAM`))}</div>
+      <div class="pvpc-result-net ${net >= 0 ? "is-plus" : "is-minus"}">${escapeHtml(L("Твой итог: ", "Your result: ") + netText)}</div>`;
+    return;
+  }
+
+  let sub;
+  if (phase === "idle") {
+    sub = L("Сделай ставку. Банк минус комиссия станет ценой сундука, а круг решит, кому достанется приз.",
+            "Place a stake. The pot minus the fee becomes the chest price, and the wheel decides who gets the prize.");
+  } else if (phase === "waiting") {
+    sub = L("Ждём соперника. Таймер стартует, когда зайдёт второй игрок.",
+            "Waiting for an opponent. The timer starts when a second player joins.");
+  } else if (phase === "locked") {
+    sub = L("Ставки закрыты. Сейчас откроем сундук.", "Stakes are closed. Opening the chest now.");
+  } else {
+    sub = L("Идёт приём ставок. Чем больше банк, тем дороже приз в сундуке.",
+            "Stakes are open. The bigger the pot, the pricier the prize in the chest.");
+  }
+  el.innerHTML = `
+    <div class="pvpc-stage-chest ${phase === "locked" ? "is-shaking" : ""}">${CASE_ICON_SVG}</div>
+    <div class="pvpc-stage-main">${s.bank > 0
+      ? escapeHtml(L("Сундук на ", "Chest worth ") + pvpCaseFmt(s.chest) + " GRAM")
+      : escapeHtml(L("Сундук пуст", "The chest is empty"))}</div>
+    <div class="pvpc-stage-sub">${escapeHtml(sub)}</div>`;
+}
+
+function pvpCaseRenderPlayers() {
+  const titleEl = document.getElementById("pvpcPlayersTitle");
+  const el = document.getElementById("pvpcPlayers");
+  if (!el || !titleEl) return;
+  const bank = pvpCaseBank();
+  titleEl.innerHTML = `
+    <span>${escapeHtml(L("Игроки", "Players"))} · ${pvpCase.players.length}/${PVP_CASE_CONFIG.maxPlayers}</span>
+    <button type="button" class="pvpc-odds-toggle" onclick="pvpCaseToggleOdds()">${escapeHtml(
+      pvpCase.oddsOpen ? L("Скрыть шансы сундука", "Hide chest odds") : L("Шансы сундука", "Chest odds"))}</button>`;
+
+  if (!pvpCase.players.length) {
+    el.innerHTML = `<div class="pvpc-empty">${escapeHtml(L("Пока никого. Зайди первым.", "Nobody here yet. Be the first."))}</div>`;
+    return;
+  }
+  const showWinner = pvpCase.phase === "result";
+  el.innerHTML = pvpCase.players.map((p) => {
+    const chance = bank > 0 ? (p.stake / bank) * 100 : 0;
+    const cls = [
+      "pvpc-player",
+      p.isMe ? "is-me" : "",
+      showWinner && p.id === pvpCase.winnerId ? "is-winner" : ""
+    ].join(" ");
+    return `
+      <div class="${cls}">
+        <div class="pvpc-player-dot" style="background:${p.color};"></div>
+        <div class="pvpc-player-name">${escapeHtml(p.name)}${p.isMe ? escapeHtml(L(" (ты)", " (you)")) : ""}</div>
+        <div class="pvpc-player-stake">${pvpCaseFmt(p.stake)} GRAM</div>
+        <div class="pvpc-player-chance">${chance.toFixed(1)}%</div>
+      </div>`;
+  }).join("");
+}
+
+function pvpCaseToggleOdds() {
+  pvpCase.oddsOpen = !pvpCase.oddsOpen;
+  pvpCaseRenderPlayers();
+  pvpCaseRenderOdds();
+}
+
+function pvpCaseRenderOdds() {
+  const el = document.getElementById("pvpcOdds");
+  if (!el) return;
+  el.classList.toggle("open", pvpCase.oddsOpen);
+  if (!pvpCase.oddsOpen) return;
+  const s = pvpCase.summary || pvpCaseSummary();
+  const rows = PVP_CASE_CONFIG.table.slice().reverse().map((row) => `
+    <div class="pvpc-odds-row" style="--tier:${row.color};">
+      <div class="pvpc-odds-mult">${pvpCaseMultLabel(row.mult)}</div>
+      <div class="pvpc-odds-value">${s.bank > 0 ? pvpCaseFmt(s.chest * row.mult) + " GRAM" : "—"}</div>
+      <div class="pvpc-odds-chance">${pvpCaseFmt(row.chance)}%</div>
+    </div>`).join("");
+  el.innerHTML = rows + `
+    <div class="pvpc-odds-note">${escapeHtml(L(
+      "Множитель считается от цены сундука (банк минус комиссия). Суммы пересчитываются при каждой ставке.",
+      "The multiplier applies to the chest price (pot minus fee). Amounts update with every stake."))}</div>`;
+}
+
+function pvpCaseRenderControls() {
+  const el = document.getElementById("pvpcControls");
+  if (!el) return;
+  const cfg = PVP_CASE_CONFIG;
+
+  if (pvpCase.phase === "result") {
+    el.innerHTML = `
+      <button type="button" class="pvpc-main-btn" onclick="openPvpCase()">${escapeHtml(L("Ещё раунд", "Play again"))}</button>
+      <div class="pvpc-hint">${escapeHtml(L("Тестовый режим: GRAM не списываются и не начисляются.", "Test mode: GRAM is neither charged nor credited."))}</div>`;
+    return;
+  }
+
+  const me = pvpCaseMe();
+  const already = me ? me.stake : 0;
+  const room = cfg.maxStake - already;
+  const open = pvpCaseBettingOpen();
+  const amount = Math.min(pvpCase.selectedStake, room);
+  const canBet = open && amount >= cfg.minStake;
+
+  let label;
+  if (!open) {
+    label = pvpCase.phase === "locked" ? L("Ставки закрыты", "Stakes closed") : L("Идёт розыгрыш", "Draw in progress");
+  } else if (room < cfg.minStake) {
+    label = L(`Максимум ${cfg.maxStake} GRAM`, `Maximum ${cfg.maxStake} GRAM`);
+  } else {
+    label = (me ? L("Докинуть", "Add") : L("Войти", "Join")) + " · " + pvpCaseFmt(amount) + " GRAM";
+  }
+
+  const chips = cfg.stakeChips.map((value) => `
+    <button type="button" class="pvpc-chip ${value === pvpCase.selectedStake ? "active" : ""}"
+      ${open && value <= room ? "" : "disabled"} onclick="pvpCaseSelectStake(${value})">${value}</button>`).join("");
+
+  el.innerHTML = `
+    <div class="pvpc-chips">${chips}</div>
+    <button type="button" class="pvpc-main-btn" ${canBet ? "" : "disabled"} onclick="pvpCaseJoin()">${escapeHtml(label)}</button>
+    <div class="pvpc-hint">${escapeHtml(L(
+      `Тестовый режим: GRAM не списываются, соперники — боты. Ставка ${cfg.minStake}–${cfg.maxStake} GRAM на игрока.`,
+      `Test mode: GRAM is not charged, opponents are bots. Stake ${cfg.minStake}–${cfg.maxStake} GRAM per player.`))}</div>`;
+}
+
+window.openPvpCase = openPvpCase;
+window.closePvpCase = closePvpCase;
+window.pvpCaseJoin = pvpCaseJoin;
+window.pvpCaseSelectStake = pvpCaseSelectStake;
+window.pvpCaseToggleOdds = pvpCaseToggleOdds;
 
 function openCases(event) {
   if (event) event.stopPropagation();
