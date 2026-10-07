@@ -2118,6 +2118,11 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 .pvpc-stage-chest.is-shaking {
   animation: pvpcShake 0.5s ease-in-out infinite;
 }
+/* Тряска сундука — часть игры: настройка «Анимация» её не выключает. */
+html.no-animations .pvpc-stage-chest.is-shaking {
+  animation-duration: 0.5s !important;
+  animation-iteration-count: infinite !important;
+}
 @keyframes pvpcShake {
   0%, 100% { transform: rotate(0deg) scale(1); }
   25% { transform: rotate(-4deg) scale(1.03); }
@@ -10141,6 +10146,10 @@ function pvpCaseLater(fn, ms) {
 function pvpCaseClearTimers() {
   pvpCase.timers.forEach((id) => clearTimeout(id));
   pvpCase.timers = [];
+  if (pvpCase.raf) {
+    cancelAnimationFrame(pvpCase.raf);
+    pvpCase.raf = null;
+  }
   if (pvpCase.ticker) {
     clearInterval(pvpCase.ticker);
     pvpCase.ticker = null;
@@ -10148,8 +10157,30 @@ function pvpCaseClearTimers() {
 }
 
 function pvpCaseDuration(ms) {
-  // С выключенными анимациями прокрутки не тянем — сразу показываем итог.
-  return (typeof animationsEnabled === "function" && !animationsEnabled()) ? 300 : ms;
+  // Прокрутки сундука и круга — часть игры, а не украшение, поэтому идут
+  // полное время при любом значении настройки «Анимация».
+  return ms;
+}
+
+// Покадровая анимация на requestAnimationFrame. CSS-переходы здесь не годятся:
+// при выключенной настройке «Анимация» правило html.no-animations делает их
+// мгновенными, и лента с кругом «прыгали» в конец вместо прокрутки.
+function pvpCaseAnimate(durationMs, onFrame, onDone) {
+  if (pvpCase.raf) cancelAnimationFrame(pvpCase.raf);
+  const startedAt = performance.now();
+  const step = (now) => {
+    if (!pvpCase.open) { pvpCase.raf = null; return; }
+    const t = Math.min(1, Math.max(0, (now - startedAt) / durationMs));
+    // Плавное торможение: быстрый старт, долгий «докат» в конце.
+    onFrame(1 - Math.pow(1 - t, 4));
+    if (t < 1) {
+      pvpCase.raf = requestAnimationFrame(step);
+    } else {
+      pvpCase.raf = null;
+      if (onDone) onDone();
+    }
+  };
+  pvpCase.raf = requestAnimationFrame(step);
 }
 
 function pvpCaseBank() {
@@ -10334,12 +10365,10 @@ function pvpCaseSpinReel() {
   const duration = pvpCaseDuration(5200);
 
   strip.style.transition = "none";
-  strip.style.transform = "translateX(0px)";
-  strip.getBoundingClientRect();
-  strip.style.transition = `transform ${duration}ms cubic-bezier(0.12, 0.75, 0.12, 1)`;
-  strip.style.transform = `translateX(${-target}px)`;
-
-  pvpCaseLater(() => {
+  strip.style.transform = "translate3d(0px, 0, 0)";
+  pvpCaseAnimate(duration, (k) => {
+    strip.style.transform = `translate3d(${(-target * k).toFixed(2)}px, 0, 0)`;
+  }, () => {
     const wonCard = strip.querySelector(".pvpc-card-target");
     if (wonCard) wonCard.classList.add("is-won");
     const caption = document.getElementById("pvpcStageSub");
@@ -10350,7 +10379,7 @@ function pvpCaseSpinReel() {
       );
     }
     pvpCaseLater(pvpCaseStartWheel, pvpCaseDuration(1600));
-  }, duration + 150);
+  });
 }
 
 function pvpCaseWheelSectors() {
@@ -10383,14 +10412,15 @@ function pvpCaseStartWheel() {
 
   wheel.style.transition = "none";
   wheel.style.transform = "rotate(0deg)";
-  wheel.getBoundingClientRect();
-  wheel.style.transition = `transform ${duration}ms cubic-bezier(0.1, 0.7, 0.1, 1)`;
-  wheel.style.transform = `rotate(${rotation}deg)`;
-
-  pvpCaseLater(() => {
-    pvpCase.phase = "result";
-    pvpCaseRenderAll();
-  }, duration + 500);
+  pvpCaseAnimate(duration, (k) => {
+    wheel.style.transform = `rotate(${(rotation * k).toFixed(2)}deg)`;
+  }, () => {
+    // Короткая пауза на остановившемся круге, потом итог.
+    pvpCaseLater(() => {
+      pvpCase.phase = "result";
+      pvpCaseRenderAll();
+    }, 700);
+  });
 }
 
 // ---------- отрисовка ----------
