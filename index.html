@@ -2647,6 +2647,10 @@ html.no-animations .pvpc-stage-icon.is-shaking {
 .case-win-mode.is-pvp {
   color: var(--accent);
 }
+.case-win.is-new .case-win-box {
+  box-shadow: 0 0 16px var(--tier);
+  border-color: var(--tier);
+}
 #inventoryScreen.menu-screen {
   /* Тот же расчёт, что у #homeScreen и #marketScreen: зазор между балансом
      и первым блоком экрана — 8px, как между балансом и кнопкой История. */
@@ -10433,6 +10437,8 @@ function closePvpCase() {
   if (!overlay) return;
   overlay.classList.remove("open");
   overlay.setAttribute("aria-hidden", "true");
+  // Выигрыши, накопленные за время в кейсе, теперь выезжают в ленте.
+  caseWinsFlush();
 }
 
 function pvpCaseRestart() {
@@ -10941,23 +10947,24 @@ window.pvpCaseRestart = pvpCaseRestart;
 window.pvpCaseJoin = pvpCaseJoin;
 window.pvpCaseSelectStake = pvpCaseSelectStake;
 window.pvpCaseToggleOdds = pvpCaseToggleOdds;
-// ---------- бегущая строка последних выигрышей ----------
+// ---------- лента последних выигрышей ----------
+// Лента стоит на месте. Когда кто-то выигрывает, новый квадрат выезжает
+// слева и сдвигает предыдущие выигрыши вправо, крайний справа уходит за край.
 // Сейчас лента живёт на клиенте: в неё попадают раунды, сыгранные в этой
 // сессии (свои соло и все PvP, включая победы ботов), а при запуске она
 // заполняется тестовыми записями, чтобы не была пустой. Когда появится
-// серверная часть, список будет приходить с сервера (выигрыши всех игроков).
-// Лента крутится покадрово, поэтому настройка «Анимация» её не останавливает.
+// серверная часть, выигрыши всех игроков будет присылать сервер — для каждого
+// достаточно вызвать caseWinsAdd.
+// Анимация покадровая, поэтому настройка «Анимация» её не выключает.
 const CASE_WINS_MAX = 20;
-const CASE_WINS_SPEED = 28;   // пикселей в секунду
-const CASE_WINS_GAP = 8;      // должен совпадать с gap у .case-wins-track
-const caseWins = { items: [], offset: 0, raf: null, lastAt: 0 };
+const CASE_WIN_STEP = 72;         // ширина плитки 64 + gap 8 — должно совпадать с CSS
+const CASE_WINS_SLIDE_MS = 450;   // сколько выезжает новый выигрыш
+const CASE_WINS_PAUSE_MS = 250;   // пауза между выигрышами, если их пришло несколько
+const caseWins = { items: [], pending: [], animating: false, raf: null };
 
 function caseWinsAdd(caseId, item, mode) {
-  caseWins.items.unshift({ caseId, value: item.value, tier: item.tier, isGift: item.isGift, mode });
-  if (caseWins.items.length > CASE_WINS_MAX) caseWins.items.length = CASE_WINS_MAX;
-  // Новый выигрыш появляется у левого края ленты, дальше лента везёт его вправо.
-  caseWins.offset = 0;
-  renderCaseWins();
+  caseWins.pending.push({ caseId, value: item.value, tier: item.tier, isGift: item.isGift, mode });
+  caseWinsFlush();
 }
 
 function caseWinsSeed() {
@@ -10974,63 +10981,76 @@ function caseWinsSeed() {
   }
 }
 
-function caseWinItemHtml(win) {
+function caseWinItemHtml(win, extraClass) {
   const tier = CASE_TIER_COLORS[win.tier] || CASE_TIER_COLORS[0];
   const icon = win.isGift
     ? `<div class="case-win-icon">${CASE_GIFT_ICON_SVG}</div>`
     : `<div class="case-win-coin">G</div>`;
   const isPvp = win.mode === "pvp";
   return `
-    <div class="case-win">
+    <div class="case-win ${extraClass || ""}">
       <div class="case-win-box" style="--tier:${tier};">${icon}<div class="case-win-value">${pvpCaseFmt(win.value)}</div></div>
       <div class="case-win-mode ${isPvp ? "is-pvp" : ""}">${escapeHtml(isPvp ? "PvP" : L("Соло", "Solo"))}</div>
     </div>`;
 }
 
+function caseWinsVisible() {
+  const screen = document.getElementById("casesScreen");
+  return !!screen && screen.classList.contains("active") && !document.hidden && !pvpCase.open;
+}
+
 function renderCaseWins() {
   const track = document.getElementById("caseWinsTrack");
   if (!track) return;
+  if (caseWins.raf) {
+    cancelAnimationFrame(caseWins.raf);
+    caseWins.raf = null;
+    caseWins.animating = false;
+  }
   if (!caseWins.items.length) caseWinsSeed();
-  const html = caseWins.items.map(caseWinItemHtml).join("");
-  // Список выводится дважды подряд. Лента едет вправо: вторая копия стоит
-  // в начале окна, первая ждёт слева за краем. Когда сдвиг доходит до длины
-  // одной копии, он сбрасывается, и лента идёт без шва.
-  track.innerHTML = html + html;
-  caseWinsApplyOffset(track);
-  caseWinsStart();
+  track.innerHTML = caseWins.items.map((win) => caseWinItemHtml(win)).join("");
+  track.style.transform = "";
+  // Выигрыши, пришедшие, пока экран кейсов был скрыт, выезжают по одному.
+  setTimeout(caseWinsFlush, 300);
 }
 
-function caseWinsApplyOffset(track) {
-  const period = (track.scrollWidth + CASE_WINS_GAP) / 2;
-  if (period > 0 && caseWins.offset >= period) caseWins.offset -= period;
-  track.style.transform = `translate3d(${(caseWins.offset - period).toFixed(2)}px, 0, 0)`;
-}
+function caseWinsFlush() {
+  if (caseWins.animating || !caseWins.pending.length) return;
+  // Пока экран кейсов не на виду (или открыт сам кейс), копим выигрыши:
+  // анимацию должно быть видно.
+  if (!caseWinsVisible()) return;
+  const track = document.getElementById("caseWinsTrack");
+  if (!track) return;
 
-function caseWinsStart() {
-  if (caseWins.raf) return;
-  caseWins.lastAt = performance.now();
+  caseWins.items.unshift(caseWins.pending.shift());
+  if (caseWins.items.length > CASE_WINS_MAX) caseWins.items.length = CASE_WINS_MAX;
+  track.innerHTML = caseWins.items.map((win, i) => caseWinItemHtml(win, i === 0 ? "is-new" : "")).join("");
+
+  // Лента стартует сдвинутой влево на одну плитку (новый квадрат за краем)
+  // и доезжает до нуля — так новый выигрыш выезжает и толкает остальные вправо.
+  caseWins.animating = true;
+  track.style.transform = `translate3d(${-CASE_WIN_STEP}px, 0, 0)`;
+  const startedAt = performance.now();
   const step = (now) => {
-    const screen = document.getElementById("casesScreen");
-    const track = document.getElementById("caseWinsTrack");
-    // Крутим, только пока экран кейсов на виду, чтобы лента не тратила ресурсы.
-    if (!screen || !track || !screen.classList.contains("active") || document.hidden) {
-      caseWins.raf = null;
+    const t = Math.min(1, Math.max(0, (now - startedAt) / CASE_WINS_SLIDE_MS));
+    const k = 1 - Math.pow(1 - t, 3);
+    track.style.transform = `translate3d(${(-CASE_WIN_STEP * (1 - k)).toFixed(2)}px, 0, 0)`;
+    if (t < 1) {
+      caseWins.raf = requestAnimationFrame(step);
       return;
     }
-    const dt = Math.min(100, now - caseWins.lastAt);
-    caseWins.lastAt = now;
-    // Пока открыт кейс, лента под ним стоит.
-    if (!pvpCase.open) {
-      caseWins.offset += CASE_WINS_SPEED * dt / 1000;
-      caseWinsApplyOffset(track);
-    }
-    caseWins.raf = requestAnimationFrame(step);
+    caseWins.raf = null;
+    caseWins.animating = false;
+    track.style.transform = "";
+    const fresh = track.querySelector(".case-win.is-new");
+    if (fresh) setTimeout(() => fresh.classList.remove("is-new"), 1500);
+    setTimeout(caseWinsFlush, CASE_WINS_PAUSE_MS);
   };
   caseWins.raf = requestAnimationFrame(step);
 }
 
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) caseWinsStart();
+  if (!document.hidden) caseWinsFlush();
 });
 // =================== КОНЕЦ БЛОКА «КЕЙСЫ: СОЛО И PvP» ===================
 
