@@ -2087,7 +2087,9 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 .pvpc-stage {
   position: relative;
   flex: 0 0 auto;
-  height: 236px;
+  /* не меньше 236px, но растёт, если внутри 2–3 ленты или окно победителя */
+  min-height: 236px;
+  padding: 10px 0;
   border-radius: 22px;
   border: 1px solid rgba(255,255,255,0.08);
   background: linear-gradient(180deg, rgba(13, 21, 46, 0.96), rgba(7, 10, 24, 0.94));
@@ -2310,6 +2312,24 @@ html.no-animations .pvpc-stage-chest.is-shaking {
 }
 .pvpc-result-net.is-plus { color: var(--accent); }
 .pvpc-result-net.is-minus { color: var(--danger); }
+/* Соло на 2–3 кейса: ленты друг под другом */
+.pvpc-reels {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pvpc-reels.is-multi {
+  margin-top: 26px;
+}
+.pvpc-result-cards {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.pvpc-chips.pvpc-chips-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 
 /* Игроки */
 .pvpc-section-title {
@@ -10690,6 +10710,7 @@ const CASE_PLAY_CONFIG = {
   pvpShareChips: [0.1, 0.25, 0.5],
   // Ограничения по числу игроков нет: раунд стартует, когда собрана сумма кейса.
   reelMs: 5200,
+  reelStaggerMs: 450,      // соло на 2–3 кейса: каждая следующая лента тормозит позже
   wheelMs: 5600
 };
 
@@ -10717,6 +10738,8 @@ const pvpCase = {
   fundEndsAt: 0,
   startAt: 0,
   prize: null,        // { value, chance, tier, isGift }
+  prizes: [],         // соло: призы всех открытых сразу кейсов (1–3)
+  soloCount: 1,       // соло: сколько кейсов открыть за раз
   winnerId: null,
   oddsOpen: false,
   timers: [],
@@ -10858,6 +10881,7 @@ function pvpCaseResetRound() {
   pvpCase.fundEndsAt = 0;
   pvpCase.startAt = 0;
   pvpCase.prize = null;
+  pvpCase.prizes = [];
   pvpCase.winnerId = null;
 }
 
@@ -10905,16 +10929,27 @@ function pvpCaseRestart() {
 
 function caseSoloOpen() {
   if (pvpCase.mode !== "solo" || pvpCase.phase !== "idle") return;
-  pvpCase.prize = caseAttachGift(pvpCasePick(caseItems(currentCase()), (item) => item.chance));
+  // Сколько кейсов открываем (1–3): каждый — отдельный честный розыгрыш по
+  // шансам кейса, и под каждый своя лента. Цена = цена кейса × количество.
+  const items = caseItems(currentCase());
+  const count = Math.min(3, Math.max(1, pvpCase.soloCount || 1));
+  pvpCase.prizes = Array.from({ length: count }, () => caseAttachGift(pvpCasePick(items, (item) => item.chance)));
+  pvpCase.prize = pvpCase.prizes[0];
   pvpCase.phase = "chest";
   pvpCaseRenderAll();
   pvpCaseSpinReel(() => {
     pvpCaseLater(() => {
       pvpCase.phase = "result";
-      caseWinsAdd(pvpCase.caseId, pvpCase.prize, "solo");
+      pvpCase.prizes.forEach((prize) => caseWinsAdd(pvpCase.caseId, prize, "solo"));
       pvpCaseRenderAll();
     }, 900);
   });
+}
+
+function pvpCaseSelectSoloCount(count) {
+  if (pvpCase.mode !== "solo" || pvpCase.phase !== "idle") return;
+  pvpCase.soloCount = count;
+  pvpCaseRenderControls();
 }
 
 // ---------- PvP: сбор кейса долями ----------
@@ -11059,37 +11094,67 @@ function pvpCaseCardHtml(item, extraClass) {
 }
 
 function pvpCaseSpinReel(onDone) {
-  const strip = document.getElementById("pvpcReelStrip");
-  const win = document.getElementById("pvpcReelWindow");
-  if (!strip || !win) return;
-
+  // Одна лента (PvP и соло на 1 кейс) или несколько (соло на 2–3 кейса):
+  // каждая крутится к своему призу, останавливаются по очереди сверху вниз.
+  const prizes = pvpCase.prizes.length ? pvpCase.prizes : [pvpCase.prize];
   const CARD = 88;
   const STEP = 96;
   const WIN_INDEX = 40;
   const items = caseItems(currentCase());
 
-  // На ленте редкие призы мелькают чаще, чем выпадают (корень из шанса) —
-  // это только картинка, исход уже выбран по настоящим шансам.
-  const cards = [];
-  for (let i = 0; i < WIN_INDEX + 6; i++) {
-    cards.push(i === WIN_INDEX ? pvpCase.prize : caseAttachGift(pvpCasePick(items, (item) => Math.sqrt(item.chance))));
-  }
-  strip.innerHTML = cards.map((item, i) => pvpCaseCardHtml(item, i === WIN_INDEX ? "pvpc-card-target" : "")).join("");
-
-  const offsetInCard = (pvpCaseRandom() - 0.5) * (CARD - 20);
-  const target = WIN_INDEX * STEP + CARD / 2 + offsetInCard - win.clientWidth / 2;
-
-  strip.style.transition = "none";
-  strip.style.transform = "translate3d(0px, 0, 0)";
-  pvpCaseAnimate(CASE_PLAY_CONFIG.reelMs, (k) => {
-    strip.style.transform = `translate3d(${(-target * k).toFixed(2)}px, 0, 0)`;
-  }, () => {
-    const wonCard = strip.querySelector(".pvpc-card-target");
-    if (wonCard) wonCard.classList.add("is-won");
-    const caption = document.getElementById("pvpcStageSub");
-    if (caption) caption.textContent = pvpCasePrizeText(pvpCase.prize);
-    if (onDone) onDone();
+  const reels = [];
+  prizes.forEach((prize, r) => {
+    const strip = document.getElementById(r ? `pvpcReelStrip${r}` : "pvpcReelStrip");
+    const win = document.getElementById(r ? `pvpcReelWindow${r}` : "pvpcReelWindow");
+    if (!strip || !win) return;
+    // На ленте редкие призы мелькают чаще, чем выпадают (корень из шанса) —
+    // это только картинка, исход уже выбран по настоящим шансам.
+    const cards = [];
+    for (let i = 0; i < WIN_INDEX + 6; i++) {
+      cards.push(i === WIN_INDEX ? prize : caseAttachGift(pvpCasePick(items, (item) => Math.sqrt(item.chance))));
+    }
+    strip.innerHTML = cards.map((item, i) => pvpCaseCardHtml(item, i === WIN_INDEX ? "pvpc-card-target" : "")).join("");
+    const offsetInCard = (pvpCaseRandom() - 0.5) * (CARD - 20);
+    const target = WIN_INDEX * STEP + CARD / 2 + offsetInCard - win.clientWidth / 2;
+    strip.style.transition = "none";
+    strip.style.transform = "translate3d(0px, 0, 0)";
+    reels.push({ strip, target, durationMs: CASE_PLAY_CONFIG.reelMs + r * CASE_PLAY_CONFIG.reelStaggerMs, done: false });
   });
+  if (!reels.length) return;
+
+  // Один покадровый цикл на все ленты (CSS-переходы выключает настройка «Анимация»).
+  if (pvpCase.raf) cancelAnimationFrame(pvpCase.raf);
+  const startedAt = performance.now();
+  const step = (now) => {
+    if (!pvpCase.open) { pvpCase.raf = null; return; }
+    let running = false;
+    reels.forEach((reel) => {
+      const t = Math.min(1, Math.max(0, (now - startedAt) / reel.durationMs));
+      const k = 1 - Math.pow(1 - t, 4);
+      reel.strip.style.transform = `translate3d(${(-reel.target * k).toFixed(2)}px, 0, 0)`;
+      if (t < 1) {
+        running = true;
+      } else if (!reel.done) {
+        reel.done = true;
+        const wonCard = reel.strip.querySelector(".pvpc-card-target");
+        if (wonCard) wonCard.classList.add("is-won");
+      }
+    });
+    if (running) {
+      pvpCase.raf = requestAnimationFrame(step);
+      return;
+    }
+    pvpCase.raf = null;
+    const caption = document.getElementById("pvpcStageSub");
+    if (caption) caption.textContent = prizes.length > 1 ? pvpCaseTotalText(prizes) : pvpCasePrizeText(prizes[0]);
+    if (onDone) onDone();
+  };
+  pvpCase.raf = requestAnimationFrame(step);
+}
+
+function pvpCaseTotalText(prizes) {
+  const total = prizes.reduce((sum, p) => sum + p.value, 0);
+  return L(`Всего выпало на ${pvpCaseFmt(total)} GRAM`, `Total: ${pvpCaseFmt(total)} GRAM`);
 }
 
 function pvpCasePrizeText(item) {
@@ -11212,13 +11277,19 @@ function pvpCaseRenderStage() {
   const caseName = L(caseDef.ru, caseDef.en);
 
   if (phase === "chest") {
-    el.innerHTML = `
-      <div class="pvpc-stage-caption">${escapeHtml(L("Открываем кейс", "Opening the case"))}</div>
-      <div id="pvpcReelWindow" class="pvpc-reel-window">
+    const reelCount = Math.max(1, pvpCase.prizes.length);
+    const reelsHtml = Array.from({ length: reelCount }, (_, r) => `
+      <div id="pvpcReelWindow${r ? r : ""}" class="pvpc-reel-window">
         <div class="pvpc-reel-pointer"></div>
-        <div id="pvpcReelStrip" class="pvpc-reel-strip"></div>
-      </div>
-      <div id="pvpcStageSub" class="pvpc-stage-sub">${escapeHtml(caseName + " · " + pvpCaseFmt(caseDef.price) + " GRAM")}</div>`;
+        <div id="pvpcReelStrip${r ? r : ""}" class="pvpc-reel-strip"></div>
+      </div>`).join("");
+    const caption = reelCount > 1
+      ? L(`Открываем ${reelCount} кейса`, `Opening ${reelCount} cases`)
+      : L("Открываем кейс", "Opening the case");
+    el.innerHTML = `
+      <div class="pvpc-stage-caption">${escapeHtml(caption)}</div>
+      <div class="pvpc-reels ${reelCount > 1 ? "is-multi" : ""}">${reelsHtml}</div>
+      <div id="pvpcStageSub" class="pvpc-stage-sub">${escapeHtml(caseName + " · " + pvpCaseFmt(pvpCaseMoney(caseDef.price * reelCount)) + " GRAM")}</div>`;
     return;
   }
 
@@ -11237,12 +11308,14 @@ function pvpCaseRenderStage() {
   }
 
   if (phase === "result" && pvpCase.mode === "solo") {
-    const prize = pvpCase.prize;
-    const net = pvpCaseMoney(prize.value - caseDef.price);
+    const prizes = pvpCase.prizes.length ? pvpCase.prizes : [pvpCase.prize];
+    const total = prizes.reduce((sum, p) => sum + p.value, 0);
+    const net = pvpCaseMoney(total - caseDef.price * prizes.length);
+    const best = prizes.reduce((a, b) => (b.value > a.value ? b : a));
     el.innerHTML = `
       <div class="pvpc-result-title">${escapeHtml(L("Тебе выпало", "You got"))}</div>
-      ${pvpCaseCardHtml(prize, "is-won")}
-      <div class="pvpc-result-prize" style="color:${caseTierColor(prize)};">${escapeHtml(pvpCasePrizeText(prize))}</div>
+      <div class="pvpc-result-cards">${prizes.map((p) => pvpCaseCardHtml(p, "is-won")).join("")}</div>
+      <div class="pvpc-result-prize" style="color:${caseTierColor(best)};">${escapeHtml(prizes.length > 1 ? pvpCaseTotalText(prizes) : pvpCasePrizeText(prizes[0]))}</div>
       <div class="pvpc-result-net ${net >= 0 ? "is-plus" : "is-minus"}">${escapeHtml(L("Итог: ", "Result: ") + (net >= 0 ? "+" : "−") + pvpCaseFmt(Math.abs(net)) + " GRAM")}</div>`;
     return;
   }
@@ -11388,9 +11461,17 @@ function pvpCaseRenderControls() {
 
   if (pvpCase.mode === "solo") {
     const idle = pvpCase.phase === "idle";
+    const count = Math.min(3, Math.max(1, pvpCase.soloCount || 1));
+    const cost = pvpCaseFmt(pvpCaseMoney(caseDef.price * count));
+    const countChips = [1, 2, 3].map((n) => `<button type="button" class="pvpc-chip ${n === count ? "active" : ""}"
+      ${idle ? "" : "disabled"} onclick="pvpCaseSelectSoloCount(${n})">${escapeHtml(n === 1 ? L("1 кейс", "1 case") : L(`${n} кейса`, `${n} cases`))}</button>`).join("");
+    const openLabel = count > 1
+      ? L(`Открыть ${count} за ${cost} GRAM`, `Open ${count} for ${cost} GRAM`)
+      : L(`Открыть за ${cost} GRAM`, `Open for ${cost} GRAM`);
     el.innerHTML = `
+      <div class="pvpc-chips pvpc-chips-3">${countChips}</div>
       <button type="button" class="pvpc-main-btn" ${idle ? "" : "disabled"} onclick="caseSoloOpen()">${escapeHtml(idle
-        ? L(`Открыть за ${pvpCaseFmt(caseDef.price)} GRAM`, `Open for ${pvpCaseFmt(caseDef.price)} GRAM`)
+        ? openLabel
         : L("Открываем…", "Opening…"))}</button>
       ${testHint("Тестовый режим: GRAM не списываются.", "Test mode: GRAM is not charged.")}`;
     return;
@@ -11434,6 +11515,7 @@ window.pvpCaseRestart = pvpCaseRestart;
 window.pvpCaseJoin = pvpCaseJoin;
 window.pvpCaseSelectStake = pvpCaseSelectStake;
 window.pvpCaseToggleOdds = pvpCaseToggleOdds;
+window.pvpCaseSelectSoloCount = pvpCaseSelectSoloCount;
 // ---------- лента последних выигрышей ----------
 // Лента стоит на месте. Когда кто-то выигрывает, новый квадрат выезжает
 // слева и сдвигает предыдущие выигрыши вправо, крайний справа уходит за край.
