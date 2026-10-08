@@ -2549,6 +2549,38 @@ html.no-animations .pvpc-stage-icon.is-shaking {
   animation-duration: 0.5s !important;
   animation-iteration-count: infinite !important;
 }
+/* Коробка с подарками внутри кейса (как на плитке) */
+.pvpc-stage-art {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  color: var(--case-color, var(--accent));
+}
+.pvpc-stage-art::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200px;
+  height: 140px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, var(--case-color, rgba(117, 245, 156, 0.35)) 0%, transparent 70%);
+  opacity: 0.3;
+  pointer-events: none;
+}
+.pvpc-stage-art .case-art {
+  margin: 0;
+  max-width: 100%;
+}
+.pvpc-stage-art.is-shaking {
+  animation: pvpcShake 0.5s ease-in-out infinite;
+}
+/* Тряска коробки перед стартом — часть игры: настройка «Анимация» её не выключает. */
+html.no-animations .pvpc-stage-art.is-shaking {
+  animation-duration: 0.5s !important;
+  animation-iteration-count: infinite !important;
+}
 /* Бегущая строка последних выигрышей над кейсами */
 .case-wins {
   position: relative;
@@ -11124,7 +11156,11 @@ function pvpCaseRenderStats() {
 }
 
 function pvpCaseCaseIconHtml(shaking) {
-  return `<div class="pvpc-stage-icon ${shaking ? "is-shaking" : ""}">${CASE_ICON_SVG}</div>`;
+  // Внутри кейса — та же открытая коробка с моделями подарков, что на плитке.
+  const caseDef = currentCase();
+  if (!caseDef) return `<div class="pvpc-stage-icon ${shaking ? "is-shaking" : ""}">${CASE_ICON_SVG}</div>`;
+  const ribbon = CASE_RIBBON_COLORS[caseDef.id] || "#ff4f6d";
+  return `<div class="pvpc-stage-art ${shaking ? "is-shaking" : ""}"><div class="case-art" data-case-art="${caseDef.id}" style="--ribbon:${ribbon};">${caseArtHtml(caseDef)}</div></div>`;
 }
 
 function pvpCaseRenderStage() {
