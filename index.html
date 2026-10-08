@@ -10688,14 +10688,23 @@ const CASE_PLAY_CONFIG = {
   pvpMaxShare: 0.75,       // максимум доли одного игрока (чтобы игроков было ≥2)
   pvpMinShare: 0.05,       // минимальная доля
   pvpShareChips: [0.1, 0.25, 0.5],
-  maxPlayers: 6,
+  // Ограничения по числу игроков нет: раунд стартует, когда собрана сумма кейса.
   reelMs: 5200,
   wheelMs: 5600
 };
 
 const PVP_CASE_BOT_NAMES = ["Bobr_Max", "lazerkot", "TonHunter", "mira", "Zub", "nord", "Kesha"];
 const PVP_CASE_BOT_SHARES = [0.05, 0.1, 0.1, 0.15, 0.2, 0.25, 0.3];
-const PVP_CASE_COLORS = ["#75f59c", "#5fa8ff", "#ff7a59", "#c47bff", "#ffd86b", "#2de1ff"];
+const PVP_CASE_COLORS = ["#75f59c", "#5fa8ff", "#ff7a59", "#c47bff", "#ffd86b", "#2de1ff",
+  "#ff5cc8", "#9dff5c", "#ff9f40", "#7b8cff", "#ff5a7a", "#4dffd2"];
+
+// Цвет сектора игрока на круге. Первые 12 — из списка, дальше цвета идут
+// по «золотому углу», чтобы соседние игроки не сливались.
+function pvpCasePlayerColor(index) {
+  if (index < PVP_CASE_COLORS.length) return PVP_CASE_COLORS[index];
+  const hue = Math.round((index * 137.508) % 360);
+  return `hsl(${hue}, 85%, 62%)`;
+}
 const CASE_TIER_COLORS = ["#8a94a8", "#9fb2d6", "#4b9bff", "#2de1ff", "#a45cff", "#ff5cc8", "#ff5a5a", "#ffb23d"];
 
 const pvpCase = {
@@ -10922,7 +10931,7 @@ function pvpCaseSelectStake(share) {
 }
 
 function pvpCaseAddPlayer(player) {
-  player.color = PVP_CASE_COLORS[pvpCase.players.length % PVP_CASE_COLORS.length];
+  player.color = pvpCasePlayerColor(pvpCase.players.length);
   pvpCase.players.push(player);
 }
 
@@ -10964,15 +10973,14 @@ function pvpCaseBotJoin() {
 
   const used = new Set(pvpCase.players.map((p) => p.name));
   const names = PVP_CASE_BOT_NAMES.filter((n) => !used.has(n));
-  if (!names.length) return;
-  const name = names[Math.floor(pvpCaseRandom() * names.length)];
-
-  const lastSeat = pvpCase.players.length >= CASE_PLAY_CONFIG.maxPlayers - 1;
+  // Игроков сколько угодно. Если тестовые имена кончились — имя с номером.
+  let name = names.length ? names[Math.floor(pvpCaseRandom() * names.length)] : "";
+  while (!name || used.has(name)) name = "Bobr_" + (100 + Math.floor(pvpCaseRandom() * 900));
   const share = PVP_CASE_BOT_SHARES[Math.floor(pvpCaseRandom() * PVP_CASE_BOT_SHARES.length)];
   let stake = Math.min(pvpCaseMoney(caseDef.price * share), remaining, pvpCaseMoney(caseDef.price * CASE_PLAY_CONFIG.pvpMaxShare));
   // Не оставляем «хвост» меньше минимальной доли — его никто не сможет закрыть.
   const minShare = pvpCaseMoney(caseDef.price * CASE_PLAY_CONFIG.pvpMinShare);
-  if (lastSeat || remaining - stake < minShare) stake = remaining;
+  if (remaining - stake < minShare) stake = remaining;
   stake = pvpCaseMoney(stake);
   if (stake <= 0) return;
 
@@ -11304,7 +11312,7 @@ function pvpCaseRenderPlayers() {
   }
 
   titleEl.innerHTML = `
-    <span>${escapeHtml(L("Игроки", "Players"))} · ${pvpCase.players.length}/${CASE_PLAY_CONFIG.maxPlayers}</span>${toggle}`;
+    <span>${escapeHtml(L("Игроки", "Players"))} · ${pvpCase.players.length}</span>${toggle}`;
   if (!pvpCase.players.length) {
     el.innerHTML = `<div class="pvpc-empty">${escapeHtml(L("Пока никого. Вложись первым.", "Nobody here yet. Be the first."))}</div>`;
     return;
