@@ -2639,11 +2639,14 @@ html.no-animations .pvpc-stage-art.is-shaking {
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 24px), transparent 100%);
   mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 24px), transparent 100%);
 }
-/* Плитка кейса: открытая подарочная коробка с подарками */
+/* Плитка кейса: открытая подарочная коробка с подарками.
+   Сцена всегда 184×150: на узкой плитке края просто уходят за её границы,
+   а коробка и модели не разъезжаются. */
 .case-art {
   position: relative;
   width: 184px;
-  max-width: calc(100% + 20px);
+  max-width: none;
+  flex: 0 0 auto;
   height: 150px;
   margin: 0 -10px;
   color: var(--case-color);
@@ -2658,7 +2661,8 @@ html.no-animations .pvpc-stage-art.is-shaking {
   z-index: 3;
   filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
 }
-/* крышка на заднем плане — за моделями подарков */
+/* крышка на заднем плане: стоит на полу справа от коробки и привалилась
+   к её заднему краю, за моделями подарков */
 .case-art-lid {
   z-index: 1;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
@@ -2669,6 +2673,22 @@ html.no-animations .pvpc-stage-art.is-shaking {
   height: 100%;
   display: block;
 }
+/* лучи света из открытой коробки — веером вверх, за моделями */
+.case-art-rays {
+  position: absolute;
+  left: -9px;
+  top: -26px;
+  width: 190px;
+  height: 108px;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 100%, rgba(255, 255, 255, 0.55) 0deg 3.5deg, rgba(255, 255, 255, 0) 3.5deg 12deg),
+    radial-gradient(ellipse 55% 85% at 50% 100%, currentColor 0%, rgba(0, 0, 0, 0) 100%);
+  -webkit-mask-image: radial-gradient(ellipse 50% 100% at 50% 100%, #000 15%, rgba(0, 0, 0, 0) 72%);
+  mask-image: radial-gradient(ellipse 50% 100% at 50% 100%, #000 15%, rgba(0, 0, 0, 0) 72%);
+  opacity: 0.5;
+}
 .case-art-peek,
 .case-art-floor {
   position: absolute;
@@ -2678,69 +2698,72 @@ html.no-animations .pvpc-stage-art.is-shaking {
 .case-art-peek {
   z-index: 2;
 }
-/* три подарка в коробке: самый дорогой по центру, два по бокам */
+/* три подарка в коробке: самый дорогой по центру, два по бокам веером */
 .case-art-peek3-0 {
-  left: 18px;
+  left: 50px;
   top: 18px;
-  width: 74px;
-  height: 74px;
+  width: 72px;
+  height: 72px;
 }
 .case-art-peek3-1 {
-  left: -2px;
+  left: 18px;
   top: 36px;
-  width: 60px;
-  height: 60px;
-  transform: rotate(-12deg);
+  width: 58px;
+  height: 58px;
+  transform: rotate(-14deg);
 }
 .case-art-peek3-2 {
-  left: 50px;
+  left: 96px;
   top: 36px;
-  width: 60px;
-  height: 60px;
-  transform: rotate(12deg);
+  width: 58px;
+  height: 58px;
+  transform: rotate(14deg);
 }
 /* два подарка в коробке (если подарков в кейсе мало) */
 .case-art-peek2-0 {
-  left: 4px;
-  top: 24px;
-  width: 70px;
-  height: 70px;
+  left: 34px;
+  top: 26px;
+  width: 66px;
+  height: 66px;
   transform: rotate(-8deg);
 }
 .case-art-peek2-1 {
-  left: 48px;
+  left: 76px;
   top: 32px;
-  width: 62px;
-  height: 62px;
+  width: 60px;
+  height: 60px;
   transform: rotate(10deg);
 }
-/* модели на полу вокруг коробки — впереди всего */
+/* модели на полу — симметрично по бокам коробки, впереди всего */
 .case-art-floor {
   z-index: 4;
-  width: 50px;
-  height: 50px;
-  bottom: -4px;
 }
 .case-art-floor-0 {
-  left: -6px;
-  transform: rotate(-8deg);
+  left: 0px;
+  bottom: 2px;
+  width: 48px;
+  height: 48px;
+  transform: rotate(-10deg);
 }
 .case-art-floor-1 {
-  right: -6px;
-  transform: rotate(8deg);
+  left: 124px;
+  bottom: 2px;
+  width: 48px;
+  height: 48px;
+  transform: rotate(10deg);
 }
 .case-art-floor-2 {
-  left: 60px;
-  width: 44px;
-  height: 44px;
-  bottom: -6px;
+  left: 36px;
+  bottom: -4px;
+  width: 42px;
+  height: 42px;
   transform: rotate(6deg);
 }
 .case-art-floor-3 {
-  right: 40px;
-  width: 44px;
-  height: 44px;
-  bottom: -6px;
+  left: 94px;
+  bottom: -4px;
+  width: 42px;
+  height: 42px;
   transform: rotate(-6deg);
 }
 .case-art-img {
@@ -10544,7 +10567,7 @@ function caseGiftImageUrl(gift) {
 // На плитке — только модели подарков без фона и узора (базовая картинка
 // коллекции), потому что конкретные NFT в наличии всё время меняются.
 // Пока цены не пришли с сервера, рисуется только коробка.
-// Обе картинки (коробка и крышка) в одной системе координат 184×150 (сдвинута на 16 влево, чтобы коробка с крышкой стояли по центру плитки) — так
+// Обе картинки (коробка и крышка) в одной системе координат 184×150 (сдвиг подобран так, чтобы коробка с крышкой смотрелись по центру плитки) — так
 // крышка точно касается угла коробки и стоит на одном полу с ней.
 // Бант — как на аватарке приложения: две петли с отверстием, концы лентой
 // уходят в стороны, в центре узел; между бантом и крышкой небольшой зазор.
@@ -10557,9 +10580,9 @@ const CASE_RIBBON_COLORS = {
   legend: "#ffd24a"
 };
 
-const CASE_BOX_BODY_SVG = '<svg viewBox="16 0 184 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="28" y="86" width="96" height="58" rx="7" fill="currentColor"/><rect x="28" y="116" width="96" height="28" rx="7" fill="#000" opacity=".16"/><rect x="24" y="78" width="104" height="16" rx="5" fill="currentColor"/><rect x="24" y="78" width="104" height="16" rx="5" fill="#fff" opacity=".22"/><rect x="68" y="78" width="16" height="66" style="fill:var(--ribbon)"/><rect x="74" y="78" width="4" height="66" fill="#000" opacity=".12"/><rect x="24" y="92" width="104" height="2" fill="#000" opacity=".14"/></svg>';
+const CASE_BOX_BODY_SVG = '<svg viewBox="-10 0 184 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="28" y="86" width="96" height="58" rx="7" fill="currentColor"/><rect x="28" y="116" width="96" height="28" rx="7" fill="#000" opacity=".16"/><rect x="24" y="78" width="104" height="16" rx="5" fill="currentColor"/><rect x="24" y="78" width="104" height="16" rx="5" fill="#fff" opacity=".22"/><rect x="68" y="78" width="16" height="66" style="fill:var(--ribbon)"/><rect x="74" y="78" width="4" height="66" fill="#000" opacity=".12"/><rect x="24" y="92" width="104" height="2" fill="#000" opacity=".14"/></svg>';
 
-const CASE_BOX_LID_SVG = '<svg viewBox="16 0 184 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(158.8 144) rotate(62) translate(-110 0)"><rect x="0" y="-18" width="110" height="18" rx="5" fill="currentColor"/><rect x="0" y="-18" width="110" height="18" rx="5" fill="#fff" opacity=".18"/><rect x="0" y="-3" width="110" height="3" fill="#000" opacity=".14"/><rect x="47" y="-18" width="16" height="18" style="fill:var(--ribbon)"/><path d="M41.4 -22.3 L27.1 -22.3 C17.2 -22.3 15.3 -29.1 15.6 -35.9 C15.9 -44.6 22.1 -50.2 29.6 -50.2 C37 -50.2 42.6 -44.6 46.3 -38.4 L53.1 -27.3 L55 -24.2 L55 -22.3 L48.2 -22.3 L46.3 -25.1 L37 -35.6 C34.5 -38.4 31.4 -39.7 29 -39.4 C25.2 -38.7 24 -34.7 25.2 -32.2 C26.5 -29.1 32.7 -25.4 41.4 -22.3 Z M68.6 -22.3 L82.9 -22.3 C92.8 -22.3 94.7 -29.1 94.4 -35.9 C94.1 -44.6 87.9 -50.2 80.4 -50.2 C73 -50.2 67.4 -44.6 63.7 -38.4 L56.9 -27.3 L55 -24.2 L55 -22.3 L61.8 -22.3 L63.7 -25.1 L73 -35.6 C75.5 -38.4 78.6 -39.7 81 -39.4 C84.8 -38.7 86 -34.7 84.8 -32.2 C83.5 -29.1 77.3 -25.4 68.6 -22.3 Z" style="fill:var(--ribbon)"/><path d="M41.4 -22.3 L27.1 -22.3 C17.2 -22.3 15.3 -29.1 15.6 -35.9 C15.9 -44.6 22.1 -50.2 29.6 -50.2 C37 -50.2 42.6 -44.6 46.3 -38.4 L53.1 -27.3 L55 -24.2 L55 -22.3 L48.2 -22.3 L46.3 -25.1 L37 -35.6 C34.5 -38.4 31.4 -39.7 29 -39.4 C25.2 -38.7 24 -34.7 25.2 -32.2 C26.5 -29.1 32.7 -25.4 41.4 -22.3 Z M68.6 -22.3 L82.9 -22.3 C92.8 -22.3 94.7 -29.1 94.4 -35.9 C94.1 -44.6 87.9 -50.2 80.4 -50.2 C73 -50.2 67.4 -44.6 63.7 -38.4 L56.9 -27.3 L55 -24.2 L55 -22.3 L61.8 -22.3 L63.7 -25.1 L73 -35.6 C75.5 -38.4 78.6 -39.7 81 -39.4 C84.8 -38.7 86 -34.7 84.8 -32.2 C83.5 -29.1 77.3 -25.4 68.6 -22.3 Z" fill="#fff" opacity=".12"/></g></svg>';
+const CASE_BOX_LID_SVG = '<svg viewBox="-10 0 184 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(134 144) rotate(76) translate(-110 0)"><rect x="0" y="-18" width="110" height="18" rx="5" fill="currentColor"/><rect x="0" y="-18" width="110" height="18" rx="5" fill="#fff" opacity=".18"/><rect x="0" y="-3" width="110" height="3" fill="#000" opacity=".14"/><g transform="translate(-25 0)"><rect x="47" y="-18" width="16" height="18" style="fill:var(--ribbon)"/><path d="M41.4 -22.3 L27.1 -22.3 C17.2 -22.3 15.3 -29.1 15.6 -35.9 C15.9 -44.6 22.1 -50.2 29.6 -50.2 C37 -50.2 42.6 -44.6 46.3 -38.4 L53.1 -27.3 L55 -24.2 L55 -22.3 L48.2 -22.3 L46.3 -25.1 L37 -35.6 C34.5 -38.4 31.4 -39.7 29 -39.4 C25.2 -38.7 24 -34.7 25.2 -32.2 C26.5 -29.1 32.7 -25.4 41.4 -22.3 Z M68.6 -22.3 L82.9 -22.3 C92.8 -22.3 94.7 -29.1 94.4 -35.9 C94.1 -44.6 87.9 -50.2 80.4 -50.2 C73 -50.2 67.4 -44.6 63.7 -38.4 L56.9 -27.3 L55 -24.2 L55 -22.3 L61.8 -22.3 L63.7 -25.1 L73 -35.6 C75.5 -38.4 78.6 -39.7 81 -39.4 C84.8 -38.7 86 -34.7 84.8 -32.2 C83.5 -29.1 77.3 -25.4 68.6 -22.3 Z" style="fill:var(--ribbon)"/><path d="M41.4 -22.3 L27.1 -22.3 C17.2 -22.3 15.3 -29.1 15.6 -35.9 C15.9 -44.6 22.1 -50.2 29.6 -50.2 C37 -50.2 42.6 -44.6 46.3 -38.4 L53.1 -27.3 L55 -24.2 L55 -22.3 L48.2 -22.3 L46.3 -25.1 L37 -35.6 C34.5 -38.4 31.4 -39.7 29 -39.4 C25.2 -38.7 24 -34.7 25.2 -32.2 C26.5 -29.1 32.7 -25.4 41.4 -22.3 Z M68.6 -22.3 L82.9 -22.3 C92.8 -22.3 94.7 -29.1 94.4 -35.9 C94.1 -44.6 87.9 -50.2 80.4 -50.2 C73 -50.2 67.4 -44.6 63.7 -38.4 L56.9 -27.3 L55 -24.2 L55 -22.3 L61.8 -22.3 L63.7 -25.1 L73 -35.6 C75.5 -38.4 78.6 -39.7 81 -39.4 C84.8 -38.7 86 -34.7 84.8 -32.2 C83.5 -29.1 77.3 -25.4 68.6 -22.3 Z" fill="#fff" opacity=".12"/></g></g></svg>';
 
 function caseGiftModelUrl(gift) {
   // Базовая картинка коллекции: только модель на прозрачном фоне.
@@ -10600,6 +10623,7 @@ function caseArtHtml(caseDef) {
   const peek = peekOrder.map((i) => `<div class="case-art-peek ${peekClass}-${i}">${caseArtModelHtml(top[i])}</div>`).join("");
   const floor = low.map((g, i) => `<div class="case-art-floor case-art-floor-${i}">${caseArtModelHtml(g)}</div>`).join("");
   return `
+    <div class="case-art-rays"></div>
     ${peek}
     <div class="case-art-box">${CASE_BOX_BODY_SVG}</div>
     <div class="case-art-lid">${CASE_BOX_LID_SVG}</div>
