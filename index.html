@@ -2607,6 +2607,128 @@ html.no-animations .pvpc-stage-icon.is-shaking {
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 24px), transparent 100%);
   mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 24px), transparent 100%);
 }
+/* Плитка кейса: открытая подарочная коробка с подарками */
+.case-art {
+  position: relative;
+  width: 164px;
+  max-width: 100%;
+  height: 124px;
+  color: var(--case-color);
+  margin-top: 2px;
+}
+.case-art-box,
+.case-art-lid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.case-art-box {
+  z-index: 2;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
+}
+.case-art-lid {
+  z-index: 3;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+.case-art-box svg,
+.case-art-lid svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.case-art-peek,
+.case-art-floor {
+  position: absolute;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+}
+.case-art-peek {
+  z-index: 1;
+}
+.case-art-peek-0 {
+  left: 24px;
+  top: 6px;
+  width: 54px;
+  height: 54px;
+  transform: rotate(-10deg);
+}
+.case-art-peek-1 {
+  left: 60px;
+  top: 16px;
+  width: 46px;
+  height: 46px;
+  transform: rotate(10deg);
+}
+.case-art-floor {
+  z-index: 4;
+  width: 36px;
+  height: 36px;
+  bottom: -2px;
+}
+.case-art-floor-0 {
+  left: -4px;
+  transform: rotate(-8deg);
+}
+.case-art-floor-1 {
+  right: -4px;
+  transform: rotate(8deg);
+}
+.case-art-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+/* Название подарка на карточке ленты кейса — мельче, чтобы влезали длинные */
+.pvpc-card .pvpc-card-kind {
+  font-size: 8px;
+  letter-spacing: 0.02em;
+}
+/* Суммы в GRAM с иконкой (карточки ленты кейса, итог, лента LIVE) */
+.case-gram {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.case-gram-ico {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-self: center;
+}
+.case-gram-ico svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.case-gram-word {
+  font-size: 10px;
+  font-weight: 800;
+  opacity: 0.75;
+}
+.pvpc-card-gram {
+  width: 34px;
+  height: 34px;
+}
+.case-win-gram {
+  width: 26px;
+  height: 26px;
+}
+.pvpc-card-gram svg,
+.case-win-gram svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.pvpc-card.has-gift .pvpc-card-value {
+  line-height: 1;
+}
+.case-win-value .case-gram-ico {
+  width: 10px;
+  height: 10px;
+}
 /* Реальные подарки: картинки с Fragment (модель на фоне с узором) на ленте
    кейса, в итоге, в шансах и в ленте выигрышей */
 .pvpc-card.has-gift {
@@ -10323,6 +10445,7 @@ function loadCaseGiftPrices() {
       };
     }).filter((g) => g.slug && g.price > 0 && g.number);
     caseGiftPricesLoadedAt = Date.now();
+    caseArtRefresh();
     if (pvpCase.open) pvpCaseRenderOdds();
   });
 }
@@ -10343,6 +10466,68 @@ function caseGiftImageUrl(gift) {
 }
 
 // Копия приза с конкретным подарком: случайная коллекция из подходящих по цене.
+// ---------- плитка кейса: открытая подарочная коробка ----------
+// Коробка цвета кейса с цветной лентой. Крышка с бантом (шире коробки) снята,
+// стоит на полу и привалилась к правому боку коробки. Из коробки выглядывают
+// самые дорогие подарки кейса, внизу по бокам стоят подарки подешевле.
+// На плитке — только модели подарков без фона и узора (базовая картинка
+// коллекции), потому что конкретные NFT в наличии всё время меняются.
+// Пока цены не пришли с сервера, рисуется только коробка.
+// Обе картинки (коробка и крышка) в одной системе координат 164×124 — так
+// крышка точно касается угла коробки и стоит на одном полу с ней.
+const CASE_RIBBON_COLORS = {
+  starter: "#ff4f6d",
+  bronze: "#2bd4b4",
+  silver: "#ff4f6d",
+  gold: "#e8344e",
+  platinum: "#ffd24a",
+  legend: "#ffd24a"
+};
+
+const CASE_BOX_BODY_SVG = '<svg viewBox="0 0 164 124" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="26" y="64" width="84" height="54" rx="6" fill="currentColor"/><rect x="26" y="92" width="84" height="26" rx="6" fill="#000" opacity=".16"/><rect x="22" y="58" width="92" height="14" rx="4" fill="currentColor"/><rect x="22" y="58" width="92" height="14" rx="4" fill="#fff" opacity=".22"/><rect x="61" y="58" width="14" height="60" style="fill:var(--ribbon)"/><rect x="66" y="58" width="4" height="60" fill="#000" opacity=".12"/><rect x="22" y="70" width="92" height="2" fill="#000" opacity=".12"/></svg>';
+
+const CASE_BOX_LID_SVG = '<svg viewBox="0 0 164 124" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(142.7 118) rotate(62) translate(-96 0)"><rect x="0" y="-16" width="96" height="16" rx="4" fill="currentColor"/><rect x="0" y="-16" width="96" height="16" rx="4" fill="#fff" opacity=".18"/><rect x="0" y="-3" width="96" height="3" fill="#000" opacity=".14"/><rect x="41" y="-16" width="14" height="16" style="fill:var(--ribbon)"/><ellipse cx="34" cy="-25" rx="14" ry="8" transform="rotate(-18 34 -25)" style="fill:var(--ribbon)"/><ellipse cx="34" cy="-25" rx="7" ry="3.5" transform="rotate(-18 34 -25)" fill="#000" opacity=".18"/><ellipse cx="62" cy="-25" rx="14" ry="8" transform="rotate(18 62 -25)" style="fill:var(--ribbon)"/><ellipse cx="62" cy="-25" rx="7" ry="3.5" transform="rotate(18 62 -25)" fill="#000" opacity=".18"/><circle cx="48" cy="-19" r="6" style="fill:var(--ribbon)"/><circle cx="48" cy="-19" r="6" fill="#fff" opacity=".18"/></g></svg>';
+
+function caseGiftModelUrl(gift) {
+  // Базовая картинка коллекции: только модель на прозрачном фоне.
+  return `https://fragment.com/file/gifts/${encodeURIComponent(gift.slug)}/thumb.webp`;
+}
+
+function caseArtModelHtml(gift) {
+  return `<img class="case-art-img" src="${caseGiftModelUrl(gift)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`;
+}
+
+function caseArtGifts(caseDef) {
+  const giftItems = caseItems(caseDef).filter((item) => item.isGift);
+  const used = new Set();
+  const pick = (item) => {
+    const gift = caseGiftCandidates(item.value).find((g) => !used.has(g.slug)) || null;
+    if (gift) used.add(gift.slug);
+    return gift;
+  };
+  const top = giftItems.slice(-2).reverse().map(pick).filter(Boolean);
+  const low = giftItems.slice(0, 2).map(pick).filter(Boolean);
+  return { top, low };
+}
+
+function caseArtHtml(caseDef) {
+  const { top, low } = caseArtGifts(caseDef);
+  const peek = top.map((g, i) => `<div class="case-art-peek case-art-peek-${i}">${caseArtModelHtml(g)}</div>`).join("");
+  const floor = low.map((g, i) => `<div class="case-art-floor case-art-floor-${i}">${caseArtModelHtml(g)}</div>`).join("");
+  return `
+    ${peek}
+    <div class="case-art-box">${CASE_BOX_BODY_SVG}</div>
+    <div class="case-art-lid">${CASE_BOX_LID_SVG}</div>
+    ${floor}`;
+}
+
+function caseArtRefresh() {
+  document.querySelectorAll("[data-case-art]").forEach((el) => {
+    const caseDef = getCaseById(el.getAttribute("data-case-art"));
+    if (caseDef) el.innerHTML = caseArtHtml(caseDef);
+  });
+}
+
 function caseAttachGift(item) {
   if (!item || !item.isGift) return item;
   const list = caseGiftCandidates(item.value);
@@ -10352,6 +10537,14 @@ function caseAttachGift(item) {
 
 const CASE_GIFT_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 11h7v10H5.5A1.5 1.5 0 0 1 4 19.5V11zm9 0h7v8.5a1.5 1.5 0 0 1-1.5 1.5H13V11zM3 7.5A1.5 1.5 0 0 1 4.5 6h15A1.5 1.5 0 0 1 21 7.5V9a.5.5 0 0 1-.5.5H13V6h-2v3.5H3.5A.5.5 0 0 1 3 9V7.5z"/><path d="M12 6c-1.2-2.6-3.4-3.6-4.6-2.6-1 .8-.5 2.6 1.6 2.6H12zm0 0c1.2-2.6 3.4-3.6 4.6-2.6 1 .8.5 2.6-1.6 2.6H12z"/></svg>';
 
+// Иконка GRAM — та же, что у баланса вверху экрана.
+const CASE_GRAM_ICON_SVG = '<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="50" fill="#30A1F5"/><rect x=".5" y=".5" width="99" height="99" rx="49.5" stroke="#000" stroke-opacity=".06"/><path d="M60.41 26.75H39.59c-2.772 0-4.159 0-5.413.388a8.691 8.691 0 0 0-3.028 1.653c-1.005.846-1.754 2.012-3.254 4.344L21.277 43.43c-.99 1.54-1.486 2.311-1.62 3.122-.119.715-.04 1.45.228 2.123.304.764.951 1.411 2.247 2.707l24.59 24.59c1.148 1.148 1.721 1.722 2.383 1.936.582.19 1.208.19 1.79 0 .661-.214 1.235-.788 2.382-1.935l24.591-24.591c1.296-1.296 1.943-1.943 2.247-2.707a3.982 3.982 0 0 0 .228-2.123c-.134-.81-.63-1.581-1.62-3.122l-6.618-10.295c-1.5-2.332-2.25-3.498-3.254-4.344a8.692 8.692 0 0 0-3.028-1.653c-1.255-.388-2.64-.388-5.414-.388z" fill="#fff"/><path d="M56.469 34.871c.338-.914 1.631-.914 1.97 0l2.337 6.317c.14.38.44.679.819.82l6.317 2.337c.914.338.914 1.63 0 1.97l-6.317 2.337c-.38.14-.679.44-.82.818l-2.337 6.317c-.338.915-1.631.915-1.97 0l-2.337-6.317c-.14-.379-.44-.678-.819-.818l-6.316-2.338c-.915-.338-.915-1.631 0-1.97l6.316-2.337c.38-.14.679-.44.82-.819l2.337-6.317z" fill="#30A1F5"/></svg>';
+
+// Сумма в GRAM с иконкой; withWord — дописать слово GRAM после числа.
+function caseGramValueHtml(value, withWord) {
+  return `<span class="case-gram"><span class="case-gram-ico">${CASE_GRAM_ICON_SVG}</span>${pvpCaseFmt(value)}${withWord ? '<span class="case-gram-word">GRAM</span>' : ""}</span>`;
+}
+
 function renderCasesScreen() {
   const title = document.getElementById("casesTitle");
   if (title) title.textContent = L("Кейсы", "Cases");
@@ -10360,7 +10553,7 @@ function renderCasesScreen() {
   loadCaseGiftPrices();
   grid.innerHTML = CASES_CATALOG.map((c) => `
     <div class="case-tile" style="--case-color:${c.color};">
-      <div class="case-tile-icon">${CASE_ICON_SVG}</div>
+      <div class="case-art" data-case-art="${c.id}" style="--ribbon:${CASE_RIBBON_COLORS[c.id] || "#ff4f6d"};">${caseArtHtml(c)}</div>
       <div class="case-tile-name">${escapeHtml(L(c.ru, c.en))}</div>
       <div class="case-tile-price">${pvpCaseFmt(c.price)} GRAM</div>
       <div class="case-tile-actions">
@@ -10733,18 +10926,18 @@ function pvpCaseCardHtml(item, extraClass) {
     return `
     <div class="pvpc-card has-gift ${extraClass || ""}" style="--tier:${caseTierColor(item)};">
       <div class="pvpc-card-photo">${caseGiftThumbHtml(item.gift, "pvpc-card-img")}</div>
-      <div class="pvpc-card-value">${pvpCaseFmt(item.value)}</div>
+      <div class="pvpc-card-value">${caseGramValueHtml(item.value, true)}</div>
       <div class="pvpc-card-kind">${escapeHtml(item.gift.name)}</div>
     </div>`;
   }
   const icon = item.isGift
     ? `<div class="pvpc-card-icon">${CASE_GIFT_ICON_SVG}</div>`
-    : `<div class="pvpc-coin">G</div>`;
+    : `<div class="pvpc-card-gram">${CASE_GRAM_ICON_SVG}</div>`;
   return `
     <div class="pvpc-card ${extraClass || ""}" style="--tier:${caseTierColor(item)};">
       ${icon}
-      <div class="pvpc-card-value">${pvpCaseFmt(item.value)}</div>
-      <div class="pvpc-card-kind">${escapeHtml(item.isGift ? L("подарок", "gift") : "GRAM")}</div>
+      <div class="pvpc-card-value">${caseGramValueHtml(item.value, true)}</div>
+      <div class="pvpc-card-kind">${escapeHtml(item.isGift ? L("подарок", "gift") : L("на баланс", "to balance"))}</div>
     </div>`;
 }
 
@@ -11160,12 +11353,12 @@ function caseWinItemHtml(win, extraClass) {
   let icon;
   if (win.gift) icon = caseGiftThumbHtml(win.gift, "case-win-img");
   else if (win.isGift) icon = `<div class="case-win-icon">${CASE_GIFT_ICON_SVG}</div>`;
-  else icon = `<div class="case-win-coin">G</div>`;
+  else icon = `<div class="case-win-gram">${CASE_GRAM_ICON_SVG}</div>`;
   const boxClass = win.gift ? "case-win-box has-gift" : "case-win-box";
   const isPvp = win.mode === "pvp";
   return `
     <div class="case-win ${extraClass || ""}">
-      <div class="${boxClass}" style="--tier:${tier};">${icon}<div class="case-win-value">${pvpCaseFmt(win.value)}</div></div>
+      <div class="${boxClass}" style="--tier:${tier};">${icon}<div class="case-win-value">${caseGramValueHtml(win.value, false)}</div></div>
       <div class="case-win-mode ${isPvp ? "is-pvp" : ""}">${escapeHtml(isPvp ? "PvP" : L("Соло", "Solo"))}</div>
     </div>`;
 }
@@ -11198,6 +11391,9 @@ function caseWinsFlush() {
   const track = document.getElementById("caseWinsTrack");
   if (!track) return;
 
+  // Если пока игрок был в кейсе, накопилось несколько выигрышей, старые сразу
+  // встают в ленту, а выезжает только самый свежий.
+  while (caseWins.pending.length > 1) caseWins.items.unshift(caseWins.pending.shift());
   caseWins.items.unshift(caseWins.pending.shift());
   if (caseWins.items.length > CASE_WINS_MAX) caseWins.items.length = CASE_WINS_MAX;
   track.innerHTML = caseWins.items.map((win) => caseWinItemHtml(win)).join("");
