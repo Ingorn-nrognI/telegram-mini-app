@@ -2811,17 +2811,18 @@ html.no-animations .pvpc-stage-art.is-shaking {
 .case-art-rays {
   position: absolute;
   left: -9px;
-  top: -26px;
+  top: -40px;
   width: 190px;
-  height: 108px;
+  height: 122px;
   z-index: 0;
   pointer-events: none;
   background:
-    repeating-conic-gradient(from 0deg at 50% 100%, rgba(255, 255, 255, 0.55) 0deg 3.5deg, rgba(255, 255, 255, 0) 3.5deg 12deg),
-    radial-gradient(ellipse 55% 85% at 50% 100%, currentColor 0%, rgba(0, 0, 0, 0) 100%);
-  -webkit-mask-image: radial-gradient(ellipse 50% 100% at 50% 100%, #000 15%, rgba(0, 0, 0, 0) 72%);
-  mask-image: radial-gradient(ellipse 50% 100% at 50% 100%, #000 15%, rgba(0, 0, 0, 0) 72%);
-  opacity: 0.5;
+    radial-gradient(ellipse 30% 45% at 50% 100%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 100%),
+    repeating-conic-gradient(from 0deg at 50% 100%, rgba(255, 255, 255, 0.85) 0deg 4deg, rgba(255, 255, 255, 0) 4deg 12deg),
+    radial-gradient(ellipse 60% 95% at 50% 100%, currentColor 0%, rgba(0, 0, 0, 0) 100%);
+  -webkit-mask-image: radial-gradient(ellipse 50% 100% at 50% 100%, #000 30%, rgba(0, 0, 0, 0) 85%);
+  mask-image: radial-gradient(ellipse 50% 100% at 50% 100%, #000 30%, rgba(0, 0, 0, 0) 85%);
+  opacity: 0.85;
 }
 .case-art-peek,
 .case-art-floor {
@@ -2835,20 +2836,20 @@ html.no-animations .pvpc-stage-art.is-shaking {
 /* три подарка в коробке: самый дорогой по центру, два по бокам веером */
 .case-art-peek3-0 {
   left: 50px;
-  top: 18px;
+  top: 10px;
   width: 72px;
   height: 72px;
 }
 .case-art-peek3-1 {
   left: 18px;
-  top: 36px;
+  top: 28px;
   width: 58px;
   height: 58px;
   transform: rotate(-14deg);
 }
 .case-art-peek3-2 {
   left: 96px;
-  top: 36px;
+  top: 28px;
   width: 58px;
   height: 58px;
   transform: rotate(14deg);
@@ -2856,14 +2857,14 @@ html.no-animations .pvpc-stage-art.is-shaking {
 /* два подарка в коробке (если подарков в кейсе мало) */
 .case-art-peek2-0 {
   left: 34px;
-  top: 26px;
+  top: 18px;
   width: 66px;
   height: 66px;
   transform: rotate(-8deg);
 }
 .case-art-peek2-1 {
   left: 76px;
-  top: 32px;
+  top: 24px;
   width: 60px;
   height: 60px;
   transform: rotate(10deg);
@@ -10824,7 +10825,7 @@ const CASE_PLAY_CONFIG = {
   pvpShareChips: [0.1, 0.25, 0.5],
   // Ограничения по числу игроков нет: раунд стартует, когда собрана сумма кейса.
   reelMs: 5200,
-  reelStaggerMs: 450,      // соло на 2–3 кейса: каждая следующая лента тормозит позже
+  reelStaggerMs: 1000,     // соло на 2–3 кейса: стартуют вместе, каждая следующая останавливается на 1 с позже
   wheelMs: 5600
 };
 
@@ -11426,14 +11427,11 @@ function pvpCaseRenderStage() {
 
   if (phase === "result" && pvpCase.mode === "solo") {
     const prizes = pvpCase.prizes.length ? pvpCase.prizes : [pvpCase.prize];
-    const total = prizes.reduce((sum, p) => sum + p.value, 0);
-    const net = pvpCaseMoney(total - caseDef.price * prizes.length);
     const best = prizes.reduce((a, b) => (b.value > a.value ? b : a));
     el.innerHTML = `
       <div class="pvpc-result-title">${escapeHtml(L("Тебе выпало", "You got"))}</div>
       <div class="pvpc-result-cards">${prizes.map((p) => pvpCaseCardHtml(p, "is-won")).join("")}</div>
-      <div class="pvpc-result-prize" style="color:${caseTierColor(best)};">${escapeHtml(prizes.length > 1 ? pvpCaseTotalText(prizes) : pvpCasePrizeText(prizes[0]))}</div>
-      <div class="pvpc-result-net ${net >= 0 ? "is-plus" : "is-minus"}">${escapeHtml(L("Итог: ", "Result: ") + (net >= 0 ? "+" : "−") + pvpCaseFmt(Math.abs(net)) + " GRAM")}</div>`;
+      <div class="pvpc-result-prize" style="color:${caseTierColor(best)};">${escapeHtml(prizes.length > 1 ? pvpCaseTotalText(prizes) : pvpCasePrizeText(prizes[0]))}</div>`;
     return;
   }
 
@@ -11580,6 +11578,10 @@ function pvpCaseRenderControls() {
   const el = document.getElementById("pvpcControls");
   const caseDef = currentCase();
   if (!el || !caseDef) return;
+  // Пока в соло крутятся ленты, нижней панели с кнопками нет — ленты видно целиком.
+  const hideControls = pvpCase.mode === "solo" && pvpCase.phase === "chest";
+  el.style.display = hideControls ? "none" : "";
+  if (hideControls) return;
   const testHint = (ru, en) => `<div class="pvpc-hint">${escapeHtml(L(ru, en))}</div>`;
 
   if (pvpCase.phase === "result" || pvpCase.phase === "refunded") {
