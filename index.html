@@ -2571,9 +2571,33 @@ html.no-animations .pvpc-stage-icon.is-shaking {
   color: var(--accent);
 }
 .case-wins-divider {
+  position: relative;
+  z-index: 2;
   flex: 0 0 auto;
   width: 1px;
   background: rgba(255,255,255,0.16);
+}
+/* Вспышка цветом приза, когда приходит новый выигрыш: черта загорается,
+   а вправо от неё расходится свечение. Яркость (--flash-a) и цвет
+   (--flash-color) задаёт скрипт, см. caseWinsFlashLive. */
+.case-wins-divider::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--flash-color, transparent);
+  box-shadow: 0 0 8px var(--flash-color, transparent);
+  opacity: var(--flash-a, 0);
+}
+.case-wins-divider::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: 1px;
+  width: 64px;
+  background: radial-gradient(ellipse at left center, var(--flash-color, transparent) 0%, transparent 70%);
+  opacity: calc(var(--flash-a, 0) * 0.6);
+  pointer-events: none;
 }
 .case-wins-viewport {
   position: relative;
@@ -2646,10 +2670,6 @@ html.no-animations .pvpc-stage-icon.is-shaking {
 }
 .case-win-mode.is-pvp {
   color: var(--accent);
-}
-.case-win.is-new .case-win-box {
-  box-shadow: 0 0 16px var(--tier);
-  border-color: var(--tier);
 }
 #inventoryScreen.menu-screen {
   /* Тот же расчёт, что у #homeScreen и #marketScreen: зазор между балансом
@@ -10960,7 +10980,7 @@ const CASE_WINS_MAX = 20;
 const CASE_WIN_STEP = 72;         // ширина плитки 64 + gap 8 — должно совпадать с CSS
 const CASE_WINS_SLIDE_MS = 450;   // сколько выезжает новый выигрыш
 const CASE_WINS_PAUSE_MS = 250;   // пауза между выигрышами, если их пришло несколько
-const caseWins = { items: [], pending: [], animating: false, raf: null };
+const caseWins = { items: [], pending: [], animating: false, raf: null, flashRaf: null };
 
 function caseWinsAdd(caseId, item, mode) {
   caseWins.pending.push({ caseId, value: item.value, tier: item.tier, isGift: item.isGift, mode });
@@ -11024,11 +11044,12 @@ function caseWinsFlush() {
 
   caseWins.items.unshift(caseWins.pending.shift());
   if (caseWins.items.length > CASE_WINS_MAX) caseWins.items.length = CASE_WINS_MAX;
-  track.innerHTML = caseWins.items.map((win, i) => caseWinItemHtml(win, i === 0 ? "is-new" : "")).join("");
+  track.innerHTML = caseWins.items.map((win) => caseWinItemHtml(win)).join("");
 
   // Лента стартует сдвинутой влево на одну плитку (новый квадрат за краем)
   // и доезжает до нуля — так новый выигрыш выезжает и толкает остальные вправо.
   caseWins.animating = true;
+  caseWinsFlashLive(CASE_TIER_COLORS[caseWins.items[0].tier] || CASE_TIER_COLORS[0]);
   track.style.transform = `translate3d(${-CASE_WIN_STEP}px, 0, 0)`;
   const startedAt = performance.now();
   const step = (now) => {
@@ -11042,11 +11063,34 @@ function caseWinsFlush() {
     caseWins.raf = null;
     caseWins.animating = false;
     track.style.transform = "";
-    const fresh = track.querySelector(".case-win.is-new");
-    if (fresh) setTimeout(() => fresh.classList.remove("is-new"), 1500);
     setTimeout(caseWinsFlush, CASE_WINS_PAUSE_MS);
   };
   caseWins.raf = requestAnimationFrame(step);
+}
+
+// Вспышка у черты LIVE цветом выпавшего приза: быстро загорается и плавно гаснет.
+function caseWinsFlashLive(color) {
+  const divider = document.querySelector("#caseWinsTicker .case-wins-divider");
+  if (!divider) return;
+  if (caseWins.flashRaf) cancelAnimationFrame(caseWins.flashRaf);
+  divider.style.setProperty("--flash-color", color);
+  const FLASH_IN_MS = 120;
+  const FLASH_TOTAL_MS = 1600;
+  const startedAt = performance.now();
+  const step = (now) => {
+    const t = now - startedAt;
+    const a = t < FLASH_IN_MS
+      ? t / FLASH_IN_MS
+      : Math.max(0, 1 - (t - FLASH_IN_MS) / (FLASH_TOTAL_MS - FLASH_IN_MS));
+    divider.style.setProperty("--flash-a", a.toFixed(3));
+    if (t < FLASH_TOTAL_MS) {
+      caseWins.flashRaf = requestAnimationFrame(step);
+    } else {
+      caseWins.flashRaf = null;
+      divider.style.setProperty("--flash-a", "0");
+    }
+  };
+  caseWins.flashRaf = requestAnimationFrame(step);
 }
 
 document.addEventListener("visibilitychange", () => {
