@@ -1958,46 +1958,42 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 .case-tile:active {
   transform: scale(0.98);
 }
-/* ===== PvP-сундук (тестовый режим, см. блок "PvP-СУНДУК" в скрипте) ===== */
-.case-tile.case-tile-pvp {
-  grid-column: 1 / -1;
-  flex-direction: row;
-  justify-content: flex-start;
-  gap: 14px;
-  padding: 14px 16px;
+/* ===== Кейсы: соло и PvP (тестовый режим, см. блок "КЕЙСЫ: СОЛО И PvP" в скрипте) ===== */
+.case-tile {
+  cursor: default;
 }
-.case-tile.case-tile-pvp::before {
-  left: 52px;
-  top: 0;
-}
-.case-tile-pvp .case-tile-icon {
-  width: 64px;
-  height: 64px;
-  flex: 0 0 auto;
-}
-.case-tile-pvp-text {
+.case-tile-price {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.case-tile-pvp-text .case-tile-name {
-  text-align: left;
-  font-size: 16px;
-}
-.case-tile-pvp-sub {
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 800;
   color: var(--text-soft);
-  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
 }
-.case-tile-pvp .case-tile-soon {
+.case-tile-actions {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  width: 100%;
+  margin-top: 2px;
+}
+.case-tile-btn {
+  height: 34px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #ecf7ff;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.case-tile-btn.is-pvp {
   color: #06140b;
-  background: var(--accent);
-  flex: 0 0 auto;
+  background: linear-gradient(180deg, #8dffb0, #4fd97b);
+  border-color: transparent;
 }
-
+.case-tile-btn:active {
+  transform: scale(0.96);
+}
 .pvpc-overlay {
   position: absolute;
   inset: 0;
@@ -2493,6 +2489,65 @@ html.no-animations .pvpc-stage-chest.is-shaking {
   line-height: 1.4;
   color: var(--text-dim);
   text-align: center;
+}
+/* Приз-подарок и приз в GRAM на карточках ленты и в таблице шансов */
+.pvpc-coin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 900;
+  color: #0a1024;
+  background: radial-gradient(circle at 35% 30%, #ffffff, var(--tier) 70%);
+}
+.pvpc-card-kind {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pvpc-odds-kind {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+/* Сбор PvP-кейса */
+.pvpc-fund {
+  width: calc(100% - 40px);
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.pvpc-fund-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4fd97b, #8dffb0);
+  transition: width 0.3s ease;
+}
+.pvpc-stage-icon {
+  width: 84px;
+  height: 84px;
+  color: var(--case-color, var(--accent));
+  filter: drop-shadow(0 0 22px var(--case-color, rgba(117, 245, 156, 0.35)));
+}
+.pvpc-stage-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.pvpc-stage-icon.is-shaking {
+  animation: pvpcShake 0.5s ease-in-out infinite;
+}
+/* Тряска кейса перед стартом — часть игры: настройка «Анимация» её не выключает. */
+html.no-animations .pvpc-stage-icon.is-shaking {
+  animation-duration: 0.5s !important;
+  animation-iteration-count: infinite !important;
 }
 #inventoryScreen.menu-screen {
   /* Тот же расчёт, что у #homeScreen и #marketScreen: зазор между балансом
@@ -10017,91 +10072,91 @@ function showBobrRunComingSoon(event) {
   showAppNotice(L("Игра на стадии разработки", "The game is under development"), { timeoutMs: 2600, closeModeMenu: true });
 }
 
-// Каталог кейсов для экрана «Кейсы». Пока это заготовки: когда появится серверная
-// часть (цены, содержимое, открытие), список будет приходить с сервера и заменит этот.
+// Каталог кейсов. Пока это тестовые данные на клиенте: когда появится серверная
+// часть, список (цены, содержимое, шансы) будет приходить с сервера.
+// items: [стоимость приза в GRAM, шанс в %]. Сумма шансов = 100, средний возврат
+// каждого кейса ≈ 90% цены. Приз от CASE_GIFT_MIN_VALUE GRAM — подарок этой
+// стоимости, дешевле — GRAM на баланс.
 const CASES_CATALOG = [
-  { id: "pvp",       ru: "PvP сундук",       en: "PvP chest",      color: "#75f59c", pvp: true },
-  { id: "common",    ru: "Обычный кейс",     en: "Common case",    color: "#9fb2d6" },
-  { id: "rare",      ru: "Редкий кейс",      en: "Rare case",      color: "#4b9bff" },
-  { id: "epic",      ru: "Эпический кейс",   en: "Epic case",      color: "#a45cff" },
-  { id: "legendary", ru: "Легендарный кейс", en: "Legendary case", color: "#ffb23d" }
+  { id: "starter", ru: "Пробный", en: "Starter", price: 1, color: "#9fb2d6",
+    items: [[0.2, 35.318], [0.45, 23.544], [0.75, 20.918], [1.5, 10.459], [2.5, 6.275], [5, 2.44], [10, 0.872], [25, 0.174]] },
+  { id: "bronze", ru: "Бронзовый", en: "Bronze", price: 3, color: "#d08a52",
+    items: [[0.6, 34.292], [1.5, 22.862], [2, 21.785], [4, 10.893], [7.5, 6.536], [15, 2.542], [30, 0.908], [75, 0.182]] },
+  { id: "silver", ru: "Серебряный", en: "Silver", price: 7, color: "#c9d6ea",
+    items: [[1.5, 33.828], [3, 22.552], [5, 22.179], [9, 11.09], [18, 6.654], [35, 2.588], [70, 0.924], [140, 0.185]] },
+  { id: "gold", ru: "Золотой", en: "Gold", price: 15, color: "#ffb23d",
+    items: [[3, 34.292], [7, 22.862], [11, 21.785], [20, 10.893], [38, 6.536], [75, 2.542], [150, 0.908], [300, 0.182]] },
+  { id: "platinum", ru: "Платиновый", en: "Platinum", price: 40, color: "#4b9bff",
+    items: [[10, 34.582], [20, 23.055], [32, 21.54], [52, 10.77], [100, 6.462], [200, 2.513], [320, 0.898], [600, 0.18]] },
+  { id: "legend", ru: "Легендарный", en: "Legendary", price: 100, color: "#a45cff",
+    items: [[25, 34.582], [50, 23.055], [80, 21.54], [130, 10.77], [250, 6.462], [500, 2.513], [800, 0.898], [1500, 0.18]] }
 ];
 
 const CASE_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="1 -0.2 22 22" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M3.6 6h16.8a1.6 1.6 0 0 1 1.6 1.6v1.8a1.6 1.6 0 0 1 -1.6 1.6h-16.8a1.6 1.6 0 0 1 -1.6 -1.6v-1.8a1.6 1.6 0 0 1 1.6 -1.6z M4.6 12h14.8a1.6 1.6 0 0 1 1.6 1.6v5.8a1.6 1.6 0 0 1 -1.6 1.6h-14.8a1.6 1.6 0 0 1 -1.6 -1.6v-5.8a1.6 1.6 0 0 1 1.6 -1.6z M12.00 13.20L12.79 15.31L15.04 15.41L13.28 16.82L13.88 18.99L12.00 17.75L10.12 18.99L10.72 16.82L8.96 15.41L11.21 15.31z M19.4 0.6Q19.8 2.4 21.6 2.8Q19.8 3.2 19.4 5.0Q19 3.2 17.2 2.8Q19 2.4 19.4 0.6z"/></svg>';
+
+// Приз от этой стоимости выдаётся подарком, дешевле — GRAM на баланс
+// (самые дешёвые подарки на рынке стоят около 2–3 GRAM).
+const CASE_GIFT_MIN_VALUE = 2.5;
+
+const CASE_GIFT_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 11h7v10H5.5A1.5 1.5 0 0 1 4 19.5V11zm9 0h7v8.5a1.5 1.5 0 0 1-1.5 1.5H13V11zM3 7.5A1.5 1.5 0 0 1 4.5 6h15A1.5 1.5 0 0 1 21 7.5V9a.5.5 0 0 1-.5.5H13V6h-2v3.5H3.5A.5.5 0 0 1 3 9V7.5z"/><path d="M12 6c-1.2-2.6-3.4-3.6-4.6-2.6-1 .8-.5 2.6 1.6 2.6H12zm0 0c1.2-2.6 3.4-3.6 4.6-2.6 1 .8.5 2.6-1.6 2.6H12z"/></svg>';
 
 function renderCasesScreen() {
   const title = document.getElementById("casesTitle");
   if (title) title.textContent = L("Кейсы", "Cases");
   const grid = document.getElementById("casesGrid");
   if (!grid) return;
-  grid.innerHTML = CASES_CATALOG.map((c) => c.pvp ? `
-    <div class="case-tile case-tile-pvp" style="--case-color:${c.color};" onclick="onCaseTileClick('${c.id}')">
-      <div class="case-tile-icon">${CASE_ICON_SVG}</div>
-      <div class="case-tile-pvp-text">
-        <div class="case-tile-name">${escapeHtml(L(c.ru, c.en))}</div>
-        <div class="case-tile-pvp-sub">${escapeHtml(L("Общий банк, один приз, круг выбирает победителя", "Shared pot, one prize, the wheel picks the winner"))}</div>
-      </div>
-      <div class="case-tile-soon">${escapeHtml(L("Тест", "Test"))}</div>
-    </div>` : `
-    <div class="case-tile" style="--case-color:${c.color};" onclick="onCaseTileClick('${c.id}')">
+  grid.innerHTML = CASES_CATALOG.map((c) => `
+    <div class="case-tile" style="--case-color:${c.color};">
       <div class="case-tile-icon">${CASE_ICON_SVG}</div>
       <div class="case-tile-name">${escapeHtml(L(c.ru, c.en))}</div>
-      <div class="case-tile-soon">${escapeHtml(L("Скоро", "Soon"))}</div>
+      <div class="case-tile-price">${pvpCaseFmt(c.price)} GRAM</div>
+      <div class="case-tile-actions">
+        <button type="button" class="case-tile-btn" onclick="openCaseSolo('${c.id}', event)">${escapeHtml(L("Соло", "Solo"))}</button>
+        <button type="button" class="case-tile-btn is-pvp" onclick="openCasePvp('${c.id}', event)">PvP</button>
+      </div>
     </div>`).join("");
 }
 
-function onCaseTileClick(caseId) {
-  if (caseId === "pvp") {
-    openPvpCase();
-    return;
-  }
-  showAppNotice(L("Открытие кейсов скоро появится", "Opening cases is coming soon"));
-}
-
-// ===================== PvP-СУНДУК (ТЕСТОВЫЙ РЕЖИМ) =====================
-// Один общий сундук на раунд: игроки делают ставки, банк минус комиссия
-// становится ценой сундука, из сундука выпадает ОДИН приз, затем круг по
-// долям ставок выбирает, кому он достаётся.
+// ===================== КЕЙСЫ: СОЛО И PvP (ТЕСТОВЫЙ РЕЖИМ) =====================
+// Соло: игрок платит цену кейса и получает один приз.
+// PvP: игроки вместе собирают цену кейса долями. Когда кейс собран, он
+// открывается, и круг по долям выбирает, кому достаётся выпавший приз.
+// Комиссии нет: платформа зарабатывает только на том, что средний приз
+// кейса меньше его цены (возврат ≈ 90%), одинаково в соло и в PvP.
 // Сейчас всё считается на клиенте: баланс не списывается, соперники — боты.
-// Когда появится серверная часть, розыгрыш (приз и победитель) должен
-// переехать на сервер, а этот блок будет только показывать готовый результат.
-const PVP_CASE_CONFIG = {
-  minStake: 1,          // минимальная ставка, GRAM
-  maxStake: 25,         // максимум на одного игрока за раунд, GRAM
-  stakeChips: [1, 5, 10, 25],
-  countdownMs: 20000,   // таймер приёма ставок (стартует со вторым игроком)
-  lockMs: 3000,         // за сколько до конца таймера ставки закрываются
-  maxPlayers: 5,
-  // Таблица сундука: множитель от цены сундука и шанс в процентах.
-  // Сумма шансов = 100, средний возврат ≈ 95% цены сундука.
-  table: [
-    { mult: 0.4, chance: 41.8, color: "#9fb2d6" },
-    { mult: 0.6, chance: 25,   color: "#9fb2d6" },
-    { mult: 0.9, chance: 15,   color: "#4b9bff" },
-    { mult: 1.3, chance: 8.5,  color: "#4b9bff" },
-    { mult: 2,   chance: 5,    color: "#a45cff" },
-    { mult: 3.5, chance: 3,    color: "#ff5cc8" },
-    { mult: 7,   chance: 1.2,  color: "#ff5a5a" },
-    { mult: 20,  chance: 0.5,  color: "#ffb23d" }
-  ]
+// Когда появится серверная часть, приз и победителя должен выбирать сервер,
+// а этот блок будет только показывать готовый результат.
+const CASE_PLAY_CONFIG = {
+  pvpFundMs: 60000,        // сколько ждём, пока кейс соберут; не собрали — возврат
+  pvpStartDelayMs: 3000,   // пауза между «кейс собран» и открытием
+  pvpMaxShare: 0.75,       // максимум доли одного игрока (чтобы игроков было ≥2)
+  pvpMinShare: 0.05,       // минимальная доля
+  pvpShareChips: [0.1, 0.25, 0.5],
+  maxPlayers: 6,
+  reelMs: 5200,
+  wheelMs: 5600
 };
 
 const PVP_CASE_BOT_NAMES = ["Bobr_Max", "lazerkot", "TonHunter", "mira", "Zub", "nord", "Kesha"];
-const PVP_CASE_BOT_STAKES = [1, 2, 3, 5, 5, 8, 10, 15, 25];
+const PVP_CASE_BOT_SHARES = [0.05, 0.1, 0.1, 0.15, 0.2, 0.25, 0.3];
 const PVP_CASE_COLORS = ["#75f59c", "#5fa8ff", "#ff7a59", "#c47bff", "#ffd86b", "#2de1ff"];
+const CASE_TIER_COLORS = ["#8a94a8", "#9fb2d6", "#4b9bff", "#2de1ff", "#a45cff", "#ff5cc8", "#ff5a5a", "#ffb23d"];
 
 const pvpCase = {
   open: false,
-  phase: "idle",      // idle | waiting | countdown | locked | chest | wheel | result
+  mode: "solo",       // solo | pvp
+  caseId: null,
+  phase: "idle",      // solo: idle | chest | result; pvp: idle | funding | ready | chest | wheel | result | refunded
   players: [],
-  selectedStake: 5,
-  endsAt: 0,
-  prize: null,        // { mult, chance, color, value }
+  selectedShare: 0.25,
+  fundEndsAt: 0,
+  startAt: 0,
+  prize: null,        // { value, chance, tier, isGift }
   winnerId: null,
-  summary: null,      // { bank, commissionPct, commission, chest }
   oddsOpen: false,
   timers: [],
-  ticker: null
+  ticker: null,
+  raf: null
 };
 
 function pvpCaseRandom() {
@@ -10125,13 +10180,17 @@ function pvpCasePick(items, weightOf) {
   return items[items.length - 1];
 }
 
-function pvpCaseFmt(value) {
-  const number = Math.round(Number(value || 0) * 100) / 100;
-  return String(Number(number.toFixed(2)));
+function pvpCaseMoney(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
 }
 
-function pvpCaseMultLabel(mult) {
-  return "×" + String(mult);
+function pvpCaseFmt(value) {
+  return String(Number(pvpCaseMoney(value).toFixed(2)));
+}
+
+function pvpCaseChanceFmt(chance) {
+  const digits = chance < 1 ? 3 : 2;
+  return String(Number(Number(chance).toFixed(digits))) + "%";
 }
 
 function pvpCaseLater(fn, ms) {
@@ -10156,15 +10215,9 @@ function pvpCaseClearTimers() {
   }
 }
 
-function pvpCaseDuration(ms) {
-  // Прокрутки сундука и круга — часть игры, а не украшение, поэтому идут
-  // полное время при любом значении настройки «Анимация».
-  return ms;
-}
-
 // Покадровая анимация на requestAnimationFrame. CSS-переходы здесь не годятся:
 // при выключенной настройке «Анимация» правило html.no-animations делает их
-// мгновенными, и лента с кругом «прыгали» в конец вместо прокрутки.
+// мгновенными, а прокрутки ленты и круга — часть игры, а не украшение.
 function pvpCaseAnimate(durationMs, onFrame, onDone) {
   if (pvpCase.raf) cancelAnimationFrame(pvpCase.raf);
   const startedAt = performance.now();
@@ -10183,43 +10236,88 @@ function pvpCaseAnimate(durationMs, onFrame, onDone) {
   pvpCase.raf = requestAnimationFrame(step);
 }
 
-function pvpCaseBank() {
-  return pvpCase.players.reduce((sum, p) => sum + p.stake, 0);
+function getCaseById(caseId) {
+  return CASES_CATALOG.find((c) => c.id === caseId) || null;
 }
 
-function pvpCaseSummary() {
-  const bank = pvpCaseBank();
-  const commissionPct = bank > 0 ? getScannerCommissionPercent(bank) : 0;
-  const commission = bank * commissionPct / 100;
-  return { bank, commissionPct, commission, chest: bank - commission };
+function currentCase() {
+  return getCaseById(pvpCase.caseId);
+}
+
+function caseItems(caseDef) {
+  // [стоимость, шанс] → объекты; tier — номер строки по возрастанию стоимости.
+  return caseDef.items
+    .map(([value, chance]) => ({ value, chance }))
+    .sort((a, b) => a.value - b.value)
+    .map((item, index, list) => ({
+      value: item.value,
+      chance: item.chance,
+      tier: Math.round((index / Math.max(1, list.length - 1)) * (CASE_TIER_COLORS.length - 1)),
+      isGift: item.value >= CASE_GIFT_MIN_VALUE
+    }));
+}
+
+function caseTierColor(item) {
+  return CASE_TIER_COLORS[item.tier] || CASE_TIER_COLORS[0];
+}
+
+function pvpCaseFunded() {
+  return pvpCaseMoney(pvpCase.players.reduce((sum, p) => sum + p.stake, 0));
+}
+
+function pvpCaseRemaining() {
+  const caseDef = currentCase();
+  return caseDef ? pvpCaseMoney(caseDef.price - pvpCaseFunded()) : 0;
 }
 
 function pvpCaseMe() {
   return pvpCase.players.find((p) => p.isMe) || null;
 }
 
+function pvpCaseMyRoom() {
+  const caseDef = currentCase();
+  if (!caseDef) return 0;
+  const me = pvpCaseMe();
+  const cap = pvpCaseMoney(caseDef.price * CASE_PLAY_CONFIG.pvpMaxShare - (me ? me.stake : 0));
+  return Math.max(0, Math.min(cap, pvpCaseRemaining()));
+}
+
 function pvpCaseBettingOpen() {
-  return pvpCase.phase === "idle" || pvpCase.phase === "waiting" || pvpCase.phase === "countdown";
+  return pvpCase.mode === "pvp" && (pvpCase.phase === "idle" || pvpCase.phase === "funding");
 }
 
 function pvpCaseResetRound() {
   pvpCaseClearTimers();
   pvpCase.phase = "idle";
   pvpCase.players = [];
-  pvpCase.endsAt = 0;
+  pvpCase.fundEndsAt = 0;
+  pvpCase.startAt = 0;
   pvpCase.prize = null;
   pvpCase.winnerId = null;
-  pvpCase.summary = null;
 }
 
-function openPvpCase() {
+function openCaseRound(caseId, mode) {
   const overlay = document.getElementById("pvpCaseOverlay");
-  if (!overlay) return;
+  const caseDef = getCaseById(caseId);
+  if (!overlay || !caseDef) return;
   pvpCaseResetRound();
+  pvpCase.caseId = caseId;
+  pvpCase.mode = mode;
   pvpCase.open = true;
+  overlay.style.setProperty("--case-color", caseDef.color);
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
   pvpCaseRenderAll();
+}
+
+function openCaseSolo(caseId, event) {
+  if (event) event.stopPropagation();
+  openCaseRound(caseId, "solo");
+}
+
+function openCasePvp(caseId, event) {
+  if (event) event.stopPropagation();
+  openCaseRound(caseId, "pvp");
 }
 
 function closePvpCase() {
@@ -10231,11 +10329,35 @@ function closePvpCase() {
   overlay.setAttribute("aria-hidden", "true");
 }
 
-// ---------- ставки ----------
+function pvpCaseRestart() {
+  openCaseRound(pvpCase.caseId, pvpCase.mode);
+}
 
-function pvpCaseSelectStake(amount) {
+// ---------- соло ----------
+
+function caseSoloOpen() {
+  if (pvpCase.mode !== "solo" || pvpCase.phase !== "idle") return;
+  pvpCase.prize = pvpCasePick(caseItems(currentCase()), (item) => item.chance);
+  pvpCase.phase = "chest";
+  pvpCaseRenderAll();
+  pvpCaseSpinReel(() => {
+    pvpCaseLater(() => {
+      pvpCase.phase = "result";
+      pvpCaseRenderAll();
+    }, 900);
+  });
+}
+
+// ---------- PvP: сбор кейса долями ----------
+
+function pvpCaseShareAmount(share) {
+  const caseDef = currentCase();
+  return caseDef ? pvpCaseMoney(caseDef.price * share) : 0;
+}
+
+function pvpCaseSelectStake(share) {
   if (!pvpCaseBettingOpen()) return;
-  pvpCase.selectedStake = amount;
+  pvpCase.selectedShare = share;
   pvpCaseRenderControls();
 }
 
@@ -10244,104 +10366,116 @@ function pvpCaseAddPlayer(player) {
   pvpCase.players.push(player);
 }
 
+function pvpCaseSelectedAmount() {
+  // selectedShare = 1 означает «весь остаток, сколько можно».
+  const room = pvpCaseMyRoom();
+  const wanted = pvpCase.selectedShare >= 1 ? room : pvpCaseShareAmount(pvpCase.selectedShare);
+  return pvpCaseMoney(Math.min(wanted, room));
+}
+
 function pvpCaseJoin() {
   if (!pvpCaseBettingOpen()) return;
-  const cfg = PVP_CASE_CONFIG;
-  const me = pvpCaseMe();
-  const already = me ? me.stake : 0;
-  const amount = Math.min(pvpCase.selectedStake, cfg.maxStake - already);
-  if (amount < cfg.minStake) return;
+  const amount = pvpCaseSelectedAmount();
+  if (amount <= 0) return;
 
+  const me = pvpCaseMe();
   if (me) {
-    me.stake += amount;
+    me.stake = pvpCaseMoney(me.stake + amount);
   } else {
     const current = getCurrentPlayer();
     pvpCaseAddPlayer({ id: "me", name: current.name || L("Игрок", "Player"), stake: amount, isMe: true });
   }
 
   if (pvpCase.phase === "idle") {
-    // Таймер не стартует, пока игрок один: ждём соперника.
-    pvpCase.phase = "waiting";
-    pvpCaseLater(pvpCaseBotJoin, 1200 + pvpCaseRandom() * 1600);
+    pvpCase.phase = "funding";
+    pvpCase.fundEndsAt = Date.now() + CASE_PLAY_CONFIG.pvpFundMs;
+    pvpCase.ticker = setInterval(pvpCaseTick, 200);
+    pvpCaseLater(pvpCaseBotJoin, 1500 + pvpCaseRandom() * 2000);
   }
+  pvpCaseCheckFunded();
   pvpCaseRenderAll();
 }
 
 function pvpCaseBotJoin() {
-  const cfg = PVP_CASE_CONFIG;
-  if (pvpCase.phase !== "waiting" && pvpCase.phase !== "countdown") return;
-  if (pvpCase.players.length >= cfg.maxPlayers) return;
+  if (pvpCase.phase !== "funding") return;
+  const caseDef = currentCase();
+  const remaining = pvpCaseRemaining();
+  if (!caseDef || remaining <= 0) return;
+
   const used = new Set(pvpCase.players.map((p) => p.name));
   const names = PVP_CASE_BOT_NAMES.filter((n) => !used.has(n));
   if (!names.length) return;
   const name = names[Math.floor(pvpCaseRandom() * names.length)];
-  const stake = PVP_CASE_BOT_STAKES[Math.floor(pvpCaseRandom() * PVP_CASE_BOT_STAKES.length)];
-  pvpCaseAddPlayer({ id: "bot_" + name, name, stake, isMe: false });
 
-  if (pvpCase.phase === "waiting" && pvpCase.players.length >= 2) {
-    pvpCaseStartCountdown();
+  const lastSeat = pvpCase.players.length >= CASE_PLAY_CONFIG.maxPlayers - 1;
+  const share = PVP_CASE_BOT_SHARES[Math.floor(pvpCaseRandom() * PVP_CASE_BOT_SHARES.length)];
+  let stake = Math.min(pvpCaseMoney(caseDef.price * share), remaining, pvpCaseMoney(caseDef.price * CASE_PLAY_CONFIG.pvpMaxShare));
+  // Не оставляем «хвост» меньше минимальной доли — его никто не сможет закрыть.
+  const minShare = pvpCaseMoney(caseDef.price * CASE_PLAY_CONFIG.pvpMinShare);
+  if (lastSeat || remaining - stake < minShare) stake = remaining;
+  stake = pvpCaseMoney(stake);
+  if (stake <= 0) return;
+
+  pvpCaseAddPlayer({ id: "bot_" + name, name, stake, isMe: false });
+  if (!pvpCaseCheckFunded()) {
+    pvpCaseLater(pvpCaseBotJoin, 1500 + pvpCaseRandom() * 2500);
   }
   pvpCaseRenderAll();
 }
 
-function pvpCaseStartCountdown() {
-  const cfg = PVP_CASE_CONFIG;
-  pvpCase.phase = "countdown";
-  pvpCase.endsAt = Date.now() + cfg.countdownMs;
-
-  // Ещё от одного до трёх ботов заходят в случайные моменты до закрытия ставок.
-  const extraBots = 1 + Math.floor(pvpCaseRandom() * 3);
-  const span = cfg.countdownMs - cfg.lockMs - 1000;
-  for (let i = 0; i < extraBots; i++) {
-    pvpCaseLater(pvpCaseBotJoin, 1000 + pvpCaseRandom() * span);
-  }
-
-  pvpCase.ticker = setInterval(pvpCaseTick, 200);
+function pvpCaseCheckFunded() {
+  if (pvpCase.phase !== "funding" || pvpCaseRemaining() > 0) return false;
+  // Кейс собран: оба исхода (приз и победитель) определяются сейчас,
+  // анимации ниже только показывают уже готовый результат.
+  const items = caseItems(currentCase());
+  pvpCase.prize = pvpCasePick(items, (item) => item.chance);
+  pvpCase.winnerId = pvpCasePick(pvpCase.players, (p) => p.stake).id;
+  pvpCase.phase = "ready";
+  pvpCase.startAt = Date.now() + CASE_PLAY_CONFIG.pvpStartDelayMs;
+  pvpCaseLater(pvpCaseStartChest, CASE_PLAY_CONFIG.pvpStartDelayMs);
+  return true;
 }
 
 function pvpCaseTick() {
   if (!pvpCase.open) return;
-  const left = pvpCase.endsAt - Date.now();
-  if (pvpCase.phase === "countdown" && left <= PVP_CASE_CONFIG.lockMs) {
-    pvpCase.phase = "locked";
+  if (pvpCase.phase === "funding" && Date.now() >= pvpCase.fundEndsAt) {
+    // Не собрали за отведённое время — все доли возвращаются.
+    pvpCaseClearTimers();
+    pvpCase.phase = "refunded";
     pvpCaseRenderAll();
     return;
   }
-  if (pvpCase.phase === "locked" && left <= 0) {
+  if (pvpCase.phase !== "funding" && pvpCase.phase !== "ready") {
     clearInterval(pvpCase.ticker);
     pvpCase.ticker = null;
-    pvpCaseStartChest();
-    return;
   }
   pvpCaseRenderStats();
+  if (pvpCase.phase === "ready") pvpCaseRenderStage();
 }
-
-// ---------- розыгрыш ----------
 
 function pvpCaseStartChest() {
-  // Оба исхода определяются в момент закрытия ставок — анимации ниже только
-  // показывают уже готовый результат.
-  const summary = pvpCaseSummary();
-  const row = pvpCasePick(PVP_CASE_CONFIG.table, (r) => r.chance);
-  const winner = pvpCasePick(pvpCase.players, (p) => p.stake);
-  pvpCase.summary = summary;
-  pvpCase.prize = Object.assign({}, row, { value: summary.chest * row.mult });
-  pvpCase.winnerId = winner.id;
   pvpCase.phase = "chest";
   pvpCaseRenderAll();
-  pvpCaseSpinReel();
+  pvpCaseSpinReel(() => {
+    pvpCaseLater(pvpCaseStartWheel, 1600);
+  });
 }
 
-function pvpCaseCardHtml(row, chestValue, extraClass) {
+// ---------- лента кейса ----------
+
+function pvpCaseCardHtml(item, extraClass) {
+  const icon = item.isGift
+    ? `<div class="pvpc-card-icon">${CASE_GIFT_ICON_SVG}</div>`
+    : `<div class="pvpc-coin">G</div>`;
   return `
-    <div class="pvpc-card ${extraClass || ""}" style="--tier:${row.color};">
-      <div class="pvpc-card-icon">${CASE_ICON_SVG}</div>
-      <div class="pvpc-card-mult">${pvpCaseMultLabel(row.mult)}</div>
-      <div class="pvpc-card-value">${pvpCaseFmt(chestValue * row.mult)}</div>
+    <div class="pvpc-card ${extraClass || ""}" style="--tier:${caseTierColor(item)};">
+      ${icon}
+      <div class="pvpc-card-value">${pvpCaseFmt(item.value)}</div>
+      <div class="pvpc-card-kind">${escapeHtml(item.isGift ? L("подарок", "gift") : "GRAM")}</div>
     </div>`;
 }
 
-function pvpCaseSpinReel() {
+function pvpCaseSpinReel(onDone) {
   const strip = document.getElementById("pvpcReelStrip");
   const win = document.getElementById("pvpcReelWindow");
   if (!strip || !win) return;
@@ -10349,44 +10483,45 @@ function pvpCaseSpinReel() {
   const CARD = 88;
   const STEP = 96;
   const WIN_INDEX = 40;
-  const table = PVP_CASE_CONFIG.table;
-  const chest = pvpCase.summary.chest;
+  const items = caseItems(currentCase());
 
   // На ленте редкие призы мелькают чаще, чем выпадают (корень из шанса) —
   // это только картинка, исход уже выбран по настоящим шансам.
   const cards = [];
   for (let i = 0; i < WIN_INDEX + 6; i++) {
-    cards.push(i === WIN_INDEX ? pvpCase.prize : pvpCasePick(table, (r) => Math.sqrt(r.chance)));
+    cards.push(i === WIN_INDEX ? pvpCase.prize : pvpCasePick(items, (item) => Math.sqrt(item.chance)));
   }
-  strip.innerHTML = cards.map((row, i) => pvpCaseCardHtml(row, chest, i === WIN_INDEX ? "pvpc-card-target" : "")).join("");
+  strip.innerHTML = cards.map((item, i) => pvpCaseCardHtml(item, i === WIN_INDEX ? "pvpc-card-target" : "")).join("");
 
   const offsetInCard = (pvpCaseRandom() - 0.5) * (CARD - 20);
   const target = WIN_INDEX * STEP + CARD / 2 + offsetInCard - win.clientWidth / 2;
-  const duration = pvpCaseDuration(5200);
 
   strip.style.transition = "none";
   strip.style.transform = "translate3d(0px, 0, 0)";
-  pvpCaseAnimate(duration, (k) => {
+  pvpCaseAnimate(CASE_PLAY_CONFIG.reelMs, (k) => {
     strip.style.transform = `translate3d(${(-target * k).toFixed(2)}px, 0, 0)`;
   }, () => {
     const wonCard = strip.querySelector(".pvpc-card-target");
     if (wonCard) wonCard.classList.add("is-won");
     const caption = document.getElementById("pvpcStageSub");
-    if (caption) {
-      caption.textContent = L(
-        `Выпал приз ${pvpCaseMultLabel(pvpCase.prize.mult)} — ${pvpCaseFmt(pvpCase.prize.value)} GRAM`,
-        `Prize ${pvpCaseMultLabel(pvpCase.prize.mult)} — ${pvpCaseFmt(pvpCase.prize.value)} GRAM`
-      );
-    }
-    pvpCaseLater(pvpCaseStartWheel, pvpCaseDuration(1600));
+    if (caption) caption.textContent = pvpCasePrizeText(pvpCase.prize);
+    if (onDone) onDone();
   });
 }
 
+function pvpCasePrizeText(item) {
+  return item.isGift
+    ? L(`Выпал подарок на ${pvpCaseFmt(item.value)} GRAM`, `Gift worth ${pvpCaseFmt(item.value)} GRAM`)
+    : L(`Выпало ${pvpCaseFmt(item.value)} GRAM на баланс`, `${pvpCaseFmt(item.value)} GRAM to balance`);
+}
+
+// ---------- круг победителя (PvP) ----------
+
 function pvpCaseWheelSectors() {
-  const bank = pvpCaseBank();
+  const total = pvpCaseFunded();
   let from = 0;
   return pvpCase.players.map((p) => {
-    const size = bank > 0 ? (p.stake / bank) * 360 : 0;
+    const size = total > 0 ? (p.stake / total) * 360 : 0;
     const sector = { player: p, from, to: from + size };
     from += size;
     return sector;
@@ -10408,11 +10543,10 @@ function pvpCaseStartWheel() {
   // Указатель сверху (0°). Чтобы точка landing оказалась под ним, круг
   // поворачивается на -landing; полные обороты добавляют разгон.
   const rotation = 360 * 6 + (360 - landing);
-  const duration = pvpCaseDuration(5600);
 
   wheel.style.transition = "none";
   wheel.style.transform = "rotate(0deg)";
-  pvpCaseAnimate(duration, (k) => {
+  pvpCaseAnimate(CASE_PLAY_CONFIG.wheelMs, (k) => {
     wheel.style.transform = `rotate(${(rotation * k).toFixed(2)}deg)`;
   }, () => {
     // Короткая пауза на остановившемся круге, потом итог.
@@ -10427,8 +10561,11 @@ function pvpCaseStartWheel() {
 
 function pvpCaseRenderAll() {
   if (!pvpCase.open) return;
+  const caseDef = currentCase();
   const title = document.getElementById("pvpcTitle");
-  if (title) title.textContent = L("PvP сундук", "PvP chest");
+  if (title && caseDef) {
+    title.textContent = L(caseDef.ru, caseDef.en) + " · " + (pvpCase.mode === "pvp" ? "PvP" : L("Соло", "Solo"));
+  }
   const badge = document.getElementById("pvpcBadge");
   if (badge) badge.textContent = L("ТЕСТ", "TEST");
   pvpCaseRenderStats();
@@ -10439,46 +10576,58 @@ function pvpCaseRenderAll() {
 }
 
 function pvpCaseTimerText() {
-  if (pvpCase.phase === "idle") return "—";
-  if (pvpCase.phase === "waiting") return L("ждём", "waiting");
-  if (pvpCase.phase === "countdown" || pvpCase.phase === "locked") {
-    const left = Math.max(0, Math.ceil((pvpCase.endsAt - Date.now()) / 1000));
-    return left + L(" с", " s");
+  if (pvpCase.phase === "funding") {
+    return Math.max(0, Math.ceil((pvpCase.fundEndsAt - Date.now()) / 1000)) + L(" с", " s");
   }
-  if (pvpCase.phase === "result") return L("итог", "done");
+  if (pvpCase.phase === "idle") return "—";
+  if (pvpCase.phase === "ready") return L("старт", "start");
+  if (pvpCase.phase === "result" || pvpCase.phase === "refunded") return L("итог", "done");
   return L("идёт", "live");
 }
 
 function pvpCaseRenderStats() {
   const el = document.getElementById("pvpcStats");
-  if (!el) return;
-  const s = pvpCase.summary || pvpCaseSummary();
+  const caseDef = currentCase();
+  if (!el || !caseDef) return;
   const stat = (label, value) => `
     <div class="pvpc-stat">
       <div class="pvpc-stat-label">${escapeHtml(label)}</div>
       <div class="pvpc-stat-value">${escapeHtml(value)}</div>
     </div>`;
+  const items = caseItems(caseDef);
+  if (pvpCase.mode === "solo") {
+    const giftChance = items.filter((i) => i.isGift).reduce((sum, i) => sum + i.chance, 0);
+    el.innerHTML =
+      stat(L("Цена", "Price"), pvpCaseFmt(caseDef.price) + " GRAM") +
+      stat(L("Макс. приз", "Top prize"), pvpCaseFmt(items[items.length - 1].value) + " GRAM") +
+      stat(L("Шанс подарка", "Gift chance"), pvpCaseChanceFmt(giftChance));
+    return;
+  }
   el.innerHTML =
-    stat(L("Банк", "Pot"), pvpCaseFmt(s.bank) + " GRAM") +
-    stat(L("Таймер", "Timer"), pvpCaseTimerText()) +
-    stat(L("Комиссия", "Fee"), s.bank > 0 ? pvpCaseFmt(s.commissionPct) + "%" : "—");
+    stat(L("Цена кейса", "Case price"), pvpCaseFmt(caseDef.price) + " GRAM") +
+    stat(L("Собрано", "Funded"), pvpCaseFmt(pvpCaseFunded()) + " / " + pvpCaseFmt(caseDef.price)) +
+    stat(L("Таймер", "Timer"), pvpCaseTimerText());
+}
+
+function pvpCaseCaseIconHtml(shaking) {
+  return `<div class="pvpc-stage-icon ${shaking ? "is-shaking" : ""}">${CASE_ICON_SVG}</div>`;
 }
 
 function pvpCaseRenderStage() {
   const el = document.getElementById("pvpcStage");
-  if (!el) return;
+  const caseDef = currentCase();
+  if (!el || !caseDef) return;
   const phase = pvpCase.phase;
-  const s = pvpCase.summary || pvpCaseSummary();
+  const caseName = L(caseDef.ru, caseDef.en);
 
   if (phase === "chest") {
     el.innerHTML = `
-      <div class="pvpc-stage-caption">${escapeHtml(L("Открываем сундук", "Opening the chest"))}</div>
+      <div class="pvpc-stage-caption">${escapeHtml(L("Открываем кейс", "Opening the case"))}</div>
       <div id="pvpcReelWindow" class="pvpc-reel-window">
         <div class="pvpc-reel-pointer"></div>
         <div id="pvpcReelStrip" class="pvpc-reel-strip"></div>
       </div>
-      <div id="pvpcStageSub" class="pvpc-stage-sub">${escapeHtml(L(
-        `Сундук на ${pvpCaseFmt(s.chest)} GRAM`, `Chest worth ${pvpCaseFmt(s.chest)} GRAM`))}</div>`;
+      <div id="pvpcStageSub" class="pvpc-stage-sub">${escapeHtml(caseName + " · " + pvpCaseFmt(caseDef.price) + " GRAM")}</div>`;
     return;
   }
 
@@ -10491,8 +10640,19 @@ function pvpCaseRenderStage() {
       <div class="pvpc-wheel-wrap">
         <div class="pvpc-wheel-pointer"></div>
         <div id="pvpcWheel" class="pvpc-wheel" style="background:conic-gradient(${stops});"></div>
-        <div class="pvpc-wheel-hub" style="color:${pvpCase.prize.color};">${pvpCaseFmt(pvpCase.prize.value)}<br>GRAM</div>
+        <div class="pvpc-wheel-hub" style="color:${caseTierColor(pvpCase.prize)};">${pvpCaseFmt(pvpCase.prize.value)}<br>GRAM</div>
       </div>`;
+    return;
+  }
+
+  if (phase === "result" && pvpCase.mode === "solo") {
+    const prize = pvpCase.prize;
+    const net = pvpCaseMoney(prize.value - caseDef.price);
+    el.innerHTML = `
+      <div class="pvpc-result-title">${escapeHtml(L("Тебе выпало", "You got"))}</div>
+      ${pvpCaseCardHtml(prize, "is-won")}
+      <div class="pvpc-result-prize" style="color:${caseTierColor(prize)};">${escapeHtml(pvpCasePrizeText(prize))}</div>
+      <div class="pvpc-result-net ${net >= 0 ? "is-plus" : "is-minus"}">${escapeHtml(L("Итог: ", "Result: ") + (net >= 0 ? "+" : "−") + pvpCaseFmt(Math.abs(net)) + " GRAM")}</div>`;
     return;
   }
 
@@ -10500,37 +10660,50 @@ function pvpCaseRenderStage() {
     const winner = pvpCase.players.find((p) => p.id === pvpCase.winnerId);
     const me = pvpCaseMe();
     const myStake = me ? me.stake : 0;
-    const net = (winner && winner.isMe ? pvpCase.prize.value : 0) - myStake;
-    const netText = (net >= 0 ? "+" : "−") + pvpCaseFmt(Math.abs(net)) + " GRAM";
+    const net = pvpCaseMoney((winner && winner.isMe ? pvpCase.prize.value : 0) - myStake);
     el.innerHTML = `
       <div class="pvpc-result-title">${escapeHtml(winner && winner.isMe ? L("Ты забрал приз", "You took the prize") : L("Приз забрал", "Prize goes to"))}</div>
       <div class="pvpc-result-name" style="color:${winner ? winner.color : "#fff"};">${escapeHtml(winner ? winner.name : "—")}</div>
-      <div class="pvpc-result-prize" style="color:${pvpCase.prize.color};">${escapeHtml(L("Приз", "Prize"))} ${pvpCaseMultLabel(pvpCase.prize.mult)} · ${pvpCaseFmt(pvpCase.prize.value)} GRAM</div>
-      <div class="pvpc-stage-sub">${escapeHtml(L(
-        `Банк ${pvpCaseFmt(s.bank)} − комиссия ${pvpCaseFmt(s.commission)} = сундук ${pvpCaseFmt(s.chest)} GRAM`,
-        `Pot ${pvpCaseFmt(s.bank)} − fee ${pvpCaseFmt(s.commission)} = chest ${pvpCaseFmt(s.chest)} GRAM`))}</div>
-      <div class="pvpc-result-net ${net >= 0 ? "is-plus" : "is-minus"}">${escapeHtml(L("Твой итог: ", "Your result: ") + netText)}</div>`;
+      <div class="pvpc-result-prize" style="color:${caseTierColor(pvpCase.prize)};">${escapeHtml(pvpCasePrizeText(pvpCase.prize))}</div>
+      <div class="pvpc-result-net ${net >= 0 ? "is-plus" : "is-minus"}">${escapeHtml(L("Твой итог: ", "Your result: ") + (net >= 0 ? "+" : "−") + pvpCaseFmt(Math.abs(net)) + " GRAM")}</div>`;
     return;
   }
 
+  if (phase === "refunded") {
+    el.innerHTML = `
+      ${pvpCaseCaseIconHtml(false)}
+      <div class="pvpc-stage-main">${escapeHtml(L("Кейс не собран", "The case wasn't funded"))}</div>
+      <div class="pvpc-stage-sub">${escapeHtml(L("Время вышло, все доли вернулись игрокам.", "Time is up, all shares were returned."))}</div>`;
+    return;
+  }
+
+  if (pvpCase.mode === "solo") {
+    el.innerHTML = `
+      ${pvpCaseCaseIconHtml(false)}
+      <div class="pvpc-stage-main">${escapeHtml(caseName)}</div>
+      <div class="pvpc-stage-sub">${escapeHtml(L(
+        `Открой кейс за ${pvpCaseFmt(caseDef.price)} GRAM. Внутри подарки и GRAM, шансы — по кнопке «Шансы кейса».`,
+        `Open the case for ${pvpCaseFmt(caseDef.price)} GRAM. Gifts and GRAM inside; see "Case odds" for chances.`))}</div>`;
+    return;
+  }
+
+  const funded = pvpCaseFunded();
+  const percent = Math.min(100, (funded / caseDef.price) * 100);
   let sub;
-  if (phase === "idle") {
-    sub = L("Сделай ставку. Банк минус комиссия станет ценой сундука, а круг решит, кому достанется приз.",
-            "Place a stake. The pot minus the fee becomes the chest price, and the wheel decides who gets the prize.");
-  } else if (phase === "waiting") {
-    sub = L("Ждём соперника. Таймер стартует, когда зайдёт второй игрок.",
-            "Waiting for an opponent. The timer starts when a second player joins.");
-  } else if (phase === "locked") {
-    sub = L("Ставки закрыты. Сейчас откроем сундук.", "Stakes are closed. Opening the chest now.");
+  if (phase === "ready") {
+    const left = Math.max(0, Math.ceil((pvpCase.startAt - Date.now()) / 1000));
+    sub = L(`Кейс собран! Открываем через ${left} с.`, `Case funded! Opening in ${left} s.`);
+  } else if (phase === "funding") {
+    sub = L(`Осталось собрать ${pvpCaseFmt(pvpCaseRemaining())} GRAM. Чем больше твоя доля, тем выше шанс забрать приз.`,
+            `${pvpCaseFmt(pvpCaseRemaining())} GRAM left to fund. The bigger your share, the higher your chance to take the prize.`);
   } else {
-    sub = L("Идёт приём ставок. Чем больше банк, тем дороже приз в сундуке.",
-            "Stakes are open. The bigger the pot, the pricier the prize in the chest.");
+    sub = L("Скиньтесь на кейс вместе. Когда он собран, открываем его, а круг по долям решает, кому достанется приз.",
+            "Fund the case together. Once it's funded we open it, and the wheel picks who gets the prize by shares.");
   }
   el.innerHTML = `
-    <div class="pvpc-stage-chest ${phase === "locked" ? "is-shaking" : ""}">${CASE_ICON_SVG}</div>
-    <div class="pvpc-stage-main">${s.bank > 0
-      ? escapeHtml(L("Сундук на ", "Chest worth ") + pvpCaseFmt(s.chest) + " GRAM")
-      : escapeHtml(L("Сундук пуст", "The chest is empty"))}</div>
+    ${pvpCaseCaseIconHtml(phase === "ready")}
+    <div class="pvpc-stage-main">${escapeHtml(pvpCaseFmt(funded) + " / " + pvpCaseFmt(caseDef.price) + " GRAM")}</div>
+    <div class="pvpc-fund"><div class="pvpc-fund-fill" style="width:${percent.toFixed(1)}%;"></div></div>
     <div class="pvpc-stage-sub">${escapeHtml(sub)}</div>`;
 }
 
@@ -10538,19 +10711,25 @@ function pvpCaseRenderPlayers() {
   const titleEl = document.getElementById("pvpcPlayersTitle");
   const el = document.getElementById("pvpcPlayers");
   if (!el || !titleEl) return;
-  const bank = pvpCaseBank();
-  titleEl.innerHTML = `
-    <span>${escapeHtml(L("Игроки", "Players"))} · ${pvpCase.players.length}/${PVP_CASE_CONFIG.maxPlayers}</span>
-    <button type="button" class="pvpc-odds-toggle" onclick="pvpCaseToggleOdds()">${escapeHtml(
-      pvpCase.oddsOpen ? L("Скрыть шансы сундука", "Hide chest odds") : L("Шансы сундука", "Chest odds"))}</button>`;
+  const toggle = `<button type="button" class="pvpc-odds-toggle" onclick="pvpCaseToggleOdds()">${escapeHtml(
+    pvpCase.oddsOpen ? L("Скрыть шансы кейса", "Hide case odds") : L("Шансы кейса", "Case odds"))}</button>`;
 
-  if (!pvpCase.players.length) {
-    el.innerHTML = `<div class="pvpc-empty">${escapeHtml(L("Пока никого. Зайди первым.", "Nobody here yet. Be the first."))}</div>`;
+  if (pvpCase.mode === "solo") {
+    titleEl.innerHTML = `<span></span>${toggle}`;
+    el.innerHTML = "";
     return;
   }
+
+  titleEl.innerHTML = `
+    <span>${escapeHtml(L("Игроки", "Players"))} · ${pvpCase.players.length}/${CASE_PLAY_CONFIG.maxPlayers}</span>${toggle}`;
+  if (!pvpCase.players.length) {
+    el.innerHTML = `<div class="pvpc-empty">${escapeHtml(L("Пока никого. Вложись первым.", "Nobody here yet. Be the first."))}</div>`;
+    return;
+  }
+  const caseDef = currentCase();
   const showWinner = pvpCase.phase === "result";
   el.innerHTML = pvpCase.players.map((p) => {
-    const chance = bank > 0 ? (p.stake / bank) * 100 : 0;
+    const chance = caseDef ? (p.stake / caseDef.price) * 100 : 0;
     const cls = [
       "pvpc-player",
       p.isMe ? "is-me" : "",
@@ -10574,67 +10753,87 @@ function pvpCaseToggleOdds() {
 
 function pvpCaseRenderOdds() {
   const el = document.getElementById("pvpcOdds");
-  if (!el) return;
+  const caseDef = currentCase();
+  if (!el || !caseDef) return;
   el.classList.toggle("open", pvpCase.oddsOpen);
   if (!pvpCase.oddsOpen) return;
-  const s = pvpCase.summary || pvpCaseSummary();
-  const rows = PVP_CASE_CONFIG.table.slice().reverse().map((row) => `
-    <div class="pvpc-odds-row" style="--tier:${row.color};">
-      <div class="pvpc-odds-mult">${pvpCaseMultLabel(row.mult)}</div>
-      <div class="pvpc-odds-value">${s.bank > 0 ? pvpCaseFmt(s.chest * row.mult) + " GRAM" : "—"}</div>
-      <div class="pvpc-odds-chance">${pvpCaseFmt(row.chance)}%</div>
+  const items = caseItems(caseDef);
+  const ev = items.reduce((sum, i) => sum + i.value * i.chance / 100, 0);
+  const rows = items.slice().reverse().map((item) => `
+    <div class="pvpc-odds-row" style="--tier:${caseTierColor(item)};">
+      <div class="pvpc-odds-mult">×${pvpCaseFmt(item.value / caseDef.price)}</div>
+      <div class="pvpc-odds-value">${pvpCaseFmt(item.value)} GRAM<span class="pvpc-odds-kind">${escapeHtml(item.isGift ? L("подарок", "gift") : L("на баланс", "balance"))}</span></div>
+      <div class="pvpc-odds-chance">${pvpCaseChanceFmt(item.chance)}</div>
     </div>`).join("");
   el.innerHTML = rows + `
     <div class="pvpc-odds-note">${escapeHtml(L(
-      "Множитель считается от цены сундука (банк минус комиссия). Суммы пересчитываются при каждой ставке.",
-      "The multiplier applies to the chest price (pot minus fee). Amounts update with every stake."))}</div>`;
+      `Средний возврат кейса — ${pvpCaseFmt(ev / caseDef.price * 100)}% цены. Призы от ${pvpCaseFmt(CASE_GIFT_MIN_VALUE)} GRAM выдаются подарком, дешевле — GRAM на баланс. В PvP шансы кейса те же, а приз достаётся одному игроку по долям.`,
+      `Average return: ${pvpCaseFmt(ev / caseDef.price * 100)}% of the price. Prizes from ${pvpCaseFmt(CASE_GIFT_MIN_VALUE)} GRAM are gifts, cheaper ones go to balance. In PvP the case odds are the same and one player takes the prize by share.`))}</div>`;
 }
 
 function pvpCaseRenderControls() {
   const el = document.getElementById("pvpcControls");
-  if (!el) return;
-  const cfg = PVP_CASE_CONFIG;
+  const caseDef = currentCase();
+  if (!el || !caseDef) return;
+  const testHint = (ru, en) => `<div class="pvpc-hint">${escapeHtml(L(ru, en))}</div>`;
 
-  if (pvpCase.phase === "result") {
+  if (pvpCase.phase === "result" || pvpCase.phase === "refunded") {
+    const again = pvpCase.mode === "solo" ? L("Открыть ещё", "Open again") : L("Ещё раунд", "Play again");
     el.innerHTML = `
-      <button type="button" class="pvpc-main-btn" onclick="openPvpCase()">${escapeHtml(L("Ещё раунд", "Play again"))}</button>
-      <div class="pvpc-hint">${escapeHtml(L("Тестовый режим: GRAM не списываются и не начисляются.", "Test mode: GRAM is neither charged nor credited."))}</div>`;
+      <button type="button" class="pvpc-main-btn" onclick="pvpCaseRestart()">${escapeHtml(again)}</button>
+      ${testHint("Тестовый режим: GRAM не списываются и не начисляются.", "Test mode: GRAM is neither charged nor credited.")}`;
     return;
   }
 
-  const me = pvpCaseMe();
-  const already = me ? me.stake : 0;
-  const room = cfg.maxStake - already;
+  if (pvpCase.mode === "solo") {
+    const idle = pvpCase.phase === "idle";
+    el.innerHTML = `
+      <button type="button" class="pvpc-main-btn" ${idle ? "" : "disabled"} onclick="caseSoloOpen()">${escapeHtml(idle
+        ? L(`Открыть за ${pvpCaseFmt(caseDef.price)} GRAM`, `Open for ${pvpCaseFmt(caseDef.price)} GRAM`)
+        : L("Открываем…", "Opening…"))}</button>
+      ${testHint("Тестовый режим: GRAM не списываются.", "Test mode: GRAM is not charged.")}`;
+    return;
+  }
+
   const open = pvpCaseBettingOpen();
-  const amount = Math.min(pvpCase.selectedStake, room);
-  const canBet = open && amount >= cfg.minStake;
+  const room = pvpCaseMyRoom();
+  const amount = pvpCaseSelectedAmount();
+  const me = pvpCaseMe();
 
   let label;
   if (!open) {
-    label = pvpCase.phase === "locked" ? L("Ставки закрыты", "Stakes closed") : L("Идёт розыгрыш", "Draw in progress");
-  } else if (room < cfg.minStake) {
-    label = L(`Максимум ${cfg.maxStake} GRAM`, `Maximum ${cfg.maxStake} GRAM`);
+    label = pvpCase.phase === "ready" ? L("Кейс собран", "Case funded") : L("Идёт розыгрыш", "Draw in progress");
+  } else if (room <= 0) {
+    label = L("Твоя доля максимальна", "Your share is at maximum");
   } else {
-    label = (me ? L("Докинуть", "Add") : L("Войти", "Join")) + " · " + pvpCaseFmt(amount) + " GRAM";
+    label = (me ? L("Докинуть", "Add") : L("Вложить", "Join")) + " · " + pvpCaseFmt(amount) + " GRAM";
   }
 
-  const chips = cfg.stakeChips.map((value) => `
-    <button type="button" class="pvpc-chip ${value === pvpCase.selectedStake ? "active" : ""}"
-      ${open && value <= room ? "" : "disabled"} onclick="pvpCaseSelectStake(${value})">${value}</button>`).join("");
+  const chipValues = CASE_PLAY_CONFIG.pvpShareChips.concat([1]);
+  const chips = chipValues.map((share) => {
+    const text = share >= 1 ? L("Макс", "Max") : pvpCaseFmt(pvpCaseShareAmount(share));
+    const disabled = !open || room <= 0 || (share < 1 && pvpCaseShareAmount(share) > room + 1e-9);
+    return `<button type="button" class="pvpc-chip ${share === pvpCase.selectedShare ? "active" : ""}"
+      ${disabled ? "disabled" : ""} onclick="pvpCaseSelectStake(${share})">${escapeHtml(text)}</button>`;
+  }).join("");
 
   el.innerHTML = `
     <div class="pvpc-chips">${chips}</div>
-    <button type="button" class="pvpc-main-btn" ${canBet ? "" : "disabled"} onclick="pvpCaseJoin()">${escapeHtml(label)}</button>
-    <div class="pvpc-hint">${escapeHtml(L(
-      `Тестовый режим: GRAM не списываются, соперники — боты. Ставка ${cfg.minStake}–${cfg.maxStake} GRAM на игрока.`,
-      `Test mode: GRAM is not charged, opponents are bots. Stake ${cfg.minStake}–${cfg.maxStake} GRAM per player.`))}</div>`;
+    <button type="button" class="pvpc-main-btn" ${open && amount > 0 ? "" : "disabled"} onclick="pvpCaseJoin()">${escapeHtml(label)}</button>
+    ${testHint(
+      `Тестовый режим: GRAM не списываются, соперники — боты. Доля одного игрока до ${Math.round(CASE_PLAY_CONFIG.pvpMaxShare * 100)}% цены. Не собрали за ${Math.round(CASE_PLAY_CONFIG.pvpFundMs / 1000)} с — доли возвращаются.`,
+      `Test mode: GRAM is not charged, opponents are bots. One player's share is up to ${Math.round(CASE_PLAY_CONFIG.pvpMaxShare * 100)}% of the price. Not funded in ${Math.round(CASE_PLAY_CONFIG.pvpFundMs / 1000)} s — shares are returned.`)}`;
 }
 
-window.openPvpCase = openPvpCase;
+window.openCaseSolo = openCaseSolo;
+window.openCasePvp = openCasePvp;
 window.closePvpCase = closePvpCase;
+window.caseSoloOpen = caseSoloOpen;
+window.pvpCaseRestart = pvpCaseRestart;
 window.pvpCaseJoin = pvpCaseJoin;
 window.pvpCaseSelectStake = pvpCaseSelectStake;
 window.pvpCaseToggleOdds = pvpCaseToggleOdds;
+// =================== КОНЕЦ БЛОКА «КЕЙСЫ: СОЛО И PvP» ===================
 
 function openCases(event) {
   if (event) event.stopPropagation();
