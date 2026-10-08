@@ -2549,6 +2549,104 @@ html.no-animations .pvpc-stage-icon.is-shaking {
   animation-duration: 0.5s !important;
   animation-iteration-count: infinite !important;
 }
+/* Бегущая строка последних выигрышей над кейсами */
+.case-wins {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 2px 0;
+}
+.case-wins-live {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Надпись читается снизу вверх. */
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+}
+.case-wins-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  background: rgba(255,255,255,0.16);
+}
+.case-wins-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 24px), transparent 100%);
+}
+.case-wins-track {
+  display: flex;
+  gap: 8px;
+  width: max-content;
+  will-change: transform;
+}
+.case-win {
+  flex: 0 0 auto;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.case-win-box {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 3px solid var(--tier);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.case-win-icon {
+  width: 26px;
+  height: 26px;
+  color: var(--tier);
+}
+.case-win-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.case-win-coin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  color: #0a1024;
+  background: radial-gradient(circle at 35% 30%, #ffffff, var(--tier) 70%);
+}
+.case-win-value {
+  font-size: 12px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.case-win-mode {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.case-win-mode.is-pvp {
+  color: var(--accent);
+}
 #inventoryScreen.menu-screen {
   /* Тот же расчёт, что у #homeScreen и #marketScreen: зазор между балансом
      и первым блоком экрана — 8px, как между балансом и кнопкой История. */
@@ -7249,6 +7347,13 @@ html.no-animations *::after {
   <div id="casesScreen" class="menu-screen">
     <div class="screen-inner">
       <div id="casesTitle" class="market-subview-title">Кейсы</div>
+      <div id="caseWinsTicker" class="case-wins" aria-label="Последние выигрыши">
+        <div class="case-wins-live">LIVE</div>
+        <div class="case-wins-divider"></div>
+        <div class="case-wins-viewport">
+          <div id="caseWinsTrack" class="case-wins-track"></div>
+        </div>
+      </div>
       <div id="casesGrid" class="cases-grid"></div>
     </div>
   </div>
@@ -10115,6 +10220,7 @@ function renderCasesScreen() {
         <button type="button" class="case-tile-btn is-pvp" onclick="openCasePvp('${c.id}', event)">PvP</button>
       </div>
     </div>`).join("");
+  renderCaseWins();
 }
 
 // ===================== КЕЙСЫ: СОЛО И PvP (ТЕСТОВЫЙ РЕЖИМ) =====================
@@ -10343,6 +10449,7 @@ function caseSoloOpen() {
   pvpCaseSpinReel(() => {
     pvpCaseLater(() => {
       pvpCase.phase = "result";
+      caseWinsAdd(pvpCase.caseId, pvpCase.prize, "solo");
       pvpCaseRenderAll();
     }, 900);
   });
@@ -10552,6 +10659,7 @@ function pvpCaseStartWheel() {
     // Короткая пауза на остановившемся круге, потом итог.
     pvpCaseLater(() => {
       pvpCase.phase = "result";
+      caseWinsAdd(pvpCase.caseId, pvpCase.prize, "pvp");
       pvpCaseRenderAll();
     }, 700);
   });
@@ -10833,6 +10941,97 @@ window.pvpCaseRestart = pvpCaseRestart;
 window.pvpCaseJoin = pvpCaseJoin;
 window.pvpCaseSelectStake = pvpCaseSelectStake;
 window.pvpCaseToggleOdds = pvpCaseToggleOdds;
+// ---------- бегущая строка последних выигрышей ----------
+// Сейчас лента живёт на клиенте: в неё попадают раунды, сыгранные в этой
+// сессии (свои соло и все PvP, включая победы ботов), а при запуске она
+// заполняется тестовыми записями, чтобы не была пустой. Когда появится
+// серверная часть, список будет приходить с сервера (выигрыши всех игроков).
+// Лента крутится покадрово, поэтому настройка «Анимация» её не останавливает.
+const CASE_WINS_MAX = 20;
+const CASE_WINS_SPEED = 28;   // пикселей в секунду
+const CASE_WINS_GAP = 8;      // должен совпадать с gap у .case-wins-track
+const caseWins = { items: [], offset: 0, raf: null, lastAt: 0 };
+
+function caseWinsAdd(caseId, item, mode) {
+  caseWins.items.unshift({ caseId, value: item.value, tier: item.tier, isGift: item.isGift, mode });
+  if (caseWins.items.length > CASE_WINS_MAX) caseWins.items.length = CASE_WINS_MAX;
+  // Новый выигрыш появляется у левого края ленты, дальше лента везёт его вправо.
+  caseWins.offset = 0;
+  renderCaseWins();
+}
+
+function caseWinsSeed() {
+  for (let i = 0; i < 12; i++) {
+    const caseDef = CASES_CATALOG[Math.floor(pvpCaseRandom() * CASES_CATALOG.length)];
+    const item = pvpCasePick(caseItems(caseDef), (it) => it.chance);
+    caseWins.items.push({
+      caseId: caseDef.id,
+      value: item.value,
+      tier: item.tier,
+      isGift: item.isGift,
+      mode: pvpCaseRandom() < 0.5 ? "solo" : "pvp"
+    });
+  }
+}
+
+function caseWinItemHtml(win) {
+  const tier = CASE_TIER_COLORS[win.tier] || CASE_TIER_COLORS[0];
+  const icon = win.isGift
+    ? `<div class="case-win-icon">${CASE_GIFT_ICON_SVG}</div>`
+    : `<div class="case-win-coin">G</div>`;
+  const isPvp = win.mode === "pvp";
+  return `
+    <div class="case-win">
+      <div class="case-win-box" style="--tier:${tier};">${icon}<div class="case-win-value">${pvpCaseFmt(win.value)}</div></div>
+      <div class="case-win-mode ${isPvp ? "is-pvp" : ""}">${escapeHtml(isPvp ? "PvP" : L("Соло", "Solo"))}</div>
+    </div>`;
+}
+
+function renderCaseWins() {
+  const track = document.getElementById("caseWinsTrack");
+  if (!track) return;
+  if (!caseWins.items.length) caseWinsSeed();
+  const html = caseWins.items.map(caseWinItemHtml).join("");
+  // Список выводится дважды подряд. Лента едет вправо: вторая копия стоит
+  // в начале окна, первая ждёт слева за краем. Когда сдвиг доходит до длины
+  // одной копии, он сбрасывается, и лента идёт без шва.
+  track.innerHTML = html + html;
+  caseWinsApplyOffset(track);
+  caseWinsStart();
+}
+
+function caseWinsApplyOffset(track) {
+  const period = (track.scrollWidth + CASE_WINS_GAP) / 2;
+  if (period > 0 && caseWins.offset >= period) caseWins.offset -= period;
+  track.style.transform = `translate3d(${(caseWins.offset - period).toFixed(2)}px, 0, 0)`;
+}
+
+function caseWinsStart() {
+  if (caseWins.raf) return;
+  caseWins.lastAt = performance.now();
+  const step = (now) => {
+    const screen = document.getElementById("casesScreen");
+    const track = document.getElementById("caseWinsTrack");
+    // Крутим, только пока экран кейсов на виду, чтобы лента не тратила ресурсы.
+    if (!screen || !track || !screen.classList.contains("active") || document.hidden) {
+      caseWins.raf = null;
+      return;
+    }
+    const dt = Math.min(100, now - caseWins.lastAt);
+    caseWins.lastAt = now;
+    // Пока открыт кейс, лента под ним стоит.
+    if (!pvpCase.open) {
+      caseWins.offset += CASE_WINS_SPEED * dt / 1000;
+      caseWinsApplyOffset(track);
+    }
+    caseWins.raf = requestAnimationFrame(step);
+  };
+  caseWins.raf = requestAnimationFrame(step);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) caseWinsStart();
+});
 // =================== КОНЕЦ БЛОКА «КЕЙСЫ: СОЛО И PvP» ===================
 
 function openCases(event) {
