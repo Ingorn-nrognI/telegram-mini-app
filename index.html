@@ -2248,6 +2248,24 @@ html.no-animations .pvpc-stage-chest.is-shaking {
   border: 4px solid rgba(255,255,255,0.14);
   box-sizing: border-box;
   will-change: transform;
+  /* Градиент рисуем на всю площадь круга вместе с ободом и без повтора:
+     иначе под ободом видны куски соседней копии — тонкие полоски от края до края. */
+  background-origin: border-box;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+/* Круг выезжает снизу вверх после ленты подарков. Это часть игры:
+   настройка «Анимация» её не выключает. */
+.pvpc-rise {
+  animation: pvpcRise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+html.no-animations .pvpc-rise {
+  animation-duration: 0.5s !important;
+  animation-iteration-count: 1 !important;
+}
+@keyframes pvpcRise {
+  from { transform: translateY(160px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 .pvpc-wheel-hub {
   position: absolute;
@@ -2312,6 +2330,102 @@ html.no-animations .pvpc-stage-chest.is-shaking {
 }
 .pvpc-result-net.is-plus { color: var(--accent); }
 .pvpc-result-net.is-minus { color: var(--danger); }
+/* Окно победителя PvP */
+.pvpc-winner-avatar {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid var(--player);
+  box-shadow: 0 0 18px var(--player);
+  background: radial-gradient(circle at 35% 30%, #ffffff, var(--player) 75%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 24px;
+  font-weight: 900;
+  color: #0a1024;
+  flex: 0 0 auto;
+}
+.pvpc-winner-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pvpc-winner-name {
+  font-size: 18px;
+  font-weight: 900;
+  max-width: 100%;
+  padding: 0 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pvpc-winner-sum {
+  font-size: 20px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.pvpc-winner-sum .case-gram-ico {
+  width: 16px;
+  height: 16px;
+}
+.pvpc-winner-sum .case-gram-word {
+  font-size: 13px;
+}
+.pvpc-win-card {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  border-radius: 18px;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 2px solid var(--tier);
+  box-shadow: 0 0 22px var(--tier);
+  background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pvpc-win-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pvpc-win-card-gram {
+  width: 54px;
+  height: 54px;
+  margin-bottom: 14px;
+  color: var(--tier);
+}
+.pvpc-win-card-gram svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.pvpc-win-card-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px 6px 6px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6));
+}
 /* Соло на 2–3 кейса: ленты друг под другом */
 .pvpc-reels {
   width: 100%;
@@ -10987,7 +11101,7 @@ function pvpCaseJoin() {
     me.stake = pvpCaseMoney(me.stake + amount);
   } else {
     const current = getCurrentPlayer();
-    pvpCaseAddPlayer({ id: "me", name: current.name || L("Игрок", "Player"), stake: amount, isMe: true });
+    pvpCaseAddPlayer({ id: "me", name: current.name || L("Игрок", "Player"), avatar: current.avatar || null, stake: amount, isMe: true });
   }
 
   if (pvpCase.phase === "idle") {
@@ -11197,16 +11311,19 @@ function pvpCaseStartWheel() {
 
   wheel.style.transition = "none";
   wheel.style.transform = "rotate(0deg)";
-  pvpCaseAnimate(CASE_PLAY_CONFIG.wheelMs, (k) => {
-    wheel.style.transform = `rotate(${(rotation * k).toFixed(2)}deg)`;
-  }, () => {
-    // Короткая пауза на остановившемся круге, потом итог.
-    pvpCaseLater(() => {
-      pvpCase.phase = "result";
-      caseWinsAdd(pvpCase.caseId, pvpCase.prize, "pvp");
-      pvpCaseRenderAll();
-    }, 700);
-  });
+  // Сначала круг выезжает снизу (pvpc-rise, 0.5 с), потом крутится.
+  pvpCaseLater(() => {
+    pvpCaseAnimate(CASE_PLAY_CONFIG.wheelMs, (k) => {
+      wheel.style.transform = `rotate(${(rotation * k).toFixed(2)}deg)`;
+    }, () => {
+      // Короткая пауза на остановившемся круге, потом итог.
+      pvpCaseLater(() => {
+        pvpCase.phase = "result";
+        caseWinsAdd(pvpCase.caseId, pvpCase.prize, "pvp");
+        pvpCaseRenderAll();
+      }, 700);
+    });
+  }, 500);
 }
 
 // ---------- отрисовка ----------
@@ -11299,9 +11416,9 @@ function pvpCaseRenderStage() {
       .join(", ");
     el.innerHTML = `
       <div class="pvpc-stage-caption">${escapeHtml(L("Кому достанется приз", "Who gets the prize"))}</div>
-      <div class="pvpc-wheel-wrap">
+      <div class="pvpc-wheel-wrap pvpc-rise">
         <div class="pvpc-wheel-pointer"></div>
-        <div id="pvpcWheel" class="pvpc-wheel" style="background:conic-gradient(${stops});"></div>
+        <div id="pvpcWheel" class="pvpc-wheel" style="background-image:conic-gradient(${stops});"></div>
         <div class="pvpc-wheel-hub" style="color:${caseTierColor(pvpCase.prize)};">${pvpCaseFmt(pvpCase.prize.value)}<br>GRAM</div>
       </div>`;
     return;
@@ -11321,15 +11438,29 @@ function pvpCaseRenderStage() {
   }
 
   if (phase === "result") {
+    // Окно победителя: заголовок, аватар и ник, сумма выигрыша, карточка приза.
     const winner = pvpCase.players.find((p) => p.id === pvpCase.winnerId);
-    const me = pvpCaseMe();
-    const myStake = me ? me.stake : 0;
-    const net = pvpCaseMoney((winner && winner.isMe ? pvpCase.prize.value : 0) - myStake);
+    const prize = pvpCase.prize;
+    const tier = caseTierColor(prize);
+    const name = winner ? winner.name : "—";
+    const photo = winner && winner.avatar
+      ? `<img class="pvpc-winner-img" src="${escapeHtml(winner.avatar)}" alt="" onerror="this.remove()">`
+      : "";
+    const label = prize.gift ? prize.gift.name : (prize.isGift ? L("Подарок", "Gift") : L("На баланс", "To balance"));
+    const cardInner = prize.gift
+      ? caseGiftThumbHtml(prize.gift, "pvpc-win-card-img")
+      : `<div class="pvpc-win-card-gram">${prize.isGift ? CASE_GIFT_ICON_SVG : CASE_GRAM_ICON_SVG}</div>`;
     el.innerHTML = `
-      <div class="pvpc-result-title">${escapeHtml(winner && winner.isMe ? L("Ты забрал приз", "You took the prize") : L("Приз забрал", "Prize goes to"))}</div>
-      <div class="pvpc-result-name" style="color:${winner ? winner.color : "#fff"};">${escapeHtml(winner ? winner.name : "—")}</div>
-      <div class="pvpc-result-prize" style="color:${caseTierColor(pvpCase.prize)};">${escapeHtml(pvpCasePrizeText(pvpCase.prize))}</div>
-      <div class="pvpc-result-net ${net >= 0 ? "is-plus" : "is-minus"}">${escapeHtml(L("Твой итог: ", "Your result: ") + (net >= 0 ? "+" : "−") + pvpCaseFmt(Math.abs(net)) + " GRAM")}</div>`;
+      <div class="pvpc-result-title">${escapeHtml(winner && winner.isMe ? L("Ты выиграл кейс", "You won the case") : L("Выиграл кейс", "Case won by"))}</div>
+      <div class="pvpc-winner-avatar" style="--player:${winner ? winner.color : "#ffffff"};">
+        <span>${escapeHtml(getPlayerInitial(name))}</span>${photo}
+      </div>
+      <div class="pvpc-winner-name">${escapeHtml(name)}${winner && winner.isMe ? escapeHtml(L(" (ты)", " (you)")) : ""}</div>
+      <div class="pvpc-winner-sum" style="color:${tier};">${caseGramValueHtml(prize.value, true)}</div>
+      <div class="pvpc-win-card ${prize.gift ? "has-gift" : ""}" style="--tier:${tier};">
+        ${cardInner}
+        <div class="pvpc-win-card-label">${escapeHtml(label)}</div>
+      </div>`;
     return;
   }
 
