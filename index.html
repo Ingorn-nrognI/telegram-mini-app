@@ -2037,26 +2037,49 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 }
 .case-poster .cp-side-l {
   z-index: 6;
-  left: -4px; top: 116px;
-  width: 82px; height: 82px;
+  left: -2px; top: 84px;
+  width: 66px; height: 66px;
   transform: rotate(-8deg);
   filter: drop-shadow(0 0 8px var(--case-light)) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
 }
 .case-poster .cp-side-r {
   z-index: 6;
-  right: -6px; top: 122px;
-  width: 78px; height: 78px;
+  right: -4px; top: 88px;
+  width: 64px; height: 64px;
   transform: rotate(8deg);
   filter: drop-shadow(0 0 8px var(--case-light)) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
 }
 .case-poster .cp-hero {
   z-index: 7;
-  left: 50%; top: 28px;
-  width: 140px; height: 140px;
-  margin-left: -70px;
+  left: 50%; top: 10px;
+  width: 116px; height: 116px;
+  margin-left: -58px;
   filter: drop-shadow(0 0 16px var(--case-light)) drop-shadow(0 12px 14px rgba(0, 0, 0, 0.5));
   animation: cpHeroFloat 3s ease-in-out infinite;
 }
+/* бегущая лента: все подарки, которые могут выпасть из кейса */
+.case-poster .cp-strip {
+  z-index: 6;
+  left: 0; right: 0; top: 164px;
+  height: 46px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+}
+.case-poster .cp-strip-track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  height: 100%;
+  animation: cpStrip var(--strip-time, 12s) linear infinite;
+}
+.case-poster .cp-strip-item {
+  flex: 0 0 auto;
+  width: 38px; height: 38px;
+  margin-right: 8px;
+  filter: drop-shadow(0 0 4px var(--case-light)) drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
+}
+@keyframes cpStrip { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .case-poster .cp-rays {
   left: 50%; top: 100px;
   width: 340px; height: 340px;
@@ -11057,16 +11080,27 @@ function casePosterFxHtml(fx) {
   return '<div class="cp-rays"></div><div class="cp-bloom"></div>';
 }
 
+// Лента подарков кейса: список повторён дважды, трек едет на половину своей
+// ширины и начинает заново — получается бесконечная прокрутка без рывка.
+function casePosterStripHtml(gifts) {
+  if (!gifts.length) return "";
+  let row = gifts.slice();
+  while (row.length < 6) row = row.concat(gifts);
+  const items = row.map((g) => `<div class="cp-model cp-strip-item">${caseArtModelHtml(g)}</div>`).join("");
+  return `<div class="cp-strip"><div class="cp-strip-track" style="--strip-time:${row.length * 2}s">${items}${items}</div></div>`;
+}
+
 function casePosterHtml(caseDef) {
   const st = casePosterStyle(caseDef);
-  const { top } = caseArtGifts(caseDef);
+  const { top, low } = caseArtGifts(caseDef);
   const model = (gift, cls) => gift ? `<div class="cp-model ${cls}">${caseArtModelHtml(gift)}</div>` : "";
   return `
     ${casePosterFxHtml(st.fx)}
     <div class="cp-fade"></div>
     ${model(top[1], "cp-side-l")}
     ${model(top[2], "cp-side-r")}
-    ${model(top[0], "cp-hero")}`;
+    ${model(top[0], "cp-hero")}
+    ${casePosterStripHtml(top.concat(low))}`;
 }
 
 function caseArtRefresh() {
