@@ -2077,16 +2077,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   flex: 0 0 auto;
   width: 38px; height: 38px;
   margin-right: 8px;
-  border-radius: 10px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 0 10px -2px var(--case-light);
-}
-.case-poster .cp-strip-img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
+  filter: drop-shadow(0 0 4px var(--case-light)) drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
 }
 @keyframes cpStrip { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .case-poster .cp-rays {
@@ -11215,8 +11206,8 @@ function casePosterStripHtml(gifts) {
   if (!gifts.length) return "";
   let row = gifts.slice();
   while (row.length < 6) row = row.concat(gifts);
-  // Картинка того самого NFT, который выпадает (как на ленте открытия и в шансах).
-  const items = row.map((g) => `<div class="cp-strip-item">${caseGiftThumbHtml(g, "cp-strip-img")}</div>`).join("");
+  // Только модели подарков, без фона и узора.
+  const items = row.map((g) => `<div class="cp-model cp-strip-item">${caseArtModelHtml(g)}</div>`).join("");
   return `<div class="cp-strip"><div class="cp-strip-track" style="--strip-time:${row.length * 2}s">${items}${items}</div></div>`;
 }
 
@@ -11967,8 +11958,8 @@ function pvpCaseRenderStage() {
     pvpCaseStagePoster(el, false, `
       <div class="pvpc-stage-main">${escapeHtml(caseName)}</div>
       <div class="pvpc-stage-sub">${escapeHtml(L(
-        `Каждое открытие — гарантированный приз: NFT-подарок или GRAM на баланс. Все подарки и шансы — в «Шансы кейса».`,
-        `Every opening is a guaranteed prize: an NFT gift or GRAM to your balance. All gifts and odds are in "Case odds".`))}</div>`);
+        `Каждое открытие — гарантированный приз: NFT-подарок или GRAM на баланс.`,
+        `Every opening is a guaranteed prize: an NFT gift or GRAM to your balance.`))}</div>`);
     return;
   }
 
@@ -11982,8 +11973,8 @@ function pvpCaseRenderStage() {
     sub = L(`Осталось собрать ${pvpCaseFmt(pvpCaseRemaining())} GRAM. Добавь долю побольше — тем выше шанс, что приз заберёшь ты.`,
             `${pvpCaseFmt(pvpCaseRemaining())} GRAM left to fund. Add a bigger share — the higher your chance to take the prize.`);
   } else {
-    sub = L("Скиньтесь на кейс вместе и сразитесь за его приз! Чем больше твоя доля, тем больше твой сектор на колесе.",
-            "Chip in on the case together and battle for its prize! The bigger your share, the bigger your slice of the wheel.");
+    sub = L("Скиньтесь на кейс вместе и сразитесь за его приз!",
+            "Chip in on the case together and battle for its prize!");
   }
   pvpCaseStagePoster(el, phase === "ready", `
     <div class="pvpc-stage-main">${escapeHtml(pvpCaseFmt(funded) + " / " + pvpCaseFmt(caseDef.price) + " GRAM")}</div>
@@ -12007,7 +11998,7 @@ function pvpCaseRenderPlayers() {
   titleEl.innerHTML = `
     <span>${escapeHtml(L("Игроки", "Players"))} · ${pvpCase.players.length}</span>${toggle}`;
   if (!pvpCase.players.length) {
-    el.innerHTML = `<div class="pvpc-empty">${escapeHtml(L("Пока никого. Вложись первым.", "Nobody here yet. Be the first."))}</div>`;
+    el.innerHTML = `<div class="pvpc-empty">${escapeHtml(L("Пока никого.", "Nobody here yet."))}</div>`;
     return;
   }
   const caseDef = currentCase();
