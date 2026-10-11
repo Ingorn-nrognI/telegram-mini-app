@@ -2298,7 +2298,12 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   gap: 10px;
   flex: 0 0 auto;
 }
+.app-back-icon {
+  display: block;
+  flex: 0 0 auto;
+}
 .pvpc-back {
+  color: #ffffff;
   width: 40px;
   height: 40px;
   border-radius: 14px;
@@ -2727,6 +2732,25 @@ html.no-animations .pvpc-rise {
 }
 .pvpc-chips.pvpc-chips-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* PvP: 3 свои суммы + «Макс» + карандаш */
+.pvpc-chips.pvpc-chips-edit {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) 46px;
+}
+.pvpc-chip-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.pvpc-chip-edit svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+/* окно настройки сумм поверх экрана кейса */
+.scanner-stake-settings-overlay.is-cases {
+  z-index: 400;
 }
 
 /* Игроки */
@@ -7896,7 +7920,7 @@ html.no-animations *::after {
 
   <div class="top-bar" onclick="if (document.body.classList.contains('rating-mode')) event.stopPropagation();">
     <div class="top-bar-left">
-      <div id="modeBackButton" class="mode-back-btn" onclick="event.stopPropagation(); handleTelegramAppBack()" aria-label="Назад">←</div>
+      <div id="modeBackButton" class="mode-back-btn" onclick="event.stopPropagation(); handleTelegramAppBack()" aria-label="Назад"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="app-back-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"/></svg></div>
 
       <div class="balance-card">
         <span class="balance-icon" aria-hidden="true">
@@ -8194,7 +8218,7 @@ html.no-animations *::after {
   <!-- PvP-сундук (тестовый режим). Содержимое рисует скрипт, см. блок "PvP-СУНДУК". -->
   <div id="pvpCaseOverlay" class="pvpc-overlay" aria-hidden="true" onclick="event.stopPropagation()">
     <div class="pvpc-head">
-      <button type="button" class="pvpc-back" onclick="closePvpCase()" aria-label="Назад">←</button>
+      <button type="button" class="pvpc-back" onclick="closePvpCase()" aria-label="Назад"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="app-back-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"/></svg></button>
       <div id="pvpcTitle" class="pvpc-title">PvP сундук</div>
       <div id="pvpcBadge" class="pvpc-badge">ТЕСТ</div>
     </div>
@@ -8958,6 +8982,7 @@ function getNetworkTimeHighRes() {
 
 let scannerQuickStakeValues = SCANNER_DEFAULT_QUICK_STAKES.slice();
 const scannerStakeSettingsState = {
+  target: "scanner",   // scanner — бар ставок Сканера, case — кнопки долей PvP-кейса
   activeIndex: 0,
   draftValues: SCANNER_DEFAULT_QUICK_STAKES.map((value) => String(value))
 };
@@ -11291,7 +11316,7 @@ const pvpCase = {
   phase: "idle",      // solo: idle | chest | result; pvp: idle | funding | ready | chest | wheel | result | refunded | live
   roundId: null,
   players: [],
-  selectedShare: 0.25,
+  selectedShare: 1,   // выбранная кнопка доли: 0–2 — свои суммы, 3 — «Макс»
   fundEndsAt: 0,
   startAt: 0,
   prize: null,        // { value, chance, tier, isGift, gift }
@@ -11576,18 +11601,82 @@ function pvpCaseShareAmount(share) {
   return caseDef ? pvpCaseMoney(caseDef.price * share) : 0;
 }
 
-function pvpCaseSelectStake(share) {
+function pvpCaseSelectStake(index) {
   if (!pvpCaseBettingOpen()) return;
-  pvpCase.selectedShare = share;
+  pvpCase.selectedShare = index;   // 0–2 — свои суммы на кнопках, 3 — «Макс»
   pvpCaseRenderControls();
 }
 
 function pvpCaseSelectedAmount() {
-  // selectedShare = 1 означает «весь остаток, сколько можно».
+  // Сумма выбранной кнопки, но не больше, чем можно вложить (остаток кейса и лимит 75%).
   const room = pvpCaseMyRoom();
-  const wanted = pvpCase.selectedShare >= 1 ? room : pvpCaseShareAmount(pvpCase.selectedShare);
+  const index = Number(pvpCase.selectedShare);
+  const wanted = index >= 3 ? room : (casePvpQuickStakes(currentCase())[index] || 0);
   return pvpCaseMoney(Math.min(wanted, room));
 }
+
+// ---------- PvP: свои суммы на кнопках долей (карандаш, как в Сканере) ----------
+// Суммы хранятся на телефоне отдельно для каждого кейса. Пока игрок их не менял —
+// 10%, 25% и 50% цены кейса. Окно настройки — то же, что у бара ставок Сканера.
+const CASE_PVP_STAKES_STORAGE_KEY = "bobr_case_pvp_quick_stakes_v1";
+
+function casePvpDefaultStakes(caseDef) {
+  const price = caseDef ? caseDef.price : 1;
+  return CASE_PLAY_CONFIG.pvpShareChips.map((share) => pvpCaseMoney(price * share));
+}
+
+function casePvpLoadAllStakes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CASE_PVP_STAKES_STORAGE_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function casePvpQuickStakes(caseDef) {
+  if (!caseDef) return [0, 0, 0];
+  const saved = casePvpLoadAllStakes()[caseDef.id];
+  if (Array.isArray(saved) && saved.length === 3) {
+    const values = saved.map((value) => normalizeStakeValue(value));
+    if (values.every((value) => value > 0)) return values;
+  }
+  return casePvpDefaultStakes(caseDef);
+}
+
+function casePvpSaveQuickStakes(caseDef, values) {
+  if (!caseDef) return;
+  const all = casePvpLoadAllStakes();
+  all[caseDef.id] = values;
+  try {
+    localStorage.setItem(CASE_PVP_STAKES_STORAGE_KEY, JSON.stringify(all));
+  } catch (error) {
+    console.warn("Не удалось сохранить суммы PvP-кейса:", error);
+  }
+}
+
+function openCaseStakeSettings(event) {
+  if (event) event.stopPropagation();
+  const caseDef = currentCase();
+  const overlay = document.getElementById("scannerStakeSettingsOverlay");
+  const input = getScannerStakeSettingsInput();
+  if (!caseDef || !overlay || !input) return;
+  scannerStakeSettingsState.target = "case";
+  scannerStakeSettingsState.activeIndex = 0;
+  scannerStakeSettingsState.draftValues = casePvpQuickStakes(caseDef).map((value) => String(value));
+  setScannerStakeSettingsError("");
+  overlay.classList.add("is-cases", "open");
+  overlay.setAttribute("aria-hidden", "false");
+  renderScannerStakeSettings();
+  setTimeout(() => {
+    const freshInput = getScannerStakeSettingsInput();
+    if (!freshInput) return;
+    freshInput.value = scannerStakeSettingsState.draftValues[0] || "";
+    freshInput.focus({ preventScroll: true });
+    freshInput.select();
+  }, 180);
+}
+window.openCaseStakeSettings = openCaseStakeSettings;
 
 function pvpCaseWatch(caseId) {
   if (typeof _socket === "undefined" || !_socket) return;
@@ -12157,16 +12246,19 @@ function pvpCaseRenderControls() {
     label = (me ? L("Докинуть", "Add") : L("Вложить", "Join")) + " · " + pvpCaseFmt(amount) + " GRAM";
   }
 
-  const chipValues = CASE_PLAY_CONFIG.pvpShareChips.concat([1]);
-  const chips = chipValues.map((share) => {
-    const text = share >= 1 ? L("Макс", "Max") : pvpCaseFmt(pvpCaseShareAmount(share));
-    const disabled = !open || room <= 0 || (share < 1 && pvpCaseShareAmount(share) > room + 1e-9);
-    return `<button type="button" class="pvpc-chip ${share === pvpCase.selectedShare ? "active" : ""}"
-      ${disabled ? "disabled" : ""} onclick="pvpCaseSelectStake(${share})">${escapeHtml(text)}</button>`;
+  const quick = casePvpQuickStakes(caseDef);
+  const chips = [0, 1, 2, 3].map((index) => {
+    const text = index >= 3 ? L("Макс", "Max") : pvpCaseFmt(quick[index]);
+    const disabled = !open || room <= 0;
+    return `<button type="button" class="pvpc-chip ${index === Number(pvpCase.selectedShare) ? "active" : ""}"
+      ${disabled ? "disabled" : ""} onclick="pvpCaseSelectStake(${index})">${escapeHtml(text)}</button>`;
   }).join("");
+  // Карандаш — та же иконка, что у бара ставок Сканера.
+  const pencilIcon = document.querySelector("#scannerBetBarEditFab .scanner-bet-edit-icon");
+  const pencil = `<button type="button" class="pvpc-chip pvpc-chip-edit" onclick="openCaseStakeSettings(event)" aria-label="${escapeHtml(L("Настроить суммы", "Edit amounts"))}">${pencilIcon ? pencilIcon.outerHTML : "✎"}</button>`;
 
   el.innerHTML = `
-    <div class="pvpc-chips">${chips}</div>
+    <div class="pvpc-chips pvpc-chips-edit">${chips}${pencil}</div>
     <button type="button" class="pvpc-main-btn" ${open && amount > 0 && !pvpCase.busy ? "" : "disabled"} onclick="pvpCaseJoin()">${escapeHtml(label)}</button>
     ${testHint(
       `Доля одного игрока — до ${Math.round(CASE_PLAY_CONFIG.pvpMaxShare * 100)}% цены. Не собрали за ${Math.round(CASE_PLAY_CONFIG.pvpFundMs / 1000)} с — доли возвращаются.`,
@@ -19253,8 +19345,9 @@ function closeScannerStakeSettings(event) {
 
   const overlay = document.getElementById("scannerStakeSettingsOverlay");
   if (!overlay) return;
-  overlay.classList.remove("open");
+  overlay.classList.remove("open", "is-cases");
   overlay.setAttribute("aria-hidden", "true");
+  scannerStakeSettingsState.target = "scanner";
   forceScannerBetBarVisibilityRefresh();
 }
 
@@ -19316,7 +19409,9 @@ function clearScannerStakeSettingsValue(event) {
 function resetScannerStakeSettings(event) {
   if (event) event.stopPropagation();
   scannerStakeSettingsState.activeIndex = 0;
-  scannerStakeSettingsState.draftValues = SCANNER_DEFAULT_QUICK_STAKES.map((value) => String(value));
+  scannerStakeSettingsState.draftValues = (scannerStakeSettingsState.target === "case"
+    ? casePvpDefaultStakes(currentCase())
+    : SCANNER_DEFAULT_QUICK_STAKES).map((value) => String(value));
   setScannerStakeSettingsError("");
   renderScannerStakeSettings();
 
@@ -19346,6 +19441,14 @@ function saveScannerStakeSettings(event) {
     return;
   }
 
+  // Окно открыто карандашом PvP-кейса — сохраняем суммы кейса, а не Сканера.
+  if (scannerStakeSettingsState.target === "case") {
+    casePvpSaveQuickStakes(currentCase(), values);
+    pvpCase.selectedShare = Math.min(2, scannerStakeSettingsState.activeIndex);
+    closeScannerStakeSettings(event);
+    pvpCaseRenderControls();
+    return;
+  }
   scannerQuickStakeValues = values;
   persistScannerQuickStakeValues(scannerQuickStakeValues);
   scannerGridState.selectedStake = values[scannerStakeSettingsState.activeIndex] || values[0] || 1;
@@ -23866,7 +23969,7 @@ function renderFilterSectionView(key) {
     <div style="display:flex; flex-direction:column; flex:1; min-height:0;">
       <div style="display:flex; align-items:center; gap:8px; padding:2px 2px 8px; flex-shrink:0;">
         <button type="button" onclick="closeFilterSection(event)" aria-label="Назад" style="width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.08); border:none; color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6" /></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="app-back-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"/></svg>
         </button>
         <div style="font-size:15px; font-weight:700; color:#fff;">${meta.title}</div>
       </div>
