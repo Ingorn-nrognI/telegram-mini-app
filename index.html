@@ -1900,6 +1900,14 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
+.cases-loading {
+  grid-column: 1 / -1;
+  padding: 48px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
 .case-tile {
   position: relative;
   display: flex;
@@ -11002,68 +11010,56 @@ function showBobrRunComingSoon(event) {
   showAppNotice(L("Игра на стадии разработки", "The game is under development"), { timeoutMs: 2600, closeModeMenu: true });
 }
 
-// Каталог кейсов. Пока это тестовые данные на клиенте: когда появится серверная
-// часть, список (цены, содержимое, шансы) будет приходить с сервера.
-// items: [стоимость приза в GRAM, шанс в %]. Сумма шансов = 100, средний возврат
-// каждого кейса ≈ 90% цены. Стоимости подарков подобраны под реальные флор-цены
-// коллекций на Fragment (октябрь 2026): каждая сумма от CASE_GIFT_MIN_VALUE
-// соответствует нескольким коллекциям, которые сейчас столько стоят.
-// Призы дешевле CASE_GIFT_MIN_VALUE — GRAM на баланс.
-const CASES_CATALOG = [
-  { id: "starter", ru: "Обычный", en: "Common", price: 1, color: "#9fb2d6",
-    items: [[0.2, 43.971], [0.45, 29.314], [0.75, 13.603], [1.5, 6.801], [5, 4.081], [10, 1.587], [16, 0.567], [30, 0.076]] },
-  { id: "bronze", ru: "Бронзовый", en: "Bronze", price: 3, color: "#d08a52",
-    items: [[0.6, 31.295], [1.5, 20.863], [2.2, 24.346], [4, 12.173], [6, 7.304], [11, 2.84], [30, 1.014], [74, 0.165]] },
-  { id: "silver", ru: "Серебряный", en: "Silver", price: 7, color: "#c9d6ea",
-    items: [[1.5, 33.389], [3, 22.259], [5, 22.556], [9, 11.278], [16, 6.767], [36, 2.631], [74, 0.94], [146, 0.18]] },
-  { id: "gold", ru: "Золотой", en: "Gold", price: 15, color: "#ffb23d",
-    items: [[3, 32.415], [7, 21.609], [11, 23.378], [16, 11.689], [38, 7.013], [74, 2.727], [146, 0.974], [240, 0.195]] },
-  { id: "platinum", ru: "Платиновый", en: "Platinum", price: 40, color: "#4b9bff",
-    items: [[10, 21.57], [16, 14.38], [30, 32.568], [47, 16.284], [74, 9.77], [112, 3.8], [146, 1.357], [240, 0.271]] },
-  { id: "legend", ru: "Легендарный", en: "Legendary", price: 100, color: "#a45cff",
-    items: [[47, 21.37], [74, 50.43], [112, 10], [129, 8], [146, 6], [240, 4], [1379, 0.2]] }
-];
+// Каталог кейсов приходит с сервера (cases.js): цены, шансы и конкретный
+// подарок (NFT с Fragment) в каждом слоте. Сервер сам меняет подарок, если
+// его цена ушла из коридора, и присылает новый состав событием cases:config.
+// items: { kind: "gift" | "gram", value, chance, gift: { slug, name, number, black } }
+let CASES_CATALOG = [];
+let casesConfigLoadedAt = 0;
+let casesSocketBound = false;
 
 const CASE_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="1 -0.2 22 22" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M3.6 6h16.8a1.6 1.6 0 0 1 1.6 1.6v1.8a1.6 1.6 0 0 1 -1.6 1.6h-16.8a1.6 1.6 0 0 1 -1.6 -1.6v-1.8a1.6 1.6 0 0 1 1.6 -1.6z M4.6 12h14.8a1.6 1.6 0 0 1 1.6 1.6v5.8a1.6 1.6 0 0 1 -1.6 1.6h-14.8a1.6 1.6 0 0 1 -1.6 -1.6v-5.8a1.6 1.6 0 0 1 1.6 -1.6z M12.00 13.20L12.79 15.31L15.04 15.41L13.28 16.82L13.88 18.99L12.00 17.75L10.12 18.99L10.72 16.82L8.96 15.41L11.21 15.31z M19.4 0.6Q19.8 2.4 21.6 2.8Q19.8 3.2 19.4 5.0Q19 3.2 17.2 2.8Q19 2.4 19.4 0.6z"/></svg>';
 
-// Приз от этой стоимости выдаётся подарком, дешевле — GRAM на баланс
-// (самые дешёвые подарки на Fragment стоят 5 GRAM).
-const CASE_GIFT_MIN_VALUE = 5;
+// Призы-подарки — конкретные NFT из состава кейса; остальное — GRAM на баланс.
+const CASE_GIFT_MIN_VALUE = 4;
 
-// ---------- реальные подарки под стоимость приза ----------
-// Сервер раз в час собирает флор-цены коллекций с Fragment (giftPrices.js) и
-// отдаёт их по событию gifts:prices:request. Под каждую сумму-приз кейса
-// подбираем коллекции, чья цена в пределах −20%…+25% от неё: их показываем в
-// шансах кейса и на ленте, одна из них «выпадает» игроку.
-let CASE_GIFT_PRICES = [];       // [{ slug, name, price, number }]
-let caseGiftPricesLoadedAt = 0;
+// Время сервера минус время телефона: таймеры PvP считаем по серверу.
+let casesServerOffset = 0;
 
-function loadCaseGiftPrices() {
-  if (typeof _socket === "undefined" || !_socket) return;
-  if (CASE_GIFT_PRICES.length && Date.now() - caseGiftPricesLoadedAt < 10 * 60 * 1000) return;
-  _socket.emit("gifts:prices:request", {}, (res) => {
-    if (!res || !res.ok || !Array.isArray(res.prices)) return;
-    CASE_GIFT_PRICES = res.prices.map((r) => {
-      const buy = Number(r.floor_buy) || 0;
-      const auction = Number(r.floor_auction) || 0;
-      return {
-        slug: r.slug,
-        name: r.name,
-        price: buy || auction,
-        number: buy ? r.floor_buy_number : r.floor_auction_number
-      };
-    }).filter((g) => g.slug && g.price > 0 && g.number);
-    caseGiftPricesLoadedAt = Date.now();
-    caseArtRefresh();
-    if (pvpCase.open) pvpCaseRenderOdds();
+// Подписки на события кейсов вешаем один раз, когда сокет уже создан.
+function casesBindSocket() {
+  if (casesSocketBound || typeof _socket === "undefined" || !_socket) return;
+  casesSocketBound = true;
+  _socket.on("cases:config", (res) => applyCasesConfig(res));
+  _socket.on("cases:win", (win) => caseWinFromServer(win));
+  _socket.on("cases:pvp:state", (state) => pvpCaseApplyServerState(state));
+  _socket.on("connect", () => {
+    loadCaseGiftPrices(true);
+    if (pvpCase.open && pvpCase.mode === "pvp") pvpCaseWatch(pvpCase.caseId);
   });
 }
 
-function caseGiftCandidates(value) {
-  return CASE_GIFT_PRICES
-    .filter((g) => g.price >= value * 0.8 && g.price <= value * 1.25)
-    .sort((a, b) => Math.abs(a.price - value) - Math.abs(b.price - value))
-    .slice(0, 4);
+function applyCasesConfig(res) {
+  if (!res || !Array.isArray(res.cases)) return;
+  CASES_CATALOG = res.cases;
+  casesConfigLoadedAt = Date.now();
+  const grid = document.getElementById("casesGrid");
+  if (grid && !grid.querySelector(".case-tile")) renderCasesScreen();
+  else caseArtRefresh();
+  if (pvpCase.open) {
+    pvpCaseRenderStats();
+    pvpCaseRenderOdds();
+  }
+}
+
+// Имя прежнее, чтобы не менять места вызова: теперь грузит состав кейсов с сервера.
+function loadCaseGiftPrices(force) {
+  if (typeof _socket === "undefined" || !_socket) return;
+  casesBindSocket();
+  if (!force && CASES_CATALOG.length && Date.now() - casesConfigLoadedAt < 5 * 60 * 1000) return;
+  _socket.emit("cases:config:request", {}, (res) => {
+    if (res && res.ok) applyCasesConfig(res);
+  });
 }
 
 // Своя константа, а не NFT_CDN: тот объявлен ниже по файлу и в момент
@@ -11109,23 +11105,8 @@ function caseArtModelHtml(gift) {
 }
 
 function caseArtGifts(caseDef) {
-  // До 7 разных моделей у каждого кейса: под каждую сумму-подарок кейса по
-  // очереди берём следующую подходящую по цене коллекцию, пока не наберём 7.
-  // 3 самых дорогих выглядывают из коробки, остальные стоят внизу вокруг неё.
-  const giftItems = caseItems(caseDef).filter((item) => item.isGift).reverse();
-  const lists = giftItems.map((item) => caseGiftCandidates(item.value));
-  const used = new Set();
-  const gifts = [];
-  for (let round = 0; round < 4 && gifts.length < 7; round++) {
-    for (const list of lists) {
-      if (gifts.length >= 7) break;
-      const gift = list.filter((g) => !used.has(g.slug))[0];
-      if (!gift) continue;
-      used.add(gift.slug);
-      gifts.push(gift);
-    }
-  }
-  gifts.sort((a, b) => b.price - a.price);
+  // Подарки кейса от дорогих к дешёвым: 3 самых дорогих — сверху, остальные — ниже.
+  const gifts = caseGiftPool(caseDef);
   const topCount = Math.min(3, gifts.length);
   return { top: gifts.slice(0, topCount), low: gifts.slice(topCount, 7) };
 }
@@ -11155,7 +11136,8 @@ const CASE_POSTER_STYLES = {
   silver:   { fx: "crystal", a: "#b9d3ff", deep: "#1f2c4a", light: "#ffffff" },
   gold:     { fx: "rays",    a: "#ffc23d", deep: "#7a4a00", light: "#fff0a0" },
   platinum: { fx: "aurora",  a: "#3fd8ff", deep: "#0d2a52", light: "#7dffc8" },
-  legend:   { fx: "cosmos",  a: "#c46bff", deep: "#2a0a4a", light: "#ff8ad8" }
+  legend:   { fx: "cosmos",  a: "#c46bff", deep: "#2a0a4a", light: "#ff8ad8" },
+  black:    { fx: "rays",    a: "#e9e9ee", deep: "#0b0b0d", light: "#ffffff" }
 };
 
 function casePosterStyle(caseDef) {
@@ -11186,18 +11168,15 @@ function casePosterFxHtml(fx) {
 
 // Лента подарков кейса: список повторён дважды, трек едет на половину своей
 // ширины и начинает заново — получается бесконечная прокрутка без рывка.
-// Все подарки, которые реально могут выпасть из кейса: под каждую сумму-подарок
-// те же коллекции, что выбирает caseAttachGift (caseGiftCandidates), без повторов,
-// от дорогих к дешёвым.
+// Все подарки, которые реально могут выпасть из кейса: NFT из его слотов
+// (их выбирает сервер), без повторов коллекций, от дорогих к дешёвым.
 function caseGiftPool(caseDef) {
   const seen = new Set();
   const pool = [];
-  caseItems(caseDef).filter((item) => item.isGift).forEach((item) => {
-    caseGiftCandidates(item.value).forEach((g) => {
-      if (seen.has(g.slug)) return;
-      seen.add(g.slug);
-      pool.push(g);
-    });
+  caseItems(caseDef).filter((item) => item.gift).forEach((item) => {
+    if (seen.has(item.gift.slug)) return;
+    seen.add(item.gift.slug);
+    pool.push(Object.assign({ price: item.value }, item.gift));
   });
   return pool.sort((a, b) => b.price - a.price);
 }
@@ -11235,11 +11214,9 @@ function caseArtRefresh() {
   });
 }
 
+// Подарок уже привязан к призу сервером (item.gift) — ничего подбирать не нужно.
 function caseAttachGift(item) {
-  if (!item || !item.isGift) return item;
-  const list = caseGiftCandidates(item.value);
-  if (!list.length) return item;
-  return Object.assign({}, item, { gift: list[Math.floor(pvpCaseRandom() * list.length)] });
+  return item;
 }
 
 const CASE_GIFT_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 11h7v10H5.5A1.5 1.5 0 0 1 4 19.5V11zm9 0h7v8.5a1.5 1.5 0 0 1-1.5 1.5H13V11zM3 7.5A1.5 1.5 0 0 1 4.5 6h15A1.5 1.5 0 0 1 21 7.5V9a.5.5 0 0 1-.5.5H13V6h-2v3.5H3.5A.5.5 0 0 1 3 9V7.5z"/><path d="M12 6c-1.2-2.6-3.4-3.6-4.6-2.6-1 .8-.5 2.6 1.6 2.6H12zm0 0c1.2-2.6 3.4-3.6 4.6-2.6 1 .8.5 2.6-1.6 2.6H12z"/></svg>';
@@ -11258,6 +11235,11 @@ function renderCasesScreen() {
   const grid = document.getElementById("casesGrid");
   if (!grid) return;
   loadCaseGiftPrices();
+  if (!CASES_CATALOG.length) {
+    grid.innerHTML = `<div class="cases-loading">${escapeHtml(L("Загружаем кейсы…", "Loading cases…"))}</div>`;
+    renderCaseWins();
+    return;
+  }
   grid.innerHTML = CASES_CATALOG.map((c) => {
     const ps = casePosterStyle(c);
     return `
@@ -11274,29 +11256,22 @@ function renderCasesScreen() {
   renderCaseWins();
 }
 
-// ===================== КЕЙСЫ: СОЛО И PvP (ТЕСТОВЫЙ РЕЖИМ) =====================
-// Соло: игрок платит цену кейса и получает один приз.
-// PvP: игроки вместе собирают цену кейса долями. Когда кейс собран, он
-// открывается, и круг по долям выбирает, кому достаётся выпавший приз.
-// Комиссии нет: платформа зарабатывает только на том, что средний приз
-// кейса меньше его цены (возврат ≈ 90%), одинаково в соло и в PvP.
-// Сейчас всё считается на клиенте: баланс не списывается, соперники — боты.
-// Когда появится серверная часть, приз и победителя должен выбирать сервер,
-// а этот блок будет только показывать готовый результат.
+// ===================== КЕЙСЫ: СОЛО И PvP (ЧЕРЕЗ СЕРВЕР) =====================
+// Всё решает сервер (cases.js): списывает цену, разыгрывает приз, выбирает
+// победителя PvP и начисляет выигрыш. Здесь только показ готового результата.
+// Соло: cases:open → сервер сразу возвращает призы, лента крутится к ним.
+// PvP: cases:pvp:watch — подписка на раунд кейса, cases:pvp:join — вложить долю,
+// cases:pvp:state — состояние раунда (игроки, доли, таймер, приз и победитель).
 const CASE_PLAY_CONFIG = {
-  pvpFundMs: 60000,        // сколько ждём, пока кейс соберут; не собрали — возврат
-  pvpStartDelayMs: 3000,   // пауза между «кейс собран» и открытием
-  pvpMaxShare: 0.75,       // максимум доли одного игрока (чтобы игроков было ≥2)
+  pvpFundMs: 60000,        // сколько ждём, пока кейс соберут; не собрали — возврат (решает сервер)
+  pvpMaxShare: 0.75,       // максимум доли одного игрока
   pvpMinShare: 0.05,       // минимальная доля
   pvpShareChips: [0.1, 0.25, 0.5],
-  // Ограничения по числу игроков нет: раунд стартует, когда собрана сумма кейса.
   reelMs: 5200,
   reelStaggerMs: 1000,     // соло на 2–3 кейса: стартуют вместе, каждая следующая останавливается на 1 с позже
   wheelMs: 5600
 };
 
-const PVP_CASE_BOT_NAMES = ["Bobr_Max", "lazerkot", "TonHunter", "mira", "Zub", "nord", "Kesha"];
-const PVP_CASE_BOT_SHARES = [0.05, 0.1, 0.1, 0.15, 0.2, 0.25, 0.3];
 const PVP_CASE_COLORS = ["#75f59c", "#5fa8ff", "#ff7a59", "#c47bff", "#ffd86b", "#2de1ff",
   "#ff5cc8", "#9dff5c", "#ff9f40", "#7b8cff", "#ff5a7a", "#4dffd2"];
 
@@ -11313,23 +11288,26 @@ const pvpCase = {
   open: false,
   mode: "solo",       // solo | pvp
   caseId: null,
-  phase: "idle",      // solo: idle | chest | result; pvp: idle | funding | ready | chest | wheel | result | refunded
+  phase: "idle",      // solo: idle | chest | result; pvp: idle | funding | ready | chest | wheel | result | refunded | live
+  roundId: null,
   players: [],
   selectedShare: 0.25,
   fundEndsAt: 0,
   startAt: 0,
-  prize: null,        // { value, chance, tier, isGift }
+  prize: null,        // { value, chance, tier, isGift, gift }
   prizes: [],         // соло: призы всех открытых сразу кейсов (1–3)
   soloCount: 1,       // соло: сколько кейсов открыть за раз
   winnerId: null,
   oddsOpen: false,
+  busy: false,        // ждём ответа сервера
+  animating: false,   // крутится лента или круг — новые состояния с сервера не сбивают показ
   timers: [],
   ticker: null,
   raf: null
 };
 
 function pvpCaseRandom() {
-  // Равномерное число [0, 1). crypto даёт распределение лучше, чем Math.random.
+  // Только для анимации (карточки-заполнители ленты, место остановки). Исход решает сервер.
   try {
     const buf = new Uint32Array(1);
     crypto.getRandomValues(buf);
@@ -11414,16 +11392,38 @@ function currentCase() {
 }
 
 function caseItems(caseDef) {
-  // [стоимость, шанс] → объекты; tier — номер строки по возрастанию стоимости.
+  // Призы кейса по возрастанию суммы; tier — номер строки (цвет редкости).
+  if (!caseDef || !Array.isArray(caseDef.items)) return [];
   return caseDef.items
-    .map(([value, chance]) => ({ value, chance }))
+    .map((it) => ({
+      value: Number(it.value),
+      chance: Number(it.chance),
+      gift: it.kind === "gift" && it.gift ? it.gift : null
+    }))
     .sort((a, b) => a.value - b.value)
     .map((item, index, list) => ({
       value: item.value,
       chance: item.chance,
       tier: Math.round((index / Math.max(1, list.length - 1)) * (CASE_TIER_COLORS.length - 1)),
-      isGift: item.value >= CASE_GIFT_MIN_VALUE
+      isGift: !!item.gift,
+      gift: item.gift
     }));
+}
+
+// Приз от сервера ({ kind, value, gift }) → предмет для показа (с цветом редкости).
+function casePrizeToItem(caseId, prize) {
+  const items = caseItems(getCaseById(caseId));
+  const isGift = !!(prize && prize.kind === "gift" && prize.gift);
+  const value = Number(prize && prize.value) || 0;
+  const match = items.find((it) => it.value === value && it.isGift === isGift)
+    || items.find((it) => it.value === value) || null;
+  return {
+    value,
+    chance: match ? match.chance : 0,
+    tier: match ? match.tier : 0,
+    isGift,
+    gift: isGift ? prize.gift : null
+  };
 }
 
 function caseTierColor(item) {
@@ -11458,12 +11458,15 @@ function pvpCaseBettingOpen() {
 function pvpCaseResetRound() {
   pvpCaseClearTimers();
   pvpCase.phase = "idle";
+  pvpCase.roundId = null;
   pvpCase.players = [];
   pvpCase.fundEndsAt = 0;
   pvpCase.startAt = 0;
   pvpCase.prize = null;
   pvpCase.prizes = [];
   pvpCase.winnerId = null;
+  pvpCase.busy = false;
+  pvpCase.animating = false;
 }
 
 function openCaseRound(caseId, mode) {
@@ -11482,6 +11485,7 @@ function openCaseRound(caseId, mode) {
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
   pvpCaseRenderAll();
+  if (mode === "pvp") pvpCaseWatch(caseId);
 }
 
 function openCaseSolo(caseId, event) {
@@ -11496,6 +11500,7 @@ function openCasePvp(caseId, event) {
 
 function closePvpCase() {
   const overlay = document.getElementById("pvpCaseOverlay");
+  if (pvpCase.mode === "pvp") pvpCaseUnwatch();
   pvpCase.open = false;
   pvpCaseResetRound();
   if (!overlay) return;
@@ -11509,24 +11514,52 @@ function pvpCaseRestart() {
   openCaseRound(pvpCase.caseId, pvpCase.mode);
 }
 
+// Ответ сервера не пришёл (обрыв связи) — через 12 с снова даём нажать кнопку.
+function pvpCaseBusyGuard() {
+  pvpCaseLater(() => {
+    if (!pvpCase.busy) return;
+    pvpCase.busy = false;
+    pvpCaseRenderControls();
+  }, 12000);
+}
+
+function pvpCaseShowError(res, ru, en) {
+  const text = (res && res.error) || L(ru, en);
+  if (typeof showTopToast === "function") showTopToast(escapeHtml(text));
+}
+
 // ---------- соло ----------
 
 function caseSoloOpen() {
-  if (pvpCase.mode !== "solo" || pvpCase.phase !== "idle") return;
-  // Сколько кейсов открываем (1–3): каждый — отдельный честный розыгрыш по
-  // шансам кейса, и под каждый своя лента. Цена = цена кейса × количество.
-  const items = caseItems(currentCase());
+  if (pvpCase.mode !== "solo" || pvpCase.phase !== "idle" || pvpCase.busy) return;
+  if (typeof _socket === "undefined" || !_socket) return;
+  const caseId = pvpCase.caseId;
   const count = Math.min(3, Math.max(1, pvpCase.soloCount || 1));
-  pvpCase.prizes = Array.from({ length: count }, () => caseAttachGift(pvpCasePick(items, (item) => item.chance)));
-  pvpCase.prize = pvpCase.prizes[0];
-  pvpCase.phase = "chest";
-  pvpCaseRenderAll();
-  pvpCaseSpinReel(() => {
-    pvpCaseLater(() => {
-      pvpCase.phase = "result";
-      pvpCase.prizes.forEach((prize) => caseWinsAdd(pvpCase.caseId, prize, "solo"));
-      pvpCaseRenderAll();
-    }, 900);
+  pvpCase.busy = true;
+  pvpCaseRenderControls();
+  pvpCaseBusyGuard();
+  const me = getCurrentPlayer();
+  _socket.emit("cases:open", { caseId, count, avatar: me.avatar || null }, (res) => {
+    if (!pvpCase.open || pvpCase.caseId !== caseId || pvpCase.mode !== "solo") return;
+    pvpCase.busy = false;
+    if (!res || !res.ok || !Array.isArray(res.prizes) || !res.prizes.length) {
+      pvpCaseShowError(res, "Не удалось открыть кейс", "Couldn't open the case");
+      pvpCaseRenderControls();
+      return;
+    }
+    // Каждый кейс — отдельный розыгрыш на сервере, под каждый своя лента.
+    pvpCase.prizes = res.prizes.map((p) => casePrizeToItem(caseId, p));
+    pvpCase.prize = pvpCase.prizes[0];
+    pvpCase.phase = "chest";
+    pvpCase.animating = true;
+    pvpCaseRenderAll();
+    pvpCaseSpinReel(() => {
+      pvpCaseLater(() => {
+        pvpCase.animating = false;
+        pvpCase.phase = "result";
+        pvpCaseRenderAll();
+      }, 900);
+    });
   });
 }
 
@@ -11536,7 +11569,7 @@ function pvpCaseSelectSoloCount(count) {
   pvpCaseRenderControls();
 }
 
-// ---------- PvP: сбор кейса долями ----------
+// ---------- PvP: сбор кейса долями (через сервер) ----------
 
 function pvpCaseShareAmount(share) {
   const caseDef = currentCase();
@@ -11549,11 +11582,6 @@ function pvpCaseSelectStake(share) {
   pvpCaseRenderControls();
 }
 
-function pvpCaseAddPlayer(player) {
-  player.color = pvpCasePlayerColor(pvpCase.players.length);
-  pvpCase.players.push(player);
-}
-
 function pvpCaseSelectedAmount() {
   // selectedShare = 1 означает «весь остаток, сколько можно».
   const room = pvpCaseMyRoom();
@@ -11561,87 +11589,107 @@ function pvpCaseSelectedAmount() {
   return pvpCaseMoney(Math.min(wanted, room));
 }
 
+function pvpCaseWatch(caseId) {
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("cases:pvp:watch", { caseId }, (res) => {
+    if (res && res.ok && res.state) pvpCaseApplyServerState(res.state);
+  });
+}
+
+function pvpCaseUnwatch() {
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("cases:pvp:unwatch", {});
+}
+
+function pvpCaseEnsureTicker() {
+  if (!pvpCase.ticker) pvpCase.ticker = setInterval(pvpCaseTick, 200);
+}
+
+// Состояние раунда с сервера. Пока крутится лента или круг, а также на экране
+// итога, новые состояния не применяем: итог уже известен, следующий раунд
+// игрок увидит по кнопке «Ещё раунд».
+function pvpCaseApplyServerState(state) {
+  if (!state || !pvpCase.open || pvpCase.mode !== "pvp" || state.caseId !== pvpCase.caseId) return;
+  if (pvpCase.animating || pvpCase.phase === "chest" || pvpCase.phase === "wheel") return;
+  if (pvpCase.phase === "result" || pvpCase.phase === "refunded") return;
+
+  casesServerOffset = Number(state.serverTime || Date.now()) - Date.now();
+  const toLocal = (t) => (t ? Number(t) - casesServerOffset : 0);
+  const myId = String(getCurrentPlayer().id || "");
+  pvpCase.roundId = state.roundId || null;
+  pvpCase.players = (state.players || []).map((p, i) => ({
+    id: String(p.playerId),
+    name: p.name || L("Игрок", "Player"),
+    avatar: p.avatar || null,
+    stake: Number(p.stake) || 0,
+    isMe: String(p.playerId) === myId,
+    color: pvpCasePlayerColor(i)
+  }));
+  pvpCase.fundEndsAt = toLocal(state.fundEndsAt);
+  pvpCase.startAt = toLocal(state.startAt);
+  pvpCase.winnerId = state.winnerId ? String(state.winnerId) : null;
+  pvpCase.prize = state.prize ? casePrizeToItem(pvpCase.caseId, state.prize) : null;
+
+  const phase = String(state.phase || "idle");
+  if (phase === "ready") {
+    const wait = pvpCase.startAt - Date.now();
+    if (wait > 300) {
+      pvpCase.phase = "ready";
+      pvpCaseEnsureTicker();
+      pvpCaseLater(pvpCaseStartChest, wait);
+    } else {
+      // Зашли, когда розыгрыш уже идёт: ждём итог без анимации.
+      pvpCase.phase = "live";
+    }
+  } else if (phase === "funding") {
+    pvpCase.phase = "funding";
+    pvpCaseEnsureTicker();
+  } else if (phase === "result" || phase === "refunded") {
+    pvpCase.phase = phase;
+  } else {
+    pvpCase.phase = "idle";
+  }
+  pvpCaseRenderAll();
+}
+
 function pvpCaseJoin() {
-  if (!pvpCaseBettingOpen()) return;
+  if (!pvpCaseBettingOpen() || pvpCase.busy) return;
+  if (typeof _socket === "undefined" || !_socket) return;
   const amount = pvpCaseSelectedAmount();
   if (amount <= 0) return;
-
-  const me = pvpCaseMe();
-  if (me) {
-    me.stake = pvpCaseMoney(me.stake + amount);
-  } else {
-    const current = getCurrentPlayer();
-    pvpCaseAddPlayer({ id: "me", name: current.name || L("Игрок", "Player"), avatar: current.avatar || null, stake: amount, isMe: true });
-  }
-
-  if (pvpCase.phase === "idle") {
-    pvpCase.phase = "funding";
-    pvpCase.fundEndsAt = Date.now() + CASE_PLAY_CONFIG.pvpFundMs;
-    pvpCase.ticker = setInterval(pvpCaseTick, 200);
-    pvpCaseLater(pvpCaseBotJoin, 1500 + pvpCaseRandom() * 2000);
-  }
-  pvpCaseCheckFunded();
-  pvpCaseRenderAll();
-}
-
-function pvpCaseBotJoin() {
-  if (pvpCase.phase !== "funding") return;
-  const caseDef = currentCase();
-  const remaining = pvpCaseRemaining();
-  if (!caseDef || remaining <= 0) return;
-
-  const used = new Set(pvpCase.players.map((p) => p.name));
-  const names = PVP_CASE_BOT_NAMES.filter((n) => !used.has(n));
-  // Игроков сколько угодно. Если тестовые имена кончились — имя с номером.
-  let name = names.length ? names[Math.floor(pvpCaseRandom() * names.length)] : "";
-  while (!name || used.has(name)) name = "Bobr_" + (100 + Math.floor(pvpCaseRandom() * 900));
-  const share = PVP_CASE_BOT_SHARES[Math.floor(pvpCaseRandom() * PVP_CASE_BOT_SHARES.length)];
-  let stake = Math.min(pvpCaseMoney(caseDef.price * share), remaining, pvpCaseMoney(caseDef.price * CASE_PLAY_CONFIG.pvpMaxShare));
-  // Не оставляем «хвост» меньше минимальной доли — его никто не сможет закрыть.
-  const minShare = pvpCaseMoney(caseDef.price * CASE_PLAY_CONFIG.pvpMinShare);
-  if (remaining - stake < minShare) stake = remaining;
-  stake = pvpCaseMoney(stake);
-  if (stake <= 0) return;
-
-  pvpCaseAddPlayer({ id: "bot_" + name, name, stake, isMe: false });
-  if (!pvpCaseCheckFunded()) {
-    pvpCaseLater(pvpCaseBotJoin, 1500 + pvpCaseRandom() * 2500);
-  }
-  pvpCaseRenderAll();
-}
-
-function pvpCaseCheckFunded() {
-  if (pvpCase.phase !== "funding" || pvpCaseRemaining() > 0) return false;
-  // Кейс собран: оба исхода (приз и победитель) определяются сейчас,
-  // анимации ниже только показывают уже готовый результат.
-  const items = caseItems(currentCase());
-  pvpCase.prize = caseAttachGift(pvpCasePick(items, (item) => item.chance));
-  pvpCase.winnerId = pvpCasePick(pvpCase.players, (p) => p.stake).id;
-  pvpCase.phase = "ready";
-  pvpCase.startAt = Date.now() + CASE_PLAY_CONFIG.pvpStartDelayMs;
-  pvpCaseLater(pvpCaseStartChest, CASE_PLAY_CONFIG.pvpStartDelayMs);
-  return true;
+  pvpCase.busy = true;
+  pvpCaseRenderControls();
+  pvpCaseBusyGuard();
+  const me = getCurrentPlayer();
+  const caseId = pvpCase.caseId;
+  _socket.emit("cases:pvp:join", { caseId, amount, avatar: me.avatar || null }, (res) => {
+    if (!pvpCase.open || pvpCase.caseId !== caseId || pvpCase.mode !== "pvp") return;
+    pvpCase.busy = false;
+    if (!res || !res.ok) {
+      pvpCaseShowError(res, "Не удалось вложить долю", "Couldn't add your share");
+      pvpCaseRenderControls();
+      return;
+    }
+    if (res.state) pvpCaseApplyServerState(res.state);
+    else pvpCaseRenderControls();
+  });
 }
 
 function pvpCaseTick() {
   if (!pvpCase.open) return;
-  if (pvpCase.phase === "funding" && Date.now() >= pvpCase.fundEndsAt) {
-    // Не собрали за отведённое время — все доли возвращаются.
-    pvpCaseClearTimers();
-    pvpCase.phase = "refunded";
-    pvpCaseRenderAll();
-    return;
-  }
   if (pvpCase.phase !== "funding" && pvpCase.phase !== "ready") {
     clearInterval(pvpCase.ticker);
     pvpCase.ticker = null;
+    return;
   }
   pvpCaseRenderStats();
   if (pvpCase.phase === "ready") pvpCaseRenderStage();
 }
 
 function pvpCaseStartChest() {
+  if (!pvpCase.open || pvpCase.phase !== "ready" || !pvpCase.prize) return;
   pvpCase.phase = "chest";
+  pvpCase.animating = true;
   pvpCaseRenderAll();
   pvpCaseSpinReel(() => {
     pvpCaseLater(pvpCaseStartWheel, 1600);
@@ -11789,7 +11837,7 @@ function pvpCaseStartWheel() {
       // Короткая пауза на остановившемся круге, потом итог.
       pvpCaseLater(() => {
         pvpCase.phase = "result";
-        caseWinsAdd(pvpCase.caseId, pvpCase.prize, "pvp");
+        pvpCase.animating = false;
         pvpCaseRenderAll();
       }, 700);
     });
@@ -11806,7 +11854,7 @@ function pvpCaseRenderAll() {
     title.textContent = L(caseDef.ru, caseDef.en) + " · " + (pvpCase.mode === "pvp" ? "PvP" : L("Соло", "Solo"));
   }
   const badge = document.getElementById("pvpcBadge");
-  if (badge) badge.textContent = L("ТЕСТ", "TEST");
+  if (badge) badge.style.display = "none";
   pvpCaseRenderStats();
   pvpCaseRenderStage();
   pvpCaseRenderPlayers();
@@ -11947,6 +11995,12 @@ function pvpCaseRenderStage() {
     return;
   }
 
+  if (phase === "live") {
+    pvpCaseStagePoster(el, false, `
+      <div class="pvpc-stage-main">${escapeHtml(L("Идёт розыгрыш", "Draw in progress"))}</div>
+      <div class="pvpc-stage-sub">${escapeHtml(L("Кейс уже открывают — дождись итога или вложись в следующий раунд.", "The case is being opened — wait for the result or join the next round."))}</div>`);
+    return;
+  }
   if (phase === "refunded") {
     pvpCaseStagePoster(el, false, `
       <div class="pvpc-stage-main">${escapeHtml(L("Кейс не собран", "The case wasn't funded"))}</div>
@@ -11957,9 +12011,9 @@ function pvpCaseRenderStage() {
   if (pvpCase.mode === "solo") {
     pvpCaseStagePoster(el, false, `
       <div class="pvpc-stage-main">${escapeHtml(caseName)}</div>
-      <div class="pvpc-stage-sub">${escapeHtml(L(
-        `Каждое открытие — гарантированный приз: NFT-подарок или GRAM на баланс.`,
-        `Every opening is a guaranteed prize: an NFT gift or GRAM to your balance.`))}</div>`);
+      <div class="pvpc-stage-sub">${escapeHtml(caseDef.black
+        ? L(`Каждое открытие — гарантированный NFT-подарок на чёрном фоне.`, `Every opening is a guaranteed NFT gift on a black backdrop.`)
+        : L(`Каждое открытие — гарантированный приз: NFT-подарок или GRAM на баланс.`, `Every opening is a guaranteed prize: an NFT gift or GRAM to your balance.`))}</div>`);
     return;
   }
 
@@ -12026,13 +12080,12 @@ function pvpCaseToggleOdds() {
   pvpCaseRenderOdds();
 }
 
-// Какие подарки могут выпасть на эту сумму: до четырёх коллекций с картинкой.
+// Какой подарок выпадет на эту сумму: конкретный NFT из слота кейса.
 function pvpCaseOddsGiftsHtml(item) {
-  if (!item.isGift) return "";
-  const list = caseGiftCandidates(item.value);
-  if (!list.length) return "";
-  return `<div class="pvpc-odds-gifts">${list.map((g) => `
-    <span class="pvpc-odds-gift">${caseGiftThumbHtml(g, "pvpc-odds-gift-img")}${escapeHtml(g.name)}</span>`).join("")}</div>`;
+  if (!item.gift) return "";
+  const g = item.gift;
+  return `<div class="pvpc-odds-gifts">
+    <span class="pvpc-odds-gift">${caseGiftThumbHtml(g, "pvpc-odds-gift-img")}${escapeHtml(g.name)} #${escapeHtml(String(g.number || ""))}</span></div>`;
 }
 
 function pvpCaseRenderOdds() {
@@ -12052,8 +12105,8 @@ function pvpCaseRenderOdds() {
     </div>`).join("");
   el.innerHTML = rows + `
     <div class="pvpc-odds-note">${escapeHtml(L(
-      `Средний возврат кейса — ${pvpCaseFmt(ev / caseDef.price * 100)}% цены. Призы от ${pvpCaseFmt(CASE_GIFT_MIN_VALUE)} GRAM выдаются подарком, дешевле — GRAM на баланс. В PvP шансы кейса те же, а приз достаётся одному игроку по долям.`,
-      `Average return: ${pvpCaseFmt(ev / caseDef.price * 100)}% of the price. Prizes from ${pvpCaseFmt(CASE_GIFT_MIN_VALUE)} GRAM are gifts, cheaper ones go to balance. In PvP the case odds are the same and one player takes the prize by share.`))}</div>`;
+      `Средний возврат кейса — ${pvpCaseFmt(ev / caseDef.price * 100)}% цены. Подарок — конкретный NFT с Fragment; если его цена сильно изменится, его заменят похожим по цене. В PvP шансы кейса те же, а приз достаётся одному игроку по долям.`,
+      `Average return: ${pvpCaseFmt(ev / caseDef.price * 100)}% of the price. A gift is a specific NFT from Fragment; if its price changes a lot, it is replaced with a similar one. In PvP the case odds are the same and one player takes the prize by share.`))}</div>`;
 }
 
 function pvpCaseRenderControls() {
@@ -12069,8 +12122,7 @@ function pvpCaseRenderControls() {
   if (pvpCase.phase === "result" || pvpCase.phase === "refunded") {
     const again = pvpCase.mode === "solo" ? L("Открыть ещё", "Open again") : L("Ещё раунд", "Play again");
     el.innerHTML = `
-      <button type="button" class="pvpc-main-btn" onclick="pvpCaseRestart()">${escapeHtml(again)}</button>
-      ${testHint("Тестовый режим: GRAM не списываются и не начисляются.", "Test mode: GRAM is neither charged nor credited.")}`;
+      <button type="button" class="pvpc-main-btn" onclick="pvpCaseRestart()">${escapeHtml(again)}</button>`;
     return;
   }
 
@@ -12085,10 +12137,9 @@ function pvpCaseRenderControls() {
       : L(`Открыть за ${cost} GRAM`, `Open for ${cost} GRAM`);
     el.innerHTML = `
       <div class="pvpc-chips pvpc-chips-3">${countChips}</div>
-      <button type="button" class="pvpc-main-btn" ${idle ? "" : "disabled"} onclick="caseSoloOpen()">${escapeHtml(idle
+      <button type="button" class="pvpc-main-btn" ${idle && !pvpCase.busy ? "" : "disabled"} onclick="caseSoloOpen()">${escapeHtml(idle && !pvpCase.busy
         ? openLabel
-        : L("Открываем…", "Opening…"))}</button>
-      ${testHint("Тестовый режим: GRAM не списываются.", "Test mode: GRAM is not charged.")}`;
+        : L("Открываем…", "Opening…"))}</button>`;
     return;
   }
 
@@ -12116,10 +12167,10 @@ function pvpCaseRenderControls() {
 
   el.innerHTML = `
     <div class="pvpc-chips">${chips}</div>
-    <button type="button" class="pvpc-main-btn" ${open && amount > 0 ? "" : "disabled"} onclick="pvpCaseJoin()">${escapeHtml(label)}</button>
+    <button type="button" class="pvpc-main-btn" ${open && amount > 0 && !pvpCase.busy ? "" : "disabled"} onclick="pvpCaseJoin()">${escapeHtml(label)}</button>
     ${testHint(
-      `Тестовый режим: GRAM не списываются, соперники — боты. Доля одного игрока до ${Math.round(CASE_PLAY_CONFIG.pvpMaxShare * 100)}% цены. Не собрали за ${Math.round(CASE_PLAY_CONFIG.pvpFundMs / 1000)} с — доли возвращаются.`,
-      `Test mode: GRAM is not charged, opponents are bots. One player's share is up to ${Math.round(CASE_PLAY_CONFIG.pvpMaxShare * 100)}% of the price. Not funded in ${Math.round(CASE_PLAY_CONFIG.pvpFundMs / 1000)} s — shares are returned.`)}`;
+      `Доля одного игрока — до ${Math.round(CASE_PLAY_CONFIG.pvpMaxShare * 100)}% цены. Не собрали за ${Math.round(CASE_PLAY_CONFIG.pvpFundMs / 1000)} с — доли возвращаются.`,
+      `One player's share is up to ${Math.round(CASE_PLAY_CONFIG.pvpMaxShare * 100)}% of the price. Not funded in ${Math.round(CASE_PLAY_CONFIG.pvpFundMs / 1000)} s — shares are returned.`)}`;
 }
 
 window.openCaseSolo = openCaseSolo;
@@ -12152,18 +12203,13 @@ function caseWinsAdd(caseId, item, mode) {
 }
 
 function caseWinsSeed() {
-  for (let i = 0; i < 12; i++) {
-    const caseDef = CASES_CATALOG[Math.floor(pvpCaseRandom() * CASES_CATALOG.length)];
-    const item = caseAttachGift(pvpCasePick(caseItems(caseDef), (it) => it.chance));
-    caseWins.items.push({
-      caseId: caseDef.id,
-      value: item.value,
-      tier: item.tier,
-      isGift: item.isGift,
-      gift: item.gift || null,
-      mode: pvpCaseRandom() < 0.5 ? "solo" : "pvp"
-    });
-  }
+  // Ленту заполняют настоящие выигрыши с сервера (cases:win) — тестовых записей больше нет.
+}
+
+// Выигрыш любого игрока с сервера: { caseId, mode, name, avatar, prize }.
+function caseWinFromServer(win) {
+  if (!win || !win.prize || !getCaseById(win.caseId)) return;
+  caseWinsAdd(win.caseId, casePrizeToItem(win.caseId, win.prize), win.mode === "pvp" ? "pvp" : "solo");
 }
 
 function caseWinItemHtml(win, extraClass) {
