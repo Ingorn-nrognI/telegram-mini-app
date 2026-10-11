@@ -2037,21 +2037,21 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 }
 .case-poster .cp-side-l {
   z-index: 6;
-  left: -2px; top: 84px;
+  left: -2px; top: 100px;
   width: 66px; height: 66px;
   transform: rotate(-8deg);
   filter: drop-shadow(0 0 8px var(--case-light)) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
 }
 .case-poster .cp-side-r {
   z-index: 6;
-  right: -4px; top: 88px;
+  right: -4px; top: 104px;
   width: 64px; height: 64px;
   transform: rotate(8deg);
   filter: drop-shadow(0 0 8px var(--case-light)) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
 }
 .case-poster .cp-hero {
   z-index: 7;
-  left: 50%; top: 10px;
+  left: 50%; top: 26px;
   width: 116px; height: 116px;
   margin-left: -58px;
   filter: drop-shadow(0 0 16px var(--case-light)) drop-shadow(0 12px 14px rgba(0, 0, 0, 0.5));
@@ -2060,7 +2060,7 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
 /* бегущая лента: все подарки, которые могут выпасть из кейса */
 .case-poster .cp-strip {
   z-index: 6;
-  left: 0; right: 0; top: 164px;
+  left: 0; right: 0; top: 180px;
   height: 46px;
   overflow: hidden;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
@@ -2077,7 +2077,16 @@ body.market-mode:not(.market-nav-hidden) .bottom-market-fab {
   flex: 0 0 auto;
   width: 38px; height: 38px;
   margin-right: 8px;
-  filter: drop-shadow(0 0 4px var(--case-light)) drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 0 10px -2px var(--case-light);
+}
+.case-poster .cp-strip-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 @keyframes cpStrip { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .case-poster .cp-rays {
@@ -11186,25 +11195,42 @@ function casePosterFxHtml(fx) {
 
 // Лента подарков кейса: список повторён дважды, трек едет на половину своей
 // ширины и начинает заново — получается бесконечная прокрутка без рывка.
+// Все подарки, которые реально могут выпасть из кейса: под каждую сумму-подарок
+// те же коллекции, что выбирает caseAttachGift (caseGiftCandidates), без повторов,
+// от дорогих к дешёвым.
+function caseGiftPool(caseDef) {
+  const seen = new Set();
+  const pool = [];
+  caseItems(caseDef).filter((item) => item.isGift).forEach((item) => {
+    caseGiftCandidates(item.value).forEach((g) => {
+      if (seen.has(g.slug)) return;
+      seen.add(g.slug);
+      pool.push(g);
+    });
+  });
+  return pool.sort((a, b) => b.price - a.price);
+}
+
 function casePosterStripHtml(gifts) {
   if (!gifts.length) return "";
   let row = gifts.slice();
   while (row.length < 6) row = row.concat(gifts);
-  const items = row.map((g) => `<div class="cp-model cp-strip-item">${caseArtModelHtml(g)}</div>`).join("");
+  // Картинка того самого NFT, который выпадает (как на ленте открытия и в шансах).
+  const items = row.map((g) => `<div class="cp-strip-item">${caseGiftThumbHtml(g, "cp-strip-img")}</div>`).join("");
   return `<div class="cp-strip"><div class="cp-strip-track" style="--strip-time:${row.length * 2}s">${items}${items}</div></div>`;
 }
 
 function casePosterHtml(caseDef) {
   const st = casePosterStyle(caseDef);
-  const { top, low } = caseArtGifts(caseDef);
+  const pool = caseGiftPool(caseDef);
   const model = (gift, cls) => gift ? `<div class="cp-model ${cls}">${caseArtModelHtml(gift)}</div>` : "";
   return `
     ${casePosterFxHtml(st.fx)}
     <div class="cp-fade"></div>
-    ${model(top[1], "cp-side-l")}
-    ${model(top[2], "cp-side-r")}
-    ${model(top[0], "cp-hero")}
-    ${casePosterStripHtml(top.concat(low))}`;
+    ${model(pool[1], "cp-side-l")}
+    ${model(pool[2], "cp-side-r")}
+    ${model(pool[0], "cp-hero")}
+    ${casePosterStripHtml(pool)}`;
 }
 
 function caseArtRefresh() {
@@ -11941,8 +11967,8 @@ function pvpCaseRenderStage() {
     pvpCaseStagePoster(el, false, `
       <div class="pvpc-stage-main">${escapeHtml(caseName)}</div>
       <div class="pvpc-stage-sub">${escapeHtml(L(
-        `Открой кейс за ${pvpCaseFmt(caseDef.price)} GRAM. Внутри подарки и GRAM, шансы — по кнопке «Шансы кейса».`,
-        `Open the case for ${pvpCaseFmt(caseDef.price)} GRAM. Gifts and GRAM inside; see "Case odds" for chances.`))}</div>`);
+        `Каждое открытие — гарантированный приз: NFT-подарок или GRAM на баланс. Все подарки и шансы — в «Шансы кейса».`,
+        `Every opening is a guaranteed prize: an NFT gift or GRAM to your balance. All gifts and odds are in "Case odds".`))}</div>`);
     return;
   }
 
@@ -11953,11 +11979,11 @@ function pvpCaseRenderStage() {
     const left = Math.max(0, Math.ceil((pvpCase.startAt - Date.now()) / 1000));
     sub = L(`Кейс собран! Открываем через ${left} с.`, `Case funded! Opening in ${left} s.`);
   } else if (phase === "funding") {
-    sub = L(`Осталось собрать ${pvpCaseFmt(pvpCaseRemaining())} GRAM. Чем больше твоя доля, тем выше шанс забрать приз.`,
-            `${pvpCaseFmt(pvpCaseRemaining())} GRAM left to fund. The bigger your share, the higher your chance to take the prize.`);
+    sub = L(`Осталось собрать ${pvpCaseFmt(pvpCaseRemaining())} GRAM. Добавь долю побольше — тем выше шанс, что приз заберёшь ты.`,
+            `${pvpCaseFmt(pvpCaseRemaining())} GRAM left to fund. Add a bigger share — the higher your chance to take the prize.`);
   } else {
-    sub = L("Скиньтесь на кейс вместе. Когда он собран, открываем его, а круг по долям решает, кому достанется приз.",
-            "Fund the case together. Once it's funded we open it, and the wheel picks who gets the prize by shares.");
+    sub = L("Скиньтесь на кейс вместе и сразитесь за его приз! Чем больше твоя доля, тем больше твой сектор на колесе.",
+            "Chip in on the case together and battle for its prize! The bigger your share, the bigger your slice of the wheel.");
   }
   pvpCaseStagePoster(el, phase === "ready", `
     <div class="pvpc-stage-main">${escapeHtml(pvpCaseFmt(funded) + " / " + pvpCaseFmt(caseDef.price) + " GRAM")}</div>
