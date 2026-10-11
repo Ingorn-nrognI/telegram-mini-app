@@ -2991,6 +2991,110 @@ html.no-animations .pvpc-stage-art.is-shaking {
   animation-duration: 0.5s !important;
   animation-iteration-count: infinite !important;
 }
+/* ===== Экран кейса в стиле постера: цвет и эффект кейса как на плитке ===== */
+.pvpc-overlay {
+  background:
+    radial-gradient(120% 45% at 50% 0%, var(--case-deep, #0c1a3a) 0%, rgba(5, 8, 19, 0) 70%),
+    linear-gradient(180deg, #07101f 0%, #050813 42%, #05070e 100%);
+}
+.pvpc-title {
+  font-size: 18px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--case-color, #ffffff);
+  text-shadow: 0 0 12px var(--case-color, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pvpc-overlay .pvpc-stat {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 0 var(--case-color, transparent);
+}
+.pvpc-overlay .pvpc-stage {
+  border: 2px solid var(--case-color, rgba(255, 255, 255, 0.08));
+  background: #0b0f22;
+  box-shadow: 0 0 22px -6px var(--case-color, transparent), var(--shadow-main);
+}
+.case-poster.is-stage {
+  width: 100%;
+  height: 262px;
+  margin: -10px 0 0;
+}
+.case-poster.is-stage .cp-hero {
+  top: 14px;
+  width: 150px; height: 150px;
+  margin-left: -75px;
+}
+.case-poster.is-stage .cp-side-l {
+  left: calc(50% - 165px);
+  top: 92px;
+  width: 92px; height: 92px;
+}
+.case-poster.is-stage .cp-side-r {
+  right: calc(50% - 165px);
+  top: 96px;
+  width: 88px; height: 88px;
+}
+.case-poster.is-stage .cp-strip {
+  top: 196px;
+  height: 54px;
+}
+.case-poster.is-stage .cp-strip-item {
+  width: 46px; height: 46px;
+  margin-right: 12px;
+}
+.case-poster.is-stage .cp-aurora {
+  width: 130%;
+}
+.case-poster.is-stage .cp-nebula {
+  left: -10%;
+  width: 120%;
+  height: 280px;
+}
+.case-poster.is-stage .cp-stars-2 {
+  left: 52%;
+}
+/* тряска перед стартом PvP — трясётся главный подарок; настройка «Анимация» её не выключает */
+.case-poster.is-shaking .cp-hero {
+  animation: pvpcShake 0.5s ease-in-out infinite;
+}
+html.no-animations .case-poster.is-shaking .cp-hero {
+  animation-duration: 0.5s !important;
+  animation-iteration-count: infinite !important;
+}
+.pvpc-stage-info {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.pvpc-overlay .pvpc-stage-main {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--case-color, #ffffff);
+  text-shadow: 0 0 12px var(--case-color, transparent);
+}
+.pvpc-overlay .pvpc-fund-fill {
+  background: linear-gradient(90deg, var(--case-color, #4fd97b), var(--case-light, #8dffb0));
+  box-shadow: 0 0 10px var(--case-color, transparent);
+}
+.pvpc-overlay .pvpc-controls {
+  background: rgba(11, 15, 34, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -8px 24px -12px var(--case-color, transparent);
+}
+.pvpc-overlay .pvpc-chip.active {
+  color: #ffffff;
+  border-color: var(--case-color, var(--accent));
+  box-shadow: inset 0 0 0 1px var(--case-color, var(--accent)), 0 0 14px -4px var(--case-color, var(--accent));
+}
+.pvpc-overlay .pvpc-odds-toggle {
+  color: var(--case-light, var(--blue-1));
+}
 /* Бегущая строка последних выигрышей над кейсами */
 .case-wins {
   position: relative;
@@ -11354,7 +11458,10 @@ function openCaseRound(caseId, mode) {
   pvpCase.caseId = caseId;
   pvpCase.mode = mode;
   pvpCase.open = true;
-  overlay.style.setProperty("--case-color", caseDef.color);
+  const ps = casePosterStyle(caseDef);
+  overlay.style.setProperty("--case-color", ps.a);
+  overlay.style.setProperty("--case-deep", ps.deep);
+  overlay.style.setProperty("--case-light", ps.light);
   overlay.classList.add("open");
   overlay.removeAttribute("aria-hidden");
   pvpCaseRenderAll();
@@ -11732,6 +11839,22 @@ function pvpCaseCaseIconHtml(shaking) {
   return `<div class="pvpc-stage-art ${shaking ? "is-shaking" : ""}"><div class="case-art" data-case-art="${caseDef.id}" style="--ribbon:${ribbon};">${caseArtHtml(caseDef)}</div></div>`;
 }
 
+// Сцена с большим постером кейса. Сцена перерисовывается часто (таймер PvP,
+// новые игроки), поэтому постер создаём один раз и дальше меняем только
+// текст под ним — иначе лента подарков и анимации каждый раз начинались бы заново.
+function pvpCaseStagePoster(el, shaking, infoHtml) {
+  const caseDef = currentCase();
+  const poster = el.querySelector(":scope > .case-poster.is-stage");
+  const info = el.querySelector(":scope > .pvpc-stage-info");
+  if (poster && info && poster.getAttribute("data-case-poster") === caseDef.id) {
+    poster.classList.toggle("is-shaking", !!shaking);
+    info.innerHTML = infoHtml;
+    return;
+  }
+  const st = casePosterStyle(caseDef);
+  el.innerHTML = `<div class="case-poster is-stage fx-${st.fx} ${shaking ? "is-shaking" : ""}" data-case-poster="${caseDef.id}">${casePosterHtml(caseDef)}</div><div class="pvpc-stage-info">${infoHtml}</div>`;
+}
+
 function pvpCaseRenderStage() {
   const el = document.getElementById("pvpcStage");
   const caseDef = currentCase();
@@ -11808,20 +11931,18 @@ function pvpCaseRenderStage() {
   }
 
   if (phase === "refunded") {
-    el.innerHTML = `
-      ${pvpCaseCaseIconHtml(false)}
+    pvpCaseStagePoster(el, false, `
       <div class="pvpc-stage-main">${escapeHtml(L("Кейс не собран", "The case wasn't funded"))}</div>
-      <div class="pvpc-stage-sub">${escapeHtml(L("Время вышло, все доли вернулись игрокам.", "Time is up, all shares were returned."))}</div>`;
+      <div class="pvpc-stage-sub">${escapeHtml(L("Время вышло, все доли вернулись игрокам.", "Time is up, all shares were returned."))}</div>`);
     return;
   }
 
   if (pvpCase.mode === "solo") {
-    el.innerHTML = `
-      ${pvpCaseCaseIconHtml(false)}
+    pvpCaseStagePoster(el, false, `
       <div class="pvpc-stage-main">${escapeHtml(caseName)}</div>
       <div class="pvpc-stage-sub">${escapeHtml(L(
         `Открой кейс за ${pvpCaseFmt(caseDef.price)} GRAM. Внутри подарки и GRAM, шансы — по кнопке «Шансы кейса».`,
-        `Open the case for ${pvpCaseFmt(caseDef.price)} GRAM. Gifts and GRAM inside; see "Case odds" for chances.`))}</div>`;
+        `Open the case for ${pvpCaseFmt(caseDef.price)} GRAM. Gifts and GRAM inside; see "Case odds" for chances.`))}</div>`);
     return;
   }
 
@@ -11838,11 +11959,10 @@ function pvpCaseRenderStage() {
     sub = L("Скиньтесь на кейс вместе. Когда он собран, открываем его, а круг по долям решает, кому достанется приз.",
             "Fund the case together. Once it's funded we open it, and the wheel picks who gets the prize by shares.");
   }
-  el.innerHTML = `
-    ${pvpCaseCaseIconHtml(phase === "ready")}
+  pvpCaseStagePoster(el, phase === "ready", `
     <div class="pvpc-stage-main">${escapeHtml(pvpCaseFmt(funded) + " / " + pvpCaseFmt(caseDef.price) + " GRAM")}</div>
     <div class="pvpc-fund"><div class="pvpc-fund-fill" style="width:${percent.toFixed(1)}%;"></div></div>
-    <div class="pvpc-stage-sub">${escapeHtml(sub)}</div>`;
+    <div class="pvpc-stage-sub">${escapeHtml(sub)}</div>`);
 }
 
 function pvpCaseRenderPlayers() {
