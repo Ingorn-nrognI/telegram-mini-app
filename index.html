@@ -6975,6 +6975,36 @@ html.no-animations *::after {
    дорогая часть кадра (размытие большой области пересчитывается каждый кадр). */
 .referral-fx-lite .master-level-card .mlc-rays { filter: none; }
 
+/* ===== Моделька подарка за уровень в круге карточки ===== */
+.level-gift {
+  position: absolute;
+  left: -34px;
+  top: -34px;
+  width: 68px;
+  height: 68px;
+  z-index: 5;
+  pointer-events: none;
+}
+.level-gift img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.level-gift.is-given img {
+  filter: blur(2px) brightness(0.55);
+}
+.level-gift-status {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
 /* ===== Карточки уровней «Новичок» и «Работяга»: эффекты на canvas (пузырьки / частицы) ===== */
 .canvas-level-card {
   position: relative;
@@ -14278,6 +14308,46 @@ function startProLevelCards() {
   referralFxRegisterCards();
 }
 
+// Подарок за прохождение уровня: карточка по порядку -> ключ награды на сервере.
+const LEVEL_REWARD_BY_CARD = ["worker", "master", "pro", "pro_bonus"];
+let _levelRewards = [];
+
+function fetchLevelRewards() {
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("referral:rewards:request", {}, (res) => {
+    if (res && res.ok) {
+      _levelRewards = res.items || [];
+      applyLevelRewardBadges();
+    }
+  });
+}
+
+// Моделька подарка за уровень по порядку карточек. Показываем сразу,
+// от сервера берём только отметку, что подарок уже выдан.
+const LEVEL_REWARD_SLUG_BY_CARD = ["lolpop", "cupidcharm", "kissedfrog", "minioscar"];
+
+function applyLevelRewardBadges() {
+  const row = document.getElementById("referralLevelsRow");
+  if (!row) return;
+  const cards = row.children;
+  for (let i = 0; i < cards.length; i++) {
+    const slug = LEVEL_REWARD_SLUG_BY_CARD[i];
+    const origin = cards[i].querySelector(".clc-origin, .mlc-origin, .plc-origin");
+    if (!origin || !slug) continue;
+    const reward = _levelRewards.find((r) => r.key === LEVEL_REWARD_BY_CARD[i]);
+    const given = !!(reward && reward.given === true);
+    let el = origin.querySelector(".level-gift");
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "level-gift";
+      origin.appendChild(el);
+    }
+    el.classList.toggle("is-given", given);
+    el.innerHTML = `<img src="https://fragment.com/file/gifts/${slug}/thumb.webp" alt="" loading="lazy">`
+      + (given ? `<div class="level-gift-status">${L("Получено", "Received")}</div>` : "");
+  }
+}
+
 function renderReferralLevelCards(levels, turnover, levelKey) {
   const row = document.getElementById("referralLevelsRow");
   if (!row || !Array.isArray(levels) || !levels.length) return;
@@ -14391,6 +14461,7 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
   startProLevelCards();
   startMasterLevelCards();
   startCanvasLevelCards();
+  applyLevelRewardBadges();
 }
 
 function openReferralLevelsModal() {
@@ -14508,6 +14579,7 @@ async function renderReferralsScreen() {
     if (referralsResponse?.levels) {
       _lastReferralLevelsData = referralsResponse;
       renderReferralLevelCards(referralsResponse.levels, Number(referralsResponse.turnover || 0), referralsResponse.levelKey);
+      fetchLevelRewards();
       const earnedAmountEl = document.getElementById("referralEarnedAmount");
       if (earnedAmountEl && referralsResponse.unclaimedTotal != null) {
         earnedAmountEl.textContent = formatTon(referralsResponse.unclaimedTotal);
