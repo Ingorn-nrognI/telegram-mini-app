@@ -14355,7 +14355,7 @@ function renderReferralLevelCards(levels, turnover, levelKey) {
   row.innerHTML = levels.map((level, index) => {
     const nextLevel = levels[index + 1];
     const rangeStart = level.threshold;
-    const rangeEnd = nextLevel ? nextLevel.threshold : null; // у "Профи" верхней границы нет
+    const rangeEnd = nextLevel ? nextLevel.threshold : 300000; // у "Профи" граница — порог подарка 300 000
 
     let percent;
     let currentValueInRange;
