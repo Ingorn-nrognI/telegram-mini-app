@@ -11059,6 +11059,7 @@ function casesBindSocket() {
   _socket.on("cases:win", (win) => caseWinFromServer(win));
   _socket.on("cases:pvp:state", (state) => pvpCaseApplyServerState(state));
   _socket.on("connect", () => {
+    caseWinsHistoryLoaded = false;
     loadCaseGiftPrices(true);
     if (pvpCase.open && pvpCase.mode === "pvp") pvpCaseWatch(pvpCase.caseId);
   });
@@ -11068,6 +11069,7 @@ function applyCasesConfig(res) {
   if (!res || !Array.isArray(res.cases)) return;
   CASES_CATALOG = res.cases;
   casesConfigLoadedAt = Date.now();
+  caseWinsLoadHistory();
   const grid = document.getElementById("casesGrid");
   if (grid && !grid.querySelector(".case-tile")) renderCasesScreen();
   else caseArtRefresh();
@@ -12302,6 +12304,35 @@ function caseWinsSeed() {
 function caseWinFromServer(win) {
   if (!win || !win.prize || !getCaseById(win.caseId)) return;
   caseWinsAdd(win.caseId, casePrizeToItem(win.caseId, win.prize), win.mode === "pvp" ? "pvp" : "solo");
+}
+
+// История ленты с сервера: последние выигрыши всех игроков. Раньше лента жила
+// только в памяти приложения и после перезапуска была пустой.
+let caseWinsHistoryLoaded = false;
+function caseWinsLoadHistory() {
+  if (caseWinsHistoryLoaded || typeof _socket === "undefined" || !_socket) return;
+  caseWinsHistoryLoaded = true;
+  _socket.emit("cases:wins:request", { limit: CASE_WINS_MAX }, (res) => {
+    if (!res || !res.ok || !Array.isArray(res.items)) {
+      caseWinsHistoryLoaded = false;
+      return;
+    }
+    caseWins.items = res.items
+      .filter((w) => w && w.prize && getCaseById(w.caseId))
+      .map((w) => {
+        const item = casePrizeToItem(w.caseId, w.prize);
+        return {
+          caseId: w.caseId,
+          value: item.value,
+          tier: item.tier,
+          isGift: item.isGift,
+          gift: item.gift,
+          mode: w.mode === "pvp" ? "pvp" : "solo"
+        };
+      });
+    // Перерисовываем ленту; выигрыши, пришедшие за это время, выедут поверх.
+    renderCaseWins();
+  });
 }
 
 function caseWinItemHtml(win, extraClass) {
