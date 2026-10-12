@@ -9638,18 +9638,6 @@ function hideInsufficientBalanceModal(event) {
   }
 }
 
-function getScannerCommissionPercent(totalPot) {
-  const pot = Number(totalPot || 0);
-  if (pot < 0.2) return 15;
-  if (pot < 1) return 15;
-  if (pot < 5) return 12;
-  if (pot < 20) return 8;
-  if (pot < 50) return 6;
-  if (pot < 100) return 4;
-  if (pot < 200) return 3;
-  return 2;
-}
-
 function escapeCssUrl(value) {
   return String(value || "")
     .replace(/\\/g, "\\\\")
@@ -19455,7 +19443,7 @@ function saveScannerStakeSettings(event) {
   syncScannerStakeSettingsDraftFromInput();
 
   const values = scannerStakeSettingsState.draftValues.map((value) => normalizeStakeValue(value));
-  const invalidIndex = values.findIndex((value) => !Number.isFinite(value) || value <= 0);
+  const invalidIndex = values.findIndex((value) => !Number.isFinite(value) || value < 0.1);
   if (invalidIndex !== -1) {
     scannerStakeSettingsState.activeIndex = invalidIndex;
     renderScannerStakeSettings();
@@ -19464,7 +19452,7 @@ function saveScannerStakeSettings(event) {
       input.value = scannerStakeSettingsState.draftValues[invalidIndex] || "";
       input.focus({ preventScroll: true });
     }
-    setScannerStakeSettingsError(L("Каждая быстрая ставка должна быть числом больше 0.", "Each quick bet must be a number greater than 0."));
+    setScannerStakeSettingsError(L("Каждая быстрая ставка должна быть не меньше 0,1 GRAM.", "Each quick bet must be at least 0.1 GRAM."));
     return;
   }
 
@@ -23409,7 +23397,6 @@ window.updateScannerBetBarVisibility = updateScannerBetBarVisibility;
 window.forceScannerBetBarVisibilityRefresh = forceScannerBetBarVisibilityRefresh;
 window.hideInsufficientBalanceModal = hideInsufficientBalanceModal;
 window.showInsufficientBalanceModal = showInsufficientBalanceModal;
-window.getScannerCommissionPercent = getScannerCommissionPercent;
 window.processScannerRoundPayoutOnce = processScannerRoundPayoutOnce;
 window.isScannerBettingLocked = isScannerBettingLocked;
 window.setScannerPopulation = setScannerPopulation;
