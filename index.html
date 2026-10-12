@@ -7895,7 +7895,7 @@ html.no-animations *::after {
         <h2>🏆 Рейтинг</h2>
         <span class="closeBtn" onclick="closeLeaderboard()">✕</span>
       </div>
-      <div id="ratingModeTitle" style="font-size:20px; font-weight:800; letter-spacing:-0.02em; color:#ffffff; padding:0 14px; margin-top:8px;">Турниры</div>
+      <div id="ratingModeTitle" style="font-size:20px; font-weight:800; letter-spacing:-0.02em; color:#ffffff; padding:0 14px; margin-top:8px; text-align:center;">Турниры</div>
       <div style="padding:10px 14px;">
         <div class="tournament-tab-frame">
           <button class="tournament-tab active" data-tab="market" onclick="switchTournamentTab('market')">Market</button>
@@ -8169,7 +8169,7 @@ html.no-animations *::after {
 
   <div id="inventoryScreen" class="menu-screen">
     <div class="screen-inner">
-      <div class="market-subview-title">Инвентарь</div>
+      <div class="market-subview-title" style="text-align:center;">Инвентарь</div>
       <div id="inventoryTabsPill" style="display:flex; background:rgba(255,255,255,0.06); border-radius:999px; padding:4px; gap:4px;">
         <button type="button" id="inventoryTabGifts" class="inventory-tab-btn active" onclick="switchInventoryTab('gifts')">Подарки</button>
         <button type="button" id="inventoryTabOffers" class="inventory-tab-btn" onclick="switchInventoryTab('offers')">Офферы</button>
@@ -8203,15 +8203,11 @@ html.no-animations *::after {
 
   <div id="casesScreen" class="menu-screen">
     <div class="screen-inner">
-      <div id="casesTitle" class="market-subview-title">Кейсы</div>
-      <div id="caseWinsTicker" class="case-wins" aria-label="Последние выигрыши">
-        <div class="case-wins-live">LIVE</div>
-        <div class="case-wins-divider"></div>
-        <div class="case-wins-viewport">
-          <div id="caseWinsTrack" class="case-wins-track"></div>
-        </div>
+      <div id="casesTitle" class="market-subview-title" style="text-align:center;">Кейсы</div>
+      <div class="market-empty-state" style="min-height:55vh; flex-direction:column; gap:6px;">
+        <div style="font-size:22px; font-weight:800; color:#fff;">Скоро</div>
+        <div>Кейсы появятся в ближайшем обновлении</div>
       </div>
-      <div id="casesGrid" class="cases-grid"></div>
     </div>
   </div>
 
