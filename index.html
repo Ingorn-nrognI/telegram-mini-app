@@ -14488,15 +14488,19 @@ function openReferralLevelsModal() {
     return `${escapeHtml(displayName)} (${level.percent}%, ${rangeText} GRAM)`;
   }).join(" → ");
 
-  // Комиссия маркета по уровням и подарки за уровни — для текста ниже.
-  const marketFeeText = levels.map((level) => `${escapeHtml(L(level.name, level.nameEn))} — ${level.marketCommission}%`).join(", ");
+  // Подарки за уровни: моделька подарка + название + порог оборота.
   const rewardsSource = (Array.isArray(_levelRewards) && _levelRewards.length) ? _levelRewards : [
-    { name: "Lol Pop", threshold: 25000 },
-    { name: "Cupid Charm", threshold: 80000 },
-    { name: "Kissed Frog", threshold: 200000 },
-    { name: "Mini Oscar", threshold: 300000 }
+    { slug: "lolpop", name: "Lol Pop", threshold: 25000 },
+    { slug: "cupidcharm", name: "Cupid Charm", threshold: 80000 },
+    { slug: "kissedfrog", name: "Kissed Frog", threshold: 200000 },
+    { slug: "minioscar", name: "Mini Oscar", threshold: 300000 }
   ];
-  const rewardsText = rewardsSource.map((r) => `${escapeHtml(r.name)} — ${formatCompactNumber(r.threshold)} GRAM`).join(", ");
+  const rewardsText = rewardsSource.map((r) => {
+    const icon = r.slug
+      ? `<img src="https://fragment.com/file/gifts/${encodeURIComponent(r.slug)}/thumb.webp" alt="" loading="lazy" style="width:18px; height:18px; object-fit:contain; vertical-align:-4px; margin-right:4px;">`
+      : "";
+    return `<span style="white-space:nowrap;">${icon}${escapeHtml(r.name)}</span> — ${formatCompactNumber(r.threshold)} GRAM`;
+  }).join(", ");
 
   const points = [
     {
@@ -14505,14 +14509,9 @@ function openReferralLevelsModal() {
                "Copy your personal link above or send it with the \"Invite\" button. Anyone who opens the app for the first time through this link becomes your referral permanently.")
     },
     {
-      title: L("Процент с игр в Лазере", "Earnings from Laser games"),
-      text: L("Когда твой реферал выигрывает раунд в Лазере, приложение берёт комиссию с его выигрыша. Часть этой комиссии автоматически зачисляется тебе — без каких-либо действий с твоей стороны.",
-               "When your referral wins a Laser round, the app takes a commission from the winnings. A share of that commission is credited to you automatically — no action needed on your part.")
-    },
-    {
-      title: L("Процент с покупок на Market", "Earnings from Market purchases"),
-      text: L("Когда твой реферал покупает подарок на Market, маркет берёт комиссию со сделки. Твой процент с этой комиссии тоже зачисляется тебе автоматически.",
-               "When your referral buys a gift on the Market, the Market takes a commission from the deal. Your share of that commission is credited to you automatically as well.")
+      title: L("Процент с Арены и Market", "Earnings from the Arena and Market"),
+      text: L("Когда твой реферал выигрывает раунд в любой игре Арены, приложение берёт комиссию с этой игры. Когда он покупает подарок на Market (а в будущем — выигрывает аукцион), маркет берёт комиссию со сделки. Часть каждой такой комиссии автоматически зачисляется тебе — без каких-либо действий с твоей стороны.",
+               "When your referral wins a round in any Arena game, the app takes a commission from that game. When they buy a gift on the Market (and, in the future, win an auction), the Market takes a commission from the deal. A share of every such commission is credited to you automatically — no action needed on your part.")
     },
     {
       title: L("Уровни и процент", "Levels and percentage"),
@@ -14521,18 +14520,13 @@ function openReferralLevelsModal() {
     },
     {
       title: L("Что считается оборотом", "What counts as turnover"),
-      text: L("Оборот — это сумма всех ставок твоих рефералов в Лазере плюс полная стоимость подарков, которые они купили на Market. Продажи подарков в оборот не входят.",
-               "Turnover is the sum of all your referrals' bets in Laser plus the full price of gifts they bought on the Market. Gift sales are not counted.")
+      text: L("Оборот — это сумма всех ставок твоих рефералов в Арене плюс полная стоимость подарков, которые они купили на Market. Продажи подарков в оборот не входят.",
+               "Turnover is the sum of all your referrals' bets in the Arena plus the full price of gifts they bought on the Market. Gift sales are not counted.")
     },
     {
       title: L("Подарок за каждый уровень", "A gift for every level"),
-      text: L(`За прохождение каждого уровня ты получаешь NFT-подарок: ${rewardsText} оборота. Подарок показан в круге на карточке уровня. После короткой проверки он появится в твоём инвентаре, а на карточке появится надпись «Получено». Подарок можно оставить, продать на Market или вывести себе в Telegram. Каждый подарок выдаётся один раз.`,
-               `For completing each level you get an NFT gift: ${rewardsText} of turnover. The gift is shown in the circle on the level card. After a short check it appears in your inventory, and the card shows "Received". You can keep it, sell it on the Market or withdraw it to Telegram. Each gift is given once.`)
-    },
-    {
-      title: L("Скидка на комиссию Market", "Market fee discount"),
-      text: L(`«Ком. Маркет» на карточке — это комиссия, которую ты платишь, когда продаёшь свои подарки на Market. Чем выше твой уровень, тем она ниже: ${marketFeeText}.`,
-               `"Market fee" on the card is the commission you pay when you sell your gifts on the Market. The higher your level, the lower it is: ${marketFeeText}.`)
+      text: L(`За прохождение каждого уровня ты получаешь NFT-подарок: ${rewardsText} оборота. Подарок можно оставить, продать на Market, сделать им ставку в Арене или вывести себе в Telegram. Каждый подарок выдаётся один раз.`,
+               `For completing each level you get an NFT gift: ${rewardsText} of turnover. You can keep the gift, sell it on the Market, bet it in the Arena or withdraw it to Telegram. Each gift is given once.`)
     },
     {
       title: L("Вывод заработанного", "Claiming your earnings"),
