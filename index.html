@@ -5880,7 +5880,8 @@ body.market-filter-open .market-side-fab {
   display: flex;
   gap: 4px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(24, 29, 44, 0.97), rgba(12, 15, 25, 0.98));
+  z-index: 2;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.32), inset 0 0 0 1px rgba(255,255,255,0.02);
   backdrop-filter: blur(18px);
@@ -5895,7 +5896,7 @@ body.market-filter-open .market-side-fab {
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.5;
+  opacity: 0.8;
   transition: background 0.18s ease, opacity 0.18s ease;
 }
 .scanner-bet-mode-btn.active {
@@ -5973,6 +5974,10 @@ body.market-filter-open .market-side-fab {
 .scanner-bet-bar.is-betting-locked .scanner-bet-gift-card {
   opacity: 0.56;
   filter: grayscale(1);
+}
+.scanner-bet-bar,
+.scanner-bet-edit-fab {
+  border-radius: 22px;
 }
 
 @media (max-width: 420px) {
@@ -20446,18 +20451,16 @@ function updateScannerBetBarVisibility() {
     const navRect = bottomBar.getBoundingClientRect();
     const menuEl = document.getElementById("menu");
     const containerBottom = menuEl ? menuEl.getBoundingClientRect().bottom : window.innerHeight;
-    const gapAboveNav = 4;
-    // Стекло бара тянется до НИЗА главного меню: нижний край бара совпадает
-    // с нижним краем меню, а нижний отступ равен высоте меню + зазор, поэтому
-    // кнопки ставок остаются ровно на прежнем месте над меню.
-    const barBottom = Math.max(0, containerBottom - navRect.bottom);
-    const barBorderBottom = parseFloat(getComputedStyle(bar).borderBottomWidth) || 0;
-    const barPadBottom = Math.max(0, (containerBottom - navRect.top) + gapAboveNav - barBottom - barBorderBottom);
+    const gapAboveNav = 6;
+    // Бар и карандаш стоят целиком НАД главным меню и не заходят под него —
+    // раньше их стекло тянулось до низа меню и торчало по его краям.
+    const barBottom = Math.max(0, (containerBottom - navRect.top) + gapAboveNav);
+    const barPadTop = parseFloat(getComputedStyle(bar).paddingTop) || 9;
     bar.style.bottom = `${barBottom}px`;
-    bar.style.paddingBottom = `${barPadBottom}px`;
+    bar.style.paddingBottom = `${barPadTop}px`;
     if (editFab) {
       editFab.style.bottom = `${barBottom}px`;
-      editFab.style.paddingBottom = `${barPadBottom}px`;
+      editFab.style.paddingBottom = `${barPadTop}px`;
     }
   } else {
     bar.style.bottom = "";
