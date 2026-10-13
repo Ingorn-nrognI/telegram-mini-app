@@ -8351,6 +8351,7 @@ html.no-animations *::after {
     <button type="button" id="scannerBetBarQuick1" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(1, event)">10</button>
     <button type="button" id="scannerBetBarQuick2" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(2, event)">25</button>
     <button type="button" id="scannerBetBarAllIn" class="scanner-bet-btn scanner-bet-allin" onclick="setScannerAllInStake(event)">ва-банк</button>
+    <button type="button" id="scannerBetBarGifts" class="scanner-bet-btn" onclick="openArenaGiftPicker(event)" aria-label="Ставка подарками">🎁</button>
   </div>
   <div id="scannerBetBarEditFab" class="scanner-bet-edit-fab" onclick="event.stopPropagation()" aria-label="Бар ставок Сканера — настройка">
     <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="Настроить быстрые ставки">
@@ -14520,8 +14521,13 @@ function openReferralLevelsModal() {
     },
     {
       title: L("Что считается оборотом", "What counts as turnover"),
-      text: L("Оборот — это сумма всех ставок твоих рефералов в Арене плюс полная стоимость подарков, которые они купили на Market. Продажи подарков в оборот не входят.",
-               "Turnover is the sum of all your referrals' bets in the Arena plus the full price of gifts they bought on the Market. Gift sales are not counted.")
+      text: L("Оборот считается по Арене и Market. Арена: если реферал выиграл раунд — в оборот идёт сумма его выигрыша (чужие ставки без его собственной), если проиграл — вся его проигранная ставка. Подарки в ставке считаются по цене в GRAM. Market: полная цена подарков, которые реферал купил (комиссия в оборот не входит). Продажи подарков в оборот не входят.",
+               "Turnover counts the Arena and the Market. Arena: if your referral wins a round, the winnings count (other players' bets without their own); if they lose, their whole lost bet counts. Gifts in a bet are valued in GRAM. Market: the full price of gifts they bought (the fee is not included). Gift sales are not counted.")
+    },
+    {
+      title: L("Комиссия Market", "Market fee"),
+      text: L("Комиссию Market платит покупатель: она добавляется сверху к цене подарка, а продавец получает цену целиком. Чем выше твой реферальный уровень, тем меньше комиссия при твоих покупках: Новичок 1.5%, Работяга 1%, Мастер 1%, Профи 0.5%. Часть этой комиссии получает тот, кто тебя пригласил.",
+               "The Market fee is paid by the buyer: it is added on top of the gift price and the seller receives the full price. The higher your referral level, the lower the fee on your purchases: Novice 1.5%, Worker 1%, Master 1%, Pro 0.5%. A share of this fee goes to whoever invited you.")
     },
     {
       title: L("Подарок за каждый уровень", "A gift for every level"),
@@ -18257,6 +18263,8 @@ function initSocketConnection() {
   // Баланс приходит с сервера после каждой денежной операции.
   // Пока параллельно работает и Firestore-подписка; когда сервер
   // переедет на SQLite, останется только этот путь.
+  _socket.on("inventory:changed", () => { fetchInventoryGifts(); });
+
   _socket.on('balance:update', (data) => {
     const value = Number(data?.balance);
     if (Number.isFinite(value)) {
@@ -20199,6 +20207,11 @@ function renderScannerBetBar() {
   if (allInButton) {
     allInButton.disabled = shouldDisable;
     allInButton.classList.toggle("is-locked", bettingLocked);
+    const _giftsBtn = document.getElementById("scannerBetBarGifts");
+    if (_giftsBtn) {
+      _giftsBtn.disabled = shouldDisable;
+      _giftsBtn.classList.toggle("is-locked", bettingLocked);
+    }
   }
 
   requestScannerBetBarVisibilityUpdate();
@@ -23713,6 +23726,7 @@ const MARKET_BACK_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20"
 
 function fetchMarketListings() {
   if (typeof _socket === "undefined" || !_socket) return;
+  fetchMarketBuyerFee();
   _socket.emit("market:listings:request", {}, (res) => {
     if (res && res.ok) {
       MARKET_LISTINGS = res.items || [];
@@ -24347,11 +24361,12 @@ function renderMarketOfferForm(showForm) {
   if (!item) return;
   if (!showForm) {
     actionsEl.innerHTML = `
-      <button type="button" onclick="handleMarketGiftBuy()" style="width:100%; padding:16px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:15px; border:none; letter-spacing:0.02em;">КУПИТЬ ЗА ${item.price.toFixed(2)} GRAM</button>
+      <button type="button" onclick="handleMarketGiftBuy()" style="width:100%; padding:16px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:15px; border:none; letter-spacing:0.02em;">КУПИТЬ ЗА ${(item.price * (1 + MARKET_BUYER_FEE_PERCENT / 100)).toFixed(2)} GRAM</button>
+      <div style="text-align:center; font-size:12px; color:rgba(255,255,255,0.5);">${item.price.toFixed(2)} + ${L("комиссия", "fee")} ${MARKET_BUYER_FEE_PERCENT}%</div>
       <button type="button" onclick="handleMarketOfferButtonClick()" style="width:100%; padding:14px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:700; font-size:14px;">Отправить оффер</button>`;
   } else {
     actionsEl.innerHTML = `
-      <input id="marketOfferPriceInput" type="number" step="0.01" min="0.01" placeholder="Твоя цена в GRAM" style="width:100%; padding:14px; border-radius:16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:15px; box-sizing:border-box;">
+      <input id="marketOfferPriceInput" type="number" step="0.01" min="0.01" placeholder="Твоя цена в GRAM (+ комиссия ${MARKET_BUYER_FEE_PERCENT}% сверху)" style="width:100%; padding:14px; border-radius:16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:15px; box-sizing:border-box;">
       <div style="display:flex; gap:10px;">
         <button type="button" onclick="handleMarketGiftOfferSend()" style="flex:1; padding:14px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:700; font-size:15px; border:none;">Отправить</button>
         <button type="button" onclick="renderMarketOfferForm(false)" style="flex:1; padding:14px; border-radius:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; font-weight:700; font-size:15px;">Отмена</button>
@@ -24703,6 +24718,18 @@ function closeMarketGiftDetail(event) {
 }
 window.closeMarketGiftDetail = closeMarketGiftDetail;
 
+// Комиссию Market платит покупатель сверху цены; процент зависит от его реферального уровня.
+let MARKET_BUYER_FEE_PERCENT = 1.5;
+function fetchMarketBuyerFee() {
+  if (typeof _socket === "undefined" || !_socket) return;
+  _socket.emit("market:fee:request", {}, (res) => {
+    if (res && res.ok && Number.isFinite(Number(res.percent))) {
+      MARKET_BUYER_FEE_PERCENT = Number(res.percent);
+    }
+  });
+}
+window.fetchMarketBuyerFee = fetchMarketBuyerFee;
+
 function handleMarketGiftBuy() {
   const listingId = marketDetailListingId;
   if (!listingId || typeof _socket === "undefined" || !_socket) return;
@@ -24872,11 +24899,132 @@ function fetchInventoryGifts() {
   _socket.emit("inventory:request", {}, (res) => {
     if (res && res.ok) {
       INVENTORY_GIFTS = res.items || [];
+      if (document.getElementById("arenaGiftPickerOverlay")) setTimeout(renderArenaGiftPicker, 0);
       renderInventoryGifts();
       prefetchGiftAnimations(INVENTORY_GIFTS);
     }
   });
 }
+
+// ===== Ставка подарками в арене =====
+let arenaGiftPickedIds = [];
+
+function getArenaBettableGifts() {
+  return (INVENTORY_GIFTS || []).filter((g) => !g.hasActiveListing && !g.lockedInRound && Number(g.giftValue) > 0);
+}
+
+function closeArenaGiftPicker(event) {
+  if (event && event.stopPropagation) event.stopPropagation();
+  const el = document.getElementById("arenaGiftPickerOverlay");
+  if (el) el.remove();
+}
+window.closeArenaGiftPicker = closeArenaGiftPicker;
+
+function toggleArenaGiftPick(id) {
+  const i = arenaGiftPickedIds.indexOf(id);
+  if (i >= 0) arenaGiftPickedIds.splice(i, 1);
+  else arenaGiftPickedIds.push(id);
+  renderArenaGiftPicker();
+}
+window.toggleArenaGiftPick = toggleArenaGiftPick;
+
+function renderArenaGiftPicker() {
+  const list = document.getElementById("arenaGiftPickerList");
+  const totalEl = document.getElementById("arenaGiftPickerTotal");
+  const okBtn = document.getElementById("arenaGiftPickerOk");
+  if (!list || !totalEl || !okBtn) return;
+  const gifts = getArenaBettableGifts();
+  arenaGiftPickedIds = arenaGiftPickedIds.filter((id) => gifts.some((g) => g.id === id));
+  if (!gifts.length) {
+    list.innerHTML = `<div style="grid-column:1 / -1; padding:24px 8px; text-align:center; opacity:0.6; font-size:13px; line-height:1.45;">${L("Нет подарков для ставки. Подарки, выставленные на продажу или уже стоящие в раунде, здесь не показываются.", "No gifts to bet. Gifts listed for sale or already in a round are not shown here.")}</div>`;
+  } else {
+    list.innerHTML = gifts.map((g) => {
+      const picked = arenaGiftPickedIds.indexOf(g.id) >= 0;
+      const img = getGiftImageUrl(g);
+      return `<button type="button" onclick="toggleArenaGiftPick(${g.id})" style="display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 6px; border-radius:14px; background:${picked ? "rgba(138,124,255,0.22)" : "rgba(255,255,255,0.06)"}; border:2px solid ${picked ? "#8a7cff" : "rgba(255,255,255,0.12)"}; color:#fff;">
+        ${img ? `<img src="${img}" alt="" loading="lazy" style="width:64px; height:64px; object-fit:contain;">` : `<div style="width:64px; height:64px;"></div>`}
+        <div style="font-size:12px; font-weight:700; line-height:1.2; text-align:center;">${escapeHtml(g.giftTitle || g.giftType || "")} #${g.number}</div>
+        <div style="font-size:12px; opacity:0.75;">${Number(g.giftValue).toFixed(2)} GRAM</div>
+      </button>`;
+    }).join("");
+  }
+  const total = gifts.filter((g) => arenaGiftPickedIds.indexOf(g.id) >= 0).reduce((s, g) => s + Number(g.giftValue), 0);
+  totalEl.textContent = `${L("Ставка подарками", "Gift bet")}: ${total.toFixed(2)} GRAM`;
+  okBtn.disabled = !arenaGiftPickedIds.length;
+  okBtn.style.opacity = arenaGiftPickedIds.length ? "1" : "0.5";
+}
+
+function openArenaGiftPicker(event) {
+  if (event && event.stopPropagation) event.stopPropagation();
+  if (isScannerBettingLocked()) {
+    setScannerTransientMessage(L("Ставки заблокированы до окончания текущего раунда.", "Bets are locked until the current round ends."), { type: "info", timeoutMs: 5000 });
+    return;
+  }
+  closeArenaGiftPicker();
+  arenaGiftPickedIds = [];
+  const overlay = document.createElement("div");
+  overlay.id = "arenaGiftPickerOverlay";
+  overlay.setAttribute("style", "position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.6); display:flex; align-items:flex-end; justify-content:center;");
+  overlay.addEventListener("click", closeArenaGiftPicker);
+  overlay.innerHTML = `
+    <div onclick="event.stopPropagation()" style="width:100%; max-width:520px; max-height:80vh; display:flex; flex-direction:column; background:#14151c; border-radius:22px 22px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); color:#fff;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div style="font-size:17px; font-weight:800;">${L("Ставка подарками", "Bet with gifts")}</div>
+        <button type="button" onclick="closeArenaGiftPicker(event)" style="background:none; border:none; color:#fff; font-size:22px; opacity:0.7;">✕</button>
+      </div>
+      <div style="font-size:12.5px; opacity:0.65; line-height:1.4; margin-bottom:12px;">${L("Подарок оценивается по цене коллекции на Fragment. Победитель раунда забирает все подарки банка. Пока подарок в раунде, его нельзя продать или вывести.", "A gift is valued at its collection floor price on Fragment. The round winner takes all gifts in the pot. A gift in a round cannot be sold or withdrawn.")}</div>
+      <div id="arenaGiftPickerList" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; overflow-y:auto; margin-bottom:12px;"></div>
+      <div id="arenaGiftPickerTotal" style="font-size:13px; font-weight:700; margin-bottom:10px;"></div>
+      <button type="button" id="arenaGiftPickerOk" onclick="submitArenaGiftStake()" style="width:100%; padding:15px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:15px; border:none;">${L("Поставить", "Place bet")}</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  renderArenaGiftPicker();
+  fetchInventoryGifts();
+}
+window.openArenaGiftPicker = openArenaGiftPicker;
+
+async function submitArenaGiftStake() {
+  if (scannerRealtime.isJoinBusy || !arenaGiftPickedIds.length) return;
+  if (isScannerBettingLocked()) {
+    setScannerTransientMessage(L("Ставки заблокированы до окончания текущего раунда.", "Bets are locked until the current round ends."), { type: "info", timeoutMs: 5000 });
+    return;
+  }
+  scannerRealtime.isJoinBusy = true;
+  renderScannerButtons();
+  renderScannerBetBar();
+  try {
+    const player = getCurrentPlayer();
+    const giftIds = arenaGiftPickedIds.slice();
+    const eventName = scannerRealtime.activeRoundId && getScannerParticipantById(player.id) ? "round:addStake" : "round:join";
+    const payload = eventName === "round:join"
+      ? { playerId: player.id, name: player.name, avatar: player.avatar || null, giftIds }
+      : { playerId: player.id, giftIds };
+    await new Promise((resolve, reject) => {
+      if (!_socket || !_socket.connected) {
+        return reject(new Error(L("Нет соединения с сервером. Попробуй ещё раз.", "No connection to the server. Please try again.")));
+      }
+      const timer = setTimeout(() => reject(new Error(L("Сервер не ответил. Попробуй ещё раз.", "The server didn't respond. Please try again."))), 8000);
+      _socket.emit(eventName, payload, (response) => {
+        clearTimeout(timer);
+        if (response && response.ok) resolve();
+        else reject(new Error((response && response.error) || L("Не удалось войти в раунд.", "Failed to join the round.")));
+      });
+    });
+    arenaGiftPickedIds = [];
+    closeArenaGiftPicker();
+    fetchInventoryGifts();
+    setScannerTransientMessage(L("Ты подключён к раунду.", "You've joined the round."), { type: "success", timeoutMs: 3000, render: false });
+    enterScannerGridMode();
+  } catch (error) {
+    reportAppError("Не удалось войти в раунд подарками:", error);
+    setScannerTransientMessage(error?.message || L("Не удалось войти в раунд.", "Failed to join the round."), { type: "error", timeoutMs: 6000 });
+  } finally {
+    scannerRealtime.isJoinBusy = false;
+    renderScannerButtons();
+    renderScannerBetBar();
+  }
+}
+window.submitArenaGiftStake = submitArenaGiftStake;
 
 function renderInventoryGifts() {
   const grid = document.getElementById("inventoryGiftsGrid");
