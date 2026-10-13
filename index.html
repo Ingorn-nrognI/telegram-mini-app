@@ -5975,10 +5975,6 @@ body.market-filter-open .market-side-fab {
   opacity: 0.56;
   filter: grayscale(1);
 }
-.scanner-bet-bar,
-.scanner-bet-edit-fab {
-  border-radius: 22px;
-}
 
 @media (max-width: 420px) {
   .scanner-bet-bar {
@@ -20451,23 +20447,39 @@ function updateScannerBetBarVisibility() {
     const navRect = bottomBar.getBoundingClientRect();
     const menuEl = document.getElementById("menu");
     const containerBottom = menuEl ? menuEl.getBoundingClientRect().bottom : window.innerHeight;
-    const gapAboveNav = 6;
-    // Бар и карандаш стоят целиком НАД главным меню и не заходят под него —
-    // раньше их стекло тянулось до низа меню и торчало по его краям.
-    const barBottom = Math.max(0, (containerBottom - navRect.top) + gapAboveNav);
-    const barPadTop = parseFloat(getComputedStyle(bar).paddingTop) || 9;
+    const gapAboveNav = 4;
+    // Стекло бара тянется до НИЗА главного меню: нижний край бара совпадает
+    // с нижним краем меню, а нижний отступ равен высоте меню + зазор, поэтому
+    // кнопки ставок остаются ровно на прежнем месте над меню.
+    const barBottom = Math.max(0, containerBottom - navRect.bottom);
+    const barBorderBottom = parseFloat(getComputedStyle(bar).borderBottomWidth) || 0;
+    const barPadBottom = Math.max(0, (containerBottom - navRect.top) + gapAboveNav - barBottom - barBorderBottom);
+    // Нижние углы скругляем ровно как у меню (пилюля) и у круга Market,
+    // чтобы стекло не выглядывало из-под них.
+    const navRadius = Math.round(navRect.height / 2);
     bar.style.bottom = `${barBottom}px`;
-    bar.style.paddingBottom = `${barPadTop}px`;
+    bar.style.paddingBottom = `${barPadBottom}px`;
+    bar.style.borderBottomLeftRadius = `${navRadius}px`;
+    bar.style.borderBottomRightRadius = `${navRadius}px`;
     if (editFab) {
+      const marketBtn = document.getElementById("navMarket");
+      const fabWidth = (marketBtn && marketBtn.getBoundingClientRect().width) || editFab.getBoundingClientRect().width || 0;
+      const fabRadius = Math.round(fabWidth / 2);
       editFab.style.bottom = `${barBottom}px`;
-      editFab.style.paddingBottom = `${barPadTop}px`;
+      editFab.style.paddingBottom = `${barPadBottom}px`;
+      editFab.style.borderBottomLeftRadius = `${fabRadius}px`;
+      editFab.style.borderBottomRightRadius = `${fabRadius}px`;
     }
   } else {
     bar.style.bottom = "";
     bar.style.paddingBottom = "";
+    bar.style.borderBottomLeftRadius = "";
+    bar.style.borderBottomRightRadius = "";
     if (editFab) {
       editFab.style.bottom = "";
       editFab.style.paddingBottom = "";
+      editFab.style.borderBottomLeftRadius = "";
+      editFab.style.borderBottomRightRadius = "";
     }
   }
   bar.style.transform = "";
