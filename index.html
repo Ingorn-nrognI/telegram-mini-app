@@ -24506,7 +24506,10 @@ function applyMarketFilter(list) {
     const price = Number(item.price);
     if (marketFilters.priceMin != null && price < marketFilters.priceMin) return false;
     if (marketFilters.priceMax != null && price > marketFilters.priceMax) return false;
-    if (marketFilters.collection && getGiftDisplayName(item) !== marketFilters.collection) return false;
+    if (marketFilters.collection) {
+      const normName = (v) => String(v || "").replace(/[’ʼ`]/g, "'");
+      if (normName(getGiftDisplayName(item)) !== normName(marketFilters.collection)) return false;
+    }
     if (marketFilters.models.size && !marketFilters.models.has(item.model)) return false;
     if (marketFilters.backdrops.size && !marketFilters.backdrops.has(item.backdrop)) return false;
     if (marketFilters.patterns.size && !marketFilters.patterns.has(item.pattern)) return false;
