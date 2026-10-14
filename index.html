@@ -24194,11 +24194,13 @@ const marketFilters = {
 const marketFilterOpenSections = new Set();
 const marketFilterSearch = { collection: "", models: "", backdrops: "", patterns: "" };
 
+let GIFT_CATALOG_AT = 0;
 function fetchGiftCatalog() {
-  if (GIFT_CATALOG || typeof _socket === "undefined" || !_socket) return;
+  if ((GIFT_CATALOG && Date.now() - GIFT_CATALOG_AT < 30 * 60 * 1000) || typeof _socket === "undefined" || !_socket) return;
   _socket.emit("market:catalog:request", {}, (res) => {
     if (res && res.ok && res.catalog) {
       GIFT_CATALOG = res.catalog;
+      GIFT_CATALOG_AT = Date.now();
       const menu = document.getElementById("marketFilterMenu");
       if (menu && menu.classList.contains("open")) renderMarketFilterMenu();
     }
