@@ -10086,7 +10086,7 @@ function openSupport() {
 }
 
 function openChat() {
-  showAppNotice(L("Чат скоро появится", "Chat is coming soon"));
+  showAppNotice(L("Недоступно в приложении", "Not available in the app"));
 }
 
 function showProfilePlaceholderAction(action) {
@@ -11167,8 +11167,26 @@ function updateAppNoticePosition() {
   if (!notice) return;
   const betBar = document.getElementById("scannerBetBar");
   const betBarVisible = !!betBar?.classList.contains("is-visible");
-  const extraOffset = betBarVisible ? 78 : 0;
-  notice.style.bottom = `calc(var(--safe-bottom) + var(--bottom-nav-height) + 14px + ${extraOffset}px)`;
+  // Окно ставим над РЕАЛЬНЫМ верхним краем главного меню (а если открыт
+  // бар ставок — над ним), а не по CSS-переменной, которая ниже меню.
+  const menuEl = document.getElementById("menu");
+  const containerBottom = menuEl ? menuEl.getBoundingClientRect().bottom : window.innerHeight;
+  let topEdge = null;
+  if (betBarVisible) {
+    const r = betBar.getBoundingClientRect();
+    if (r.height > 0) topEdge = r.top;
+  }
+  if (topEdge === null) {
+    const nav = document.querySelector(".bottom-bar");
+    const r = nav ? nav.getBoundingClientRect() : null;
+    if (r && r.height > 0) topEdge = r.top;
+  }
+  if (topEdge !== null) {
+    notice.style.bottom = `${Math.max(0, Math.round(containerBottom - topEdge + 10))}px`;
+  } else {
+    const extraOffset = betBarVisible ? 78 : 0;
+    notice.style.bottom = `calc(var(--safe-bottom) + var(--bottom-nav-height) + 14px + ${extraOffset}px)`;
+  }
 }
 
 function showAppNotice(message, options = {}) {
