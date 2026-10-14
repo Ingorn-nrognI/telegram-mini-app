@@ -5909,11 +5909,14 @@ body.market-filter-open .market-side-fab {
 
 /* ===== Бар ставок: сворачивание и режим подарков ===== */
 .scanner-bet-bar {
-  transition: opacity 0.24s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), translate 0.22s ease;
+  /* Видимая область с запасом -40px, чтобы не обрезать тень бара. */
+  clip-path: inset(-40px -40px -40px -40px);
+  transition: opacity 0.24s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), clip-path 0.22s ease;
 }
+/* При переключении GRAM/подарки бар не уезжает вниз целиком: его верхний
+   край опускается до меню (как штора) и потом поднимается обратно. */
 .scanner-bet-bar.is-mode-collapsing {
-  translate: 0 120%;
-  opacity: 0 !important;
+  clip-path: inset(100% -40px -40px -40px);
 }
 .scanner-bet-gift-strip { display: none; }
 .scanner-bet-bar.is-gift-mode { display: block; }
@@ -25258,7 +25261,7 @@ function renderScannerGiftStrip() {
   if (!strip) return;
   const gifts = getArenaBettableGifts();
   if (!gifts.length) {
-    strip.innerHTML = `<div class="scanner-bet-gift-empty">${L("Нет подарков для ставки. Подарки на продаже здесь не показываются.", "No gifts to bet. Gifts listed for sale are not shown here.")}</div>`;
+    strip.innerHTML = `<div class="scanner-bet-gift-empty">${L("Подарков нету", "No gifts")}</div>`;
     return;
   }
   strip.innerHTML = gifts.map((g) => {
