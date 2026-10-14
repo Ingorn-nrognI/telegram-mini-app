@@ -3777,6 +3777,19 @@ html.no-animations .case-poster.is-shaking .cp-hero {
   transition: transform 0.22s ease, opacity 0.2s ease;
 }
 
+/* У .market-sort-menu не было display:flex, поэтому внутренний список не получал
+   границ по высоте и не скроллился. Включаем flex только у меню фильтров. */
+#marketFilterMenu {
+  display: flex;
+  flex-direction: column;
+}
+#marketFilterMenu .market-filter-list {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
 .market-sort-menu.open {
   transform: translateY(0) scale(1);
   opacity: 1;
@@ -5975,6 +5988,18 @@ body.market-filter-open .market-side-fab {
    край опускается до меню (как штора) и потом поднимается обратно. */
 .scanner-bet-bar.is-mode-collapsing {
   clip-path: inset(100% -40px -40px -40px);
+}
+/* Когда арена не в фокусе (кейсы, турниры, маркет и т.д.), бар и окно карандаша
+   не просто тают, а опускаются вниз «шторой» под главное меню. Прозрачность
+   гасим с задержкой, чтобы движение успело быть видно. */
+.scanner-bet-bar:not(.is-visible),
+.scanner-bet-edit-fab:not(.is-visible) {
+  clip-path: inset(100% -40px -40px -40px);
+  transition: clip-path 0.26s ease, opacity 0.01s linear 0.26s, transform 0.01s linear 0.26s;
+}
+.scanner-bet-edit-fab {
+  clip-path: inset(-40px -40px -40px -40px);
+  transition: opacity 0.24s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), clip-path 0.22s ease;
 }
 .scanner-bet-gift-strip { display: none; }
 .scanner-bet-bar.is-gift-mode { display: block; }
@@ -8435,7 +8460,7 @@ html.no-animations *::after {
 
   <div id="auctionScreen" class="menu-screen">
     <div class="screen-inner">
-      <div class="market-subview-title">Аукцион</div>
+      <div class="market-subview-title" style="text-align:center;">Аукцион</div>
       <div id="auctionEmpty" class="market-empty-state">
         Пока что недоступно
       </div>
@@ -20558,16 +20583,9 @@ function updateScannerBetBarVisibility() {
       editFab.style.borderBottomRightRadius = `${fabRadius}px`;
     }
   } else {
-    bar.style.bottom = "";
-    bar.style.paddingBottom = "";
-    bar.style.borderBottomLeftRadius = "";
-    bar.style.borderBottomRightRadius = "";
-    if (editFab) {
-      editFab.style.bottom = "";
-      editFab.style.paddingBottom = "";
-      editFab.style.borderBottomLeftRadius = "";
-      editFab.style.borderBottomRightRadius = "";
-    }
+    // Позицию и скругления НЕ сбрасываем: пока бар уезжает вниз (clip-path),
+    // он должен оставаться на месте, иначе будет скачок. Всё пересчитается
+    // при следующем показе.
   }
   bar.style.transform = "";
   const floatBtn = document.getElementById("navProfileFloat");
