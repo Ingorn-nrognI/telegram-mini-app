@@ -5408,7 +5408,7 @@ body.market-filter-open .market-side-fab {
   min-height: 54px;
   padding: 9px 9px 45px 9px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(54px, 1fr)) 72px;
+  grid-template-columns: 44px repeat(3, minmax(44px, 1fr)) 70px;
   gap: 7px;
   align-items: center;
   border-radius: 26px 26px 20px 20px;
@@ -5906,6 +5906,19 @@ body.market-filter-open .market-side-fab {
 }
 .scanner-bet-mode-icon { width: 22px; height: 22px; display: inline-flex; }
 .scanner-bet-mode-icon svg { width: 100%; height: 100%; display: block; }
+.scanner-bet-mode-toggle {
+  width: 100%;
+  border-radius: 999px;
+  padding: 0;
+}
+.scanner-bet-mode-toggle .scanner-bet-mode-icon { width: 24px; height: 24px; }
+.scanner-bet-mode-toggle .scanner-bet-mode-icon-gram { display: none; }
+.scanner-bet-edit-fab.is-gift-mode .scanner-bet-mode-icon-gift { display: none; }
+.scanner-bet-edit-fab.is-gift-mode .scanner-bet-mode-icon-gram { display: inline-flex; }
+#scannerBetBar .scanner-bet-edit {
+  width: 100%;
+  padding: 0;
+}
 
 /* ===== Бар ставок: сворачивание и режим подарков ===== */
 .scanner-bet-bar {
@@ -5982,8 +5995,8 @@ body.market-filter-open .market-side-fab {
 @media (max-width: 420px) {
   .scanner-bet-bar {
     width: calc(100vw - 12px - var(--market-fab-size) - var(--market-fab-gap));
-    grid-template-columns: repeat(3, minmax(46px, 1fr)) 66px;
-    gap: 6px;
+    grid-template-columns: 40px repeat(3, minmax(38px, 1fr)) 60px;
+    gap: 5px;
     padding: 8px 8px 40px 8px;
     border-radius: 22px 22px 18px 18px;
   }
@@ -8493,6 +8506,9 @@ html.no-animations *::after {
   </div>
 
   <div id="scannerBetBar" class="scanner-bet-bar" onclick="event.stopPropagation()" aria-label="Бар ставок Сканера">
+    <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="Настроить быстрые ставки">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="scanner-bet-edit-icon" aria-hidden="true"><path fill="currentColor" d="M100.4 417.2C104.5 402.6 112.2 389.3 123 378.5L304.2 197.3L338.1 163.4C354.7 180 389.4 214.7 442.1 267.4L476 301.3L442.1 335.2L260.9 516.4C250.2 527.1 236.8 534.9 222.2 539L94.4 574.6C86.1 576.9 77.1 574.6 71 568.4C64.9 562.2 62.6 553.3 64.9 545L100.4 417.2zM156 413.5C151.6 418.2 148.4 423.9 146.7 430.1L122.6 517L209.5 492.9C215.9 491.1 221.7 487.8 226.5 483.2L155.9 413.5zM510 267.4C493.4 250.8 458.7 216.1 406 163.4L372 129.5C398.5 103 413.4 88.1 416.9 84.6C430.4 71 448.8 63.4 468 63.4C487.2 63.4 505.6 71 519.1 84.6L554.8 120.3C568.4 133.9 576 152.3 576 171.4C576 190.5 568.4 209 554.8 222.5C551.3 226 536.4 240.9 509.9 267.4z"/></svg>
+    </button>
     <button type="button" id="scannerBetBarQuick0" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(0, event)">1</button>
     <button type="button" id="scannerBetBarQuick1" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(1, event)">10</button>
     <button type="button" id="scannerBetBarQuick2" class="scanner-bet-btn scanner-bet-quick" onclick="setScannerQuickStakeByIndex(2, event)">25</button>
@@ -8500,12 +8516,9 @@ html.no-animations *::after {
     <div id="scannerBetGiftStrip" class="scanner-bet-gift-strip"></div>
   </div>
   <div id="scannerBetBarEditFab" class="scanner-bet-edit-fab" onclick="event.stopPropagation()" aria-label="Бар ставок Сканера — настройка">
-    <div class="scanner-bet-mode-switch" onclick="event.stopPropagation()">
-      <button type="button" id="scannerBetModeGifts" class="scanner-bet-mode-btn" onclick="setScannerBetMode('gifts', event)" aria-label="Ставка подарками"><span class="scanner-bet-mode-icon" data-app-gift-icon></span></button>
-      <button type="button" id="scannerBetModeGram" class="scanner-bet-mode-btn active" onclick="setScannerBetMode('gram', event)" aria-label="Ставка GRAM"><span class="scanner-bet-mode-icon" data-gram-icon></span></button>
-    </div>
-    <button type="button" class="scanner-bet-btn scanner-bet-edit" onclick="setScannerCustomStake(event)" aria-label="Настроить быстрые ставки">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="scanner-bet-edit-icon" aria-hidden="true"><path fill="currentColor" d="M100.4 417.2C104.5 402.6 112.2 389.3 123 378.5L304.2 197.3L338.1 163.4C354.7 180 389.4 214.7 442.1 267.4L476 301.3L442.1 335.2L260.9 516.4C250.2 527.1 236.8 534.9 222.2 539L94.4 574.6C86.1 576.9 77.1 574.6 71 568.4C64.9 562.2 62.6 553.3 64.9 545L100.4 417.2zM156 413.5C151.6 418.2 148.4 423.9 146.7 430.1L122.6 517L209.5 492.9C215.9 491.1 221.7 487.8 226.5 483.2L155.9 413.5zM510 267.4C493.4 250.8 458.7 216.1 406 163.4L372 129.5C398.5 103 413.4 88.1 416.9 84.6C430.4 71 448.8 63.4 468 63.4C487.2 63.4 505.6 71 519.1 84.6L554.8 120.3C568.4 133.9 576 152.3 576 171.4C576 190.5 568.4 209 554.8 222.5C551.3 226 536.4 240.9 509.9 267.4z"/></svg>
+    <button type="button" id="scannerBetModeToggle" class="scanner-bet-btn scanner-bet-mode-toggle" onclick="toggleScannerBetMode(event)" aria-label="Переключить ставку GRAM / подарки">
+      <span class="scanner-bet-mode-icon scanner-bet-mode-icon-gift" data-app-gift-icon></span>
+      <span class="scanner-bet-mode-icon scanner-bet-mode-icon-gram" data-gram-icon></span>
     </button>
   </div>
 
@@ -25232,6 +25245,9 @@ function setScannerBetMode(mode, event) {
   const giftsBtn = document.getElementById("scannerBetModeGifts");
   if (gramBtn) gramBtn.classList.toggle("active", next === "gram");
   if (giftsBtn) giftsBtn.classList.toggle("active", next === "gifts");
+  // На кнопке справа показываем режим, в который можно переключиться.
+  const modeFab = document.getElementById("scannerBetBarEditFab");
+  if (modeFab) modeFab.classList.toggle("is-gift-mode", next === "gifts");
   const bar = document.getElementById("scannerBetBar");
   if (!bar) return;
   if (_scannerBetModeTimer) clearTimeout(_scannerBetModeTimer);
@@ -25250,6 +25266,10 @@ function setScannerBetMode(mode, event) {
   }, 230);
 }
 window.setScannerBetMode = setScannerBetMode;
+function toggleScannerBetMode(event) {
+  setScannerBetMode(scannerBetMode === "gifts" ? "gram" : "gifts", event);
+}
+window.toggleScannerBetMode = toggleScannerBetMode;
 
 function formatScannerGiftPrice(value) {
   const v = Number(value) || 0;
