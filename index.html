@@ -4309,6 +4309,51 @@ body.market-filter-open .market-side-fab {
     inset 0 0 0 1px rgba(255,255,255,0.12),
     inset 0 1px 0 rgba(255,255,255,0.22);
 }
+.top-add-gift-btn {
+  width: auto;
+  padding: 0 12px;
+  color: #ecf7ff;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.inventory-empty {
+  margin-top: 40px;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.inventory-empty-title {
+  font-size: 15px;
+  color: rgba(236, 247, 255, 0.55);
+}
+.inventory-add-gift-tile {
+  width: 132px;
+  height: 132px;
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #ecf7ff;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.inventory-add-gift-tile:active {
+  transform: scale(0.96);
+  background: rgba(255,255,255,0.1);
+}
+.inventory-add-gift-plus {
+  font-size: 40px;
+  font-weight: 300;
+  line-height: 1;
+}
+.inventory-add-gift-label {
+  font-size: 13px;
+  font-weight: 800;
+}
 
 .scanner-player-list,
 .scanner-recent-list {
@@ -8118,6 +8163,7 @@ html.no-animations *::after {
       <button type="button" id="scannerRoundsPanelBtn" class="scanner-rounds-btn" style="display:none;" onclick="toggleScannerRoundsPanel(event)" aria-label="История раундов">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M13 5h8"/><path d="M13 9h5"/><path d="M13 15h8"/><path d="M13 19h5"/><path d="M3 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/><path d="M3 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/></svg>
       </button>
+      <button type="button" id="topAddGiftBtn" class="scanner-rounds-btn top-add-gift-btn" style="display:none;" onclick="openAddGiftModal(event)" aria-label="Добавить подарок">+ Подарок</button>
     </div>
 
     <div id="historyModeTitle" class="history-mode-title"></div>
@@ -8366,7 +8412,13 @@ html.no-animations *::after {
 
       <div id="inventoryGiftsView">
         <div id="inventoryGiftsGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; margin-top:14px;"></div>
-        <div id="inventoryGiftsEmpty" class="market-empty-state" style="display:none;">Пока пусто. Отправь свой подарок нашему боту, и он появится здесь.</div>
+        <div id="inventoryGiftsEmpty" class="inventory-empty" style="display:none;">
+          <div class="inventory-empty-title">Пусто</div>
+          <button type="button" class="inventory-add-gift-tile" onclick="openAddGiftModal(event)">
+            <span class="inventory-add-gift-plus">+</span>
+            <span class="inventory-add-gift-label">Добавить подарок</span>
+          </button>
+        </div>
       </div>
 
       <div id="inventoryOffersView" style="display:none;">
@@ -10312,6 +10364,7 @@ function setMenuView(view, options = {}) {
   if (profileScreen) profileScreen.classList.toggle("active", view === "profile");
   const inventoryScreen = document.getElementById("inventoryScreen");
   if (inventoryScreen) inventoryScreen.classList.toggle("active", view === "inventory");
+  updateTopAddGiftBtn(view);
   const marketScreen = document.getElementById("marketScreen");
   if (marketScreen) marketScreen.classList.toggle("active", view === "market");
   const auctionScreen = document.getElementById("auctionScreen");
@@ -25320,12 +25373,75 @@ function placeArenaGiftBet(giftId, event) {
 }
 window.placeArenaGiftBet = placeArenaGiftBet;
 
+// ===== Добавление подарка в маркет =====
+const GIFT_DEPOSIT_USERNAME = "LM_GiftRelayer";
+
+// Кнопка «+ Подарок» в верхнем баре — только в инвентаре и только когда подарки уже есть
+// (когда пусто, такая же кнопка стоит по центру экрана).
+function updateTopAddGiftBtn(view) {
+  const btn = document.getElementById("topAddGiftBtn");
+  if (!btn) return;
+  const v = view || currentMenuView;
+  btn.style.display = (v === "inventory" && (INVENTORY_GIFTS || []).length > 0) ? "flex" : "none";
+}
+
+function openGiftDepositAccount(event) {
+  if (event && event.stopPropagation) event.stopPropagation();
+  const url = `https://t.me/${GIFT_DEPOSIT_USERNAME}`;
+  if (window.Telegram?.WebApp?.openTelegramLink) window.Telegram.WebApp.openTelegramLink(url);
+  else window.open(url, "_blank");
+}
+window.openGiftDepositAccount = openGiftDepositAccount;
+
+function closeAddGiftModal(event) {
+  if (event && event.stopPropagation) event.stopPropagation();
+  const el = document.getElementById("addGiftModalOverlay");
+  if (el) el.remove();
+}
+window.closeAddGiftModal = closeAddGiftModal;
+
+function openAddGiftModal(event) {
+  if (event && event.stopPropagation) event.stopPropagation();
+  closeAddGiftModal();
+  const nick = `<a href="#" onclick="openGiftDepositAccount(event); return false;" style="color:#6FDCFF; font-weight:800; text-decoration:none;">@${GIFT_DEPOSIT_USERNAME}</a>`;
+  const steps = [
+    L(`Подарок должен быть коллекционным (NFT) — обычные подарки добавить нельзя.`,
+      `The gift must be a collectible (NFT) — regular gifts can't be added.`),
+    L(`Открой свой NFT-подарок в профиле Telegram и нажми «Передать».`,
+      `Open your NFT gift in your Telegram profile and tap "Transfer".`),
+    L(`Выбери получателя ${nick} и подтверди передачу. Telegram может взять за передачу небольшую плату в звёздах.`,
+      `Choose ${nick} as the recipient and confirm. Telegram may charge a small Stars fee for the transfer.`),
+    L(`Через несколько секунд подарок появится здесь, в инвентаре. Его можно продать на Market, поставить в Арене или вывести обратно.`,
+      `In a few seconds the gift will appear here in your inventory. You can sell it on the Market, bet it in the Arena or withdraw it back.`)
+  ];
+  const overlay = document.createElement("div");
+  overlay.id = "addGiftModalOverlay";
+  overlay.setAttribute("style", "position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; padding:16px;");
+  overlay.addEventListener("click", closeAddGiftModal);
+  overlay.innerHTML = `
+    <div onclick="event.stopPropagation()" style="width:100%; max-width:420px; background:#14151c; border:1px solid rgba(255,255,255,0.1); border-radius:22px; padding:20px 18px; color:#fff;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div style="font-size:18px; font-weight:900;">${L("Как добавить подарок", "How to add a gift")}</div>
+        <button type="button" onclick="closeAddGiftModal(event)" style="background:none; border:none; color:#fff; font-size:22px; opacity:0.7;">✕</button>
+      </div>
+      ${steps.map((t, i) => `
+        <div style="display:flex; gap:12px; align-items:flex-start; padding:8px 0;">
+          <div style="width:24px; height:24px; min-width:24px; border-radius:50%; background:rgba(111,220,255,0.16); color:#6FDCFF; font-size:13px; font-weight:900; display:flex; align-items:center; justify-content:center;">${i + 1}</div>
+          <div style="font-size:13.5px; line-height:1.45; opacity:0.85;">${t}</div>
+        </div>`).join("")}
+      <button type="button" onclick="openGiftDepositAccount(event)" style="width:100%; margin-top:14px; padding:15px; border-radius:16px; background:linear-gradient(135deg, #8a7cff, #6a5cff); color:#fff; font-weight:800; font-size:15px; border:none;">${L("Открыть", "Open")} @${GIFT_DEPOSIT_USERNAME}</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+window.openAddGiftModal = openAddGiftModal;
+
 function renderInventoryGifts() {
   const grid = document.getElementById("inventoryGiftsGrid");
   const empty = document.getElementById("inventoryGiftsEmpty");
   if (!grid || !empty) return;
   grid.style.display = INVENTORY_GIFTS.length ? "grid" : "none";
   empty.style.display = INVENTORY_GIFTS.length ? "none" : "flex";
+  updateTopAddGiftBtn();
   grid.innerHTML = INVENTORY_GIFTS.map(buildInventoryGiftTileHtml).join("");
   INVENTORY_GIFTS.forEach(ensureInventoryGiftAnim);
 }
