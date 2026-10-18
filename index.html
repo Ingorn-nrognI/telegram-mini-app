@@ -7637,6 +7637,11 @@ html.no-animations *::after {
   }
 }
 
+#referralTable[data-mode="games"] .ref-mk-market,
+#referralTable[data-mode="market"] .ref-mk-games {
+  display: none;
+}
+
 #referralLevelsModal.open {
   display: flex;
 }
@@ -8951,7 +8956,7 @@ html.no-animations *::after {
     <div class="app-settings-section">
       <div class="app-settings-section-title" id="referralCountSectionTitle" style="text-transform:none; font-size:12px; white-space:nowrap; letter-spacing:normal; overflow:hidden; text-overflow:ellipsis;">Приглашено пользователей: <span id="referralCount">0</span></div>
       <div style="overflow-x:auto; margin-top:8px;">
-        <table style="width:100%; table-layout:fixed; border-collapse:collapse; font-size:12px;">
+        <table id="referralTable" data-mode="games" style="width:100%; table-layout:fixed; border-collapse:collapse; font-size:12px;">
           <colgroup>
             <col style="width:6%;">
             <col style="width:30%;">
@@ -13714,13 +13719,10 @@ function toggleReferralMarketColumn() {
     marketIcon.style.background = isArena ? "transparent" : "rgba(255,255,255,0.18)";
     marketIcon.style.color = isArena ? "rgba(255,255,255,0.5)" : "#fff";
   }
-  const _refSheet = document.querySelector("#appReferralsOverlay .app-settings-sheet");
-  const _refPrevTop = _refSheet ? _refSheet.scrollTop : 0;
-  renderReferralTableRows(_lastReferralItems);
-  if (_refSheet) {
-    _refSheet.scrollTop = _refPrevTop;
-    requestAnimationFrame(() => { _refSheet.scrollTop = _refPrevTop; });
-  }
+  // Таблицу НЕ перерисовываем: так прокрутка экрана не сбрасывается.
+  // Просто показываем нужную из двух уже готовых колонок.
+  const _refTableEl = document.getElementById("referralTable");
+  if (_refTableEl) _refTableEl.setAttribute("data-mode", _referralMarketColumnMode);
 }
 window.toggleReferralMarketColumn = toggleReferralMarketColumn;
 
@@ -14935,6 +14937,8 @@ async function renderReferralsScreen() {
 function renderReferralTableRows(items) {
   const listEl = document.getElementById("referralList");
   if (!listEl) return;
+  const _refTableEl = document.getElementById("referralTable");
+  if (_refTableEl) _refTableEl.setAttribute("data-mode", _referralMarketColumnMode);
   listEl.innerHTML = items.map((item, index) => {
     const name = escapeHtml(item.name || item.username || (L("Игрок", "Player") + " " + (item.playerId || item.id || "")));
     const joinedDate = item.joinedAt ? new Date(item.joinedAt).toLocaleDateString() : "—";
@@ -14945,9 +14949,8 @@ function renderReferralTableRows(items) {
       return `${n.toFixed(2)} <span style="font-size:0.8em; opacity:0.75;">gram</span>`;
     };
     const turnoverValue = item.turnover != null ? formatTonSmallUnit(item.turnover) : "—";
-    const marketColumnValue = _referralMarketColumnMode === "games"
-      ? (item.gamesMarketEarn != null ? formatTonSmallUnit(item.gamesMarketEarn) : "—")
-      : (item.marketEarn != null ? formatTonSmallUnit(item.marketEarn) : "—");
+    const gamesColumnValue = item.gamesMarketEarn != null ? formatTonSmallUnit(item.gamesMarketEarn) : "—";
+    const marketOnlyColumnValue = item.marketEarn != null ? formatTonSmallUnit(item.marketEarn) : "—";
     const totalEarn = item.totalEarn != null ? formatTonSmallUnit(item.totalEarn) : "—";
     return `<tr style="border-top:1px solid rgba(255,255,255,0.06);">
       <td style="padding:8px 8px 8px 4px; border-right:1px solid rgba(255,255,255,0.08);">${index + 1}</td>
@@ -14965,7 +14968,7 @@ function renderReferralTableRows(items) {
         </div>
       </td>
       <td style="padding:8px 6px; text-align:right; border-right:1px solid rgba(255,255,255,0.08);">${turnoverValue}</td>
-      <td style="padding:8px 8px 8px 4px; text-align:right; border-right:1px solid rgba(255,255,255,0.08);">${marketColumnValue}</td>
+      <td style="padding:8px 8px 8px 4px; text-align:right; border-right:1px solid rgba(255,255,255,0.08);"><span class="ref-mk-games">${gamesColumnValue}</span><span class="ref-mk-market">${marketOnlyColumnValue}</span></td>
       <td style="padding:8px 4px 8px 8px; text-align:right; font-weight:700;">${totalEarn}</td>
     </tr>`;
   }).join("");
