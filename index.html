@@ -11164,7 +11164,9 @@ async function openLeaderboard() {
   setActiveBottomNav("leaderboard");
   modal.style.display = "flex";
   if (typeof syncHistoryModeState === "function") syncHistoryModeState();
-  contentDiv.innerHTML = `<div class='history-panel-text'>${L("Загрузка...", "Loading...")}</div>`;
+  // Турниров пока нет: старый рейтинг игроков не показываем и с сервера не запрашиваем.
+  contentDiv.innerHTML = `<div class='history-panel-text'>${L("Нет турниров", "No tournaments")}</div>`;
+  return;
 
   try {
     // Рейтинг по ЧИСТОЙ прибыли: выплата минус собственная ставка,
@@ -14811,8 +14813,8 @@ function openReferralLevelsModal() {
     },
     {
       title: L("Процент с Арены и Market", "Earnings from the Arena and Market"),
-      text: L("Когда твой реферал выигрывает раунд в любой игре Арены, приложение берёт комиссию с этой игры. Когда он покупает подарок на Market (а в будущем — выигрывает аукцион), маркет берёт комиссию со сделки. Часть каждой такой комиссии автоматически зачисляется тебе — без каких-либо действий с твоей стороны.",
-               "When your referral wins a round in any Arena game, the app takes a commission from that game. When they buy a gift on the Market (and, in the future, win an auction), the Market takes a commission from the deal. A share of every such commission is credited to you automatically — no action needed on your part.")
+      text: L("Когда твой реферал выигрывает раунд в любой игре Арены, приложение берёт комиссию с этой игры. Когда он покупает подарок на Market или выигрывает аукцион, маркет берёт комиссию со сделки. Часть каждой такой комиссии автоматически зачисляется тебе — без каких-либо действий с твоей стороны.",
+               "When your referral wins a round in any Arena game, the app takes a commission from that game. When they buy a gift on the Market or win an auction, the Market takes a commission from the deal. A share of every such commission is credited to you automatically — no action needed on your part.")
     },
     {
       title: L("Уровни и процент", "Levels and percentage"),
@@ -14836,8 +14838,8 @@ function openReferralLevelsModal() {
     },
     {
       title: L("Вывод заработанного", "Claiming your earnings"),
-      text: L("Заработанное копится в карточке «Заработано» вверху экрана. Как только сумма достигнет 1 GRAM, кнопка «Забрать» станет активной — нажми её, и деньги сразу зачислятся на твой основной баланс в приложении.",
-               "Earnings accumulate in the \"Earned\" card at the top of the screen. Once the amount reaches 1 GRAM, the \"Claim\" button becomes active — tap it and the funds are credited straight to your main app balance.")
+      text: L("Заработанное копится в карточке «Заработано». Как только сумма достигнет 1 GRAM, кнопка «Забрать» станет активной — нажми её, и деньги сразу зачислятся на твой основной баланс в приложении.",
+               "Earnings accumulate in the \"Earned\" card. Once the amount reaches 1 GRAM, the \"Claim\" button becomes active — tap it and the funds are credited straight to your main app balance.")
     }
   ];
 
