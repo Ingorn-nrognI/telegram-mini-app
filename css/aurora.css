@@ -4828,3 +4828,24 @@ html.dz-open #pvpSelectScreen,html.dz-open #scannerBetBar,html.dz-open #scannerB
 #dcv.pk-root .kq1{margin-top: 10px; gap: 14px !important;}
 #dcv.pk-root .kq1-rail{height: 200px !important;}
 #dcv.pk-root .dv-ctrl.pk-c{gap: 7px;}
+
+/* ===== Турниры: пока «Скоро», как в кейсах; фон — общее звёздное небо приложения ===== */
+html[data-app] #leaderboardModal .app-modal-card > .ap-soon{display: flex !important;}
+html[data-app] #leaderboardModal .ap-soon{padding: 21px 12px 0;}
+body.rating-mode #leaderboardModal{background: transparent !important;}
+html[data-app] body.rating-mode #leaderboardModal .app-modal-card{background-image: none !important;}
+body.rating-mode #apSky{z-index: 73 !important; background: var(--mxb, rgb(4,20,23));}
+
+/* ===== Производительность: всё, что спрятано под открытым окном, не анимируется ===== */
+html.ap-cov #homeScreen,html.ap-cov #homeScreen *,html.ap-cov #homeScreen *::before,html.ap-cov #homeScreen *::after{animation-play-state: paused !important;}
+/* панель ставки сканера невидима — без размытия под ней */
+#scannerBetBar:not(.is-visible),#scannerBetBarEditFab:not(.is-visible){-webkit-backdrop-filter: none !important; backdrop-filter: none !important;}
+
+/* ===== Лёгкая графика (html.lq): слабые телефоны или «Качество графики: Низкое» ===== */
+html.lq *,html.lq *::before,html.lq *::after{-webkit-backdrop-filter: none !important; backdrop-filter: none !important;}
+html.lq .bottom-bar,html.lq .bottom-market-fab,html.lq .balance-card,html.lq .scanner-rounds-btn,html.lq .mode-back-btn{background-color: rgba(10,40,44,.94) !important;}
+html.lq .rf-stars i:not(:nth-child(3n+1)){display: none !important;}
+html.lq .au-fx i:nth-child(2n),html.lq .rh15b-conf i:nth-child(2n),html.lq .rh15b-spk i:nth-child(2n),html.lq .rh15b-burst i:nth-child(2n){display: none !important;}
+html.lq .rh15b-sh,html.lq .rh15b-badge,html.lq #referralPitchTitle,html.lq #claimReferralBtn{animation: none !important;}
+html.lq .au-lv,html.lq .au-ring,html.lq .au-fx i,html.lq .rh15b-conf i,html.lq .rh15b-spk i,html.lq .rh15b-burst i{filter: none !important;}
+html.lq .au-lv.lock{opacity: .82;}

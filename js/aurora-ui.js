@@ -1,3 +1,34 @@
+/* ===== Производительность на слабых телефонах =====
+   Режим «лёгкой графики» (класс lq на <html>) включается, когда в Настройках выбрано
+   «Качество графики: Низкое», либо при «Авто», если телефон не тянет 45 кадров/с.
+   В нём: без размытия под стеклом, меньше частиц, канвасы в 1x и 30 к/с. */
+window.__lq=function(){return document.documentElement.classList.contains('lq')};
+(function(){var R=document.documentElement,KEY='lm_perf_low'
+function tier(){try{return getEffectiveQualityTier()}catch(e){return'mid'}}
+function apply(){R.classList.toggle('lq',tier()==='low')}
+var det=window.detectOptimalQuality
+if(typeof det==='function'){window.detectOptimalQuality=function(){try{if(localStorage.getItem(KEY)==='1')return'low'}catch(e){}return det.apply(this,arguments)}}
+var setQ=window.setAppQuality
+if(typeof setQ==='function'){window.setAppQuality=function(){var r=setQ.apply(this,arguments);apply();return r}}
+function isAuto(){try{return appSettings.quality==='auto'}catch(e){return false}}
+function low(){try{localStorage.setItem(KEY,'1')}catch(e){}try{setAppQuality('auto')}catch(e){apply()}}
+function probe(){var slow=0,n=0,t0=0
+function f(t){if(!isAuto())return
+if(document.hidden){t0=0;requestAnimationFrame(f);return}
+if(!t0){t0=t;n=0;requestAnimationFrame(f);return}
+n++
+if(t-t0<2500){requestAnimationFrame(f);return}
+var fps=n*1000/(t-t0);t0=0
+if(fps<45){if(++slow>=2){low();return}}else if(slow)slow=0
+setTimeout(function(){requestAnimationFrame(f)},4000)}
+setTimeout(function(){requestAnimationFrame(f)},5000)}
+apply()
+try{if(isAuto()&&localStorage.getItem(KEY)!=='1')probe()}catch(e){}
+/* исходные 5 статуэток рефералов спрятаны новым дизайном — не грузим и не крутим их */
+try{for(var i=REFERRAL_GIFT_FILES.length-1;i>=0;i--){if(!/hula_girl|streetbeast/.test(REFERRAL_GIFT_FILES[i].file))REFERRAL_GIFT_FILES.splice(i,1)}}catch(e){}
+try{window.ensureReferralGiftAnimsLoaded=function(){}
+window.syncReferralGiftPlayback=function(){try{referralGiftAnims.forEach(function(a){try{a.pause()}catch(e){}})}catch(e){}}}catch(e){}
+})();
 window.__origLvCards=window.renderReferralLevelCards
 window.__origLvBadges=window.applyLevelRewardBadges;(function(){var TON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5h13a1.4 1.4 0 0 1 1.2 2.1L13 18.8a1.2 1.2 0 0 1-2 0L4.3 6.6a1.4 1.4 0 0 1 1.2-2.1zM12 4.5v14.6"/></svg>'
 var HEART='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 12.6 12 20l-7.5-7.4A5 5 0 1 1 12 6.1a5 5 0 1 1 7.5 6.5z"/></svg>'
@@ -2521,8 +2552,9 @@ var r=cv.getBoundingClientRect()
 if(r.bottom<0||r.top>innerHeight||!r.width)return false
 cv.__w=cv.clientWidth
 cv.__h=cv.clientHeight
-return true}))}function lzFrame(now){if(document.hidden){requestAnimationFrame(lzFrame)
-return}lzScan(now)
+return true}))}function lzFrame(now){if(document.hidden||(window.__lq()&&now-(LZ.lt||0)<32)){requestAnimationFrame(lzFrame)
+return}LZ.lt=now
+lzScan(now)
 var list=LZ.list,smp=null,ang=0
 for(var i=0;i<list.length;i++){var cv=list[i]
 if(!smp){smp=lzSample(now)
@@ -2588,8 +2620,9 @@ return}var K=Object.keys(TILT).map((function(q){return[q.split(' ')[0],TILT[q]]}
 var all=document.getElementsByClassName('mx-arena')
 for(var i=0;i<all.length;i++){var el=all[i]
 for(var j=0;j<K.length;j++){if(el.parentElement&&el.parentElement.closest(K[j][0])){if(el.offsetParent){cnt[j]=(cnt[j]||0)+1
-out.push([el,K[j][1],cnt[j]-1])}break}}}TL.list=out}function tilt(now){if(document.hidden){requestAnimationFrame(tilt)
-return}tiltScan(now)
+out.push([el,K[j][1],cnt[j]-1])}break}}}TL.list=out}function tilt(now){if(document.hidden||(window.__lq()&&now-(TL.lt||0)<32)){requestAnimationFrame(tilt)
+return}TL.lt=now
+tiltScan(now)
 var t=now/1e3
 TL.list.forEach((function(it){var el=it[0],c=it[1],n=it[2];(function(){var o=n*1.7
 var rx=c.x+c.ax*(.62*Math.sin(t*.83+o)+.38*Math.sin(t*1.37+1.1+o))
@@ -3148,13 +3181,14 @@ setTimeout(end,(D+40)*(window.__navTimeScale||1))}function isM(v){return v==='ma
 if(!reduce&&view!=='profile'&&isM(view)!==before){try{snap=take()}catch(e){}}var r=_smv.apply(this,arguments)
 if(snap&&document.body.classList.contains('market-mode')!==before){try{play(snap)}catch(e){console.warn(e)}}return r}})();(function(){if(!document.documentElement.hasAttribute('data-app'))return
 var SV=function(p){return'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>'}
-var IC={tour:SV('<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/>'),cases:SV('<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>'),
-auction:SV('<path d="M13 10l7.4 7.4a2.1 2.1 0 0 1-3 3L10 13"/><path d="M6 9l4 4M13 10l-4-4M3 21h7"/><path d="M6.8 15.8l-3.6-3.6a1 1 0 0 1 0-1.4l5.8-5.8a1 1 0 0 1 1.4 0l3.6 3.6a1 1 0 0 1 0 1.4l-5.8 5.8a1 1 0 0 1-1.4 0z"/>')}
+var IC={tour:SV('<path d="M8 21h8M12 17v4M7 4h10"/><path d="M17 4v8a5 5 0 0 1-10 0V4"/><circle cx="5" cy="9" r="2"/><circle cx="19" cy="9" r="2"/>'),cases:SV('<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>'),
+auction:SV('<path d="M13 10l7.383 7.418c.823 .82 .823 2.148 0 2.967a2.11 2.11 0 0 1 -2.976 0l-7.407 -7.385"/><path d="M6 9l4 4"/><path d="M13 10l-4 -4"/><path d="M3 21h7"/><path d="M6.793 15.793l-3.586 -3.586a1 1 0 0 1 0 -1.414l2.293 -2.293l.5 .5l3 -3l-.5 -.5l2.293 -2.293a1 1 0 0 1 1.414 0l3.586 3.586a1 1 0 0 1 0 1.414l-2.293 2.293l-.5 -.5l-3 3l.5 .5l-2.293 2.293a1 1 0 0 1 -1.414 0z"/>')}
 function soon(title,ic){return'<div class="ap-soon"><h1>'+title+'</h1><div class="ap-soon-c"><span class="ap-soon-i">'+ic+'</span><b>Скоро</b><small>раздел в разработке</small></div></div>'}function put(host,html,after){if(!host||host.querySelector(':scope > .ap-soon'))return
 var a=after&&host.querySelector(after)
 if(a)a.insertAdjacentHTML('afterend',html)
 else host.insertAdjacentHTML('afterbegin',html)}function screens(){put(document.querySelector('#casesScreen .screen-inner'),soon('Кейсы',IC.cases))
-put(document.querySelector('#auctionScreen .screen-inner'),soon('Аукцион',IC.auction))}var MAXG=9
+put(document.querySelector('#auctionScreen .screen-inner'),soon('Аукцион',IC.auction))
+put(document.querySelector('#leaderboardModal .app-modal-card'),soon('Турниры',IC.tour))}var MAXG=9
 function gifts(){document.querySelectorAll('#historyPanel .mx-strip').forEach((function(c){if(c.__ap)return
 c.__ap=1
 var g=c.querySelectorAll('.mx-gt')
@@ -3273,13 +3307,14 @@ if(!R.hasAttribute('data-app'))return
 var KEY='apAppBg'
 var cv,cx,W=0,H=0,dpr=1,stars=[],mets=[],last=0,nextMet=0,raf=0,T=0
 function rnd(a,b){return a+Math.random()*(b-a)}function still(){try{return R.classList.contains('no-animations')||window.matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}}function mkStar(top){var r=.35+Math.pow(Math.random(),2.2)*1.25
-return{x:rnd(0,W),y:top?rnd(-20,0):rnd(0,H),r:r,a:rnd(.3,.95),tw:rnd(0,6.3),ts:rnd(.5,2.2),v:2.5+r*5}}function size(){dpr=Math.min(1.5,window.devicePixelRatio||1)
+return{x:rnd(0,W),y:top?rnd(-20,0):rnd(0,H),r:r,a:rnd(.3,.95),tw:rnd(0,6.3),ts:rnd(.5,2.2),v:2.5+r*5}}function size(){dpr=R.classList.contains('lq')?1:Math.min(1.5,window.devicePixelRatio||1)
 W=window.innerWidth
 H=window.innerHeight
 cv.width=Math.round(W*dpr)
 cv.height=Math.round(H*dpr)
 cx.setTransform(dpr,0,0,dpr,0,0)
 var n=Math.max(70,Math.min(320,Math.round(W*H/2300)))
+if(R.classList.contains('lq'))n=Math.round(n*.5)
 falling=0
 stars=[]
 for(var i=0;i<n;i++)stars.push(mkStar(false))}var falling=0
@@ -3553,7 +3588,7 @@ g.fillRect(0,0,1,128)
 return c}var SPR=null
 var CUR=[{y:.5,c:.3,ds:.21,h:.62,a:.95,ph:0},{y:.42,c:.7,ds:-.17,h:.55,a:.75,ph:2.1},{y:.56,c:.5,ds:.13,h:.5,a:.6,ph:4.3}]
 var DY=.08,CH=1.4,JG=.35,AM=.7
-function aurora(cv,ban){var cx=cv.getContext('2d'),W=0,H=0,d=Math.min(2,window.devicePixelRatio||1)
+function aurora(cv,ban){var cx=cv.getContext('2d'),W=0,H=0,d=window.__lq()?1:Math.min(2,window.devicePixelRatio||1)
 SPR=SPR||sprite()
 function size(){W=cv.clientWidth
 H=cv.clientHeight
@@ -3573,6 +3608,7 @@ cx.globalAlpha=1
 cx.globalCompositeOperation='source-over'}var raf=0
 function frame(ms){raf=0
 if(!ban.__on)return
+if(window.__lq()&&ms-(cv.__lt||0)<30){raf=requestAnimationFrame(frame);return}cv.__lt=ms
 if(!W||cv.width!==Math.round(cv.clientWidth*d))size()
 if(W)draw(ms/1e3)
 raf=requestAnimationFrame(frame)}return{play:function(){if(!raf)raf=requestAnimationFrame(frame)},pause:function(){if(raf)cancelAnimationFrame(raf)
@@ -3581,7 +3617,7 @@ try{if(typeof REFERRAL_GIFT_DATA!=='undefined'&&REFERRAL_GIFT_DATA[FILES[name]])
 if(!D.obj&&window.__DotLottieWorker){try{var cv=document.createElement('canvas')
 cv.style.cssText='width:100%;height:100%;display:block'
 el.appendChild(cv)
-return new window.__DotLottieWorker(Object.assign({canvas:cv,loop:true,autoplay:false,workerId:'referral-gifts-'+i%2,renderConfig:{devicePixelRatio:Math.min(2,window.devicePixelRatio||1),autoResize:true}},D.text?{data:D.text}:{src:new URL(D.file,location.href).href}))}catch(e){el.innerHTML=''}}var LT=window.__RF_LOT||window.lottie
+return new window.__DotLottieWorker(Object.assign({canvas:cv,loop:true,autoplay:false,workerId:'referral-gifts-'+i%2,renderConfig:{devicePixelRatio:window.__lq()?1:Math.min(2,window.devicePixelRatio||1),autoResize:true}},D.text?{data:D.text}:{src:new URL(D.file,location.href).href}))}catch(e){el.innerHTML=''}}var LT=window.__RF_LOT||window.lottie
 if(!LT||!LT.loadAnimation)return null
 try{var a=LT.loadAnimation(Object.assign({container:el,renderer:'svg',loop:true,autoplay:false},D.obj?{animationData:JSON.parse(JSON.stringify(D.obj))}:D.text?{animationData:JSON.parse(D.text)}:{path:D.file}))
 if(a.setSubframe)a.setSubframe(false)
