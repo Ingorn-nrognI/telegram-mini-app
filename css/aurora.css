@@ -4849,3 +4849,8 @@ html.lq .au-fx i:nth-child(2n),html.lq .rh15b-conf i:nth-child(2n),html.lq .rh15
 html.lq .rh15b-sh,html.lq .rh15b-badge,html.lq #referralPitchTitle,html.lq #claimReferralBtn{animation: none !important;}
 html.lq .au-lv,html.lq .au-ring,html.lq .au-fx i,html.lq .rh15b-conf i,html.lq .rh15b-spk i,html.lq .rh15b-burst i{filter: none !important;}
 html.lq .au-lv.lock{opacity: .82;}
+
+/* 3D-арены: тень не фильтром (он пересчитывался каждый кадр из-за лазера внутри), а обычной тенью карточки */
+.ln-arena .mx-arena,.ln-pg-art .mx-arena,.pu-tg.scan .mx-arena,.tv-ar .mx-arena{filter: none !important;}
+.ln-arena .mx-arena > svg,.ln-pg-art .mx-arena > svg,.tv-ar .mx-arena > svg{border-radius: 7%; box-shadow: 0 22px 18px rgba(0,0,0,.55);}
+.pu-tg.scan .mx-arena > svg{border-radius: 7%; box-shadow: 0 22px 14px rgba(0,0,0,.55);}
