@@ -1574,6 +1574,7 @@ JOIN=null
 S=null
 roomsNewRound()
 if(ROOMS[t].pk)window.dvRoom(t)
+tgBack(true)
 return}ENTRY=entry||ENTRY
 if(!root){root=document.createElement('div')
 root.id='dcv'
@@ -1582,7 +1583,11 @@ sheetEl.id='dcvSheet'
 document.body.appendChild(sheetEl);(document.getElementById('menu')||document.body).appendChild(root)}root.style.display=''
 root.scrollTop=0
 H.classList.add('dz-open','dcv-open')
-try{setActiveBottomNav('pvp')}catch(x){}newRound()}
+try{setActiveBottomNav('pvp')}catch(x){}newRound()
+tgBack(true)}
+/* стрелка «назад» в шапке Telegram: на столе ведёт со стола, после выхода — как обычно для экрана */
+function tgBack(on){try{if(on)syncAppBackButton({forceShow:true,onClick:function(){window.dvCloseTable()}})
+else syncAppBackButton()}catch(e){}}
 window.dvCloseTable=function(){if(!root)return
 clearT()
 physClear()
@@ -1597,7 +1602,8 @@ root._in.style.display=''
 root.classList.remove('pk-root')
 ROOM=0}}S=null
 root.style.display='none'
-H.classList.remove('dz-open','dcv-open')}
+H.classList.remove('dz-open','dcv-open')
+tgBack(false)}
 window.dvBack=function(){if(window.__DCV_APP&&ROOMS_ON){window.dvCloseTable()
 return}if(window.__DCV_APP){window.dvCloseTable()
 try{window.mxDiceOpen()}catch(e){}}else window.dvStake()}
