@@ -2571,14 +2571,14 @@ lzScan(now)
 var list=LZ.list,smp=null,ang=0
 for(var i=0;i<list.length;i++){var cv=list[i]
 if(!smp){smp=lzSample(now)
-ang=lzAngle()}var dpr=Math.min(2,window.devicePixelRatio||1),W=cv.__w,H=cv.__h
+ang=lzAngle()}var dpr=Math.min(window.__lq()?1.5:2,window.devicePixelRatio||1),W=cv.__w,H=cv.__h
 if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr)
 cv.height=Math.round(H*dpr)}var vb=(cv.getAttribute('data-vb')||'0,0,100,100').split(',').map(Number),kx=W/vb[2],ky=H/vb[3]
 var fx=-vb[0]*kx,fy=-vb[1]*ky,fs=100*kx,board=vb[0]<0
 var ctx=cv.getContext('2d')
 ctx.setTransform(dpr,0,0,dpr,0,0)
 ctx.clearRect(0,0,W,H)
-var k=1,sc=fs/366,rr=(Math.max(11,366*.031)-1)*sc
+var k=cv.parentElement&&cv.parentElement.classList.contains('ap-ss')?2:1,sc=fs/366,rr=(Math.max(11,366*.031)-1)*sc
 var px=fx+Math.max(rr,Math.min(fs-rr,fs*smp.x)),py=fy+Math.max(rr,Math.min(fs-rr,fs*smp.y))
 var st=cv.__z||(cv.__z={vx:0,vy:0,hits:[]}),vx=Number(smp.vx)||0,vy=Number(smp.vy)||0
 if(st.vx&&vx&&Math.sign(vx)!==Math.sign(st.vx))st.hits.push({x:smp.x<.5?fx:fx+fs,y:py,t:now,h:0})
@@ -2643,30 +2643,35 @@ return}var K=Object.keys(TILT).map((function(q){return[q.split(' ')[0],TILT[q]]}
 var all=document.getElementsByClassName('mx-arena')
 for(var i=0;i<all.length;i++){var el=all[i]
 for(var j=0;j<K.length;j++){if(el.parentElement&&el.parentElement.closest(K[j][0])){if(el.offsetParent){cnt[j]=(cnt[j]||0)+1
-out.push([el,K[j][1],cnt[j]-1])}break}}}TL.list=out}/* Покачивание 3D-арен: раньше каждый кадр JS писал style.transform (пересчёт стилей
-   на основном потоке). Теперь та же кривая заранее раскладывается в ключевые кадры
-   и крутится анимацией браузера на видеокарте — без работы основного потока.
-   Частоты подогнаны под период 60 с, поэтому стык цикла незаметен. */
-var TP=60,TW=2*Math.PI/TP
-function fq(f){return Math.max(1,Math.round(f/TW))*TW}
-var F={a:fq(.83),b:fq(1.37),c:fq(.61),d:fq(1.13),e:fq(.47),f:fq(.97),g:fq(1.21)}
-function tiltFrames(c,o){var kf=[],N=300
-for(var i=0;i<=N;i++){var t=TP*i/N
-var rx=c.x+c.ax*(.62*Math.sin(t*F.a+o)+.38*Math.sin(t*F.b+1.1+o))
-var ry=c.y+c.ay*(.6*Math.sin(t*F.c+2+o)+.4*Math.sin(t*F.d+o))
-var rz=c.z+c.az*(.55*Math.sin(t*F.e+4+o)+.45*Math.sin(t*F.f+.5+o))
-var ty=4*Math.sin(t*F.g+o)
-kf.push({transform:'rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg) rotateZ('+rz.toFixed(2)+'deg) translateY('+ty.toFixed(1)+'px)'})}return kf}
+out.push([el,K[j][1],cnt[j]-1])}break}}}TL.list=out}/* Покачивание 3D-арен. Браузер растрирует наклонённый в 3D элемент с пониженным
+   разрешением — картинка мылилась. Поэтому арена верстается в 2 раза крупнее и
+   уменьшается обратно в самом transform (scale(.5)): растр получается вдвое чётче.
+   Положение и размер на экране те же (отрицательные отступы вокруг точки поворота). */
+var SS=2
+function ssPrep(el){if(el.__ss)return el.__ss
+var w=el.offsetWidth,h=el.offsetHeight
+if(!w||!h)return null
+var o=getComputedStyle(el).transformOrigin.split(' ').map(parseFloat),ox=o[0]||w/2,oy=o[1]||h/2,k=SS-1,st=el.style
+st.width=w*SS+'px';st.height=h*SS+'px';st.maxWidth='none';st.aspectRatio='auto'
+st.marginLeft=-k*ox+'px';st.marginRight=k*(ox-w)+'px';st.marginTop=-k*oy+'px';st.marginBottom=k*(oy-h)+'px'
+st.transformOrigin=SS*ox+'px '+SS*oy+'px'
+el.classList.add('ap-ss')
+return el.__ss={w:w,h:h}}
+window.addEventListener('resize',function(){[].forEach.call(document.querySelectorAll('.ap-ss'),function(el){var st=el.style;['width','height','maxWidth','aspectRatio','marginLeft','marginRight','marginTop','marginBottom','transformOrigin'].forEach(function(q){st[q]=''});el.classList.remove('ap-ss');el.__ss=null})})
 function still(){return document.documentElement.classList.contains('no-animations')}
-function tilt(now){if(document.hidden){requestAnimationFrame(tilt)
-return}tiltScan(now)
-TL.list.forEach(function(it){var el=it[0],c=it[1],n=it[2]
-if(still()){if(el.__ta){try{el.__ta.cancel()}catch(e){}el.__ta=null}el.style.transform='rotateX('+c.x+'deg) rotateY('+c.y+'deg) rotateZ('+c.z+'deg)';return}
-if(el.__ta&&el.__ta.playState!=='idle')return
-el.style.transform=''
-try{el.__ta=el.animate(tiltFrames(c,n*1.7),{duration:TP*1e3,iterations:Infinity,easing:'linear'})
-el.__ta.currentTime=(performance.now()%(TP*1e3))}catch(e){}})
-setTimeout(function(){requestAnimationFrame(tilt)},1000)}
+function tilt(now){requestAnimationFrame(tilt)
+if(document.hidden||(window.__lq()&&now-(TL.lt||0)<32))return
+TL.lt=now
+tiltScan(now)
+var t=now/1e3
+TL.list.forEach(function(it){var el=it[0],c=it[1],o=it[2]*1.7
+if(!ssPrep(el))return
+if(still()){el.style.transform='rotateX('+c.x+'deg) rotateY('+c.y+'deg) rotateZ('+c.z+'deg) scale(.5)';return}
+var rx=c.x+c.ax*(.62*Math.sin(t*.83+o)+.38*Math.sin(t*1.37+1.1+o))
+var ry=c.y+c.ay*(.6*Math.sin(t*.61+2+o)+.4*Math.sin(t*1.13+o))
+var rz=c.z+c.az*(.55*Math.sin(t*.47+4+o)+.45*Math.sin(t*.97+.5+o))
+var ty=4*Math.sin(t*1.21+o)
+el.style.transform='rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg) rotateZ('+rz.toFixed(2)+'deg) translateY('+ty.toFixed(1)+'px) scale(.5)'})}
 requestAnimationFrame(tilt)
 function sigOf(P){return P.list.map((function(p){return p.color+p.sh.toFixed(1)+p.name})).join('|')+(P.last?'L':'')}function arts(){var P=null
 document.querySelectorAll('[data-arena]').forEach((function(el){if(!el.offsetParent)return
