@@ -2535,14 +2535,17 @@ var field='<g clip-path="url(#'+k+'c)"><rect width="100" height="100" fill="#0e1
 if(board){
 return'<svg viewBox="-8 -8 116 126" aria-hidden="true">'+defs+'<path d="M-6 92 L-6 104 Q-6 110 0 110 L100 110 Q106 110 106 104 L106 92 Z" fill="url(#'+k+'s)"/>'+'<rect x="-6" y="-6" width="112" height="112" rx="9" fill="url(#'+k+'w)"/><rect x="-6" y="-6" width="112" height="112" rx="9" fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".8"/>'+'<rect x="-1.5" y="-1.5" width="103" height="103" rx="5.5" fill="#0b0b26"/>'+field+'<rect x="0" y="0" width="100" height="100" rx="4" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="1.6"/></svg><canvas class="ar-cv" data-vb="-8,-8,116,126"></canvas>'
 }return'<svg viewBox="0 0 100 100" aria-hidden="true">'+defs+field+'<rect x=".5" y=".5" width="99" height="99" rx="7" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/></svg><canvas class="ar-cv" data-vb="0,0,100,100"></canvas>'}var LZ={sim:{x:.5,y:.5,vx:.23,vy:-.17,t:0}}
-function lzSample(now){try{if(typeof getScannerSharedLobbyBeamSample==='function'){var s0=getScannerSharedLobbyBeamSample(typeof getNetworkTimeHighRes==='function'?getNetworkTimeHighRes():Date.now())
+function lzSample(now){/* та же точка луча, что и на большой арене (сервер + сглаживание), а не отдельная формула — иначе луч «телепортировался» */
+try{if(typeof getScannerStabilizedBeamSample==='function'&&typeof scannerGridState!=='undefined'&&scannerGridState){var g0=getScannerStabilizedBeamSample(scannerGridState.status||'idle',scannerGridState.roundData||null,scannerGridState.players||[],typeof getNetworkTimeHighRes==='function'?getNetworkTimeHighRes():Date.now())
+if(g0&&isFinite(g0.x)&&isFinite(g0.y))return g0}}catch(e){}
+try{if(typeof getScannerSharedLobbyBeamSample==='function'){var s0=getScannerSharedLobbyBeamSample(typeof getNetworkTimeHighRes==='function'?getNetworkTimeHighRes():Date.now())
 if(s0&&isFinite(s0.x)&&isFinite(s0.y))return s0}}catch(e){}var S0=LZ.sim,dt=S0.t?Math.min(.05,(now-S0.t)/1e3):0
 S0.t=now
 S0.x+=S0.vx*dt
 S0.y+=S0.vy*dt
 if(S0.x<.05||S0.x>.95){S0.vx=-S0.vx
 S0.x=Math.max(.05,Math.min(.95,S0.x))}if(S0.y<.05||S0.y>.95){S0.vy=-S0.vy
-S0.y=Math.max(.05,Math.min(.95,S0.y))}return S0}function lzAngle(){try{return getNetworkTime()/1e3*SCANNER_LOBBY_LASER_TURN_SPEED%(Math.PI*2)}catch(e){return Date.now()/1e3*.65%(Math.PI*2)}}var LZ={list:[],at:0}
+S0.y=Math.max(.05,Math.min(.95,S0.y))}return S0}function lzAngle(){try{return getNetworkTime()/1e3*SCANNER_LOBBY_LASER_TURN_SPEED%(Math.PI*2)}catch(e){return Date.now()/1e3*.65%(Math.PI*2)}}LZ.list=[];LZ.at=0
 function covered(){return document.documentElement.classList.contains('ap-cov')}window.mxCovered=covered
 function lzScan(now){if(now-LZ.at<500)return
 LZ.at=now
@@ -2565,7 +2568,7 @@ var fx=-vb[0]*kx,fy=-vb[1]*ky,fs=100*kx,board=vb[0]<0
 var ctx=cv.getContext('2d')
 ctx.setTransform(dpr,0,0,dpr,0,0)
 ctx.clearRect(0,0,W,H)
-var k=1,rr=Math.max(7,fs*.052)
+var k=1,sc=fs/366,rr=(Math.max(11,366*.031)-1)*sc
 var px=fx+Math.max(rr,Math.min(fs-rr,fs*smp.x)),py=fy+Math.max(rr,Math.min(fs-rr,fs*smp.y))
 var st=cv.__z||(cv.__z={vx:0,vy:0,hits:[]}),vx=Number(smp.vx)||0,vy=Number(smp.vy)||0
 if(st.vx&&vx&&Math.sign(vx)!==Math.sign(st.vx))st.hits.push({x:smp.x<.5?fx:fx+fs,y:py,t:now,h:0})
@@ -2588,7 +2591,11 @@ ctx.lineTo(-rr,0)
 ctx.moveTo(rr,0)
 ctx.lineTo(fs*2,0)
 ctx.stroke()}ctx.restore()
-try{drawScannerReticle(ctx,px,py,rr,{rotation:now*(typeof SCANNER_RETICLE_IDLE_SPIN_SPEED==='number'?SCANNER_RETICLE_IDLE_SPIN_SPEED:.0017),plusScale:.72})}catch(e){}ctx.restore()
+try{ctx.save()
+ctx.translate(px,py)
+ctx.scale(sc,sc)
+drawScannerReticle(ctx,0,0,rr/sc,{alpha:.86,plusScale:.16,plusColor:'rgba(255,255,255,0.92)',rotation:(typeof getNetworkTime==='function'?getNetworkTime():Date.now())*(typeof SCANNER_RETICLE_IDLE_SPIN_SPEED==='number'?SCANNER_RETICLE_IDLE_SPIN_SPEED:.0017),wobble:typeof SCANNER_RETICLE_IDLE_WOBBLE==='number'?SCANNER_RETICLE_IDLE_WOBBLE:0})
+ctx.restore()}catch(e){}ctx.restore()
 ctx.save()
 ctx.globalCompositeOperation='lighter'
 st.hits=st.hits.filter((function(h){return now-h.t<800}))
@@ -3227,6 +3234,9 @@ var id=parseInt(String(p.id||'').replace(/\D/g,'').slice(-9)||'0',10),c=TGC[Math
 if(!el)return
 var g='linear-gradient(180deg,'+c[0]+','+c[1]+')'
 if(el.style.getPropertyValue('--ap-ava')!==g)el.style.setProperty('--ap-ava',g)
+var m=/url\(["']?(.*?)["']?\)/.exec(el.style.backgroundImage||''),im=el.querySelector('img')
+/* фото из Telegram твой код ставит фоном элемента, а новый дизайн красит фон градиентом поверх — показываем фото картинкой внутри */
+if(m&&m[1]&&(!im||im.getAttribute('src')!==m[1])){var ni=document.createElement('img');ni.alt='';ni.src=m[1];el.textContent='';el.appendChild(ni)}
 el.classList.toggle('ap-photo',!!el.querySelector('img'))}))}window.apInfo=function(o){var old=document.getElementById('apInfo')
 if(old)old.remove()
 var el=document.createElement('div')
