@@ -3449,7 +3449,7 @@ html:is([data-mix="12"],[data-mix="13"],[data-mix="15"]) #leaderboardModal .mx-l
 html:is([data-mix="12"],[data-mix="13"],[data-mix="15"]) #leaderboardModal .tv-sec:last-child{margin-bottom: 10px;}
 html[data-mix] body.market-mode #marketFavoritesFab.market-side-fab,html[data-mix] body.market-mode #marketCartFab.market-side-fab{width: 50px !important; height: 50px !important; background: rgba(255,255,255,.08) !important; border: 1px solid rgba(255,255,255,.14) !important; color: #fff !important; -webkit-backdrop-filter: blur(24px) saturate(1.6) !important; backdrop-filter: blur(24px) saturate(1.6) !important; box-shadow: 0 12px 30px rgba(0,0,0,.45) !important;}
 html[data-mix] body.market-mode #marketFavoritesFab.market-side-fab.on,html[data-mix] body.market-mode #marketCartFab.market-side-fab.on{background: #fff !important; color: #0b0d1a !important; border-color: transparent !important;}
-.ln-arena .mx-arena,.ln-pg-art .mx-arena,.pu-tg.scan .mx-arena,.tv-ar .mx-arena{will-change: transform;}
+/* без will-change: иначе браузер растрирует 3D-арену один раз в низком качестве и потом только растягивает — картинка мылится */
 .ap-off,.ap-off *{animation-play-state: paused !important;}
 html[data-mix] #historyPanel .mx-r:not(.is-expanded){content-visibility: auto; contain-intrinsic-size: auto 94px;}
 html[data-mix] .mx-hg{display: flex; gap: 6px; padding: 2px 2px 10px; overflow-x: auto; scrollbar-width: none;}
@@ -4854,3 +4854,6 @@ html.lq .au-lv.lock{opacity: .82;}
 .ln-arena .mx-arena,.ln-pg-art .mx-arena,.pu-tg.scan .mx-arena,.tv-ar .mx-arena{filter: none !important;}
 .ln-arena .mx-arena > svg,.ln-pg-art .mx-arena > svg,.tv-ar .mx-arena > svg{border-radius: 7%; box-shadow: 0 22px 18px rgba(0,0,0,.55);}
 .pu-tg.scan .mx-arena > svg{border-radius: 7%; box-shadow: 0 22px 14px rgba(0,0,0,.55);}
+/* арена в двойном размере (ap-ss) — тень тоже вдвое, чтобы после уменьшения выглядела как раньше */
+.ln-arena .mx-arena.ap-ss > svg,.ln-pg-art .mx-arena.ap-ss > svg,.tv-ar .mx-arena.ap-ss > svg{box-shadow: 0 44px 36px rgba(0,0,0,.55);}
+.pu-tg.scan .mx-arena.ap-ss > svg{box-shadow: 0 44px 28px rgba(0,0,0,.55);}
