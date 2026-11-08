@@ -1,1 +1,7 @@
 node_modules/
+
+# Личные и серверные файлы — никогда не публиковать
+server_code.txt
+AUDIT.md
+LootBag.json
+fragment_dump.tar.gz
