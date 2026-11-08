@@ -2535,6 +2535,16 @@ var field='<g clip-path="url(#'+k+'c)"><rect width="100" height="100" fill="#0e1
 if(board){
 return'<svg viewBox="-8 -8 116 126" aria-hidden="true">'+defs+'<path d="M-6 92 L-6 104 Q-6 110 0 110 L100 110 Q106 110 106 104 L106 92 Z" fill="url(#'+k+'s)"/>'+'<rect x="-6" y="-6" width="112" height="112" rx="9" fill="url(#'+k+'w)"/><rect x="-6" y="-6" width="112" height="112" rx="9" fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".8"/>'+'<rect x="-1.5" y="-1.5" width="103" height="103" rx="5.5" fill="#0b0b26"/>'+field+'<rect x="0" y="0" width="100" height="100" rx="4" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="1.6"/></svg><canvas class="ar-cv" data-vb="-8,-8,116,126"></canvas>'
 }return'<svg viewBox="0 0 100 100" aria-hidden="true">'+defs+field+'<rect x=".5" y=".5" width="99" height="99" rx="7" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/></svg><canvas class="ar-cv" data-vb="0,0,100,100"></canvas>'}var LZ={sim:{x:.5,y:.5,vx:.23,vy:-.17,t:0}}
+/* луч и прицел превью рисуются один раз в заготовку и потом только переносятся с поворотом —
+   размытие свечения (shadowBlur) больше не считается каждый кадр */
+var LZS={},LZN=0
+function lzSprite(kind,key,w,h,dpr,draw){var tier='';try{tier=getEffectiveQualityTier()}catch(e){}var k=kind+key.join('|')+tier,sp=LZS[k]
+if(sp)return sp
+if(++LZN>12){LZS={};LZN=1}
+var c=document.createElement('canvas');c.width=Math.ceil(w*dpr);c.height=Math.ceil(h*dpr)
+var g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,w*dpr/2,h*dpr/2)
+try{draw(g)}catch(e){return null}
+sp={c:c,w:w,h:h};LZS[k]=sp;return sp}
 function lzSample(now){/* та же точка луча, что и на большой арене (сервер + сглаживание), а не отдельная формула — иначе луч «телепортировался» */
 try{if(typeof getScannerStabilizedBeamSample==='function'&&typeof scannerGridState!=='undefined'&&scannerGridState){var g0=getScannerStabilizedBeamSample(scannerGridState.status||'idle',scannerGridState.roundData||null,scannerGridState.players||[],typeof getNetworkTimeHighRes==='function'?getNetworkTimeHighRes():Date.now())
 if(g0&&isFinite(g0.x)&&isFinite(g0.y))return g0}}catch(e){}
@@ -2583,7 +2593,9 @@ ctx.clip()
 ctx.save()
 ctx.translate(px,py)
 ctx.rotate(ang)
-try{drawScannerBeam(ctx,fs*4.6,{glowWidth:7.2*k,coreWidth:Math.max(1.4,2.85*k),innerWidth:Math.max(.5,.9*k),glowBlur:18*k,coreBlur:14*k,beamColor:'rgba(45, 225, 255, 0.74)',innerColor:'rgba(255,255,255,0.88)',centerGap:rr*2})}catch(e){ctx.strokeStyle='rgba(45,225,255,.8)'
+var BS=lzSprite('b',[fs.toFixed(1),rr.toFixed(2),dpr],fs*4.6+40,62,dpr,function(g){drawScannerBeam(g,fs*4.6,{glowWidth:7.2*k,coreWidth:Math.max(1.4,2.85*k),innerWidth:Math.max(.5,.9*k),glowBlur:18*k,coreBlur:14*k,beamColor:'rgba(45, 225, 255, 0.74)',innerColor:'rgba(255,255,255,0.88)',centerGap:rr*2})})
+if(BS)ctx.drawImage(BS.c,-BS.w/2,-BS.h/2,BS.w,BS.h)
+else try{drawScannerBeam(ctx,fs*4.6,{glowWidth:7.2*k,coreWidth:Math.max(1.4,2.85*k),innerWidth:Math.max(.5,.9*k),glowBlur:18*k,coreBlur:14*k,beamColor:'rgba(45, 225, 255, 0.74)',innerColor:'rgba(255,255,255,0.88)',centerGap:rr*2})}catch(e){ctx.strokeStyle='rgba(45,225,255,.8)'
 ctx.lineWidth=1.5
 ctx.beginPath()
 ctx.moveTo(-fs*2,0)
@@ -2591,10 +2603,11 @@ ctx.lineTo(-rr,0)
 ctx.moveTo(rr,0)
 ctx.lineTo(fs*2,0)
 ctx.stroke()}ctx.restore()
-try{ctx.save()
+try{var RS=lzSprite('r',[rr.toFixed(2),dpr],(rr/sc+30)*2*sc,(rr/sc+30)*2*sc,dpr,function(g){g.scale(sc,sc);drawScannerReticle(g,0,0,rr/sc,{alpha:.86,plusScale:.16,plusColor:'rgba(255,255,255,0.92)',rotation:0,wobble:0})})
+ctx.save()
 ctx.translate(px,py)
-ctx.scale(sc,sc)
-drawScannerReticle(ctx,0,0,rr/sc,{alpha:.86,plusScale:.16,plusColor:'rgba(255,255,255,0.92)',rotation:(typeof getNetworkTime==='function'?getNetworkTime():Date.now())*(typeof SCANNER_RETICLE_IDLE_SPIN_SPEED==='number'?SCANNER_RETICLE_IDLE_SPIN_SPEED:.0017),wobble:typeof SCANNER_RETICLE_IDLE_WOBBLE==='number'?SCANNER_RETICLE_IDLE_WOBBLE:0})
+ctx.rotate((typeof getNetworkTime==='function'?getNetworkTime():Date.now())*(typeof SCANNER_RETICLE_IDLE_SPIN_SPEED==='number'?SCANNER_RETICLE_IDLE_SPIN_SPEED:.0017))
+if(RS)ctx.drawImage(RS.c,-RS.w/2,-RS.h/2,RS.w,RS.h)
 ctx.restore()}catch(e){}ctx.restore()
 ctx.save()
 ctx.globalCompositeOperation='lighter'
@@ -2617,6 +2630,9 @@ if(h.h){ctx.moveTo(h.x-Ln,h.y)
 ctx.lineTo(h.x+Ln,h.y)}else{ctx.moveTo(h.x,h.y-Ln)
 ctx.lineTo(h.x,h.y+Ln)}ctx.stroke()}))
 ctx.restore()}requestAnimationFrame(lzFrame)
+}requestAnimationFrame(lzFrame)
+/* ВАЖНО: раньше этот блок по ошибке сидел ВНУТРИ кадра лазера и каждый кадр запускал ещё один
+   бесконечный цикл покачивания — за минуту их набегали тысячи, и приложение всё сильнее тормозило */
 var TILT={'.ln-arena .mx-arena':{x:8,ax:26,y:0,ay:18,z:0,az:9},'.ln-pg-art .mx-arena':{x:8,ax:24,y:0,ay:16,z:0,az:8},'.pu-tg.scan .mx-arena':{x:26,ax:24,y:0,ay:14,z:-6,az:10},'.tv-ar .mx-arena':{x:18,ax:20,y:0,ay:16,z:0,az:7}}
 var TL={list:[],at:0}
 function tiltScan(now){if(now-TL.at<1e3)return
@@ -2627,17 +2643,31 @@ return}var K=Object.keys(TILT).map((function(q){return[q.split(' ')[0],TILT[q]]}
 var all=document.getElementsByClassName('mx-arena')
 for(var i=0;i<all.length;i++){var el=all[i]
 for(var j=0;j<K.length;j++){if(el.parentElement&&el.parentElement.closest(K[j][0])){if(el.offsetParent){cnt[j]=(cnt[j]||0)+1
-out.push([el,K[j][1],cnt[j]-1])}break}}}TL.list=out}function tilt(now){if(document.hidden||(window.__lq()&&now-(TL.lt||0)<32)){requestAnimationFrame(tilt)
-return}TL.lt=now
-tiltScan(now)
-var t=now/1e3
-TL.list.forEach((function(it){var el=it[0],c=it[1],n=it[2];(function(){var o=n*1.7
-var rx=c.x+c.ax*(.62*Math.sin(t*.83+o)+.38*Math.sin(t*1.37+1.1+o))
-var ry=c.y+c.ay*(.6*Math.sin(t*.61+2+o)+.4*Math.sin(t*1.13+o))
-var rz=c.z+c.az*(.55*Math.sin(t*.47+4+o)+.45*Math.sin(t*.97+.5+o))
-var ty=4*Math.sin(t*1.21+o)
-el.style.transform='rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg) rotateZ('+rz.toFixed(2)+'deg) translateY('+ty.toFixed(1)+'px)'})()}))
-requestAnimationFrame(tilt)}requestAnimationFrame(tilt)}requestAnimationFrame(lzFrame)
+out.push([el,K[j][1],cnt[j]-1])}break}}}TL.list=out}/* Покачивание 3D-арен: раньше каждый кадр JS писал style.transform (пересчёт стилей
+   на основном потоке). Теперь та же кривая заранее раскладывается в ключевые кадры
+   и крутится анимацией браузера на видеокарте — без работы основного потока.
+   Частоты подогнаны под период 60 с, поэтому стык цикла незаметен. */
+var TP=60,TW=2*Math.PI/TP
+function fq(f){return Math.max(1,Math.round(f/TW))*TW}
+var F={a:fq(.83),b:fq(1.37),c:fq(.61),d:fq(1.13),e:fq(.47),f:fq(.97),g:fq(1.21)}
+function tiltFrames(c,o){var kf=[],N=300
+for(var i=0;i<=N;i++){var t=TP*i/N
+var rx=c.x+c.ax*(.62*Math.sin(t*F.a+o)+.38*Math.sin(t*F.b+1.1+o))
+var ry=c.y+c.ay*(.6*Math.sin(t*F.c+2+o)+.4*Math.sin(t*F.d+o))
+var rz=c.z+c.az*(.55*Math.sin(t*F.e+4+o)+.45*Math.sin(t*F.f+.5+o))
+var ty=4*Math.sin(t*F.g+o)
+kf.push({transform:'rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg) rotateZ('+rz.toFixed(2)+'deg) translateY('+ty.toFixed(1)+'px)'})}return kf}
+function still(){return document.documentElement.classList.contains('no-animations')}
+function tilt(now){if(document.hidden){requestAnimationFrame(tilt)
+return}tiltScan(now)
+TL.list.forEach(function(it){var el=it[0],c=it[1],n=it[2]
+if(still()){if(el.__ta){try{el.__ta.cancel()}catch(e){}el.__ta=null}el.style.transform='rotateX('+c.x+'deg) rotateY('+c.y+'deg) rotateZ('+c.z+'deg)';return}
+if(el.__ta&&el.__ta.playState!=='idle')return
+el.style.transform=''
+try{el.__ta=el.animate(tiltFrames(c,n*1.7),{duration:TP*1e3,iterations:Infinity,easing:'linear'})
+el.__ta.currentTime=(performance.now()%(TP*1e3))}catch(e){}})
+setTimeout(function(){requestAnimationFrame(tilt)},1000)}
+requestAnimationFrame(tilt)
 function sigOf(P){return P.list.map((function(p){return p.color+p.sh.toFixed(1)+p.name})).join('|')+(P.last?'L':'')}function arts(){var P=null
 document.querySelectorAll('[data-arena]').forEach((function(el){if(!el.offsetParent)return
 P=P||players()
@@ -3608,18 +3638,19 @@ cv.height=Math.round(H*d)
 cx.setTransform(d,0,0,d,0,0)}function draw(t){cx.clearRect(0,0,W,H)
 cx.globalCompositeOperation='lighter'
 CUR.forEach((function(c){var mid=W*(c.c+.24*Math.sin(t*c.ds+c.ph)),half=W*.7,L=mid-half,R=mid+half
-for(var x=Math.max(L,-3);x<Math.min(R,W+3);x+=1.5){var u=x/W,p=(x-L)/(R-L),e=Math.pow(Math.max(0,Math.sin(Math.PI*p)),.7)
+var STP=window.__lq()?3:2
+for(var x=Math.max(L,-3);x<Math.min(R,W+3);x+=STP){var u=x/W,p=(x-L)/(R-L),e=Math.pow(Math.max(0,Math.sin(Math.PI*p)),.7)
 var yb=H*(c.y+DY+AM*.08*Math.sin(u*10+t*.22+c.ph)+JG*(.05*Math.sin(u*23-t*.31)+.045*Math.sin(u*23+t*.9+c.ph)+.03*Math.sin(u*57-t*1.4)))
 var I=e*c.a*(.62+.2*Math.sin(u*38+t*1.8+c.ph)+.12*Math.sin(u*71-t*1.4))
 var hh=H*c.h*CH*(.7+.2*Math.sin(u*9+t*.6+c.ph))
 cx.globalAlpha=Math.min(1,I)
-cx.drawImage(SPR,x,yb-hh,2.5,hh)}}))
+cx.drawImage(SPR,x,yb-hh,STP+1,hh)}}))
 cx.globalAlpha=1
 cx.globalCompositeOperation='source-over'}var raf=0
 function frame(ms){raf=0
 if(!ban.__on)return
-if(window.__lq()&&ms-(cv.__lt||0)<30){raf=requestAnimationFrame(frame);return}cv.__lt=ms
-if(!W||cv.width!==Math.round(cv.clientWidth*d))size()
+if(ms-(cv.__lt||0)<30){raf=requestAnimationFrame(frame);return}cv.__lt=ms
+if(!W||((cv.__rs=(cv.__rs||0)+1)%30===0&&cv.width!==Math.round(cv.clientWidth*d)))size()
 if(W)draw(ms/1e3)
 raf=requestAnimationFrame(frame)}return{play:function(){if(!raf)raf=requestAnimationFrame(frame)},pause:function(){if(raf)cancelAnimationFrame(raf)
 raf=0}}}function giftData(name){if(window.__RF_GIFTS&&window.__RF_GIFTS[name])return{obj:window.__RF_GIFTS[name]}

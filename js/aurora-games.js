@@ -674,9 +674,10 @@ B.vy-=ny2*im}}}D.forEach((function(p){p.d.pos(p.x,p.y,p.h)}))
 if(!moving){idle+=dt
 if(idle>(opts.pause||1.8))throwAll()}}requestAnimationFrame(frame)
 return{stop:function(){alive=false
-D.forEach((function(p){p.d.el.remove()}))},dice:D}}function world(layer,getB,size){var D=[],r=size/2,last=performance.now(),alive=true
-function step(now){if(!alive||!layer.isConnected)return
-requestAnimationFrame(step)
+D.forEach((function(p){p.d.el.remove()}))},dice:D}}function world(layer,getB,size){var D=[],r=size/2,last=performance.now(),alive=true,run=true
+/* физика спит, когда все кубики лежат (раньше считала и двигала их каждый кадр всегда) */
+function step(now){if(!alive||!layer.isConnected||!D.length||D.every(function(p){return p.rest&&p.h===0&&p.vh===0})){run=false
+return}requestAnimationFrame(step)
 var dt=Math.min(.033,(now-last)/1e3)
 last=now
 var B=getB()
@@ -742,6 +743,9 @@ layer.appendChild(d.el)
 var air=.42,sc=1.15+Math.random()*.35,p={d:d,x:x0,y:y0,h:24,vh:1300*air/2,vx:(tx-x0)/air*sc+(Math.random()-.5)*60,vy:(ty-y0)/air*sc+(Math.random()-.5)*60,w:[(Math.random()-.5)*30,(Math.random()-.5)*30,(Math.random()-.5)*12],rest:false,inside:false}
 d.setM(mul(rot([Math.random(),Math.random(),Math.random()],Math.random()*6),I()))
 D.push(p)
+if(!run){run=true
+last=performance.now()
+requestAnimationFrame(step)}
 return new Promise((function(res){var t0=performance.now();(function wait(){if(p.rest&&performance.now()-t0>600){setTimeout((function(){res(d.top())}),120)}else setTimeout(wait,80)})()}))},clear:function(){D.splice(0).forEach((function(p){p.d.el.style.transition='opacity .35s'
 p.d.el.style.opacity='0'
 setTimeout((function(){p.d.el.remove()}),400)}))},stop:function(){alive=false}}}window.Dice3D={make:make,fly:fly,table:table,world:world,faceM:faceM}})();(function(){var N_V=4
@@ -951,11 +955,15 @@ el.querySelector('.ch b').textContent=d.chance.toFixed(1)+'%'
 el.querySelector('.rd').classList.toggle('done',d.st==='finished'||d.st==='preparing_next_round')
 if(Math.abs(d.pot-potTo)>.001){potShown=currentPot()
 potTo=d.pot
-potT0=performance.now()}}function currentPot(){var t=Math.min(1,(performance.now()-potT0)/600)
-return potShown+(potTo-potShown)*(1-Math.pow(1-t,3))}function potLoop(){var v=currentPot()
+potT0=performance.now()
+potKick()}}function currentPot(){var t=Math.min(1,(performance.now()-potT0)/600)
+return potShown+(potTo-potShown)*(1-Math.pow(1-t,3))}/* банк докручивается только пока меняется (раньше цикл шёл каждый кадр всегда) */
+var potRun=false
+function potLoop(){var v=currentPot()
 document.querySelectorAll('.sv-plate .bank b span').forEach((function(e){var s2=n2(v)
 if(e.textContent!==s2)e.textContent=s2}))
-requestAnimationFrame(potLoop)}requestAnimationFrame(potLoop)
+if(performance.now()-potT0<700)requestAnimationFrame(potLoop)
+else potRun=false}function potKick(){if(!potRun){potRun=true;requestAnimationFrame(potLoop)}}potKick()
 var lastSec=null
 function cdUpdate(d){var el=box.cd
 if(!el)return
