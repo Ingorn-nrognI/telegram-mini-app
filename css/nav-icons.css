@@ -10,6 +10,11 @@ html:not(.no-animations) .bottom-btn.is-active .nav-icon.nv-has>svg:not(.nvi){di
 .nvi{--bgc:#1c1e25;--fx:#5eead4}
 html[data-v="5"] .bottom-btn.is-active .nvi{--bgc:#fff;--fx:#0f766e}
 .nvi *{transform-box:view-box}
+/* Выравнивание визуального размера иконок: у Arena (контурные перчатки + молнии) и у кубка/молотка
+   рисунок занимает меньше места в своей рамке, поэтому они казались мельче остальных. */
+#navArenaMarketStateArena .nav-icon svg,#navMarketStateArena .nav-icon svg{scale:1.22}
+#navLeaderboard .nav-icon svg{scale:1.12}
+#navPvp .nav-icon-auction svg{scale:1.1}
 .nv-sw .nv-trl path{stroke-dasharray:.45 2;opacity:0}
 .nv-sw.nv-v6 .nv-swA{animation:nv-sw6a 2.2s cubic-bezier(.55,0,.25,1) infinite}
 .nv-sw.nv-v6 .nv-swB{animation:nv-sw6b 2.2s cubic-bezier(.55,0,.25,1) infinite}
