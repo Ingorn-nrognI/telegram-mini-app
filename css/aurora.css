@@ -4857,3 +4857,8 @@ html.lq .au-lv.lock{opacity: .82;}
 /* арена в двойном размере (ap-ss) — тень тоже вдвое, чтобы после уменьшения выглядела как раньше */
 .ln-arena .mx-arena.ap-ss > svg,.ln-pg-art .mx-arena.ap-ss > svg,.tv-ar .mx-arena.ap-ss > svg{box-shadow: 0 44px 36px rgba(0,0,0,.55);}
 .pu-tg.scan .mx-arena.ap-ss > svg{box-shadow: 0 44px 28px rgba(0,0,0,.55);}
+
+/* Убраны панели вкладок: «Главная / PvP» на главном экране и «Маркет / Инвентарь» в Маркете
+   (Инвентарь открывается кнопкой в нижнем меню). Разметку не трогаем — только скрываем. */
+html body #homeScreen .ap-tabs{display:none!important}
+html body #lxCats.lx-cats.pum-h{display:none!important}
