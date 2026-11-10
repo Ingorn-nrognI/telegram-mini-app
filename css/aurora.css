@@ -4872,10 +4872,16 @@ html body #lxCats.lx-cats.pum-h{display:none!important}
 .rm-own .ro-t b{font:800 14.5px/1.1 Onest,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rm-own .ro-t small{font:600 12px/1.2 Onest,system-ui,sans-serif;color:#7fb3ab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rm-own .ro-plus{flex:none;width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(120deg,#86efac,#5eead4 50%,#67e8f9);color:#042f2e;font:900 20px/1 Onest,system-ui,sans-serif;box-shadow:0 6px 16px rgba(45,212,191,.3)}
-.dv-head.rm-h{flex-wrap:wrap;row-gap:10px}
-.dv-head.rm-h .rm-sw{flex:1 1 100%;order:2;gap:4px}
-.dv-head.rm-h .rm-sw button{flex:1 1 0;min-width:0;padding:0 6px;transition:flex-grow .35s cubic-bezier(.3,.7,.2,1),background .25s,color .25s}
-.dv-head.rm-h .rm-sw button.on{flex-grow:1.9}
+/* 5 кнопок столов справа от заголовка: компактнее, чтобы влезали и на узких телефонах */
+.dv-head.rm-h{gap:8px}
+.dv-head.rm-h .dv-ti{min-width:0}
+.dv-head.rm-h .dv-ti small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dv-head.rm-h .rm-sw{gap:2px;padding:3px}
+.dv-head.rm-h .rm-sw button{min-width:32px;padding:0 7px}
+.dv-head.rm-h .rm-sw button.on{padding:0 11px}
+.dv-head.rm-h .dv-ti>span{white-space:nowrap}
+.dv-head.rm-h .dv-q{flex:none}
+@media (max-width:374px){.dv-head.rm-h{gap:6px}.dv-head.rm-h .rm-sw button{min-width:29px;padding:0 5px}.dv-head.rm-h .rm-sw button.on{padding:0 9px}.dv-head.rm-h .dv-ti b{font-size:19px}}
 .ro-ov{position:fixed;inset:0;z-index:10050;display:flex;align-items:flex-end;justify-content:center;visibility:hidden;pointer-events:none;transition:visibility 0s .32s}
 .ro-ov.on{visibility:visible;pointer-events:auto;transition:none}
 .ro-bg{position:absolute;inset:0;background:rgba(1,10,12,.62);opacity:0;transition:opacity .28s}
