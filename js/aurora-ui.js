@@ -1,17 +1,22 @@
 /* ===== Производительность на слабых телефонах =====
    Режим «лёгкой графики» (класс lq на <html>) включается, когда в Настройках выбрано
-   «Качество графики: Низкое», либо при «Авто», если телефон не тянет 45 кадров/с.
+   «Качество графики: Низкое», либо при «Авто», если телефон не тянет 40 кадров/с (три замера подряд; метка живёт 3 дня).
    В нём: без размытия под стеклом, меньше частиц, канвасы в 1x и 30 к/с. */
 window.__lq=function(){return document.documentElement.classList.contains('lq')};
+/* Чёткость статуэток (лотти-модельки в баннерах и рефералах): рисуются в отдельном потоке и стоят дёшево,
+   поэтому даже в лёгком режиме — не ниже 2x, иначе на телефонах они мыльные. */
+window.__mdpr=function(){var d=window.devicePixelRatio||1;return Math.max(1,Math.min(d,window.__lq()?2:3))};
 (function(){var R=document.documentElement,KEY='lm_perf_low'
 function tier(){try{return getEffectiveQualityTier()}catch(e){return'mid'}}
+/* Метка «телефон не тянет» живёт 3 дня, потом проверяем заново (старые метки '1' — сбрасываются) */
+function flagged(){try{var v=+localStorage.getItem(KEY);if(v>1e12&&Date.now()-v<2592e5)return true;if(localStorage.getItem(KEY))localStorage.removeItem(KEY)}catch(e){}return false}
 function apply(){R.classList.toggle('lq',tier()==='low')}
 var det=window.detectOptimalQuality
-if(typeof det==='function'){window.detectOptimalQuality=function(){try{if(localStorage.getItem(KEY)==='1')return'low'}catch(e){}return det.apply(this,arguments)}}
+if(typeof det==='function'){window.detectOptimalQuality=function(){if(flagged())return'low';return det.apply(this,arguments)}}
 var setQ=window.setAppQuality
 if(typeof setQ==='function'){window.setAppQuality=function(){var r=setQ.apply(this,arguments);apply();return r}}
 function isAuto(){try{return appSettings.quality==='auto'}catch(e){return false}}
-function low(){try{localStorage.setItem(KEY,'1')}catch(e){}try{setAppQuality('auto')}catch(e){apply()}}
+function low(){try{localStorage.setItem(KEY,String(Date.now()))}catch(e){}try{setAppQuality('auto')}catch(e){apply()}}
 function probe(){var slow=0,n=0,t0=0
 function f(t){if(!isAuto())return
 if(document.hidden){t0=0;requestAnimationFrame(f);return}
@@ -19,11 +24,11 @@ if(!t0){t0=t;n=0;requestAnimationFrame(f);return}
 n++
 if(t-t0<2500){requestAnimationFrame(f);return}
 var fps=n*1000/(t-t0);t0=0
-if(fps<45){if(++slow>=2){low();return}}else if(slow)slow=0
+if(fps<40){if(++slow>=3){low();return}}else if(slow)slow=0
 setTimeout(function(){requestAnimationFrame(f)},4000)}
 setTimeout(function(){requestAnimationFrame(f)},5000)}
 apply()
-try{if(isAuto()&&localStorage.getItem(KEY)!=='1')probe()}catch(e){}
+try{if(isAuto()&&!flagged())probe()}catch(e){}
 /* исходные 5 статуэток рефералов спрятаны новым дизайном — не грузим и не крутим их */
 try{for(var i=REFERRAL_GIFT_FILES.length-1;i>=0;i--){if(!/hula_girl|streetbeast/.test(REFERRAL_GIFT_FILES[i].file))REFERRAL_GIFT_FILES.splice(i,1)}}catch(e){}
 try{window.ensureReferralGiftAnimsLoaded=function(){}
@@ -3663,7 +3668,7 @@ try{if(typeof REFERRAL_GIFT_DATA!=='undefined'&&REFERRAL_GIFT_DATA[FILES[name]])
 if(!D.obj&&window.__DotLottieWorker){try{var cv=document.createElement('canvas')
 cv.style.cssText='width:100%;height:100%;display:block'
 el.appendChild(cv)
-return new window.__DotLottieWorker(Object.assign({canvas:cv,loop:true,autoplay:false,workerId:'referral-gifts-'+i%2,renderConfig:{devicePixelRatio:window.__lq()?1:Math.min(2,window.devicePixelRatio||1),autoResize:true}},D.text?{data:D.text}:{src:new URL(D.file,location.href).href}))}catch(e){el.innerHTML=''}}var LT=window.__RF_LOT||window.lottie
+return new window.__DotLottieWorker(Object.assign({canvas:cv,loop:true,autoplay:false,workerId:'referral-gifts-'+i%2,renderConfig:{devicePixelRatio:window.__mdpr(),autoResize:true}},D.text?{data:D.text}:{src:new URL(D.file,location.href).href}))}catch(e){el.innerHTML=''}}var LT=window.__RF_LOT||window.lottie
 if(!LT||!LT.loadAnimation)return null
 try{var a=LT.loadAnimation(Object.assign({container:el,renderer:'svg',loop:true,autoplay:false},D.obj?{animationData:JSON.parse(JSON.stringify(D.obj))}:D.text?{animationData:JSON.parse(D.text)}:{path:D.file}))
 if(a.setSubframe)a.setSubframe(false)

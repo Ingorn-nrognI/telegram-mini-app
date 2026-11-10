@@ -9832,7 +9832,7 @@ function createReferralGiftPlayer(el, file, index) {
         autoplay: false,
         workerId: "referral-gifts-" + (index % 2),     // 5 фигурок на 2 потока
         renderConfig: {
-          devicePixelRatio: Math.min(referralFxIsLite() ? 1.5 : 2, window.devicePixelRatio || 1),
+          devicePixelRatio: Math.min(referralFxIsLite() ? 2 : 3, window.devicePixelRatio || 1),   // статуэтки — чёткие и на слабых
           autoResize: true
         }
       }, preloaded ? { data: preloaded } : { src: new URL(file, location.href).href }));
@@ -25950,7 +25950,7 @@ if (document.readyState === "loading") {
 </script>
 <div id="scannerNameTooltip" class="scanner-name-tooltip"></div>
 <script src="js/nav-icons.js?v=1"></script>
-<script src="js/aurora-ui.js?v=5"></script>
+<script src="js/aurora-ui.js?v=6"></script>
 <script src="js/aurora-games.js?v=5"></script>
 </body>
 </html>
