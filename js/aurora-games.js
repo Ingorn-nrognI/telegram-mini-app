@@ -1117,8 +1117,7 @@ gr+=s.stake.gram||0
 s.stake.gifts.forEach((function(g){gifts.push(g)}))}))
 return{gram:gr,gifts:gifts,total:gr+gifts.reduce((function(a,g){return a+g.value}),0)}}function kindOf(st){return st.gifts.length?st.gram?'gg':'g':'gram'}function kindLbl(st){return{gram:'GRAM',g:'подарки',gg:'подарки + GRAM'}[kindOf(st)]}function stake(st,max){var g=st.gifts,m=max||2
 if(!g.length)return'<span class="dv-sk k-gram">'+gram(n2(st.gram))+'</span>'
-return'<span class="dv-sk k-'+kindOf(st)+'"><span class="dv-gs">'+g.slice(0,m).map((function(x){return gt(x)})).join('')+(g.length>m?'<em>+'+(g.length-m)+'</em>':'')+'</span>'+(st.gram?'<span class="dv-plus">+</span>'+gram(n2(st.gram)):'<span class="dv-ap">≈'+n2(stakeVal(st))+'</span>')+'</span>'}var ROOMS_ON=!!window.__DCV_ROOMS,ROOMS=[{n:'Стол',ic:'1',min:.1,max:1,chips:[.1,.25,.5,1]},{n:'Стол',
-ic:'2',min:1,max:10,chips:[1,2.5,5,10]},{n:'Покер',pk:true,min:1,max:1,chips:[1,1,1,1]}],ROOM=0,JOIN=null,PICK=.25,BOTN=['nightowl','Sasha_V','grammaster','lucky_bobr','dice_king','Mira'],BOTC=['#ff5d8f','#ffb547','#34d17f','#8b5cf6','#38bdf8','#f472b6']
+return'<span class="dv-sk k-'+kindOf(st)+'"><span class="dv-gs">'+g.slice(0,m).map((function(x){return gt(x)})).join('')+(g.length>m?'<em>+'+(g.length-m)+'</em>':'')+'</span>'+(st.gram?'<span class="dv-plus">+</span>'+gram(n2(st.gram)):'<span class="dv-ap">≈'+n2(stakeVal(st))+'</span>')+'</span>'}var ROOMS_ON=!!window.__DCV_ROOMS,ROOMS=[{n:'Стол',ic:'1',min:.1,max:.1,chips:[.1,.1,.1,.1]},{n:'Стол',ic:'2',min:.5,max:.5,chips:[.5,.5,.5,.5]},{n:'Стол',ic:'3',min:1,max:1,chips:[1,1,1,1]},{n:'Стол',ic:'4',min:3,max:3,chips:[3,3,3,3]},{n:'Покер',pk:true,min:5,max:5,chips:[5,5,5,5]}],ROOM=0,JOIN=null,PICK=.25,BOTN=['nightowl','Sasha_V','grammaster','lucky_bobr','dice_king','Mira'],BOTC=['#ff5d8f','#ffb547','#34d17f','#8b5cf6','#38bdf8','#f472b6']
 function rbot(k,used){var i
 do{i=Math.floor(Math.random()*BOTN.length)}while(used[BOTN[i]])
 used[BOTN[i]]=1
@@ -1176,7 +1175,7 @@ root.classList.toggle('pk-root',!!ROOMS[k].pk)
 if(ROOMS[k].pk){root._in.innerHTML=''
 root._in.style.display='none'
 root._pk.style.display=''
-if(window.pkStart)pkStart(root._pk)
+if(window.pkStart)pkStart(root._pk,ROOMS[k].min)
 return}root._pk.style.display='none'
 root._pk.innerHTML=''
 root._in.style.display=''
@@ -1187,12 +1186,108 @@ root._hd=document.createElement('div')
 root._hd.className='dv-head rm-h'
 root._hd.innerHTML='<div class="dv-ti"><span><b>Кости 21</b><i class="dv-q">?</i></span><small class="dv-rn2"></small></div><div class="rm-sw">'+ROOMS.map((function(r,k){return'<button type="button" data-k="'+k+'" onclick="dvRoom('+k+')">'+(r.pk?'<i class="ic">'+SPADE+'</i><span>'+r.n+'</span>':'<span>'+r.n+'</span><i class="ic n">'+r.ic+'</i>')+'</button>'})).join('')+'</div>'
 root.insertBefore(root._hd,root.firstChild)
+root._ow=document.createElement('button')
+root._ow.type='button'
+root._ow.className='rm-own'
+root._ow.setAttribute('onclick','dvOwnOpen()')
+root._ow.innerHTML=OWN_BTN()
+root.insertBefore(root._ow,root._hd.nextSibling)
 root._pk=document.createElement('div')
 root._pk.className='rm-pk'
 root._pk.style.display='none'
 root.insertBefore(root._pk,root._in.nextSibling)
 swUpd()}function swUpd(){if(!root||!root._hd)return
-root._hd.querySelectorAll('.rm-sw button').forEach((function(b){b.classList.toggle('on',+b.dataset.k===ROOM)}))}window.dvHeadSub=function(t){var e=root&&root._hd&&root._hd.querySelector('.dv-rn2')
+root._hd.querySelectorAll('.rm-sw button').forEach((function(b){b.classList.toggle('on',+b.dataset.k===ROOM)}))
+if(root._ow){root._ow.innerHTML=OWN_BTN()
+root._ow.classList.toggle('on',!!(ROOMS[ROOM]&&ROOMS[ROOM].own))}}/* ===== Столы игроков: список чужих столов + создание своего (Кости 21 и Покер) ===== */
+var OWN_IC='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.6 14.3c2.6-.4 4.8 1 5.4 4.2"/></svg>'
+var LOCK='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+var OWN_LIST=[{g:'d',t:'Стол Mira',h:'Mira',c:'#f472b6',e:.25,p:3},{g:'d',t:'Быстрые кости',h:'lucky_bobr',c:'#8b5cf6',e:.3,p:2},{g:'d',t:'Ночной стол',h:'nightowl',c:'#ff5d8f',e:.75,p:1},{g:'d',t:'Только свои',h:'grammaster',c:'#34d17f',e:1.5,p:2,lock:1},{g:'d',t:'Двадцать одно',h:'Sasha_V',c:'#ffb547',e:2.5,p:4},{g:'d',t:'High roller',h:'dice_king',c:'#38bdf8',e:10,p:6},
+{g:'p',t:'Новички',h:'lucky_bobr',c:'#8b5cf6',e:1,p:5},{g:'p',t:'Покер у Миры',h:'Mira',c:'#f472b6',e:2,p:3},{g:'p',t:'Блеф-клуб',h:'grammaster',c:'#34d17f',e:7.5,p:4},{g:'p',t:'Киты',h:'dice_king',c:'#38bdf8',e:25,p:2}]
+var OWN={g:'d',v:'list',cg:'d',ce:1,ct:'',cl:0},OWN_Q=[.1,.5,1,3,5,10,25],OWN_ST=[.1,.2,.25,.3,.5,.75,1,1.5,2,2.5,3,4,5,7.5,10,15,20,25,50,100]
+function OWN_BTN(){var R0=ROOMS[ROOM]||{}
+if(R0.own)return'<span class="ro-ic">'+OWN_IC+'</span><span class="ro-t"><b>«'+esc(R0.t)+'»</b><small>'+(R0.mine?'твой стол':'стол игрока')+' · вход '+n2(R0.min)+' GRAM</small></span><span class="ro-plus" aria-hidden="true">⇄</span>'
+return'<span class="ro-ic">'+OWN_IC+'</span><span class="ro-t"><b>Столы игроков</b><small>'+OWN_LIST.length+' открыто · или создай свой</small></span><span class="ro-plus" aria-hidden="true">+</span>'}
+function ownEl(){var m=document.getElementById('rmOwn')
+if(m)return m
+m=document.createElement('div')
+m.id='rmOwn'
+m.className='ro-ov'
+m.innerHTML='<div class="ro-bg" onclick="dvOwnClose()"></div><div class="ro-sh" role="dialog" aria-modal="true" aria-label="Столы игроков"></div>'
+document.body.appendChild(m)
+return m}
+function ownHap(){try{Telegram.WebApp.HapticFeedback.selectionChanged()}catch(e){}}
+window.dvOwnOpen=function(){var m=ownEl()
+OWN.v='list'
+var R0=ROOMS[ROOM]
+if(R0)OWN.g=R0.pk?'p':'d'
+ownR()
+requestAnimationFrame((function(){m.classList.add('on')}))
+ownHap()}
+window.dvOwnClose=function(){var m=document.getElementById('rmOwn')
+if(m)m.classList.remove('on')}
+window.dvOwnG=function(g){OWN.g=g
+ownHap()
+ownR()}
+window.dvOwnV=function(v){OWN.v=v
+if(v==='new')OWN.cg=OWN.g
+ownR()}
+window.dvOwnCG=function(g){OWN.cg=g
+ownR()}
+window.dvOwnCL=function(l){OWN.cl=l==='l'?1:0
+ownR()}
+window.dvOwnName=function(v){OWN.ct=v}
+function ownAmtOk(){return OWN.ce>=.1&&OWN.ce<=1000}
+function ownUpd(){var sh=document.querySelector('#rmOwn .ro-sh')
+if(!sh)return
+sh.querySelectorAll('.ro-q button').forEach((function(b){b.classList.toggle('on',+b.dataset.v===OWN.ce)}))
+var mk=sh.querySelector('.ro-mk')
+if(mk){mk.disabled=!ownAmtOk()
+mk.innerHTML=ownAmtOk()?'Создать стол · вход '+n2(OWN.ce)+' GRAM':'Вход от 0.1 до 1000 GRAM'}var nt=sh.querySelector('.ro-note')
+if(nt)nt.innerHTML=ownNote()}
+window.dvOwnAmt=function(v){var x=parseFloat(String(v).replace(',','.'))
+OWN.ce=isFinite(x)?Math.round(x*100)/100:0
+ownUpd()}
+window.dvOwnSet=function(v){OWN.ce=v
+var i=document.getElementById('roAmt')
+if(i)i.value=v
+ownHap()
+ownUpd()}
+window.dvOwnStep=function(d){var c=OWN.ce,v=c
+if(d>0){v=OWN_ST.filter((function(x){return x>c+1e-9}))[0]||c}else{var l=OWN_ST.filter((function(x){return x<c-1e-9}))
+v=l.length?l[l.length-1]:c}window.dvOwnSet(v)}
+function ownNote(){var e=OWN.ce
+return'Победитель забирает банк, комиссия 5%. '+(OWN.cg==='p'?'Анте '+n2(e*.1)+' · рейзы '+n2(e*.1)+' / '+n2(e*.25)+' / '+n2(e*.5)+' GRAM. ':'')+'Стол закрывается, если 10 минут за ним никого нет.'}
+function ownSeg(cur,fn,items){return'<div class="ro-seg">'+items.map((function(it){return'<button type="button" class="'+(it[0]===cur?'on':'')+'" onclick="'+fn+'(\''+it[0]+'\')">'+it[1]+'</button>'})).join('')+'</div>'}
+function ownR(){var sh=document.querySelector('#rmOwn .ro-sh')
+if(!sh)return
+var GAMES=[['d','Кости 21'],['p','<i class="ro-sp">'+SPADE+'</i>Покер']],X='<button type="button" class="ro-x" aria-label="Закрыть" onclick="dvOwnClose()">×</button>'
+if(OWN.v==='list'){var L=OWN_LIST.filter((function(r){return r.g===OWN.g})).sort((function(a,b){return(b.mine?1:0)-(a.mine?1:0)||a.e-b.e}))
+sh.innerHTML='<div class="ro-hd"><b>Столы игроков</b>'+X+'</div>'+ownSeg(OWN.g,'dvOwnG',GAMES)+'<div class="ro-list">'+(L.length?L.map((function(r){var i=OWN_LIST.indexOf(r),full=r.p>=6
+return'<div class="ro-row'+(full?' full':'')+(r.mine?' mine':'')+'"><span class="ro-av" style="--c:'+r.c+'">'+esc(r.h.charAt(0).toUpperCase())+'</span><span class="ro-rt"><b>'+(r.lock?'<i class="ro-lk">'+LOCK+'</i>':'')+esc(r.t)+'</b><small>'+(r.mine?'твой стол':esc(r.h))+' · '+r.p+' из 6</small></span><span class="ro-en"><small>вход</small>'+gram(n2(r.e))+'</span><button type="button" class="ro-go"'+(full?' disabled':'')+' onclick="dvOwnJoin('+i+')">'+(full?'Мест нет':'Войти')+'</button></div>'})).join(''):'<div class="ro-empty">Пока никто не создал стол — будь первым</div>')+'</div><div class="ro-ft"><button type="button" class="ro-new" onclick="dvOwnV(\'new\')"><b>+</b> Создать свой стол</button></div>'
+return}sh.innerHTML='<div class="ro-hd"><button type="button" class="ro-bk" aria-label="Назад" onclick="dvOwnV(\'list\')">←</button><b>Новый стол</b>'+X+'</div>'+'<div class="ro-lb">Игра</div>'+ownSeg(OWN.cg,'dvOwnCG',GAMES)+'<div class="ro-lb">Вход за стол</div><div class="ro-amt"><button type="button" aria-label="Меньше" onclick="dvOwnStep(-1)">−</button><label class="ro-val"><span class="ro-gi">'+G()+'</span><input id="roAmt" type="text" inputmode="decimal" autocomplete="off" value="'+OWN.ce+'" oninput="dvOwnAmt(this.value)"><small>GRAM</small></label><button type="button" aria-label="Больше" onclick="dvOwnStep(1)">+</button></div><div class="ro-q">'+OWN_Q.map((function(q){return'<button type="button" data-v="'+q+'" class="'+(q===OWN.ce?'on':'')+'" onclick="dvOwnSet('+q+')">'+q+'</button>'})).join('')+'</div>'+'<div class="ro-lb">Название <i>— необязательно</i></div><input class="ro-in" id="roName" maxlength="24" autocomplete="off" placeholder="Стол '+esc(me())+'" value="'+esc(OWN.ct)+'" oninput="dvOwnName(this.value)">'+'<div class="ro-lb">Кто может сесть</div>'+ownSeg(OWN.cl?'l':'o','dvOwnCL',[['o','Все игроки'],['l','<i class="ro-lk">'+LOCK+'</i>По ссылке']])+'<div class="ro-note">'+ownNote()+'</div><div class="ro-ft"><button type="button" class="ro-new ro-mk" onclick="dvOwnCreate()"></button></div>'
+ownUpd()}
+function ownToast(t){var e=document.createElement('div')
+e.className='ro-toast'
+e.textContent=t
+document.body.appendChild(e)
+setTimeout((function(){e.classList.add('on')}),20)
+setTimeout((function(){e.classList.remove('on')
+setTimeout((function(){e.remove()}),400)}),2600)}
+function ownOpen(r){window.dvOwnClose()
+var e=r.e,room={n:r.g==='p'?'Покер':'Стол',ic:'★',own:1,mine:!!r.mine,t:r.t,min:e,max:e,chips:[e,e,e,e],pk:r.g==='p'}
+ROOMS.push(room)
+window.dvRoom(ROOMS.length-1)
+if(root)root.scrollTop=0}
+window.dvOwnJoin=function(i){var r=OWN_LIST[i]
+if(r)ownOpen(r)}
+window.dvOwnCreate=function(){if(!ownAmtOk())return
+var t=(OWN.ct||'').trim()||'Стол '+me(),r={g:OWN.cg,t:t,h:me(),c:'#34d6ff',e:OWN.ce,p:1,lock:OWN.cl,mine:1}
+OWN_LIST.unshift(r)
+OWN.ct=''
+ownOpen(r)
+ownToast(r.lock?'Стол создан · ссылка-приглашение скопирована':'Стол создан · он появился в списке у всех игроков')}
+window.dvHeadSub=function(t){var e=root&&root._hd&&root._hd.querySelector('.dv-rn2')
 if(e&&e.textContent!==t)e.textContent=t}
 window.dvPick=function(v){PICK=v
 render()}
@@ -1214,8 +1309,8 @@ function roomHist(){var c=ROOMS[ROOM].chips
 return[['Mira','#f472b6',20,3],['Sasha_V','#ffb547',21,4],['lucky_bobr','#8b5cf6',19,2],['dice_king','#38bdf8',18,3],['nightowl','#ff5d8f',21,5]].map((function(h,k){return{name:h[0],color:h[1],sum:h[2],pot:c[(k+1)%4]*h[3]*.95}}))}function roomTabs(){return'<div class="rm-tabs">'+ROOMS.map((function(r,k){
 return'<button type="button" class="'+(k===ROOM?'on':'')+'" onclick="dvRoom('+k+')"><b>'+r.n+'</b><small>'+r.min+' – '+r.max+' GRAM</small></button>'})).join('')+'</div>'}function roomsCtrl(){var c=cur(),R0=ROOMS[ROOM]
 if(S.me<0||S.phase==='play'&&!S.seats[S.me]){var nx=S.phase==='play'||S.phase==='result'
-return'<div class="dv-ctrl"><div class="rm-bet">'+R0.chips.map((function(v){return'<button type="button" class="'+(v===PICK?'on':'')+'" onclick="dvPick('+v+')">'+v+'</button>'
-})).join('')+'</div>'+'<button type="button" class="dv-btn main rm-sit'+(JOIN?' wait':'')+'" onclick="dvSit()">'+(JOIN?'Ты в очереди на следующий раунд · '+JOIN:(nx?'Сесть на следующий раунд · ':'Сесть за стол · ')+PICK+' GRAM')+'</button></div>'}
+return'<div class="dv-ctrl">'+(R0.max>R0.min?'<div class="rm-bet">'+R0.chips.map((function(v){return'<button type="button" class="'+(v===PICK?'on':'')+'" onclick="dvPick('+v+')">'+v+'</button>'
+})).join('')+'</div>':'')+'<button type="button" class="dv-btn main rm-sit'+(JOIN?' wait':'')+'" onclick="dvSit()">'+(JOIN?'Ты в очереди на следующий раунд · '+JOIN:(nx?'Сесть на следующий раунд · ':'Сесть за стол · ')+PICK+' GRAM')+'</button></div>'}
 if(S.phase==='result')return'<div class="dv-ctrl"><div class="dv-acts nx"><div class="dv-next"><i style="--n:'+S.next+'"></i><span>'+(JOIN?'Новый раунд через':'Ты выйдешь через')+' <b>'+S.next+'</b> с</span></div>'+(JOIN?'<button type="button" class="dv-btn ghost" onclick="dvLeave()">Встать</button>':'<button type="button" class="dv-btn ghost" onclick="dvStay()">Остаться</button>')+'</div></div>'
 if(S.phase==='wait')return'<div class="dv-ctrl"><div class="dv-acts"><div class="dv-info">Ждём ещё игроков…</div><button type="button" class="dv-btn ghost" onclick="dvLeave()">Встать</button></div></div>'
 if(S.phase==='gather')return'<div class="dv-ctrl"><div class="dv-acts"><div class="dv-info">Старт через <b>'+Math.max(0,S.cd)+'</b> с</div><button type="button" class="dv-btn ghost" onclick="dvLeave()">Встать</button></div></div>'
@@ -1392,7 +1487,7 @@ if(!c||!c.dice.length||S.phase!=='play')return''
 return'<div class="dv-cur">'+esc(c.me?'Твоя сумма':c.name)+': <b>'+c.sum+'</b>'+(c.sum>21?' — перебор':c.sum===21?' — очко!':'')+'</div>'}function bankH(cl){var B=bank()
 return'<div class="dv-bank '+(cl||'')+'"><small>банк</small>'+gram(n2(B.gram),'b')+(B.gifts.length?'<span class="dv-gs">'+B.gifts.slice(0,3).map((function(g){return gt(g)})).join('')+(B.gifts.length>3?'<em>+'+(B.gifts.length-3)+'</em>':'')+'</span>':'')+'</div>'}function head(sm){if(ROOMS_ON){var R0=ROOMS[ROOM]
 swUpd()
-dvHeadSub(R0.min+'–'+R0.max+' GRAM · раунд №'+S.round)
+dvHeadSub((R0.max>R0.min?R0.min+'–'+R0.max:'Вход '+R0.min)+' GRAM · №'+S.round)
 return''}return'<div class="dv-head"><button type="button" class="dv-back" aria-label="Назад" onclick="dvBack()">←</button><div class="dv-ti"><span><b>Стол · '+ENTRY+' GRAM</b><i class="dv-q">?</i></span>'+(RN()===2?'<small class="dv-rn2">Раунд №'+S.round+'</small>':'')+'</div>'+(RN()===1?'<span class="dv-rn">Раунд №'+S.round+'</span>':'')+'</div>'}function ctrl(){var c=cur()
 if(ROOMS_ON){var rc=roomsCtrl()
 if(rc)return rc}var r6=RN()===6?'<span class="rn6">№'+S.round+'</span>':''
@@ -1862,7 +1957,7 @@ root._in=document.createElement('div')
 root.appendChild(root._in)
 layer=document.createElement('div')
 layer.className='dv-phys'
-root.appendChild(layer)}if(EMBED&&window.dvHeadSub)dvHeadSub('Вход '+ENTRY+' GRAM · раунд №'+S.round)
+root.appendChild(layer)}if(EMBED&&window.dvHeadSub)dvHeadSub('Вход '+ENTRY+' GRAM · №'+S.round)
 var bank='<div class="kq-bank"><small>банк</small>'+gram(n2(S.pot),'b')+'</div>'
 root._in.innerHTML='<div class="dv-in">'+(EMBED?'':'<div class="dv-head"><div class="dv-ti"><span><b>Кости 21 · покер</b><i class="dv-q">?</i></span><small class="dv-rn2">Вход '+ENTRY+' GRAM · раунд №'+S.round+'</small></div></div>')+'<div class="kq1">'+row([0,1,2])+'<div class="kq-rail kq1-rail"><div class="kq-felt kq1-felt"><i class="kqlogo">21</i>'+bank+stage()+'</div></div>'+row([5,4,3])+'</div>'+ctrl()+'<div class="dv-emos">'+EMO.map((function(x){
 return'<button type="button" onclick="pkEmo(\''+x+'\')">'+x+'</button>'})).join('')+'</div>'+hist()+'</div>'
@@ -1871,7 +1966,9 @@ function mount(){root=document.createElement('div')
 root.id='dcv'
 root.className='pk-root';(document.getElementById('menu')||document.body).appendChild(root)
 H.classList.add('dz-open','dcv-open')
-try{setActiveBottomNav('pvp')}catch(x){}newRound()}window.pkStart=function(el){root=el
+try{setActiveBottomNav('pvp')}catch(x){}newRound()}window.pkStart=function(el,entry){if(entry){ENTRY=entry
+ANTE=r2(entry*.1)
+RAISES=[.1,.25,.5].map((function(x){return r2(x*entry)}))}root=el
 root._in=null
 layer=null
 W3=null
