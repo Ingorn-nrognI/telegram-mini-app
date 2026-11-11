@@ -1712,6 +1712,15 @@ try{window.mxDiceClose()}catch(e){}window.dvOpenTable(Math.round(n))}
 var nav=window.handleBottomNav
 if(typeof nav==='function')window.handleBottomNav=function(){if(H.classList.contains('dcv-open'))window.dvCloseTable()
 return nav.apply(this,arguments)}
+/* профиль из верхней панели: сначала закрываем стол Костей 21, иначе он остаётся поверх профиля */
+var op=window.openProfileScreen
+var fromT=false
+if(typeof op==='function')window.openProfileScreen=function(){var t=H.classList.contains('dcv-open');if(t){window.dvCloseTable();fromT=true}else if(typeof currentMenuView==='undefined'||currentMenuView!=='profile')fromT=false
+return op.apply(this,arguments)}
+/* «назад» из профиля возвращает за тот же стол, с которого открыли профиль */
+var cp=window.closeProfileScreen
+if(typeof cp==='function')window.closeProfileScreen=function(){var r=cp.apply(this,arguments)
+if(fromT){fromT=false;window.dvOpenTable(null,LASTR)}return r}
 var bk=window.handleTelegramAppBack
 if(typeof bk==='function')window.handleTelegramAppBack=function(){if(H.classList.contains('dcv-open')){window.dvBack()
 return}return bk.apply(this,arguments)}}))}var sw=document.createElement('div')
