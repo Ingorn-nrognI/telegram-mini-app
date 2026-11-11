@@ -3750,3 +3750,25 @@ var all=Promise.all([fontsReady(),lottieReady(),statues(),images()]).then(functi
 P=Promise.race([all,wait(5000)])
 return P}
 try{window.__bootWarm()}catch(e){}})();
+
+/* Карточки уровней: круг с подарком подгоняется под ширину карточки — растёт до строки
+   с процентами, и зазор до «ком. маркета» равен зазору до стенок карточки. */
+;(function(){var G=4,MIN=60
+function fit(c){var o=c.querySelector('.au-orb'),ps=c.querySelectorAll('.au-st>span'),p=ps[ps.length-1]
+if(!o||!p)return
+var cr=c.getBoundingClientRect();if(!cr.width)return
+var pr=p.getBoundingClientRect(),rr=parseFloat(getComputedStyle(p).borderTopLeftRadius)||0
+var L=pr.left-cr.left+rr,Rt=pr.right-cr.left-rr,T=pr.top-cr.top+rr,B=pr.bottom-cr.top-rr
+var tr=c.querySelector('.au-tr'),cap=tr?tr.getBoundingClientRect().top-cr.top-22-G:pr.bottom-cr.top
+var best=MIN/2
+for(var r=MIN/2;r<=80;r+=.5){var cx=cr.width-G-r,cy=G+r
+var dx=Math.max(L-cx,0,cx-Rt),dy=Math.max(T-cy,0,cy-B)
+if(Math.hypot(dx,dy)-rr-r<G||cy+r>cap)break
+best=r}
+c.style.setProperty('--orb',(best*2).toFixed(1)+'px')}
+var ro=window.ResizeObserver?new ResizeObserver(function(es){es.forEach(function(e){fit(e.target)})}):null
+function scan(){[].forEach.call(document.querySelectorAll('.au-lv'),function(c){if(c.__orb)return;c.__orb=1;if(ro)ro.observe(c);fit(c)})}
+scan()
+new MutationObserver(function(){requestAnimationFrame(scan)}).observe(document.documentElement,{childList:true,subtree:true})
+window.addEventListener('resize',function(){[].forEach.call(document.querySelectorAll('.au-lv'),fit)})
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){[].forEach.call(document.querySelectorAll('.au-lv'),fit)})})();
