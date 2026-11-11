@@ -29,10 +29,8 @@ setTimeout(function(){requestAnimationFrame(f)},4000)}
 setTimeout(function(){requestAnimationFrame(f)},5000)}
 apply()
 try{if(isAuto()&&!flagged())probe()}catch(e){}
-/* исходные 5 статуэток рефералов спрятаны новым дизайном — не грузим и не крутим их */
-try{for(var i=REFERRAL_GIFT_FILES.length-1;i>=0;i--){if(!/hula_girl|streetbeast/.test(REFERRAL_GIFT_FILES[i].file))REFERRAL_GIFT_FILES.splice(i,1)}}catch(e){}
-try{window.ensureReferralGiftAnimsLoaded=function(){}
-window.syncReferralGiftPlayback=function(){try{referralGiftAnims.forEach(function(a){try{a.pause()}catch(e){}})}catch(e){}}}catch(e){}
+/* 5 статуэток в карточке «Зарабатывай до 15%» снова показываются (как в исходном приложении).
+   Играют только когда окно рефералов открыто и карточка видна — это делает исходный код. */
 })();
 window.__origLvCards=window.renderReferralLevelCards
 window.__origLvBadges=window.applyLevelRewardBadges;(function(){var TON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5h13a1.4 1.4 0 0 1 1.2 2.1L13 18.8a1.2 1.2 0 0 1-2 0L4.3 6.6a1.4 1.4 0 0 1 1.2-2.1zM12 4.5v14.6"/></svg>'
@@ -3704,3 +3702,51 @@ setTimeout(go,2500)}}function run(){document.querySelectorAll('.home-promo-slide
 if(document.documentElement.hasAttribute('data-app'))document.querySelectorAll('.home-promo-track > .home-promo-slide:not(.home-promo-slide-referral)').forEach((function(sl){sl.remove()}))}document.addEventListener('visibilitychange',(function(){document.querySelectorAll('.rf-ban').forEach(sync)}))
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run)
 else run()})()
+
+/* ===== Единые крестики закрытия во всём приложении — как в окне победителя ===== */
+;(function(){var CLS=['closeBtn','panel-close-btn','app-settings-close','scanner-stake-settings-close','scanner-result-close-btn','mx-help-x','ro-x']
+function is(e){if(!e||e.nodeType!==1||!e.classList||e.classList.contains('apx')||e.classList.contains('ww-x')||e.closest('.ww'))return false
+for(var i=0;i<CLS.length;i++)if(e.classList.contains(CLS[i]))return true
+if(e.tagName!=='BUTTON')return false
+var t=(e.textContent||'').trim(),al=e.getAttribute('aria-label')||''
+if(t.length===1&&/[✕×✖✗]/.test(t))return true
+if(!t&&/^(Закрыть|Close)$/i.test(al)&&e.querySelector('svg'))return true
+return false}
+function fix(e){e.classList.add('apx')
+e.innerHTML='<i aria-hidden="true">✕</i>'
+if(!e.getAttribute('aria-label'))e.setAttribute('aria-label','Закрыть')}
+function scan(r){if(!r||r.nodeType!==1)return
+if(is(r))fix(r)
+if(r.querySelectorAll){var l=r.querySelectorAll('button,.closeBtn')
+for(var i=0;i<l.length;i++)if(is(l[i]))fix(l[i])}}
+var Q=[],T=0
+function flush(){T=0
+var q=Q
+Q=[]
+for(var i=0;i<q.length;i++)scan(q[i])}
+function start(){scan(document.body)
+if(!('MutationObserver'in window))return
+new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var a=ms[i].addedNodes
+for(var j=0;j<a.length;j++)if(a[j].nodeType===1)Q.push(a[j])
+if(ms[i].type==='characterData'||ms[i].target&&ms[i].target.nodeType===1&&ms[i].addedNodes.length&&ms[i].target.tagName==='BUTTON')Q.push(ms[i].target)}
+if(Q.length&&!T)T=requestAnimationFrame(flush)}).observe(document.body,{childList:true,subtree:true})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start()})();
+
+/* ===== Пока висит экран загрузки — заранее грузим всё тяжёлое,
+   чтобы после входа в приложение ничего не догружалось и не тормозило =====
+   Ждём (но не дольше 5 с): шрифты, движок анимаций dotLottie, файлы статуэток,
+   готовые к показу картинки на странице; создаём плееры статуэток на паузе. */
+;(function(){function wait(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function fontsReady(){try{return document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()}catch(e){return Promise.resolve()}}
+function lottieReady(){return new Promise(function(r){if(window.__DotLottieWorker||window.__dotLottieFailed)return r()
+window.addEventListener('dotlottie-ready',function(){r()},{once:true})})}
+function statues(){try{return Promise.all(REFERRAL_GIFT_FILES.map(function(g){if(REFERRAL_GIFT_DATA[g.file])return 0
+return fetch(g.file).then(function(x){return x.text()}).then(function(t){REFERRAL_GIFT_DATA[g.file]=t}).catch(function(){})}))}catch(e){return Promise.resolve()}}
+function images(){var l=[].slice.call(document.images||[]).filter(function(i){return i.src&&!i.complete}).slice(0,40)
+return Promise.all(l.map(function(i){return(i.decode?i.decode():Promise.resolve()).catch(function(){})}))}
+var P=null
+window.__bootWarm=function(){if(P)return P
+var all=Promise.all([fontsReady(),lottieReady(),statues(),images()]).then(function(){try{if(typeof ensureReferralGiftAnimsLoaded==='function')ensureReferralGiftAnimsLoaded()}catch(e){}return wait(200)})
+P=Promise.race([all,wait(5000)])
+return P}
+try{window.__bootWarm()}catch(e){}})();
