@@ -3751,24 +3751,36 @@ P=Promise.race([all,wait(5000)])
 return P}
 try{window.__bootWarm()}catch(e){}})();
 
-/* Карточки уровней: круг с подарком подгоняется под ширину карточки — растёт до строки
-   с процентами, и зазор до «ком. маркета» равен зазору до стенок карточки. */
+/* Карточки уровней: круг с подарком подгоняется под карточку — растёт, пока зазор до текста
+   и плашек слева не станет равен зазору до стенок карточки. Плюс бегунок прогресса: сумма под
+   точкой не вылезает за края, а подписи «начало/конец» шкалы прячутся, когда она их перекрывает. */
 ;(function(){var G=4,MIN=60
-function fit(c){var o=c.querySelector('.au-orb'),ps=c.querySelectorAll('.au-st>span'),p=ps[ps.length-1]
-if(!o||!p)return
-var cr=c.getBoundingClientRect();if(!cr.width)return
-var pr=p.getBoundingClientRect(),rr=parseFloat(getComputedStyle(p).borderTopLeftRadius)||0
-var L=pr.left-cr.left+rr,Rt=pr.right-cr.left-rr,T=pr.top-cr.top+rr,B=pr.bottom-cr.top-rr
-var tr=c.querySelector('.au-tr'),cap=tr?tr.getBoundingClientRect().top-cr.top-22-G:pr.bottom-cr.top
+function rr(e){if(!e)return null;var r;if(e.tagName==='SMALL'){var g=document.createRange();g.selectNodeContents(e);r=g.getBoundingClientRect()}else r=e.getBoundingClientRect()
+if(!r.width)return null;var k=e.tagName==='SPAN'?(parseFloat(getComputedStyle(e).borderTopLeftRadius)||0):0
+return{l:r.left,r:r.right,t:r.top,b:r.bottom,k:Math.min(k,r.width/2,r.height/2)}}
+function fitOrb(c,cr){var o=c.querySelector('.au-orb');if(!o)return
+var ob=[].map.call(c.querySelectorAll('.au-st>span,.au-n small,.au-n b,.au-n .mx-tag'),rr).filter(Boolean)
+var tr=c.querySelector('.au-tr'),cap=tr?tr.getBoundingClientRect().top-cr.top-6-G:999
 var best=MIN/2
-for(var r=MIN/2;r<=80;r+=.5){var cx=cr.width-G-r,cy=G+r
-var dx=Math.max(L-cx,0,cx-Rt),dy=Math.max(T-cy,0,cy-B)
-if(Math.hypot(dx,dy)-rr-r<G||cy+r>cap)break
-best=r}
+for(var r=MIN/2;r<=80;r+=.5){var cx=cr.width-G-r,cy=G+r,ok=cy+r<=cap
+for(var j=0;ok&&j<ob.length;j++){var q=ob[j],k=q.k,L=q.l-cr.left+k,R=q.r-cr.left-k,T=q.t-cr.top+k,B=q.b-cr.top-k
+var dx=Math.max(L-cx,0,cx-R),dy=Math.max(T-cy,0,cy-B);if(Math.hypot(dx,dy)-k-r<G)ok=false}
+if(!ok)break;best=r}
 c.style.setProperty('--orb',(best*2).toFixed(1)+'px')}
+function fitBubble(c){var pg=c.querySelector('.au-pg'),em=pg&&pg.querySelector('.au-tr u em');if(!em)return
+em.style.setProperty('--sh','0px')
+var P=pg.getBoundingClientRect(),E=em.getBoundingClientRect(),sh=0
+if(E.left<P.left)sh=P.left-E.left;else if(E.right>P.right)sh=P.right-E.right
+em.style.setProperty('--sh',sh.toFixed(1)+'px')
+var l=E.left+sh-6,r=E.right+sh+6
+;[].forEach.call(pg.querySelectorAll('.au-ends>span'),function(s){s.style.visibility='';var q=s.getBoundingClientRect()
+if(q.right>l&&q.left<r)s.style.visibility='hidden'})}
+function fit(c){var cr=c.getBoundingClientRect();if(!cr.width)return
+fitBubble(c);fitOrb(c,cr)}
+function all(){[].forEach.call(document.querySelectorAll('.au-lv'),fit)}
 var ro=window.ResizeObserver?new ResizeObserver(function(es){es.forEach(function(e){fit(e.target)})}):null
 function scan(){[].forEach.call(document.querySelectorAll('.au-lv'),function(c){if(c.__orb)return;c.__orb=1;if(ro)ro.observe(c);fit(c)})}
 scan()
 new MutationObserver(function(){requestAnimationFrame(scan)}).observe(document.documentElement,{childList:true,subtree:true})
-window.addEventListener('resize',function(){[].forEach.call(document.querySelectorAll('.au-lv'),fit)})
-if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){[].forEach.call(document.querySelectorAll('.au-lv'),fit)})})();
+window.addEventListener('resize',all)
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(all)})();
