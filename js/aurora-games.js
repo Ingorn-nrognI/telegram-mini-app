@@ -759,9 +759,61 @@ return'00:'+(t<10?'0':'')+t}var ARENA={1:{band:['#134e4a','#0b2a33'],glow:'band'
 var GMOD={1:'bg:dust',2:'bg:dust',3:'bg:dust',4:'bg:dust'},WTXT={1:'Ожидание раунда...',2:'Ожидание раунда...',3:'Ожидание раунда...',4:'Ожидание раунда...'}
 var WAITK={1:'grid',2:'tiles',3:'sonar',4:'pulse',5:'grid'},TSTY={1:'punch2',2:'neon2',3:'punch3',4:'neon3',5:'punch2'}
 var curWait=false
-function bandPath(ctx,size,bw){ctx.beginPath()
+/* Скругление арены: канвас обрезан CSS-ом со скруглёнными углами. Берём этот радиус
+   (в единицах канваса), чтобы внутренний край рамки и вспышка от удара лазера
+   шли по дуге угла, а не прямой полосой, которая упирается в срезанный угол. */
+var RC=typeof WeakMap!=='undefined'?new WeakMap():null
+function arenaR(ctx,size){var cv=ctx&&ctx.canvas;if(!cv||!cv.getBoundingClientRect)return 0
+var c=RC&&RC.get(cv),now=performance.now()
+if(c&&now-c.t<1000&&c.size===size)return c.r
+var r=0,e=cv,w=cv.clientWidth||0
+for(var k=0;e&&k<4&&!r;k++,e=e.parentElement){var br=parseFloat(getComputedStyle(e).borderTopLeftRadius)||0
+if(br>0)r=br}
+r=w?r*size/w:0
+if(RC)RC.set(cv,{t:now,r:r,size:size})
+return r}
+function innerR(ctx,size,bw){return Math.max(0,arenaR(ctx,size)-bw)}
+function bandPath(ctx,size,bw){var ri=innerR(ctx,size,bw)
+ctx.beginPath()
 ctx.rect(0,0,size,size)
-ctx.rect(bw,bw,size-bw*2,size-bw*2)}function paintBand(ctx,size,bw){var A=ARENA[V],lg=ctx.createLinearGradient(0,0,size,size)
+if(ri>.5&&ctx.roundRect)ctx.roundRect(bw,bw,size-bw*2,size-bw*2,ri)
+else ctx.rect(bw,bw,size-bw*2,size-bw*2)}
+/* точка на скруглённом внутреннем крае рамки по длине s (обход по часовой от левого верхнего угла) */
+function rrAt(s,size,bw,ri){var a0=bw,a1=size-bw,Ls=Math.max(0,a1-a0-2*ri),Ar=Math.PI/2*ri,P=4*(Ls+Ar)
+s=(s%P+P)%P
+var segs=[[a0+ri,a0,1,0],[a1-ri,a0+ri,-Math.PI/2],[a1,a0+ri,0,1],[a1-ri,a1-ri,0],[a1-ri,a1,-1,0],[a0+ri,a1-ri,Math.PI/2],[a0,a1-ri,0,-1],[a0+ri,a0+ri,Math.PI]]
+for(var i=0;i<8;i++){var g=segs[i]
+if(i%2===0){if(s<=Ls)return[g[0]+g[2]*s,g[1]+g[3]*s];s-=Ls}
+else{if(s<=Ar){var t=g[2]+(ri?s/ri:0);return[g[0]+ri*Math.cos(t),g[1]+ri*Math.sin(t)]}s-=Ar}}
+return[a0+ri,a0]}
+function rrLen(size,bw,ri){return 4*(Math.max(0,size-2*bw-2*ri)+Math.PI/2*ri)}
+function rrNear(x,y,size,bw,ri){var P=rrLen(size,bw,ri),best=0,bd=1e18
+for(var s=0;s<P;s+=1){var q=rrAt(s,size,bw,ri),d=(q[0]-x)*(q[0]-x)+(q[1]-y)*(q[1]-y);if(d<bd){bd=d;best=s}}
+return best}
+var SPR={}
+function glowSprite(acc){if(SPR[acc])return SPR[acc]
+var c=document.createElement('canvas');c.width=c.height=64
+var x=c.getContext('2d'),g=x.createRadialGradient(32,32,0,32,32,32)
+g.addColorStop(0,'rgba(255,255,255,1)')
+g.addColorStop(.35,'rgba('+acc+',.9)')
+g.addColorStop(1,'rgba('+acc+',0)')
+x.fillStyle=g;x.fillRect(0,0,64,64)
+return SPR[acc]=c}
+var GN=null
+/* вспышка вдоль скруглённого края: цепочка мягких пятен с гауссовым спадом по длине —
+   на прямой стороне выглядит как прежний вытянутый блик, у угла загибается по дуге */
+function arcGlow(ctx,pt,size,bw,a,acc){var ri=innerR(ctx,size,bw)
+if(pt._rsz!==size||pt._rri!==ri){var m=bw/2,cx=Math.max(m,Math.min(size-m,pt.x)),cy=Math.max(m,Math.min(size-m,pt.y))
+pt._rs=rrNear(cx,cy,size,bw,ri);pt._rsz=size;pt._rri=ri}
+var st=bw*.4,sg=bw*1.25,K=Math.ceil(sg*2.6/st)
+if(GN===null){var S=0;for(var k=-K;k<=K;k++){var d=k*.4;S+=Math.exp(-d*d/(2*1.5625))*Math.max(0,1-Math.abs(d))}GN=1/S}
+var spr=glowSprite(acc),ga=ctx.globalAlpha
+for(var k=-K;k<=K;k++){var d=k*st,w=Math.exp(-d*d/(2*sg*sg))*a*GN*1.15
+if(w<.004)continue
+var q=rrAt(pt._rs+d,size,bw,ri)
+ctx.globalAlpha=Math.min(1,w)
+ctx.drawImage(spr,q[0]-bw,q[1]-bw,bw*2,bw*2)}
+ctx.globalAlpha=ga}function paintBand(ctx,size,bw){var A=ARENA[V],lg=ctx.createLinearGradient(0,0,size,size)
 A.band.forEach((function(c,k){lg.addColorStop(k/(A.band.length-1),c)}))
 ctx.save()
 bandPath(ctx,size,bw)
@@ -835,7 +887,7 @@ ctx.fillRect(0,0,size,size)}if(A.glow==='run'){var d=age/T*size*1.6;[s0+d,s0-d].
 blob(ctx,p[0],p[1],bw*3.2,a,A.acc)}))}else if(A.glow==='drop'){for(var k=0;k<3;k++){var ak=age-k*150,f=ak/760
 if(ak<0||f>=1)continue
 var dd=bw*(1.2+7.5*f),al=Math.pow(1-f,1.5)*(1-k*.22);[s0+dd,s0-dd].forEach((function(sx){var pp=perim(sx,size,bw)
-halfGlow(ctx,inner(pp,size,bw),pp,size,bw,al*.9,A.acc)}))}}halfGlow(ctx,pin,p0,size,bw,a,A.acc)
+halfGlow(ctx,inner(pp,size,bw),pp,size,bw,al*.9,A.acc)}))}}arcGlow(ctx,pt,size,bw,a,A.acc)
 ctx.restore()
 if(A.glow==='spill'||A.glow==='ripple'){ctx.save()
 ctx.beginPath()
