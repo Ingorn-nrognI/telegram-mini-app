@@ -29,10 +29,8 @@ setTimeout(function(){requestAnimationFrame(f)},4000)}
 setTimeout(function(){requestAnimationFrame(f)},5000)}
 apply()
 try{if(isAuto()&&!flagged())probe()}catch(e){}
-/* исходные 5 статуэток рефералов спрятаны новым дизайном — не грузим и не крутим их */
-try{for(var i=REFERRAL_GIFT_FILES.length-1;i>=0;i--){if(!/hula_girl|streetbeast/.test(REFERRAL_GIFT_FILES[i].file))REFERRAL_GIFT_FILES.splice(i,1)}}catch(e){}
-try{window.ensureReferralGiftAnimsLoaded=function(){}
-window.syncReferralGiftPlayback=function(){try{referralGiftAnims.forEach(function(a){try{a.pause()}catch(e){}})}catch(e){}}}catch(e){}
+/* 5 статуэток в карточке «Зарабатывай до 15%» снова показываются (как в исходном приложении).
+   Играют только когда окно рефералов открыто и карточка видна — это делает исходный код. */
 })();
 window.__origLvCards=window.renderReferralLevelCards
 window.__origLvBadges=window.applyLevelRewardBadges;(function(){var TON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5h13a1.4 1.4 0 0 1 1.2 2.1L13 18.8a1.2 1.2 0 0 1-2 0L4.3 6.6a1.4 1.4 0 0 1 1.2-2.1zM12 4.5v14.6"/></svg>'
@@ -1359,7 +1357,7 @@ return'<div class="shl-it '+x.state+'"><span class="shl-spot" aria-hidden="true"
 html=head+'<div class="au-car">'+D.list.map((function(x){var c=LC[x.i%4],pg
 if(x.state==='cur'&&x.end)pg='<div class="au-pg"><div class="au-tr"><i style="width:'+x.pct.toFixed(1)+'%"></i><u style="left:'+x.pct.toFixed(1)+'%"><em>'+Math.round(D.tv).toLocaleString('ru-RU')+'</em></u></div><div class="au-ends"><span>'+Math.round(x.lv.threshold).toLocaleString('ru-RU')+'</span><span>'+Math.round(x.end).toLocaleString('ru-RU')+'</span></div></div>'
 else if(x.state==='done')pg='<div class="au-pg done"><div class="au-tr"><i style="width:100%"></i></div><div class="au-ends"><span>уровень пройден</span><span>✓</span></div></div>'
-else pg='<div class="au-pg lock"><div class="au-tr"></div><div class="au-ends"><span>откроется при обороте</span><span>'+Math.round(x.lv.threshold).toLocaleString('ru-RU')+'</span></div></div>'
+else pg='<div class="au-pg lock"><div class="au-tr"></div><div class="au-ends"><span>'+Math.round(x.lv.threshold).toLocaleString('ru-RU')+'</span><span>'+(x.end?Math.round(x.end).toLocaleString('ru-RU'):'')+'</span></div></div>'
 return'<div class="au-lv '+x.state+' fxl'+x.i%4+'" style="--a:'+c[0]+';--b:'+c[1]+'">'+auFx(x.i%4)+'<div class="au-top"><span class="au-n"><small>уровень '+(x.i+1)+'</small><b>'+esc(x.name)+'</b>'+tag(x)+'</span><span class="au-orb"><span class="au-ring"></span><span class="au-gift">'+giftArt(x.rw&&x.rw.slug,c[0],c[1])+'</span></span></div>'+'<div class="au-st"><span><b>'+x.lv.percent+'%</b><small>реф. процент</small></span><span><b>'+x.mc+'</b><small>ком. маркета</small></span></div>'+pg+(x.rw?'<div class="au-rw"><span>награда</span><b>'+esc(x.rw.name)+'</b><em>'+rwStatus(x)+'</em></div>':'')+'</div>'
 })).join('')+'</div><div class="mx-dots">'+D.list.map((function(x){return'<i class="'+(x.i===D.cur?'on':'')+'"></i>'})).join('')+'</div>'}else if(M==='4'){html=head+'<div class="m4-grid">'+D.list.map((function(x){
 return'<div class="m4-lv '+x.state+'"><div class="m4-art"><span class="m4-g">'+rwImg(x.rw)+'</span>'+tag(x)+'<span class="m4-rwn">'+esc(x.rw?x.rw.name:'')+'</span></div>'+'<div class="m4-b"><div class="m4-t"><b>'+esc(x.name)+'</b><span>'+x.lv.percent+'%</span></div><small>маркет '+x.mc+' · от '+compact(x.lv.threshold)+'</small><em>'+(x.rw?rwStatus(x):'')+'</em>'+prog(x,D)+'</div></div>'
@@ -3704,3 +3702,85 @@ setTimeout(go,2500)}}function run(){document.querySelectorAll('.home-promo-slide
 if(document.documentElement.hasAttribute('data-app'))document.querySelectorAll('.home-promo-track > .home-promo-slide:not(.home-promo-slide-referral)').forEach((function(sl){sl.remove()}))}document.addEventListener('visibilitychange',(function(){document.querySelectorAll('.rf-ban').forEach(sync)}))
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run)
 else run()})()
+
+/* ===== Единые крестики закрытия во всём приложении — как в окне победителя ===== */
+;(function(){var CLS=['closeBtn','panel-close-btn','app-settings-close','scanner-stake-settings-close','scanner-result-close-btn','mx-help-x','ro-x']
+function is(e){if(!e||e.nodeType!==1||!e.classList||e.classList.contains('apx')||e.classList.contains('ww-x')||e.closest('.ww'))return false
+for(var i=0;i<CLS.length;i++)if(e.classList.contains(CLS[i]))return true
+if(e.tagName!=='BUTTON')return false
+var t=(e.textContent||'').trim(),al=e.getAttribute('aria-label')||''
+if(t.length===1&&/[✕×✖✗]/.test(t))return true
+if(!t&&/^(Закрыть|Close)$/i.test(al)&&e.querySelector('svg'))return true
+return false}
+function fix(e){e.classList.add('apx')
+e.innerHTML='<i aria-hidden="true">✕</i>'
+if(!e.getAttribute('aria-label'))e.setAttribute('aria-label','Закрыть')}
+function scan(r){if(!r||r.nodeType!==1)return
+if(is(r))fix(r)
+if(r.querySelectorAll){var l=r.querySelectorAll('button,.closeBtn')
+for(var i=0;i<l.length;i++)if(is(l[i]))fix(l[i])}}
+var Q=[],T=0
+function flush(){T=0
+var q=Q
+Q=[]
+for(var i=0;i<q.length;i++)scan(q[i])}
+function start(){scan(document.body)
+if(!('MutationObserver'in window))return
+new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var a=ms[i].addedNodes
+for(var j=0;j<a.length;j++)if(a[j].nodeType===1)Q.push(a[j])
+if(ms[i].type==='characterData'||ms[i].target&&ms[i].target.nodeType===1&&ms[i].addedNodes.length&&ms[i].target.tagName==='BUTTON')Q.push(ms[i].target)}
+if(Q.length&&!T)T=requestAnimationFrame(flush)}).observe(document.body,{childList:true,subtree:true})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start()})();
+
+/* ===== Пока висит экран загрузки — заранее грузим всё тяжёлое,
+   чтобы после входа в приложение ничего не догружалось и не тормозило =====
+   Ждём (но не дольше 5 с): шрифты, движок анимаций dotLottie, файлы статуэток,
+   готовые к показу картинки на странице; создаём плееры статуэток на паузе. */
+;(function(){function wait(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function fontsReady(){try{return document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()}catch(e){return Promise.resolve()}}
+function lottieReady(){return new Promise(function(r){if(window.__DotLottieWorker||window.__dotLottieFailed)return r()
+window.addEventListener('dotlottie-ready',function(){r()},{once:true})})}
+function statues(){try{return Promise.all(REFERRAL_GIFT_FILES.map(function(g){if(REFERRAL_GIFT_DATA[g.file])return 0
+return fetch(g.file).then(function(x){return x.text()}).then(function(t){REFERRAL_GIFT_DATA[g.file]=t}).catch(function(){})}))}catch(e){return Promise.resolve()}}
+function images(){var l=[].slice.call(document.images||[]).filter(function(i){return i.src&&!i.complete}).slice(0,40)
+return Promise.all(l.map(function(i){return(i.decode?i.decode():Promise.resolve()).catch(function(){})}))}
+var P=null
+window.__bootWarm=function(){if(P)return P
+var all=Promise.all([fontsReady(),lottieReady(),statues(),images()]).then(function(){try{if(typeof ensureReferralGiftAnimsLoaded==='function')ensureReferralGiftAnimsLoaded()}catch(e){}return wait(200)})
+P=Promise.race([all,wait(5000)])
+return P}
+try{window.__bootWarm()}catch(e){}})();
+
+/* Карточки уровней: круг с подарком подгоняется под карточку — растёт, пока зазор до текста
+   и плашек слева не станет равен зазору до стенок карточки. Плюс бегунок прогресса: сумма под
+   точкой не вылезает за края, а подписи «начало/конец» шкалы прячутся, когда она их перекрывает. */
+;(function(){var G=4,MIN=60
+function rr(e){if(!e)return null;var r;if(e.tagName==='SMALL'){var g=document.createRange();g.selectNodeContents(e);r=g.getBoundingClientRect()}else r=e.getBoundingClientRect()
+if(!r.width)return null;var k=e.tagName==='SPAN'?(parseFloat(getComputedStyle(e).borderTopLeftRadius)||0):0
+return{l:r.left,r:r.right,t:r.top,b:r.bottom,k:Math.min(k,r.width/2,r.height/2)}}
+function fitOrb(c,cr){var o=c.querySelector('.au-orb');if(!o)return
+var ob=[].map.call(c.querySelectorAll('.au-st>span,.au-n small,.au-n b,.au-n .mx-tag'),rr).filter(Boolean)
+var tr=c.querySelector('.au-tr'),cap=tr?tr.getBoundingClientRect().top-cr.top-6-G:999
+var best=MIN/2
+for(var r=MIN/2;r<=80;r+=.5){var cx=cr.width-G-r,cy=G+r,ok=cy+r<=cap
+for(var j=0;ok&&j<ob.length;j++){var q=ob[j],k=q.k,L=q.l-cr.left+k,R=q.r-cr.left-k,T=q.t-cr.top+k,B=q.b-cr.top-k
+var dx=Math.max(L-cx,0,cx-R),dy=Math.max(T-cy,0,cy-B);if(Math.hypot(dx,dy)-k-r<G)ok=false}
+if(!ok)break;best=r}
+c.style.setProperty('--orb',(best*2).toFixed(1)+'px')}
+function fitBubble(c){var pg=c.querySelector('.au-pg'),em=pg&&pg.querySelector('.au-tr u em');if(!em)return
+em.style.setProperty('--sh','0px')
+var P=pg.getBoundingClientRect(),E=em.getBoundingClientRect(),sh=0
+if(E.left<P.left)sh=P.left-E.left;else if(E.right>P.right)sh=P.right-E.right
+em.style.setProperty('--sh',sh.toFixed(1)+'px')
+var l=E.left+sh-6,r=E.right+sh+6
+;[].forEach.call(pg.querySelectorAll('.au-ends>span'),function(s){s.style.visibility='';var q=s.getBoundingClientRect()
+if(q.right>l&&q.left<r)s.style.visibility='hidden'})}
+function fit(c){var cr=c.getBoundingClientRect();if(!cr.width)return
+fitBubble(c);fitOrb(c,cr)}
+function all(){[].forEach.call(document.querySelectorAll('.au-lv'),fit)}
+var ro=window.ResizeObserver?new ResizeObserver(function(es){es.forEach(function(e){fit(e.target)})}):null
+function scan(){[].forEach.call(document.querySelectorAll('.au-lv'),function(c){if(c.__orb)return;c.__orb=1;if(ro)ro.observe(c);fit(c)})}
+scan()
+new MutationObserver(function(){requestAnimationFrame(scan)}).observe(document.documentElement,{childList:true,subtree:true})
+window.addEventListener('resize',all)
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(all)})();

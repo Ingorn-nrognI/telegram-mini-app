@@ -4862,3 +4862,120 @@ html.lq .au-lv.lock{opacity: .82;}
    (Инвентарь открывается кнопкой в нижнем меню). Разметку не трогаем — только скрываем. */
 html body #homeScreen .ap-tabs{display:none!important}
 html body #lxCats.lx-cats.pum-h{display:none!important}
+
+/* ===== Кости 21: «Столы игроков» — кнопка под переключателем столов и окно со списком/созданием ===== */
+.rm-own{display:flex;align-items:center;gap:11px;width:100%;margin:0 0 12px;padding:9px 10px 9px 9px;border:1px solid rgba(94,234,212,.16);border-radius:18px;background:rgba(3,20,23,.55);color:#e8fbf8;text-align:left;cursor:pointer;font:inherit;-webkit-tap-highlight-color:transparent;transition:transform .15s,border-color .2s}
+.rm-own:active{transform:scale(.985)}
+.rm-own.on{border-color:rgba(94,234,212,.45);background:rgba(8,47,52,.6)}
+.rm-own .ro-ic{flex:none;width:38px;height:38px;border-radius:13px;display:grid;place-items:center;background:rgba(94,234,212,.12);color:#5eead4}
+.rm-own .ro-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.rm-own .ro-t b{font:800 14.5px/1.1 Onest,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rm-own .ro-t small{font:600 12px/1.2 Onest,system-ui,sans-serif;color:#7fb3ab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rm-own .ro-plus{flex:none;width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(120deg,#86efac,#5eead4 50%,#67e8f9);color:#042f2e;font:900 20px/1 Onest,system-ui,sans-serif;box-shadow:0 6px 16px rgba(45,212,191,.3)}
+/* 5 кнопок столов справа от заголовка: компактнее, чтобы влезали и на узких телефонах */
+.dv-head.rm-h{gap:8px}
+.dv-head.rm-h .dv-ti{min-width:0}
+.dv-head.rm-h .dv-ti small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dv-head.rm-h .rm-sw{gap:2px;padding:3px}
+.dv-head.rm-h .rm-sw button{min-width:32px;padding:0 7px}
+.dv-head.rm-h .rm-sw button.on{padding:0 11px}
+.dv-head.rm-h .dv-ti>span{white-space:nowrap}
+.dv-head.rm-h .dv-q{flex:none}
+@media (max-width:374px){.dv-head.rm-h{gap:6px}.dv-head.rm-h .rm-sw button{min-width:29px;padding:0 5px}.dv-head.rm-h .rm-sw button.on{padding:0 9px}.dv-head.rm-h .dv-ti b{font-size:19px}}
+.ro-ov{position:fixed;inset:0;z-index:10050;display:flex;align-items:flex-end;justify-content:center;visibility:hidden;pointer-events:none;transition:visibility 0s .32s}
+.ro-ov.on{visibility:visible;pointer-events:auto;transition:none}
+.ro-bg{position:absolute;inset:0;background:rgba(1,10,12,.62);opacity:0;transition:opacity .28s}
+.ro-ov.on .ro-bg{opacity:1}
+.ro-sh{position:relative;display:flex;flex-direction:column;width:100%;max-width:520px;max-height:86vh;overflow:auto;overscroll-behavior:contain;padding:14px 14px 0;border-radius:26px 26px 0 0;background:linear-gradient(180deg,#0b2b31,#061a1e 60%);border:1px solid rgba(94,234,212,.2);border-bottom:0;box-shadow:0 -24px 60px rgba(0,0,0,.55);color:#e8fbf8;font-family:Onest,system-ui,sans-serif;transform:translateY(102%);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+.ro-ov.on .ro-sh{transform:none}
+.ro-sh::before{content:"";align-self:center;flex:none;width:38px;height:4px;margin:-4px 0 10px;border-radius:2px;background:rgba(255,255,255,.18)}
+.ro-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ro-hd b{flex:1;font:800 19px/1.1 Onest,system-ui,sans-serif}
+.ro-x,.ro-bk{flex:none;width:34px;height:34px;border-radius:12px;border:0;background:rgba(255,255,255,.07);color:#cfe9e5;font:600 20px/1 Onest,system-ui,sans-serif;cursor:pointer}
+.ro-seg{display:flex;gap:4px;padding:4px;margin-bottom:12px;border-radius:16px;background:rgba(3,20,23,.6);border:1px solid rgba(94,234,212,.14)}
+.ro-seg button{flex:1;height:38px;display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:12px;background:none;color:#7fb3ab;font:800 13.5px/1 Onest,system-ui,sans-serif;cursor:pointer;transition:background .2s,color .2s}
+.ro-seg button.on{background:linear-gradient(120deg,#86efac,#5eead4 50%,#67e8f9);color:#042f2e;box-shadow:0 4px 14px rgba(45,212,191,.28)}
+.ro-sp,.ro-lk{display:inline-grid;place-items:center;font-style:normal}.ro-sp svg{width:15px;height:15px}
+.ro-list{display:flex;flex-direction:column;gap:8px}
+.ro-row{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(94,234,212,.1)}
+.ro-row.mine{border-color:rgba(94,234,212,.4);background:rgba(94,234,212,.07)}
+.ro-row.full{opacity:.5}
+.ro-av{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#fff;font:800 15px/1 Onest,system-ui,sans-serif;box-shadow:inset 0 0 0 2px rgba(255,255,255,.12)}
+.ro-rt{flex:1;min-width:0}
+.ro-rt b{display:flex;align-items:center;gap:5px;font:800 14px/1.2 Onest,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ro-rt .ro-lk{color:#ffb547}
+.ro-rt small{display:block;margin-top:3px;color:#7fb3ab;font:600 12px/1.2 Onest,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ro-en{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.ro-en small{color:#7fb3ab;font:600 10.5px/1 Onest,system-ui,sans-serif}
+.ro-en .dv-g{font:800 14px/1 Onest,system-ui,sans-serif}
+.ro-go{flex:none;height:36px;padding:0 13px;border:0;border-radius:12px;background:rgba(94,234,212,.15);color:#5eead4;font:800 13px/1 Onest,system-ui,sans-serif;cursor:pointer}
+.ro-go:disabled{background:rgba(255,255,255,.05);color:#6b8a86;cursor:default}
+.ro-empty{padding:28px 10px;text-align:center;color:#7fb3ab;font:600 13px/1.4 Onest,system-ui,sans-serif}
+.ro-ft{position:sticky;bottom:0;margin:12px -14px 0;padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(6,26,30,0),#061a1e 30%)}
+.ro-new{width:100%;height:52px;display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:17px;background:linear-gradient(120deg,#86efac,#5eead4 50%,#67e8f9);color:#042f2e;font:800 15px/1 Onest,system-ui,sans-serif;box-shadow:0 10px 26px rgba(45,212,191,.3);cursor:pointer}
+.ro-new b{font:900 20px/1 Onest,system-ui,sans-serif}
+.ro-new:disabled{opacity:.45;box-shadow:none;cursor:default}
+.ro-lb{margin:4px 2px 8px;color:#9cc7c0;font:700 12.5px/1 Onest,system-ui,sans-serif}
+.ro-lb i{font-style:normal;color:#5f8580;font-weight:600}
+.ro-amt{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ro-amt>button{flex:none;width:50px;height:54px;border-radius:15px;border:1px solid rgba(94,234,212,.16);background:rgba(3,20,23,.6);color:#5eead4;font:700 24px/1 Onest,system-ui,sans-serif;cursor:pointer}
+.ro-val{flex:1;min-width:0;height:54px;display:flex;align-items:center;justify-content:center;gap:7px;border-radius:15px;background:rgba(3,20,23,.6);border:1px solid rgba(94,234,212,.32);cursor:text}
+.ro-gi{display:grid;width:22px;height:22px}.ro-gi svg{width:100%;height:100%}
+.ro-val input{width:5ch;min-width:0;border:0;background:none;color:#fff;font:800 25px/1 Onest,system-ui,sans-serif;text-align:center;outline:none;padding:0}
+.ro-val small{color:#7fb3ab;font:700 12px/1 Onest,system-ui,sans-serif}
+.ro-q{display:flex;gap:6px;margin-bottom:14px}
+.ro-q button{flex:1 1 0;min-width:0;height:34px;border-radius:11px;border:1px solid rgba(94,234,212,.14);background:none;color:#9cc7c0;font:800 13px/1 Onest,system-ui,sans-serif;cursor:pointer}
+.ro-q button.on{background:rgba(94,234,212,.16);color:#5eead4;border-color:rgba(94,234,212,.45)}
+.ro-in{width:100%;height:46px;padding:0 14px;margin-bottom:14px;border-radius:14px;border:1px solid rgba(94,234,212,.16);background:rgba(3,20,23,.6);color:#fff;font:700 15px Onest,system-ui,sans-serif;outline:none;box-sizing:border-box}
+.ro-in:focus,.ro-val:focus-within{border-color:rgba(94,234,212,.55)}
+.ro-note{margin:0 2px;color:#7fb3ab;font:600 12px/1.45 Onest,system-ui,sans-serif}
+.ro-toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));z-index:10060;max-width:calc(100% - 32px);padding:11px 16px;border-radius:14px;background:rgba(8,43,48,.96);border:1px solid rgba(94,234,212,.35);color:#e8fbf8;font:700 13px/1.3 Onest,system-ui,sans-serif;box-shadow:0 12px 30px rgba(0,0,0,.45);transform:translate(-50%,-14px);opacity:0;transition:opacity .3s,transform .3s}
+.ro-toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ===== Единые крестики закрытия (как в окне победителя) ===== */
+html body button.apx:not(#_x0):not(#_x1),html body span.apx:not(#_x0):not(#_x1){display:inline-grid;place-items:center}
+html body .apx:not(#_x0):not(#_x1){box-sizing:border-box!important;width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;flex:none!important;padding:0!important;margin:0;border:0!important;border-radius:50%!important;background:rgba(2,16,18,.5)!important;color:#cfe9e5!important;box-shadow:none!important;opacity:1!important;text-shadow:none!important;font:700 15px/1 Onest,system-ui,sans-serif!important;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s}
+html body .apx:not(#_x0):not(#_x1)>i{display:block;font-style:normal;font-size:15px;font-weight:700;line-height:1;pointer-events:none}
+html body .apx:not(#_x0):not(#_x1):active{transform:scale(.92)}
+
+/* ===== Окно победителя: фон за ним чуть мутный (и в лёгком режиме тоже) ===== */
+html .ww.on{background:rgba(2,10,12,.5)!important;-webkit-backdrop-filter:blur(6px)!important;backdrop-filter:blur(6px)!important}
+
+/* ===== Столы игроков: окно одной высоты для Костей 21 и Покера 21 ===== */
+.ro-sh{height:min(86vh,610px)}
+.ro-list{flex:1 1 auto}
+.rm-own .ro-t{justify-content:center}
+
+/* ===== Маркет: без розовых счётчиков на Избранном и Корзине; пустые экраны — без карточки ===== */
+html body .market-side-fab .mx-fab-n{display:none!important}
+html body #marketFavoritesEmpty.market-empty-state,html body #marketCartEmpty.market-empty-state{background:none!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* ===== Инвентарь: шапка плотнее ===== */
+html body #inventoryScreen .market-subview-title{margin-bottom:2px!important}
+html body #inventoryScreen #mxInvSum.pi-line{margin:0 0 2px!important}
+html body #inventoryScreen #inventoryTabsPill{margin-top:0!important;padding-top:0!important;padding-bottom:0!important}
+
+/* ===== Рефералы: окно непрозрачное ===== */
+html body.referrals-mode #appReferralsOverlay#appReferralsOverlay.app-settings-overlay,html body #appReferralsOverlay#appReferralsOverlay.app-settings-overlay{background:var(--mxb,#0b0a1c)!important}
+
+/* ===== Рефералы: «Забрать» без свечения ===== */
+html[data-mix] #appReferralsOverlay #claimReferralBtn{box-shadow:none!important}
+
+/* ===== Рефералы: в карточке «Зарабатывай до 15%» снова 5 статуэток-фигурок ===== */
+html[data-mix] body #referralLinkCard > #mxRefDeco{display:none!important}
+html[data-mix] body #referralLinkCard > div[style*="aspect-ratio"]{display:block!important}
+
+/* ===== Карточки уровней: «ком. маркета» под «реф. процент», вровень с названием; справа — крупный круг с подарком
+   (размер считает aurora-ui.js); сумма прогресса — под точкой ===== */
+html[data-app] .au-st{flex-direction:column!important;align-items:flex-start!important;gap:4px!important;margin-left:-7px}
+html[data-app] .au-st > span{padding:4px 7px!important}
+html[data-app] .au-orb{right:3px!important;top:3px!important;width:var(--orb,68px)!important;height:var(--orb,68px)!important}
+html[data-app] .au-gift{width:calc(var(--orb,68px) * .853)!important;height:calc(var(--orb,68px) * .853)!important}
+html[data-app] .au-gift .mx-gsvg,html[data-app] .au-gift img{inset:2px;width:calc(100% - 4px);height:calc(100% - 4px)}
+html[data-app] .au-pg:not(.lock):not(.done) .au-tr{margin-top:8px!important}
+html[data-app] .au-pg:not(.lock):not(.done) .au-ends{margin-top:10px!important}
+html[data-app] .au-tr u em{bottom:auto!important;top:calc(100% + 3px);transform:translateX(calc(-50% + var(--sh,0px)))}
+html[data-app] .au-tr u em::after{bottom:auto;top:-4px;left:calc(50% - var(--sh,0px));border:4px solid transparent;border-top:0;border-bottom-color:var(--a)}
+
+/* ===== Карточки уровней: свечение фона — вокруг круга с подарком и по его размеру ===== */
+html[data-app] .au-lv{background:radial-gradient(circle calc(var(--orb,68px) * 1.05) at calc(100% - 4px - var(--orb,68px) / 2) calc(4px + var(--orb,68px) / 2),color-mix(in srgb,var(--a) 40%,transparent),color-mix(in srgb,var(--a) 14%,transparent) 55%,transparent),linear-gradient(160deg,color-mix(in srgb,var(--b) 45%,#041417),#061a1d 75%)!important}
