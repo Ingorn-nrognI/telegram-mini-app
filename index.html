@@ -18519,6 +18519,7 @@ let _scannerZoomOutStartMs = null;
 // Текущий уровень зума арены — читается при расчёте разрешения канваса, чтобы
 // при зуме буфер увеличивался и картинка не мылилась.
 let scannerCurrentZoomLevel = 1;
+let scannerZoomFx = { x: 0.5, y: 0.5, z: 1 };
 let _scannerResultShownForRound = null;
 let _lastFrozenResultPos = null;
 let _beamTransitionEndMs = 0;
@@ -23159,6 +23160,13 @@ function renderScannerCanvas() {
   // с overflow:hidden, а увеличивается только канвас внутри неё, поэтому всё,
   // что вылезает за арену, обрезается её границей.
   {
+    // Точка, вокруг которой увеличен канвас, и сам зум — по ним ник владельца
+    // клетки ниже рисуется в экранных координатах, чтобы не улетал за край.
+    scannerZoomFx = {
+      x: scannerEndZoom > 1.001 ? (scannerLastBeamSample?.x ?? 0.5) : 0.5,
+      y: scannerEndZoom > 1.001 ? (scannerLastBeamSample?.y ?? 0.5) : 0.5,
+      z: scannerEndZoom > 1.001 ? scannerEndZoom : 1
+    };
     const _canvases = [
       document.getElementById("scannerGridCanvas"),
       document.getElementById("scannerScreenGridCanvas")
@@ -23608,8 +23616,19 @@ function renderScannerCanvas() {
     const ownerIndex = scannerGridState.cellOwners?.[beamCellIndex] ?? -1;
     const ownerPlayer = ownerIndex >= 0 ? scannerGridState.players[ownerIndex] : null;
     if (ownerPlayer) {
-      const px = Math.max(0, Math.min(size - 1, visualBeamSample.x * size));
-      const py = Math.max(0, Math.min(size - 1, visualBeamSample.y * size));
+      // Канвас во время зума увеличен CSS-ом вокруг точки луча, поэтому всё,
+      // что нарисовано в стороне от луча, уезжает в Z раз дальше и обрезается
+      // рамкой арены. Ник считаем в экранных координатах (как без зума) и
+      // рисуем с обратным масштабом — он остаётся рядом с прицелом, того же
+      // размера и всегда внутри арены.
+      const zf = scannerZoomFx && scannerZoomFx.z > 1 ? scannerZoomFx : { x: 0.5, y: 0.5, z: 1 };
+      const Z = zf.z;
+      const ox = zf.x * size;
+      const oy = zf.y * size;
+      const bx = Math.max(0, Math.min(size - 1, visualBeamSample.x * size));
+      const by = Math.max(0, Math.min(size - 1, visualBeamSample.y * size));
+      const px = ox + (bx - ox) * Z;
+      const py = oy + (by - oy) * Z;
       const fontSize = Math.max(11, size * 0.038);
       const label = ownerPlayer.name || L("Игрок", "Player");
       const paddingX = fontSize * 0.7;
@@ -23618,9 +23637,16 @@ function renderScannerCanvas() {
       const textWidth = ctx.measureText(label).width;
       const boxW = textWidth + paddingX * 2;
       const boxH = fontSize + paddingY * 2;
+      const reticleR = (Math.max(11, size * 0.031) - 1) * Z;
+      const gap = Math.max(Math.max(10, size * 0.031) * 3.5, reticleR + 8);
       const boxX = Math.max(4, Math.min(size - boxW - 4, px - boxW / 2));
-      const boxY = Math.max(4, py - boxH - Math.max(10, size * 0.031) * 3.5);
+      let boxY = py - boxH - gap;
+      // не влезает над прицелом — ставим под ним
+      if (boxY < 4) boxY = Math.min(size - boxH - 4, py + gap);
       ctx.save();
+      ctx.translate(ox, oy);
+      ctx.scale(1 / Z, 1 / Z);
+      ctx.translate(-ox, -oy);
       ctx.fillStyle = "rgba(0,0,0,0.62)";
       ctx.beginPath();
       ctx.roundRect(boxX, boxY, boxW, boxH, fontSize * 0.38);
