@@ -1,11 +1,5 @@
 window.__SCV_FIX=2
-window.__SCV_APP=1
-window.__DCV_APP=1
-window.__DCV_FIX=1
-window.__DCV_ROOMS=1
-window.__PK_EMBED=1
-window.__KC=4
-window.__RN=2;(function(){var DIA='<svg class="ww-dia" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#2a9ef1"/><path d="M7.5 8h9l2.6 3.3L12 18.5 4.9 11.3z" fill="#fff"/></svg>'
+window.__SCV_APP=1;(function(){var DIA='<svg class="ww-dia" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#2a9ef1"/><path d="M7.5 8h9l2.6 3.3L12 18.5 4.9 11.3z" fill="#fff"/></svg>'
 function G(){return typeof CASE_GRAM_ICON_SVG!=='undefined'?'<span class="ww-gi">'+CASE_GRAM_ICON_SVG+'</span>':DIA}function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,(function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]}))}function n2(v){return(Number(v)||0).toFixed(2)}var el=null,tmr=0,onClose=null,DUR=1e4
 var COL=['#5eead4','#86efac','#fbbf24','#f472b6','#38bdf8','#a78bfa','#fde68a','#ffffff']
 function runConfetti(card,kind){card.querySelectorAll('.ww-cv').forEach((function(c){c._stop=true
@@ -594,6 +588,8 @@ faces.forEach((function(f){var n=f[1],z=o.M[2][0]*n[0]+o.M[2][1]*n[1]+o.M[2][2]*
 if(z>best){best=z
 v=f[2]}}))
 return v}
+o.label=function(arr){faces.forEach((function(f,i){f[2]=arr[i]
+for(var k=0;k<9;k++)f[0].children[k].className=PIPS[arr[i]].indexOf(k)>=0?'on':''}))}
 o.show=function(v,yaw){o.setM(faceM(v,yaw==null?(Math.random()-.5)*.5:yaw))}
 o.pos=function(x,y,h){h=h||0
 el.style.transform='translate('+(x-H).toFixed(1)+'px,'+(y-H-h*.35).toFixed(1)+'px) scale('+(1+h/160).toFixed(3)+')'
@@ -675,31 +671,46 @@ B.vy-=ny2*im}}}D.forEach((function(p){p.d.pos(p.x,p.y,p.h)}))
 if(!moving){idle+=dt
 if(idle>(opts.pause||1.8))throwAll()}}requestAnimationFrame(frame)
 return{stop:function(){alive=false
-D.forEach((function(p){p.d.el.remove()}))},dice:D}}function world(layer,getB,size){var D=[],r=size/2,last=performance.now(),alive=true,run=true
-/* физика спит, когда все кубики лежат (раньше считала и двигала их каждый кадр всегда) */
-function step(now){if(!alive||!layer.isConnected||!D.length||D.every(function(p){return p.rest&&p.h===0&&p.vh===0})){run=false
-return}requestAnimationFrame(step)
-var dt=Math.min(.033,(now-last)/1e3)
-last=now
-var B=getB()
-D.forEach((function(p){p.x+=p.vx*dt
+D.forEach((function(p){p.d.el.remove()}))},dice:D}}/* разметка граней: какое число на какой грани, чтобы при этой ориентации M сверху было t */
+function forceLabels(M,t){var N=FACES.map((function(f){return f[2]})),Lb=FACES.map((function(f){return f[0]})),k=0,bz=-2
+N.forEach((function(n,i){var z=M[2][0]*n[0]+M[2][1]*n[1]+M[2][2]*n[2]
+if(z>bz){bz=z
+k=i}}))
+var nk=N[k],nt=N[Lb.indexOf(t)],Q,dt=nk[0]*nt[0]+nk[1]*nt[1]+nk[2]*nt[2]
+if(dt>.5)Q=I()
+else if(dt<-.5){var a=[0,0,0]
+for(var j=0;j<3;j++)if(!nt[j]){a[j]=1
+break}Q=[0,1,2].map((function(x){return[0,1,2].map((function(y){return 2*a[x]*a[y]-(x===y?1:0)}))}))}else Q=rot([nt[1]*nk[2]-nt[2]*nk[1],nt[2]*nk[0]-nt[0]*nk[2],nt[0]*nk[1]-nt[1]*nk[0]],Math.PI/2).map((function(row){return row.map(Math.round)}))
+return N.map((function(n){var q=[Q[0][0]*n[0]+Q[1][0]*n[1]+Q[2][0]*n[2],Q[0][1]*n[0]+Q[1][1]*n[1]+Q[2][1]*n[2],Q[0][2]*n[0]+Q[1][2]*n[1]+Q[2][2]*n[2]]
+for(var i=0;i<6;i++)if(N[i][0]===q[0]&&N[i][1]===q[1]&&N[i][2]===q[2])return Lb[i]
+return 1}))}
+/* Стол с физикой кубиков. Шаг физики фиксированный (1/120 с) и случайность внутри шага —
+   своя, с сохраняемым состоянием: поэтому бросок можно заранее «прокрутить» в памяти,
+   узнать, какой гранью кубик ляжет, и разметить грани так, чтобы сверху оказалось
+   число, которое выбросил сервер. Сам полёт при этом не меняется. */
+function world(layer,getB,size){var D=[],r=size/2,last=performance.now(),alive=true,run=false,acc=0,FX=1/120,BF=null,RG={s:(Math.random()*4294967296)>>>0}
+function rnd(g){var t=g.s=(g.s+0x6D2B79F5)>>>0
+t=Math.imul(t^(t>>>15),t|1)
+t^=t+Math.imul(t^(t>>>7),t|61)
+return((t^(t>>>14))>>>0)/4294967296}
+function sim(D,B,dt,g){D.forEach((function(p){p.x+=p.vx*dt
 p.y+=p.vy*dt
 if(p.h>0||p.vh>0){p.vh-=1300*dt
 p.h+=p.vh*dt
-p.d.setM(mul(rot(p.w,Math.hypot(p.w[0],p.w[1],p.w[2])*dt),p.d.M))
+p.M=mul(rot(p.w,Math.hypot(p.w[0],p.w[1],p.w[2])*dt),p.M)
 if(p.h<=0){p.h=0
 if(p.vh<-90){p.vh=-p.vh*.48
 p.vx*=.86
 p.vy*=.86
-p.w=[p.w[0]*.6+(Math.random()-.5)*8,p.w[1]*.6+(Math.random()-.5)*8,p.w[2]*.7]}else p.vh=0}}else{var sp0=Math.hypot(p.vx,p.vy),dec=sp0>0?Math.max(0,sp0-(55+sp0*.55)*dt)/sp0:0
+p.w=[p.w[0]*.6+(rnd(g)-.5)*8,p.w[1]*.6+(rnd(g)-.5)*8,p.w[2]*.7]}else p.vh=0}}else{var sp0=Math.hypot(p.vx,p.vy),dec=sp0>0?Math.max(0,sp0-(55+sp0*.55)*dt)/sp0:0
 p.vx*=dec
 p.vy*=dec
 var sp=Math.hypot(p.vx,p.vy)
-if(sp>2)p.d.setM(mul(rot([-p.vy,p.vx,0],sp*dt/r),p.d.M))
-if(sp<48){var M=p.d.M,bc=0,bz=0
+if(sp>2)p.M=mul(rot([-p.vy,p.vx,0],sp*dt/r),p.M)
+if(sp<48){var M=p.M,bc=0,bz=0
 for(var c=0;c<3;c++)if(Math.abs(M[2][c])>Math.abs(bz)){bz=M[2][c]
 bc=c}var u=[M[0][bc]*Math.sign(bz),M[1][bc]*Math.sign(bz),M[2][bc]*Math.sign(bz)],ang=Math.acos(Math.min(1,u[2]))
-if(ang>.002)p.d.setM(ortho(mul(rot([u[1],-u[0],0],ang*Math.min(1,dt*(sp<15?12:5))),M)))
+if(ang>.002)p.M=ortho(mul(rot([u[1],-u[0],0],ang*Math.min(1,dt*(sp<15?12:5))),M))
 else if(sp<6)p.rest=true
 if(sp<6){p.vx=0
 p.vy=0}}}if(Math.hypot(p.vx,p.vy)>6||p.h>0)p.rest=false
@@ -718,7 +729,7 @@ p.y=Y1
 var dot=p.vx*nx+p.vy*ny
 if(dot>0){p.vx=(p.vx-2*dot*nx)*.74
 p.vy=(p.vy-2*dot*ny)*.74
-p.w=[p.w[0]+ny*10,p.w[1]-nx*10,p.w[2]+(Math.random()-.5)*8]
+p.w=[p.w[0]+ny*10,p.w[1]-nx*10,p.w[2]+(rnd(g)-.5)*8]
 if(dot>160&&p.h<4)p.vh=Math.max(p.vh,dot*.35)}}}))
 for(var i=0;i<D.length;i++)for(var j=i+1;j<D.length;j++){var A=D[i],C=D[j]
 if(Math.abs(A.h-C.h)>size*.8)continue
@@ -737,19 +748,51 @@ A.vy-=J/ma*ny2
 C.vx+=J/mc*nx2
 C.vy+=J/mc*ny2
 A.w=[A.w[0]-ny2*4,A.w[1]+nx2*4,A.w[2]]
-C.w=[C.w[0]+ny2*4,C.w[1]-nx2*4,C.w[2]]}}}D.forEach((function(p){p.d.pos(p.x,p.y,p.h)}))}requestAnimationFrame(step)
-return{dice:D,throw:function(x0,y0,tx,ty,cls){var d=make(size)
-if(cls)d.el.classList.add(cls)
-layer.appendChild(d.el)
-var air=.42,sc=1.15+Math.random()*.35,p={d:d,x:x0,y:y0,h:24,vh:1300*air/2,vx:(tx-x0)/air*sc+(Math.random()-.5)*60,vy:(ty-y0)/air*sc+(Math.random()-.5)*60,w:[(Math.random()-.5)*30,(Math.random()-.5)*30,(Math.random()-.5)*12],rest:false,inside:false}
-d.setM(mul(rot([Math.random(),Math.random(),Math.random()],Math.random()*6),I()))
-D.push(p)
-if(!run){run=true
+C.w=[C.w[0]+ny2*4,C.w[1]-nx2*4,C.w[2]]}}}}
+function still(D){return D.every((function(p){return p.rest&&p.h===0&&p.vh===0}))}
+/* физика спит, когда все кубики лежат */
+function step(now){if(!alive||!layer.isConnected||!D.length||still(D)){run=false
+BF=null
+return}requestAnimationFrame(step)
+acc+=Math.min(.1,(now-last)/1e3)
+last=now
+var B=BF||getB()
+while(acc>=FX){sim(D,B,FX,RG)
+acc-=FX}D.forEach((function(p){p.d.setM(p.M)
+p.d.pos(p.x,p.y,p.h)}))}
+function wake(){if(!run){run=true
+acc=0
 last=performance.now()
-requestAnimationFrame(step)}
-return new Promise((function(res){var t0=performance.now();(function wait(){if(p.rest&&performance.now()-t0>600){setTimeout((function(){res(d.top())}),120)}else setTimeout(wait,80)})()}))},clear:function(){D.splice(0).forEach((function(p){p.d.el.style.transition='opacity .35s'
+requestAnimationFrame(step)}}
+function cl(p){return{x:p.x,y:p.y,h:p.h,vh:p.vh,vx:p.vx,vy:p.vy,w:p.w.slice(),M:p.M.map((function(a){return a.slice()})),rest:p.rest,inside:p.inside}}
+function spawn(o){var d=make(size)
+if(o.cls)d.el.classList.add(o.cls)
+var air=.42,sc=1.15+Math.random()*.35,M=mul(rot([Math.random(),Math.random(),Math.random()],Math.random()*6),I())
+var p={d:d,x:o.x0,y:o.y0,h:24,vh:1300*air/2,vx:(o.tx-o.x0)/air*sc+(Math.random()-.5)*60,vy:(o.ty-o.y0)/air*sc+(Math.random()-.5)*60,w:[(Math.random()-.5)*30,(Math.random()-.5)*30,(Math.random()-.5)*12],M:M,rest:false,inside:false}
+d.setM(M)
+d.pos(p.x,p.y,p.h)
+return p}
+function settle(p){var t0=performance.now()
+return new Promise((function(res){(function wait(){if(!alive||!layer.isConnected)return res(p.want||p.d.top())
+if(p.rest&&performance.now()-t0>600){setTimeout((function(){if(p.want&&p.d.top()!==p.want){window.__d3fix=(window.__d3fix||0)+1
+p.d.label(forceLabels(p.M,p.want))}res(p.d.top())}),120)}else setTimeout(wait,80)})()}))}
+/* бросок нескольких кубиков сразу; v — число, которое должно выпасть (если задано) */
+function throwMany(list){var B=getB()
+var P=list.map(spawn)
+if(list.some((function(o){return o.v}))){BF=BF||B
+var S=D.concat(P).map(cl),k0=D.length,g={s:RG.s},n=0
+while(n<2400&&!still(S)){sim(S,BF,FX,g)
+n++}P.forEach((function(p,k){var v=list[k].v
+if(v){p.want=v
+p.d.label(forceLabels(S[k0+k].M,v))}}))}else if(!run)BF=null
+P.forEach((function(p){layer.appendChild(p.d.el)
+D.push(p)}))
+wake()
+return Promise.all(P.map(settle))}
+return{dice:D,throwMany:throwMany,throw:function(x0,y0,tx,ty,cls){return throwMany([{x0:x0,y0:y0,tx:tx,ty:ty,cls:cls}]).then((function(v){return v[0]}))},clear:function(){BF=null
+D.splice(0).forEach((function(p){p.d.el.style.transition='opacity .35s'
 p.d.el.style.opacity='0'
-setTimeout((function(){p.d.el.remove()}),400)}))},stop:function(){alive=false}}}window.Dice3D={make:make,fly:fly,table:table,world:world,faceM:faceM}})();(function(){var N_V=4
+setTimeout((function(){p.d.el.remove()}),400)}))},stop:function(){alive=false}}}window.Dice3D={make:make,fly:fly,table:table,world:world,faceM:faceM,forceLabels:forceLabels}})();(function(){var N_V=4
 var FIX=window.__SCV_FIX||0,V=1
 try{V=FIX||parseInt(localStorage.getItem('scv2'),10)||1}catch(e){}if(V>N_V)V=1
 var H=document.documentElement
@@ -1138,906 +1181,4 @@ go()}))
 function mount(){if(FIX)return
 document.body.appendChild(sw)
 mark()}if(document.body)mount()
-else document.addEventListener('DOMContentLoaded',mount)})();(function(){var H=document.documentElement,N_V=4,V=1,FIX=window.__DCV_FIX||0
-try{V=FIX||+localStorage.getItem('dcv')||1}catch(e){}if(V<1||V>N_V)V=1
-H.setAttribute('data-dcv',V)
-function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,(function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]}))}function n2(v){return Number(v||0).toFixed(2)}function rnd(n){return 1+Math.floor(Math.random()*n)}function G(){return typeof CASE_GRAM_ICON_SVG!=='undefined'?CASE_GRAM_ICON_SVG:''}function gram(v,cls){
-return'<span class="dv-g'+(cls?' '+cls:'')+'"><span class="dv-gi">'+G()+'</span>'+v+'</span>'}function ava(s){var a=''
-try{a=getScannerPlayerAvatarHtml({name:s.name})}catch(e){}return'<span class="dv-av" style="--c:'+s.color+'">'+(a||'<span class="scanner-player-avatar">'+esc(s.name[0])+'</span>')+'</span>'}var FACE={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]}
-function die(v,cls){var h=''
-for(var i=0;i<9;i++)h+='<i'+(FACE[v].indexOf(i)>=0?' class="on"':'')+'></i>'
-return'<span class="dv-die'+(cls?' '+cls:'')+'">'+h+'</span>'}function gimg(g){var u=window.__FR&&window.__FR[g.slug]||''
-return u?'<img src="'+u+'" alt="">':''}function gt(g,cls){return'<span class="dv-gt'+(cls?' '+cls:'')+'" title="'+esc(g.title)+'">'+gimg(g)+'</span>'}var ENTRY=10
-var GP={plushpepe:['plushpepe-1837','Plush Pepe',1837,38.5],heartlocket:['heartlocket-369','Heart Locket',369,21.4],resistancedog:['resistancedog-2478','Resistance Dog',2478,6.2],durovsglasses:['durovsglasses-1081',"Durov's Glasses",1081,9.8],preciouspeach:['preciouspeach-881','Precious Peach',881,14.6],heroichelmet:['heroichelmet-3001','Heroic Helmet',3001,11.3],
-scaredcat:['scaredcat-10596','Scared Cat',10596,4.9],lootbag:['lootbag-169','Loot Bag',169,17.2],durovscap:['durovscap-1966',"Durov's Cap",1966,26],mightyarm:['mightyarm-1721','Mighty Arm',1721,7.4]}
-function gift(k){var g=GP[k]
-return{slug:g[0],title:g[1],number:g[2],value:g[3]}}var BOTS=[{name:'nightowl',color:'#ff5d8f',stake:{gram:0,gifts:[gift('resistancedog'),gift('mightyarm')]}},{name:'Sasha_V',color:'#ffb547',stake:{gram:ENTRY,gifts:[]}},{name:'grammaster',color:'#34d17f',stake:{gram:5.1,gifts:[gift('scaredcat')]}},{name:'lucky_bobr',color:'#8b5cf6',stake:{gram:0,gifts:[gift('heroichelmet')]}},{name:'dice_king',
-color:'#38bdf8',stake:{gram:ENTRY,gifts:[]}}]
-var EMO=['🔥','😂','😱','👏','🎲']
-var S=null,T=[],root=null,sheetEl=null
-function later(fn,ms){var t=setTimeout((function(){var k=T.indexOf(t)
-if(k>=0)T.splice(k,1)
-fn()}),ms)
-T.push(t)
-return t}function clearT(){T.forEach(clearTimeout)
-T=[]
-if(S&&S.tick){clearInterval(S.tick)
-S.tick=null}if(S&&S.tiv){clearInterval(S.tiv)
-S.tiv=null}}function me(){try{var p=getCurrentPlayer()
-return p.name||p.username||'Ты'}catch(e){return'Ты'}}function stakeVal(st){return(st.gram||0)+st.gifts.reduce((function(a,g){return a+g.value}),0)}function bank(){var gr=0,gifts=[]
-S.seats.forEach((function(s){if(!s)return
-gr+=s.stake.gram||0
-s.stake.gifts.forEach((function(g){gifts.push(g)}))}))
-return{gram:gr,gifts:gifts,total:gr+gifts.reduce((function(a,g){return a+g.value}),0)}}function kindOf(st){return st.gifts.length?st.gram?'gg':'g':'gram'}function kindLbl(st){return{gram:'GRAM',g:'подарки',gg:'подарки + GRAM'}[kindOf(st)]}function stake(st,max){var g=st.gifts,m=max||2
-if(!g.length)return'<span class="dv-sk k-gram">'+gram(n2(st.gram))+'</span>'
-return'<span class="dv-sk k-'+kindOf(st)+'"><span class="dv-gs">'+g.slice(0,m).map((function(x){return gt(x)})).join('')+(g.length>m?'<em>+'+(g.length-m)+'</em>':'')+'</span>'+(st.gram?'<span class="dv-plus">+</span>'+gram(n2(st.gram)):'<span class="dv-ap">≈'+n2(stakeVal(st))+'</span>')+'</span>'}var ROOMS_ON=!!window.__DCV_ROOMS,ROOMS=[{n:'Стол',ic:'1',min:.1,max:.1,chips:[.1,.1,.1,.1]},{n:'Стол',ic:'2',min:.5,max:.5,chips:[.5,.5,.5,.5]},{n:'Стол',ic:'3',min:1,max:1,chips:[1,1,1,1]},{n:'Стол',ic:'4',min:3,max:3,chips:[3,3,3,3]},{n:'Покер 21',pk:true,min:5,max:5,chips:[5,5,5,5]}],ROOM=0,JOIN=null,PICK=.25,BOTN=['nightowl','Sasha_V','grammaster','lucky_bobr','dice_king','Mira'],BOTC=['#ff5d8f','#ffb547','#34d17f','#8b5cf6','#38bdf8','#f472b6']
-function rbot(k,used){var i
-do{i=Math.floor(Math.random()*BOTN.length)}while(used[BOTN[i]])
-used[BOTN[i]]=1
-var R0=ROOMS[ROOM]
-return{name:BOTN[i],color:BOTC[i],bot:true,dice:[],moves:[],sum:0,st:'ready',stake:{gram:R0.chips[Math.floor(Math.random()*R0.chips.length)],gifts:[]}}}function freeSeat(seats,pref){if(pref!=null&&!seats[pref])return pref
-var f=[0,1,2,3,4,5].filter((function(i){return!seats[i]}))
-return f.length?f[Math.floor(Math.random()*f.length)]:-1}function roomsNewRound(){clearT()
-physClear()
-if(window.WinWin)WinWin.hide()
-var prev=S,seats=[null,null,null,null,null,null],used={},mi=-1
-if(JOIN){mi=4
-seats[4]={name:me(),color:'#34d6ff',me:true,dice:[],moves:[],sum:0,st:'ready',stake:{gram:JOIN,gifts:[]}}}var keep=prev&&prev.seats?prev.seats.filter((function(x){return x&&x.bot&&Math.random()<.5})):[]
-keep.slice(0,2).forEach((function(b){used[b.name]=1
-var k=freeSeat(seats)
-seats[k]={name:b.name,color:b.color,bot:true,dice:[],moves:[],sum:0,st:'ready',stake:{gram:ROOMS[ROOM].chips[Math.floor(Math.random()*4)],gifts:[]}}}))
-S={rid:Math.random(),me:mi,seats:seats,phase:'wait',turn:-1,timer:30,emo:{},cd:10,hist:prev&&prev.hist||roomHist(),feed:[],info:null,res:false,round:(prev?prev.round:1180)+1,used:used,idleT:0}
-render()
-S.tick=setInterval((function(){var n=S.seats.filter(Boolean).length
-if(n<5&&Math.random()<(n<2?.35:.12)){var k=freeSeat(S.seats)
-if(k>=0&&k!==4){S.seats[k]=rbot(k,S.used)
-feed(S.seats[k].name+' сел за стол')
-n++}}if(S.phase==='wait'){if(n>=2){S.phase='gather'
-S.cd=10}}else if(S.phase==='gather'){S.cd--
-if(S.cd<=0&&!S.idleBusy){clearInterval(S.tick)
-S.tick=null
-physClear()
-deal()
-return}if(S.cd<0)S.cd=0}idleTick()
-render()}),1e3)}var IDLE_MS=3200
-function idleTick(){if(!PHYS||!layer||!S||S.idleBusy||S.phase!=='wait'&&S.phase!=='gather')return
-if(Date.now()<(S.idleAt||0))return
-if(S.phase==='gather'&&S.cd*1e3<IDLE_MS+800)return
-idleThrow()}function idleThrow(){var fe=root.querySelector('.kq1-felt')
-if(!fe||!fe.offsetWidth)return
-physClear()
-var f=relOf(fe),W=world(),side=Math.random()<.5?-1:1,rid=S.rid,ps=[]
-S.idleBusy=true
-var done=function(){if(S&&S.rid===rid&&S.idleBusy){S.idleBusy=false
-S.idleAt=Date.now()+1300}}
-setTimeout(done,IDLE_MS+1500)
-for(var k=0;k<2;k++)ps.push(W.throw(f.x+side*f.w*.36,f.y+(k-.5)*30,f.x-side*f.w*.1+(Math.random()-.5)*60,f.y+(Math.random()-.5)*40))
-Promise.all(ps).then(done)}window.dvRoom=function(k){if(k===ROOM)return
-var wasPk=ROOMS[ROOM].pk
-ROOM=k
-JOIN=null
-PICK=ROOMS[k].chips[1]
-ENTRY=ROOMS[k].min
-swUpd()
-if(wasPk&&window.pkStop)pkStop()
-clearT()
-physClear()
-if(window.WinWin)WinWin.hide()
-S=null
-root.classList.toggle('pk-root',!!ROOMS[k].pk)
-if(ROOMS[k].pk){root._in.innerHTML=''
-root._in.style.display='none'
-root._pk.style.display=''
-if(window.pkStart)pkStart(root._pk,ROOMS[k].min)
-return}root._pk.style.display='none'
-root._pk.innerHTML=''
-root._in.style.display=''
-roomsNewRound()}
-var SPADE='<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M12 2.2c-.5 0-.9.3-1.3.7C8.4 5.4 3.8 8.6 3.8 12.6c0 2.6 2 4.5 4.4 4.5 1.3 0 2.4-.5 3.1-1.3-.2 2-.9 3.6-2.6 4.9-.3.2-.1.7.3.7h6c.4 0 .6-.5.3-.7-1.7-1.3-2.4-2.9-2.6-4.9.7.8 1.8 1.3 3.1 1.3 2.4 0 4.4-1.9 4.4-4.5 0-4-4.6-7.2-6.9-9.7-.4-.4-.8-.7-1.3-.7z"/></svg>'
-function roomHead(){if(root._hd)return
-root._hd=document.createElement('div')
-root._hd.className='dv-head rm-h'
-root._hd.innerHTML='<div class="dv-ti"><span><b>Кости 21</b><i class="dv-q">?</i></span><small class="dv-rn2"></small></div><div class="rm-sw">'+ROOMS.map((function(r,k){return'<button type="button" data-k="'+k+'" onclick="dvRoom('+k+')">'+(r.pk?'<i class="ic">'+SPADE+'</i><span>'+r.n+'</span>':'<span>'+r.n+'</span><i class="ic n">'+r.ic+'</i>')+'</button>'})).join('')+'</div>'
-root.insertBefore(root._hd,root.firstChild)
-root._ow=document.createElement('button')
-root._ow.type='button'
-root._ow.className='rm-own'
-root._ow.setAttribute('onclick','dvOwnOpen()')
-root._ow.innerHTML=OWN_BTN()
-root.insertBefore(root._ow,root._hd.nextSibling)
-root._pk=document.createElement('div')
-root._pk.className='rm-pk'
-root._pk.style.display='none'
-root.insertBefore(root._pk,root._in.nextSibling)
-swUpd()}function swUpd(){if(!root||!root._hd)return
-root._hd.querySelectorAll('.rm-sw button').forEach((function(b){b.classList.toggle('on',+b.dataset.k===ROOM)}))
-if(root._ow){root._ow.innerHTML=OWN_BTN()
-root._ow.classList.toggle('on',!!(ROOMS[ROOM]&&ROOMS[ROOM].own))}}/* ===== Столы игроков: список чужих столов + создание своего (Кости 21 и Покер) ===== */
-var OWN_IC='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.6 14.3c2.6-.4 4.8 1 5.4 4.2"/></svg>'
-var LOCK='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
-var OWN_LIST=[{g:'d',t:'Стол Mira',h:'Mira',c:'#f472b6',e:.25,p:3},{g:'d',t:'Быстрые кости',h:'lucky_bobr',c:'#8b5cf6',e:.3,p:2},{g:'d',t:'Ночной стол',h:'nightowl',c:'#ff5d8f',e:.75,p:1},{g:'d',t:'Только свои',h:'grammaster',c:'#34d17f',e:1.5,p:2,lock:1},{g:'d',t:'Двадцать одно',h:'Sasha_V',c:'#ffb547',e:2.5,p:4},{g:'d',t:'High roller',h:'dice_king',c:'#38bdf8',e:10,p:6},
-{g:'p',t:'Новички',h:'lucky_bobr',c:'#8b5cf6',e:1,p:5},{g:'p',t:'Покер у Миры',h:'Mira',c:'#f472b6',e:2,p:3},{g:'p',t:'Блеф-клуб',h:'grammaster',c:'#34d17f',e:7.5,p:4},{g:'p',t:'Киты',h:'dice_king',c:'#38bdf8',e:25,p:2}]
-var OWN={g:'d',v:'list',cg:'d',ce:1,ct:'',cl:0},OWN_Q=[.1,.5,1,3,5,10,25],OWN_ST=[.1,.2,.25,.3,.5,.75,1,1.5,2,2.5,3,4,5,7.5,10,15,20,25,50,100]
-function OWN_BTN(){var R0=ROOMS[ROOM]||{}
-if(R0.own)return'<span class="ro-ic">'+OWN_IC+'</span><span class="ro-t"><b>«'+esc(R0.t)+'»</b><small>'+(R0.mine?'твой стол':'стол игрока')+' · вход '+n2(R0.min)+' GRAM</small></span><span class="ro-plus" aria-hidden="true">⇄</span>'
-return'<span class="ro-ic">'+OWN_IC+'</span><span class="ro-t"><b>Столы игроков</b></span><span class="ro-plus" aria-hidden="true">+</span>'}
-function ownEl(){var m=document.getElementById('rmOwn')
-if(m)return m
-m=document.createElement('div')
-m.id='rmOwn'
-m.className='ro-ov'
-m.innerHTML='<div class="ro-bg" onclick="dvOwnClose()"></div><div class="ro-sh" role="dialog" aria-modal="true" aria-label="Столы игроков"></div>'
-document.body.appendChild(m)
-return m}
-function ownHap(){try{Telegram.WebApp.HapticFeedback.selectionChanged()}catch(e){}}
-window.dvOwnOpen=function(){var m=ownEl()
-OWN.v='list'
-var R0=ROOMS[ROOM]
-if(R0)OWN.g=R0.pk?'p':'d'
-ownR()
-requestAnimationFrame((function(){m.classList.add('on')}))
-ownHap()}
-window.dvOwnClose=function(){var m=document.getElementById('rmOwn')
-if(m)m.classList.remove('on')}
-window.dvOwnG=function(g){OWN.g=g
-ownHap()
-ownR()}
-window.dvOwnV=function(v){OWN.v=v
-if(v==='new')OWN.cg=OWN.g
-ownR()}
-window.dvOwnCG=function(g){OWN.cg=g
-ownR()}
-window.dvOwnCL=function(l){OWN.cl=l==='l'?1:0
-ownR()}
-window.dvOwnName=function(v){OWN.ct=v}
-function ownAmtOk(){return OWN.ce>=.1&&OWN.ce<=1000}
-function ownUpd(){var sh=document.querySelector('#rmOwn .ro-sh')
-if(!sh)return
-sh.querySelectorAll('.ro-q button').forEach((function(b){b.classList.toggle('on',+b.dataset.v===OWN.ce)}))
-var mk=sh.querySelector('.ro-mk')
-if(mk){mk.disabled=!ownAmtOk()
-mk.innerHTML=ownAmtOk()?'Создать стол · вход '+n2(OWN.ce)+' GRAM':'Вход от 0.1 до 1000 GRAM'}var nt=sh.querySelector('.ro-note')
-if(nt)nt.innerHTML=ownNote()}
-window.dvOwnAmt=function(v){var x=parseFloat(String(v).replace(',','.'))
-OWN.ce=isFinite(x)?Math.round(x*100)/100:0
-ownUpd()}
-window.dvOwnSet=function(v){OWN.ce=v
-var i=document.getElementById('roAmt')
-if(i)i.value=v
-ownHap()
-ownUpd()}
-window.dvOwnStep=function(d){var c=OWN.ce,v=c
-if(d>0){v=OWN_ST.filter((function(x){return x>c+1e-9}))[0]||c}else{var l=OWN_ST.filter((function(x){return x<c-1e-9}))
-v=l.length?l[l.length-1]:c}window.dvOwnSet(v)}
-function ownNote(){var e=OWN.ce
-return'Победитель забирает банк, комиссия 5%. '+(OWN.cg==='p'?'Анте '+n2(e*.1)+' · рейзы '+n2(e*.1)+' / '+n2(e*.25)+' / '+n2(e*.5)+' GRAM. ':'')+'Стол закрывается, если 10 минут за ним никого нет.'}
-function ownSeg(cur,fn,items){return'<div class="ro-seg">'+items.map((function(it){return'<button type="button" class="'+(it[0]===cur?'on':'')+'" onclick="'+fn+'(\''+it[0]+'\')">'+it[1]+'</button>'})).join('')+'</div>'}
-function ownR(){var sh=document.querySelector('#rmOwn .ro-sh')
-if(!sh)return
-var GAMES=[['d','Кости 21'],['p','<i class="ro-sp">'+SPADE+'</i>Покер 21']],X='<button type="button" class="ro-x" aria-label="Закрыть" onclick="dvOwnClose()">×</button>'
-if(OWN.v==='list'){var L=OWN_LIST.filter((function(r){return r.g===OWN.g})).sort((function(a,b){return(b.mine?1:0)-(a.mine?1:0)||a.e-b.e}))
-sh.innerHTML='<div class="ro-hd"><b>Столы игроков</b>'+X+'</div>'+ownSeg(OWN.g,'dvOwnG',GAMES)+'<div class="ro-list">'+(L.length?L.map((function(r){var i=OWN_LIST.indexOf(r),full=r.p>=6
-return'<div class="ro-row'+(full?' full':'')+(r.mine?' mine':'')+'"><span class="ro-av" style="--c:'+r.c+'">'+esc(r.h.charAt(0).toUpperCase())+'</span><span class="ro-rt"><b>'+(r.lock?'<i class="ro-lk">'+LOCK+'</i>':'')+esc(r.t)+'</b><small>'+(r.mine?'твой стол':esc(r.h))+' · '+r.p+' из 6</small></span><span class="ro-en"><small>вход</small>'+gram(n2(r.e))+'</span><button type="button" class="ro-go"'+(full?' disabled':'')+' onclick="dvOwnJoin('+i+')">'+(full?'Мест нет':'Войти')+'</button></div>'})).join(''):'<div class="ro-empty">Пока никто не создал стол — будь первым</div>')+'</div><div class="ro-ft"><button type="button" class="ro-new" onclick="dvOwnV(\'new\')"><b>+</b> Создать свой стол</button></div>'
-return}sh.innerHTML='<div class="ro-hd"><button type="button" class="ro-bk" aria-label="Назад" onclick="dvOwnV(\'list\')">←</button><b>Новый стол</b>'+X+'</div>'+'<div class="ro-lb">Игра</div>'+ownSeg(OWN.cg,'dvOwnCG',GAMES)+'<div class="ro-lb">Вход за стол</div><div class="ro-amt"><button type="button" aria-label="Меньше" onclick="dvOwnStep(-1)">−</button><label class="ro-val"><span class="ro-gi">'+G()+'</span><input id="roAmt" type="text" inputmode="decimal" autocomplete="off" value="'+OWN.ce+'" oninput="dvOwnAmt(this.value)"><small>GRAM</small></label><button type="button" aria-label="Больше" onclick="dvOwnStep(1)">+</button></div><div class="ro-q">'+OWN_Q.map((function(q){return'<button type="button" data-v="'+q+'" class="'+(q===OWN.ce?'on':'')+'" onclick="dvOwnSet('+q+')">'+q+'</button>'})).join('')+'</div>'+'<div class="ro-lb">Название <i>— необязательно</i></div><input class="ro-in" id="roName" maxlength="24" autocomplete="off" placeholder="Стол '+esc(me())+'" value="'+esc(OWN.ct)+'" oninput="dvOwnName(this.value)">'+'<div class="ro-lb">Кто может сесть</div>'+ownSeg(OWN.cl?'l':'o','dvOwnCL',[['o','Все игроки'],['l','<i class="ro-lk">'+LOCK+'</i>По ссылке']])+'<div class="ro-note">'+ownNote()+'</div><div class="ro-ft"><button type="button" class="ro-new ro-mk" onclick="dvOwnCreate()"></button></div>'
-ownUpd()}
-function ownToast(t){var e=document.createElement('div')
-e.className='ro-toast'
-e.textContent=t
-document.body.appendChild(e)
-setTimeout((function(){e.classList.add('on')}),20)
-setTimeout((function(){e.classList.remove('on')
-setTimeout((function(){e.remove()}),400)}),2600)}
-function ownOpen(r){window.dvOwnClose()
-var e=r.e,room={n:r.g==='p'?'Покер 21':'Стол',ic:'★',own:1,mine:!!r.mine,t:r.t,min:e,max:e,chips:[e,e,e,e],pk:r.g==='p'}
-ROOMS.push(room)
-window.dvRoom(ROOMS.length-1)
-if(root)root.scrollTop=0}
-window.dvOwnJoin=function(i){var r=OWN_LIST[i]
-if(r)ownOpen(r)}
-window.dvOwnCreate=function(){if(!ownAmtOk())return
-var t=(OWN.ct||'').trim()||'Стол '+me(),r={g:OWN.cg,t:t,h:me(),c:'#34d6ff',e:OWN.ce,p:1,lock:OWN.cl,mine:1}
-OWN_LIST.unshift(r)
-OWN.ct=''
-ownOpen(r)
-ownToast(r.lock?'Стол создан · ссылка-приглашение скопирована':'Стол создан · он появился в списке у всех игроков')}
-window.dvHeadSub=function(t){var e=root&&root._hd&&root._hd.querySelector('.dv-rn2')
-if(e&&e.textContent!==t)e.textContent=t}
-window.dvPick=function(v){PICK=v
-render()}
-window.dvSit=function(){JOIN=PICK
-if(S&&(S.phase==='wait'||S.phase==='gather')&&S.me<0){var k=freeSeat(S.seats,4)
-if(k>=0){S.me=k
-S.seats[k]={name:me(),color:'#34d6ff',me:true,dice:[],moves:[],sum:0,st:'ready',stake:{gram:JOIN,gifts:[]}}
-feed('Ты сел за стол')
-if(S.phase==='wait'&&S.seats.filter(Boolean).length>=2){S.phase='gather'
-S.cd=10}}}render()}
-window.dvStay=function(){var m=S&&S.seats[S.me]
-if(m)JOIN=m.stake.gram
-render()}
-window.dvLeave=function(){JOIN=null
-if(S&&(S.phase==='wait'||S.phase==='gather')&&S.me>=0){S.seats[S.me]=null
-S.me=-1
-if(S.seats.filter(Boolean).length<2)S.phase='wait'}render()}
-function roomHist(){var c=ROOMS[ROOM].chips
-return[['Mira','#f472b6',20,3],['Sasha_V','#ffb547',21,4],['lucky_bobr','#8b5cf6',19,2],['dice_king','#38bdf8',18,3],['nightowl','#ff5d8f',21,5]].map((function(h,k){return{name:h[0],color:h[1],sum:h[2],pot:c[(k+1)%4]*h[3]*.95}}))}function roomTabs(){return'<div class="rm-tabs">'+ROOMS.map((function(r,k){
-return'<button type="button" class="'+(k===ROOM?'on':'')+'" onclick="dvRoom('+k+')"><b>'+r.n+'</b><small>'+r.min+' – '+r.max+' GRAM</small></button>'})).join('')+'</div>'}function roomsCtrl(){var c=cur(),R0=ROOMS[ROOM]
-if(S.me<0||S.phase==='play'&&!S.seats[S.me]){var nx=S.phase==='play'||S.phase==='result'
-return'<div class="dv-ctrl">'+(R0.max>R0.min?'<div class="rm-bet">'+R0.chips.map((function(v){return'<button type="button" class="'+(v===PICK?'on':'')+'" onclick="dvPick('+v+')">'+v+'</button>'
-})).join('')+'</div>':'')+'<button type="button" class="dv-btn main rm-sit'+(JOIN?' wait':'')+'" onclick="dvSit()">'+(JOIN?'Ты в очереди на следующий раунд · '+JOIN:(nx?'Сесть на следующий раунд · ':'Сесть за стол · ')+PICK+' GRAM')+'</button></div>'}
-if(S.phase==='result')return'<div class="dv-ctrl"><div class="dv-acts nx"><div class="dv-next"><i style="--n:'+S.next+'"></i><span>'+(JOIN?'Новый раунд через':'Ты выйдешь через')+' <b>'+S.next+'</b> с</span></div>'+(JOIN?'<button type="button" class="dv-btn ghost" onclick="dvLeave()">Встать</button>':'<button type="button" class="dv-btn ghost" onclick="dvStay()">Остаться</button>')+'</div></div>'
-if(S.phase==='wait')return'<div class="dv-ctrl"><div class="dv-acts"><div class="dv-info">Ждём ещё игроков…</div><button type="button" class="dv-btn ghost" onclick="dvLeave()">Встать</button></div></div>'
-if(S.phase==='gather')return'<div class="dv-ctrl"><div class="dv-acts"><div class="dv-info">Старт через <b>'+Math.max(0,S.cd)+'</b> с</div><button type="button" class="dv-btn ghost" onclick="dvLeave()">Встать</button></div></div>'
-return null}function newRound(){if(ROOMS_ON)return roomsNewRound()
-clearT()
-var seats=[null,null,null,null,null,null],order=[3,0,2,5,1,4]
-var mi=4
-seats[mi]={name:me(),color:'#34d6ff',me:true,dice:[],moves:[],sum:0,st:'ready',stake:{gram:ENTRY,gifts:[]}}
-if(window.WinWin)WinWin.hide()
-for(var b=0;b<3;b++)seats[order[b]]=mk(BOTS[b])
-var hist=[['Mira','#f472b6',20,28.5],['Sasha_V','#ffb547',21,47.5],['lucky_bobr','#8b5cf6',19,38],['dice_king','#38bdf8',18,19],['nightowl','#ff5d8f',21,57]].map((function(h){return{name:h[0],color:h[1],sum:h[2],pot:h[3]}}))
-physClear()
-S={rid:Math.random(),me:mi,seats:seats,phase:'gather',turn:-1,timer:15,emo:{},cd:6,hist:hist,feed:[],info:null,res:false,round:(S?S.round:1180)+1}
-feed('Ты сел за стол — место №'+(mi+1))
-render()
-S.tick=setInterval((function(){S.cd--
-if(S.cd===3){seats[order[3]]=mk(BOTS[3])
-feed(BOTS[3].name+' сел за стол')}if(S.cd<=0){clearInterval(S.tick)
-S.tick=null
-deal()
-return}render()}),1e3)}function mk(b){return{name:b.name,color:b.color,bot:true,dice:[],moves:[],sum:0,st:'ready',stake:{gram:b.stake.gifts.length?b.stake.gram:ENTRY,gifts:b.stake.gifts.slice()}}}function nm(s){return s.me?'Ты':s.name}function feed(t,cls){S.feed.unshift({t:t,c:cls||''})
-if(S.feed.length>14)S.feed.pop()}function order(){var o=[];[0,1,2,5,4,3].forEach((function(i){if(S.seats[i])o.push(i)}))
-return o}function deal(){S.phase='play'
-S.dealing=true
-feed('Раздача — всем по 2 кубика')
-var o=order(),k=0
-o.forEach((function(i){var s=S.seats[i]
-s.dice=[]
-s.moves=[]
-s.sum=0
-s.st='wait'}));(function next(){if(k>=o.length){S.turn=-1
-return later((function(){S.dealing=false
-S.q=o.slice()
-turn()}),500)}var i=o[k++],s=S.seats[i]
-S.turn=i
-roll(s,2,(function(){if(s.sum===21){s.st='b21'
-feed(nm(s)+' — ровно 21!','w')}later(next,420)}))})()}var PHYS=window.Dice3D&&window.__DCV_PHYS!==false,W3=null,layer=null
-function relOf(el){var r=el.getBoundingClientRect(),R=root.getBoundingClientRect()
-return{x:r.left-R.left+r.width/2,y:r.top-R.top+root.scrollTop+r.height/2,w:r.width,h:r.height}}function world(){if(W3)return W3
-W3=Dice3D.world(layer,(function(){var fe=root.querySelector('.kq1-felt')
-if(!fe)return{cx:-999,cy:-999,w:10,h:10,R:5}
-var r=relOf(fe)
-return{cx:r.x,cy:r.y,w:r.w,h:r.h,R:parseFloat(getComputedStyle(fe).borderTopLeftRadius)||r.h/2}}),30)
-return W3}function physClear(){if(W3)W3.clear()
-S&&(S.physOwner=null)}function roll(s,n,done){if(PHYS&&layer)return rollPhys(s,n,done)
-S.rolling=true
-S.lastN=n
-var mv=[]
-for(var j=0;j<n;j++){var v=rnd(6)
-s.dice.push(v)
-mv.push(v)}s.moves.push(mv)
-s.sum=s.dice.reduce((function(a,b){return a+b}),0)
-if(!S.dealing||s.moves.length>1)feed(nm(s)+' бросил '+mv.join(' + ')+' → '+s.sum,s.sum>21?'b':s.sum===21?'w':'')
-render()
-later((function(){S.rolling=false
-render()
-done()}),700)}function rollPhys(s,n,done){S.rolling=true
-S.lastN=n
-var i=S.seats.indexOf(s)
-if(S.physOwner!==s){physClear()
-S.physOwner=s}render()
-var card=root.querySelector('.kc[onclick="dvInfo('+i+')"] .kca')||root.querySelector('.kq1-felt'),fe=root.querySelector('.kq1-felt')
-if(!card||!fe){S.rolling=false
-return done()}var c=relOf(card),f=relOf(fe),W=world(),rid=S.rid
-var ps=[]
-for(var k=0;k<n;k++)ps.push(W.throw(c.x+k*10,c.y,f.x+(Math.random()-.5)*f.w*.45,f.y+16+(Math.random()-.5)*f.h*.3))
-Promise.all(ps).then((function(mv){if(!S||S.rid!==rid)return
-mv.forEach((function(v){s.dice.push(v)}))
-s.moves.push(mv)
-s.sum=s.dice.reduce((function(a,b){return a+b}),0)
-if(!S.dealing||s.moves.length>1)feed(nm(s)+' бросил '+mv.join(' + ')+' → '+s.sum,s.sum>21?'b':s.sum===21?'w':'')
-S.rolling=false
-render()
-done()}))}function turn(){if(!S||!S.q)return
-var i=S.q.shift()
-if(i==null)return finish()
-var s=S.seats[i]
-if(s.st==='b21'||s.st==='bust')return turn()
-S.turn=i
-s.st='turn'
-S.timer=30
-render()
-bindTimer()
-if(s.bot)return later((function(){botMove(s)}),1e3)}function after(s){if(s.sum>21){s.st='bust'
-feed(nm(s)+' — перебор '+s.sum,'b')
-render()
-return later(turn,800)}if(s.sum===21){s.st='b21'
-feed(nm(s)+' — ровно 21!','w')
-render()
-return later(turn,800)}s.st='turn'
-render()
-bindTimer()
-if(s.bot)later((function(){botMove(s)}),900)}function botMove(s){if(!S||S.phase!=='play')return
-var risk=s.sum<=9,hit=s.sum<16||s.sum<18&&Math.random()<.3
-if(Math.random()<.2)emo(S.turn,EMO[rnd(EMO.length)-1])
-if(!hit){s.st='stand'
-feed(nm(s)+': хватит на '+s.sum)
-render()
-return later(turn,700)}roll(s,risk?2:1,(function(){after(s)}))}window.dvHit=function(n){var s=S&&S.seats[S.me]
-if(!s||S.turn!==S.me||S.rolling||S.dealing)return
-roll(s,n,(function(){after(s)}))}
-window.dvStand=function(){var s=S&&S.seats[S.me]
-if(!s||S.turn!==S.me||S.dealing||s.st!=='turn')return
-s.st='stand'
-feed('Ты: хватит на '+s.sum)
-render()
-later(turn,400)}
-function bindTimer(){if(S.tiv){clearInterval(S.tiv)
-S.tiv=null}S.tiv=setInterval((function(){if(!S||S.phase!=='play'||S.turn<0)return
-if(S.rolling)return
-S.timer=Math.max(0,S.timer-1)
-document.querySelectorAll('#dcv [data-tm]').forEach((function(el){el.style.setProperty('--t',S.timer)
-var x=el.querySelector('[data-tmv]')
-if(x)x.textContent=S.timer}))
-if(S.timer<=0&&S.turn===S.me){clearInterval(S.tiv)
-S.tiv=null
-window.dvStand()}}),1e3)}function finish(){if(S.tiv){clearInterval(S.tiv)
-S.tiv=null}S.turn=-1
-S.phase='result'
-physClear()
-var best=-1
-S.seats.forEach((function(s){if(s&&s.sum<=21&&s.sum>best)best=s.sum}))
-var win=[]
-S.seats.forEach((function(s,i){if(s){if(s.sum===best&&best>0){s.st='win'
-win.push(i)}else s.st=s.sum>21?'bust':'lose'}}))
-S.win=win
-S.res=true
-S.next=10
-S.tick=setInterval((function(){if(!S||S.phase!=='result')return
-S.next--
-if(S.next<=0){clearInterval(S.tick)
-S.tick=null
-if(window.WinWin)WinWin.hide()
-newRound()
-return}var b=root.querySelector('.dv-next b')
-if(b){b.textContent=S.next
-root.querySelector('.dv-next i').style.setProperty('--n',S.next)}}),1e3)
-var B=bank()
-if(win.length){var w=S.seats[win[0]]
-feed((win.length>1?'Ничья на ':nm(w)+' забирает банк — ')+best,'w')
-S.hist.unshift({name:nm(w),color:w.color,sum:best,pot:B.gram*.95/win.length})
-if(S.hist.length>6)S.hist.length=6}render()}function emo(i,x){S.emo[i]=x
-render()
-later((function(){if(S){delete S.emo[i]
-render()}}),1800)}window.dvEmo=function(x){if(S&&S.seats[S.me])emo(S.me,x)}
-window.dvAgain=function(){newRound()}
-var LEVELS=[1,5,10,25,50],WAITN={1:2,5:3,10:3,25:1,50:2}
-window.dvStake=function(){if(!sheetEl)return
-var h='<div class="dv-sheet" onclick="if(event.target===this)dvStakeClose()"><div class="dv-sh dv-stk"><i class="grab"></i><div class="dv-sh-h"><span><b>Сменить ставку</b><small>все за столом ставят одинаково · место — случайное</small></span><button type="button" onclick="dvStakeClose()">✕</button></div>'+'<div class="dv-lv">'+LEVELS.map((function(x){
-return'<button type="button" class="'+(x===ENTRY?'on':'')+'" onclick="dvStakeSet('+x+')"><b>'+x+'</b><small>GRAM</small><em>'+(x===ENTRY?'ты здесь':'ждут '+WAITN[x])+'</em></button>'})).join('')+'</div></div></div>'
-sheetEl.innerHTML=h
-sheetEl.dataset.k='stake'}
-window.dvStakeClose=function(){sheetEl.innerHTML=''
-sheetEl.dataset.k=''}
-window.dvStakeSet=function(x){ENTRY=x
-dvStakeClose()
-if(window.WinWin)WinWin.hide()
-newRound()}
-window.dvInfo=function(i){if(S&&S.seats[i]){S.info=i
-render()}}
-window.dvClose=function(){if(S){S.info=null
-S.res=false
-render()}}
-var STL={ready:'готов',wait:'ждёт',turn:'ходит',stand:'хватит',bust:'перебор',b21:'21!',win:'победа',lose:''}
-function flag(s){var t=STL[s.st]||''
-return t?'<span class="dv-fl f-'+s.st+'">'+t+'</span>':''}function sumTxt(s){return s.dice.length?s.sum:'—'}function pct(s){return Math.min(1,s.sum/21)}function cls(s,i){return'dv-s s-'+s.st+(s.me?' me':'')+(S.turn===i?' turn':'')}function attrs(s,i){return' style="--c:'+s.color+';--t:'+pct(s).toFixed(3)+'" onclick="dvInfo('+i+')"'}function emoH(i){
-return S.emo[i]?'<span class="dv-emo">'+S.emo[i]+'</span>':''}function freeH(extra){return'<div class="dv-s free'+(extra||'')+'"><span>свободно</span></div>'}function cur(){return S.turn>=0?S.seats[S.turn]:null}function tray(big){var c=cur()
-if(S.phase==='gather')return'<div class="dv-tray wait"><span>старт через <b>'+Math.max(0,S.cd)+'</b> с</span></div>'
-if(S.phase==='result'){var w=S.win.map((function(i){return S.seats[i]}))
-return'<div class="dv-tray res">'+(w.length?'<span>'+(w.length>1?'ничья':esc(nm(w[0])))+' · <b>'+w[0].sum+'</b></span>':'<span>все перебрали</span>')+'</div>'}if(!c||!c.dice.length)return'<div class="dv-tray wait"><span>раздача…</span></div>'
-var n=c.dice.length
-return'<div class="dv-tray'+(big?' big':'')+'">'+c.dice.map((function(v,k){return die(v,S.rolling&&k>=n-S.lastN?'roll':'')})).join('')+'</div>'}function curTxt(){var c=cur()
-if(!c||!c.dice.length||S.phase!=='play')return''
-return'<div class="dv-cur">'+esc(c.me?'Твоя сумма':c.name)+': <b>'+c.sum+'</b>'+(c.sum>21?' — перебор':c.sum===21?' — очко!':'')+'</div>'}function bankH(cl){var B=bank()
-return'<div class="dv-bank '+(cl||'')+'"><small>банк</small>'+gram(n2(B.gram),'b')+(B.gifts.length?'<span class="dv-gs">'+B.gifts.slice(0,3).map((function(g){return gt(g)})).join('')+(B.gifts.length>3?'<em>+'+(B.gifts.length-3)+'</em>':'')+'</span>':'')+'</div>'}function head(sm){if(ROOMS_ON){var R0=ROOMS[ROOM]
-swUpd()
-dvHeadSub((R0.max>R0.min?R0.min+'–'+R0.max:'Вход '+R0.min)+' GRAM · №'+S.round)
-return''}return'<div class="dv-head"><button type="button" class="dv-back" aria-label="Назад" onclick="dvBack()">←</button><div class="dv-ti"><span><b>Стол · '+ENTRY+' GRAM</b><i class="dv-q">?</i></span>'+(RN()===2?'<small class="dv-rn2">Раунд №'+S.round+'</small>':'')+'</div>'+(RN()===1?'<span class="dv-rn">Раунд №'+S.round+'</span>':'')+'</div>'}function ctrl(){var c=cur()
-if(ROOMS_ON){var rc=roomsCtrl()
-if(rc)return rc}var r6=RN()===6?'<span class="rn6">№'+S.round+'</span>':''
-if(S.phase==='gather')return'<div class="dv-ctrl"><div class="dv-info">'+r6+'Ждём игроков · старт через <b>'+Math.max(0,S.cd)+'</b> с</div></div>'
-if(S.phase==='result')return'<div class="dv-ctrl"><div class="dv-acts nx"><div class="dv-next"><i style="--n:'+S.next+'"></i><span>Новый раунд через <b>'+S.next+'</b> с</span></div><button type="button" class="dv-btn ghost" onclick="dvStake()">Сменить ставку</button></div></div>'
-if(S.turn===S.me&&!S.rolling&&!S.dealing)return'<div class="dv-ctrl"><div class="dv-acts my"><button type="button" class="dv-btn main" onclick="dvHit(1)">'+die(5,'xs')+'Ещё кубик</button><button type="button" class="dv-btn risk" onclick="dvHit(2)">Риск: 2 кубика</button><button type="button" class="dv-btn ghost" onclick="dvStand()">Хватит</button></div>'+tmr()+'</div>'
-return'<div class="dv-ctrl"><div class="dv-info">'+r6+(c&&!S.dealing?'Ходит <b>'+esc(nm(c))+'</b>'+(c.bot?' · '+tmrIn():''):'Раздача…')+'</div></div>'}function tmr(){return'<div class="dv-tm" data-tm style="--t:'+S.timer+'"><i></i><span><b data-tmv>'+S.timer+'</b> с на ход</span></div>'}function tmrIn(){
-return'<span class="dv-tmi" data-tm style="--t:'+S.timer+'"><b data-tmv>'+S.timer+'</b> с</span>'}function emos(){return'<div class="dv-emos">'+EMO.map((function(x){return'<button type="button" onclick="dvEmo(\''+x+'\')">'+x+'</button>'})).join('')+'</div>'}function hist(){return'<div class="dv-hist"><small>История стола</small><div class="dv-hr">'+S.hist.map((function(h){
-return'<span class="dv-hi">'+ava(h)+'<b>'+esc(h.name)+'</b><em>'+h.sum+'</em>'+gram('+'+n2(h.pot))+'</span>'})).join('')+'</div></div>'}function bar(s){return'<span class="dv-bar"><i style="width:'+(pct(s)*100).toFixed(0)+'%"></i></span>'}function ring(s,r){var c=2*Math.PI*r,p=s.dice.length?pct(s):0
-return'<svg class="dv-ring" viewBox="0 0 '+(2*r+8)+' '+(2*r+8)+'"><circle cx="'+(r+4)+'" cy="'+(r+4)+'" r="'+r+'" class="tr"/><circle cx="'+(r+4)+'" cy="'+(r+4)+'" r="'+r+'" class="fl" stroke-dasharray="'+(c*p).toFixed(1)+' '+c.toFixed(1)+'"/></svg>'}function minidice(s,m){var d=s.dice
-if(!d.length)return'<span class="dv-md e">—</span>'
-var k=m||4
-return'<span class="dv-md">'+(d.length>k?'<em>+'+(d.length-k)+'</em>':'')+d.slice(-k).map((function(v){return die(v,'sm')})).join('')+'</span>'}var R={}
-R[1]=function(){function seat(i){var s=S.seats[i]
-if(!s)return freeH(' v1')
-return'<div class="'+cls(s,i)+' v1"'+attrs(s,i)+'>'+emoH(i)+'<span class="v1-t">'+ava(s)+flag(s)+'<span class="sm">'+sumTxt(s)+'</span></span><b class="nm">'+esc(nm(s))+'</b>'+stake(s.stake,2)+bar(s)+'</div>'}
-return head()+'<div class="v1-row">'+[0,1,2].map(seat).join('')+'</div><div class="v1-felt">'+bankH()+tray()+curTxt()+'</div><div class="v1-row">'+[3,4,5].map(seat).join('')+'</div>'+ctrl()+emos()+hist()}
-R[2]=function(){var A=[-150,-90,-30,30,90,150],W=366,CY=240,RR=150
-var seats=S.seats.map((function(s,i){var a=A[i]*Math.PI/180,x=W/2+RR*Math.cos(a),y=CY+RR*Math.sin(a),up=Math.sin(a)<0
-var pos='left:'+x.toFixed(1)+'px;top:'+y.toFixed(1)+'px'
-if(!s)return'<div class="v2-p free'+(up?' up':'')+'" style="'+pos+'"><span class="v2-a"><span class="dv-av e">+</span></span><small>свободно</small></div>'
-return'<div class="v2-p '+cls(s,i)+(up?' up':'')+'" style="'+pos+';--c:'+s.color+';--t:'+pct(s).toFixed(3)+'" onclick="dvInfo('+i+')">'+emoH(i)+'<span class="v2-a">'+ring(s,27)+ava(s)+'<span class="sm">'+sumTxt(s)+'</span></span><b class="nm">'+esc(nm(s))+'</b>'+stake(s.stake,1)+flag(s)+'</div>'})).join('')
-return head()+'<div class="v2-wrap"><div class="v2-rail"><div class="v2-felt">'+bankH('c')+tray()+curTxt()+'</div></div>'+seats+'</div>'+ctrl()+emos()+hist()}
-R[3]=function(){var rows=[0,1,2,3,4,5].map((function(i){var s=S.seats[i]
-if(!s)return'<div class="v3-r free"><span class="dv-av e">'+(i+1)+'</span><span>свободное место</span></div>'
-return'<div class="v3-r '+cls(s,i)+'"'+attrs(s,i)+'>'+emoH(i)+'<span class="no">'+(i+1)+'</span>'+ava(s)+'<span class="who"><b class="nm">'+esc(nm(s))+'</b>'+stake(s.stake,2)+'</span>'+minidice(s,4)+'<span class="sm">'+sumTxt(s)+'</span>'+flag(s)+(S.turn===i&&S.phase==='play'?'<span class="v3-tm" data-tm style="--t:'+S.timer+'"></span>':'')+'</div>'})).join('')
-return head()+'<div class="v3-top">'+bankH()+'<div class="v3-tr">'+tray()+curTxt()+'</div></div>'+ctrl()+'<div class="v3-l">'+rows+'</div>'+emos()+hist()}
-R[4]=function(){var ANG=[-145,-90,-35,35,90,145],CX=183,CY=262,RR=166,RD=84
-var parts=S.seats.map((function(s,i){var a=ANG[i]*Math.PI/180,x=CX+RR*Math.cos(a),y=CY+RR*Math.sin(a),dx=CX+RD*Math.cos(a),dy=CY+RD*Math.sin(a),up=Math.sin(a)<-.1
-var seat='<div class="kq4-s'+(up?' up':'')+'" style="left:'+x.toFixed(1)+'px;top:'+y.toFixed(1)+'px">'+seatB(s,i,'kq4')+'</div>'
-var dz=s&&s.dice.length?'<div class="kq4-d'+(S.turn===i&&S.phase==='play'?' on':'')+(s.sum>21?' bust':'')+(s.st==='win'?' win':'')+'" style="left:'+dx.toFixed(1)+'px;top:'+dy.toFixed(1)+'px;--c:'+s.color+'">'+s.dice.slice(-3).map((function(v,k){return die(v,'sm'+(S.rolling&&S.turn===i&&k>=Math.min(3,s.dice.length)-S.lastN?' roll':''))
-})).join('')+(s.dice.length>3?'<em>+'+(s.dice.length-3)+'</em>':'')+'</div>':''
-return seat+dz})).join('')
-var c=cur(),w=S.phase==='result'?S.win.map((function(i){return S.seats[i]})):[]
-var mid=S.phase==='gather'?'<b class="big">'+Math.max(0,S.cd)+'</b><small>до раздачи</small>':S.phase==='result'?w.length?'<small>'+(w.length>1?'ничья':'победил')+'</small><b class="nm2">'+esc(w.length>1?w.length+' игрока':nm(w[0]))+'</b><b class="big win">'+w[0].sum+'</b>':'<small>все перебрали</small>':c&&c.dice.length?'<small>ходит</small><b class="nm2" style="color:'+c.color+'">'+esc(nm(c))+'</b><b class="big'+(c.sum>21?' bust':'')+'">'+c.sum+'<i>/21</i></b>':'<small>раздача…</small>'
-return head()+'<div class="kq4-top">'+bankChip()+'</div><div class="kq4"><div class="kq-rail kq4-rail"><div class="kq-felt kq4-felt"><div class="kq4-mid">'+mid+'</div></div></div>'+parts+'</div>'+ctrl()+emos()+hist()}
-R[5]=function(){var cards=[0,1,2,3,4,5].map((function(i){var s=S.seats[i]
-if(!s)return freeH(' v5')
-return'<div class="'+cls(s,i)+' v5"'+attrs(s,i)+'>'+emoH(i)+'<span class="v5-l">'+ava(s)+'<span class="who"><b class="nm">'+esc(nm(s))+'</b>'+stake(s.stake,2)+'</span></span><span class="v5-g">'+ring(s,21)+'<b>'+sumTxt(s)+'</b></span>'+flag(s)+'</div>'})).join('')
-return head()+'<div class="v5-felt">'+bankH()+'<div class="v5-tr">'+tray()+curTxt()+'</div></div><div class="v5-grid">'+cards+'</div>'+ctrl()+emos()+hist()}
-R[6]=function(){var strip=[0,1,2,3,4,5].map((function(i){var s=S.seats[i]
-if(!s)return'<span class="v6-c free"><span class="dv-av e">+</span><em>—</em></span>'
-return'<span class="v6-c '+cls(s,i)+'"'+attrs(s,i)+'>'+emoH(i)+ava(s)+'<em>'+sumTxt(s)+'</em><small>'+esc(nm(s))+'</small></span>'})).join('')
-var c=cur()||S.seats[S.me],ci=S.seats.indexOf(c)
-if(S.phase==='result'&&S.win.length){c=S.seats[S.win[0]]
-ci=S.win[0]}var spot='<div class="v6-spot s-'+c.st+'" style="--c:'+c.color+';--t:'+pct(c).toFixed(3)+'" onclick="dvInfo('+ci+')"><div class="v6-who">'+ava(c)+'<span><b>'+esc(nm(c))+'</b>'+stake(c.stake,3)+'</span>'+flag(c)+'</div>'+'<div class="v6-gauge">'+ring(c,64)+'<span><b>'+sumTxt(c)+'</b><small>из 21</small></span></div>'+tray(true)+'</div>'
-return head()+'<div class="v6-strip">'+strip+'</div>'+bankH('wide')+spot+ctrl()+emos()+hist()}
-R[7]=function(){function g(i){var s=S.seats[i]
-if(!s)return'<div class="v7-g free"><span class="v7-o"><span class="dv-av e">+</span></span><small>свободно</small></div>'
-return'<div class="v7-g '+cls(s,i)+'"'+attrs(s,i)+'>'+emoH(i)+'<span class="v7-o">'+ring(s,38)+ava(s)+'</span><b class="sm">'+sumTxt(s)+'</b><small class="nm">'+esc(nm(s))+'</small>'+stake(s.stake,1)+flag(s)+'</div>'}
-return head()+'<div class="v7-row">'+[0,1,2].map(g).join('')+'</div><div class="v7-mid">'+bankH()+'<div class="v7-tr">'+tray()+curTxt()+'</div></div><div class="v7-row">'+[3,4,5].map(g).join('')+'</div>'+ctrl()+emos()+hist()}
-R[8]=function(){function p(i,side){var s=S.seats[i]
-if(!s)return'<div class="v8-p dv-s free '+side+'"><span>свободно</span></div>'
-return'<div class="v8-p '+side+' '+cls(s,i)+'"'+attrs(s,i)+'>'+emoH(i)+flag(s)+ava(s)+'<b class="nm">'+esc(nm(s))+'</b>'+stake(s.stake,1)+'<span class="sm">'+sumTxt(s)+'</span>'+bar(s)+'</div>'}
-return head()+'<div class="v8-t">'+p(0,'top')+'<div class="v8-mid"><div class="v8-col">'+p(5,'l')+p(4,'l')+'</div><div class="v8-felt">'+bankH('c')+tray()+curTxt()+'</div><div class="v8-col">'+p(1,'r')+p(2,'r')+'</div></div>'+p(3,'bot')+'</div>'+ctrl()+emos()+hist()}
-R[9]=function(){var chips=[0,1,2,3,4,5].map((function(i){var s=S.seats[i]
-if(!s)return'<span class="v9-c free"><span class="dv-av e">+</span></span>'
-return'<span class="v9-c '+cls(s,i)+'"'+attrs(s,i)+'>'+emoH(i)+ava(s)+'<b>'+sumTxt(s)+'</b>'+flag(s)+'</span>'})).join('')
-var stakes=[0,1,2,3,4,5].filter((function(i){return S.seats[i]})).map((function(i){var s=S.seats[i]
-return'<span class="v9-st" style="--c:'+s.color+'" onclick="dvInfo('+i+')"><i></i><b>'+esc(nm(s))+'</b>'+stake(s.stake,2)+'</span>'})).join('')
-var fd=S.feed.map((function(f,k){return'<div class="v9-f '+f.c+(k===0?' new':'')+'"><i></i><span>'+esc(f.t)+'</span></div>'})).join('')
-return head()+'<div class="v9-chips">'+chips+'</div><div class="v9-felt">'+bankH()+'<div class="v9-tr">'+tray()+curTxt()+'</div></div>'+ctrl()+'<div class="v9-feed"><small>Что происходит</small>'+fd+'</div><div class="v9-stakes"><small>Ставки за столом</small>'+stakes+'</div>'+emos()}
-R[10]=function(){var others=[5,0,1,2,3],pos=[[11,112],[30,18],[50,0],[70,18],[89,112]]
-var arc=others.map((function(i,k){var s=S.seats[i],st='left:'+pos[k][0]+'%;top:'+pos[k][1]+'px'
-if(!s)return'<div class="v10-p free" style="'+st+'"><span class="dv-av e">+</span><small>свободно</small></div>'
-return'<div class="v10-p '+cls(s,i)+'" style="'+st+';--c:'+s.color+';--t:'+pct(s).toFixed(3)+'" onclick="dvInfo('+i+')">'+emoH(i)+'<span class="v10-a">'+ring(s,25)+ava(s)+'<em>'+sumTxt(s)+'</em></span><b class="nm">'+esc(nm(s))+'</b>'+stake(s.stake,1)+flag(s)+'</div>'})).join('')
-var m=S.seats[S.me],mine='<div class="v10-me '+cls(m,S.me)+'"'+attrs(m,S.me)+'>'+emoH(S.me)+'<div class="v10-mh">'+ava(m)+'<span><b>Твоя рука</b>'+stake(m.stake)+'</span>'+flag(m)+'<span class="v10-ms"><b>'+sumTxt(m)+'</b><small>'+(m.dice.length?m.sum>21?'перебор':'до 21 — '+(21-m.sum):'ждёт раздачи')+'</small></span></div><div class="v10-md">'+(m.dice.length?m.dice.map((function(v,k){
-return die(v,S.rolling&&S.turn===S.me&&k>=m.dice.length-S.lastN?'roll':'')})).join(''):'')+'</div>'+bar(m)+'</div>'
-return head()+'<div class="v10-arc">'+arc+'<div class="v10-felt">'+bankH('c')+tray()+'</div></div>'+mine+ctrl()+emos()+hist()}
-function ringSeat(s,r){var c=2*Math.PI*r,p=s.dice.length?pct(s):0
-return'<svg class="kqr" viewBox="0 0 '+(2*r+8)+' '+(2*r+8)+'"><circle cx="'+(r+4)+'" cy="'+(r+4)+'" r="'+r+'" class="kqtr"/><circle cx="'+(r+4)+'" cy="'+(r+4)+'" r="'+r+'" class="kqfl" stroke-dasharray="'+(c*p).toFixed(1)+' '+c.toFixed(1)+'"/></svg>'}function RN(){return window.__RN||2}function bankChip(cl){var B=bank()
-return'<div class="kq-bank '+(cl||'')+'"><small>банк</small>'+gram(n2(B.gram),'b')+(RN()===5?'<span class="rn5">№'+S.round+'</span>':'')+(B.gifts.length?'<span class="dv-gs">'+B.gifts.slice(0,3).map((function(g){return gt(g)})).join('')+(B.gifts.length>3?'<em>+'+(B.gifts.length-3)+'</em>':'')+'</span>':'')+'</div>'}function stage(big){var c=cur()
-if(S.phase==='wait')return'<div class="rm-wt"><span>Ожидание раунда<i class="el"><i>.</i><i>.</i><i>.</i></i></span></div>'
-if(S.phase==='gather')return'<div class="kq-st wait"><b class="kqcd">'+Math.max(0,S.cd)+'</b><small>до раздачи</small></div>'
-if(S.phase==='result'){var w=S.win.map((function(i){return S.seats[i]}))
-if(!w.length)return'<div class="kq-st res"><small>все перебрали</small></div>'
-return'<div class="kq-st res"><span class="kqwho">'+ava(w[0])+'<b>'+(w.length>1?'Ничья':esc(nm(w[0])))+'</b></span><div class="kqtray">'+w[0].dice.map((function(v){return die(v,'kqd')})).join('')+'</div><span class="sm win">'+w[0].sum+'</span></div>'}if(!c||!c.dice.length)return'<div class="kq-st wait"><small>раздача…</small></div>'
-var n=c.dice.length
-if(PHYS&&layer)return'<div class="kq-st ph'+(c.sum>21?' bust':c.sum===21?' b21':'')+'" style="--c:'+c.color+'"><span class="kqwho">'+ava(c)+'<b>'+esc(c.me?'Твой бросок':c.name)+'</b></span><span class="sm">'+(c.dice.length?c.sum:'…')+'<small>/21</small></span></div>'
-return'<div class="kq-st'+(c.sum>21?' bust':c.sum===21?' b21':'')+'" style="--c:'+c.color+'"><span class="kqwho">'+ava(c)+'<b>'+esc(c.me?'Твой бросок':c.name)+'</b></span><div class="kqtray'+(big?' big':'')+'">'+c.dice.map((function(v,k){return die(v,'kqd'+(S.rolling&&k>=n-S.lastN?' roll':''))})).join('')+'</div><span class="sm">'+c.sum+'<small>/21</small></span></div>'}function seatB(s,i,extra){
-if(!s)return'<div class="kq-p free '+(extra||'')+'"><span class="kq0">+</span><small>свободно</small></div>'
-return'<div class="kq-p ks-'+s.st+(s.me?' me':'')+(S.turn===i?' turn':'')+' '+(extra||'')+'" style="--c:'+s.color+'" onclick="dvInfo('+i+')">'+emoH(i)+'<span class="kqa">'+ringSeat(s,25)+ava(s)+(S.turn===i&&S.phase==='play'?'<i class="kqt" data-tm style="--t:'+S.timer+'"></i>':'')+'</span>'+'<span class="kql"><b class="nm">'+esc(nm(s))+'</b><span class="kqv">'+stake(s.stake,1)+'</span><span class="kqf">'+(s.dice.length?'<em class="kqs">'+s.sum+'</em>':'')+flag(s)+'</span></span></div>'
-}R[1]=function(){function row(ix){return'<div class="kq1-row">'+ix.map((function(i){return seatB(S.seats[i],i,'kq1')})).join('')+'</div>'}
-return head()+'<div class="kq1">'+row([0,1,2])+'<div class="kq-rail kq1-rail">'+(RN()===4?'<span class="rn4">Раунд №'+S.round+'</span>':'')+'<div class="kq-felt kq1-felt"><i class="kqlogo">21</i>'+bankChip()+(RN()===3?'<span class="rn3">раунд №'+S.round+'</span>':'')+stage()+'</div></div>'+row([5,4,3])+'</div>'+ctrl()+emos()+hist()}
-R[2]=function(){var ANG=[-150,-90,-30,30,90,150],CX=183,CY=222,RR=158
-var seats=S.seats.map((function(s,i){var a=ANG[i]*Math.PI/180,x=CX+RR*Math.cos(a),y=CY+RR*Math.sin(a),up=Math.sin(a)<-.1
-return'<div class="kq2-s'+(up?' up':'')+'" style="left:'+x.toFixed(1)+'px;top:'+y.toFixed(1)+'px">'+seatB(s,i,'kq2')+'</div>'})).join('')
-var ptr=S.turn>=0&&S.phase==='play'?'<i class="kq2-ptr" style="--a:'+(ANG[S.turn]+90)+'deg;--c:'+S.seats[S.turn].color+'"></i>':''
-return head()+'<div class="kq2"><div class="kq-rail kq2-rail"><div class="kq-felt kq2-felt">'+ptr+bankChip('c')+stage()+'</div></div>'+seats+'</div>'+ctrl()+emos()+hist()}
-R[3]=function(){var strip=[0,1,2,3,4,5].map((function(i){var s=S.seats[i]
-if(!s)return'<span class="kq3-c free"><span class="kq0">+</span></span>'
-return'<span class="kq3-c ks-'+s.st+(s.me?' me':'')+(S.turn===i?' turn':'')+'" style="--c:'+s.color+'" onclick="dvInfo('+i+')">'+emoH(i)+'<span class="kqa">'+ringSeat(s,19)+ava(s)+'</span><em>'+sumTxt(s)+'</em><small>'+esc(nm(s))+'</small></span>'})).join('')
-var c=cur()||(S.phase==='result'&&S.win.length?S.seats[S.win[0]]:S.seats[S.me]),ci=S.seats.indexOf(c)
-var trackX=c.dice.length?Math.min(c.sum,24)/24*100:0
-return head()+'<div class="kq3-strip">'+strip+'</div>'+'<div class="kq-rail kq3-rail'+(S.phase==='result'?' res':'')+'" style="--c:'+c.color+'"><div class="kq-felt kq3-felt"><div class="kq3-top">'+bankChip()+'<span class="kq3-who" onclick="dvInfo('+ci+')">'+ava(c)+'<span><b>'+esc(nm(c))+'</b>'+stake(c.stake,2)+'</span>'+flag(c)+'</span></div>'+stage(true)+'<div class="kq3-trk"><span class="kqz"></span><span class="kqfn"></span><span class="kqfill" style="width:'+trackX.toFixed(1)+'%"></span><span class="kqmk" style="left:'+trackX.toFixed(1)+'%"></span><small class="a">0</small><small class="b">21</small></div></div></div>'+ctrl()+emos()+hist()
-}
-function seatC(s,i,dice){if(!s)return'<div class="kc free"><span class="kc0">+</span><small>свободно</small></div>'
-var on=S.turn===i&&S.phase==='play'
-var dz=dice?'<span class="kcd">'+(s.dice.length?s.dice.slice(-4).map((function(v,k){return die(v,'sm'+(S.rolling&&on&&k>=Math.min(4,s.dice.length)-S.lastN?' roll':''))})).join('')+(s.dice.length>4?'<em>+'+(s.dice.length-4)+'</em>':''):'<em class="e">ждёт раздачи</em>')+'</span>':''
-var KV=window.__KC||0,cl='kc ks-'+s.st+(s.me?' me':'')+(on?' turn':'')+(KV?' kv'+KV:''),at='" style="--c:'+s.color+';--p:'+(s.dice.length?Math.min(1,s.sum/21):0).toFixed(3)+'" onclick="dvInfo('+i+')">'+emoH(i)
-var av='<span class="kca">'+ringSeat(s,20)+ava(s)+(on?'<i class="kqt" data-tm style="--t:'+S.timer+'"></i>':'')+'</span>'
-var sum=s.dice.length?s.sum:'—',fl=flag(s),nmH='<b class="nm kcn">'+esc(nm(s))+'</b>',stH='<span class="kcv">'+stake(s.stake,1)+'</span>'
-var miniDice='<span class="kmd">'+(s.dice.length?(s.dice.length>2?'<em>+'+(s.dice.length-2)+'</em>':'')+s.dice.slice(-2).map((function(v){return die(v,'sm')})).join(''):'<em class="e">ждёт</em>')+'</span>'
-if(KV===1)return'<div class="'+cl+at+av+'<span class="k1s"><b class="big">'+sum+'</b><small>'+(fl||'<i class="of">из 21</i>')+'</small></span>'+nmH+stH+'</div>'
-if(KV===2)return'<div class="'+cl+at+av+nmH+stH+'<em class="kcs">'+sum+'</em></div>'
-if(KV===3)return'<div class="'+cl+at+av+'<span class="k3s"><span class="t"><em class="kcs">'+sum+'</em></span>'+miniDice+'</span>'+nmH+stH+'</div>'
-if(KV===4){var add=s.dice.length-(s._sh||0)
-s._sh=s.dice.length
-var dd=s.dice.slice().reverse().slice(0,5).map((function(v,k){return die(v,'sm'+(add>0&&k<add?' nw':''))})).join('')
-var av4='<span class="kca">'+ava(s)+(on?'<i class="kqt" data-tm style="--t:'+S.timer+'"></i>':'')+'</span>'
-return'<div class="'+cl+at+av4+nmH+stH+'<span class="k4n"><b>'+sum+'</b><span class="k4d'+(add>0&&s.dice.length>add?' push':'')+'" style="--n:'+Math.max(0,add)+'">'+(dd||'<em>ждёт</em>')+'</span></span></div>'}return'<div class="'+cl+at+av+'<span class="kcf">'+(s.dice.length?'<em class="kcs">'+s.sum+'</em>':'<em class="kcs e">—</em>')+fl+'</span>'+nmH+stH+dz+'</div>'}R[1]=function(){
-function row(ix){return'<div class="kc-row">'+ix.map((function(i){return seatC(S.seats[i],i)})).join('')+'</div>'}
-return head()+'<div class="kq1">'+row([0,1,2])+'<div class="kq-rail kq1-rail">'+(RN()===4?'<span class="rn4">Раунд №'+S.round+'</span>':'')+'<div class="kq-felt kq1-felt"><i class="kqlogo">21</i>'+bankChip()+(RN()===3?'<span class="rn3">раунд №'+S.round+'</span>':'')+stage()+'</div></div>'+row([5,4,3])+'</div>'+ctrl()+emos()+hist()}
-var POS6=function(cy,dx,dy,dt){return[[183-dx,cy-dy],[183,cy-dt],[183+dx,cy-dy],[183+dx,cy+dy],[183,cy+dt],[183-dx,cy+dy]]}
-R[2]=function(){var P=POS6(215,124,128,170)
-var cards=S.seats.map((function(s,i){return'<div class="kc-at" style="left:'+P[i][0]+'px;top:'+P[i][1]+'px">'+seatC(s,i)+'</div>'})).join('')
-return head()+'<div class="kq2 kc2"><div class="kq-rail kq2-rail kc2-rail"><div class="kq-felt kq2-felt">'+bankChip('c')+stage()+'</div></div>'+cards+'</div>'+ctrl()+emos()+hist()}
-R[4]=function(){var P=POS6(243,124,146,196)
-var cards=S.seats.map((function(s,i){return'<div class="kc-at" style="left:'+P[i][0]+'px;top:'+P[i][1]+'px">'+seatC(s,i,true)+'</div>'})).join('')
-var c=cur(),w=S.phase==='result'?S.win.map((function(i){return S.seats[i]})):[]
-var mid=S.phase==='gather'?'<b class="big">'+Math.max(0,S.cd)+'</b><small>до раздачи</small>':S.phase==='result'?w.length?'<small>'+(w.length>1?'ничья':'победил')+'</small><b class="nm2">'+esc(w.length>1?w.length+' игрока':nm(w[0]))+'</b><b class="big win">'+w[0].sum+'</b>':'<small>все перебрали</small>':c&&c.dice.length?'<small>ходит</small><b class="nm2" style="color:'+c.color+'">'+esc(nm(c))+'</b><b class="big'+(c.sum>21?' bust':'')+'">'+c.sum+'<i>/21</i></b>':'<small>раздача…</small>'
-return head()+'<div class="kq4 kc4"><div class="kq-rail kq4-rail kc4-rail"><div class="kq-felt kq4-felt">'+bankChip('c sm')+'<div class="kq4-mid">'+mid+'</div></div></div>'+cards+'</div>'+ctrl()+emos()+hist()}
-function infoSheet(){var s=S.seats[S.info]
-if(!s)return''
-var st={ready:'готов к игре',wait:'ждёт хода',turn:'сейчас ходит',stand:'остановился',bust:'перебор',b21:'ровно 21',win:'победил',lose:'проиграл'}[s.st]||''
-var run=0,moves=s.moves.map((function(m,k){var a=m.reduce((function(x,y){return x+y}),0)
-run+=a
-return'<div class="dv-mv'+(run>21?' x':'')+'"><span class="n">'+(k===0?'раздача':'ход '+k+(m.length>1?' · риск':''))+'</span><span class="d">'+m.map((function(v){return die(v,'sm')})).join('')+'</span><b>'+(k?'+':'')+a+'</b><em>'+run+'</em></div>'})).join('')
-var gl=s.stake.gifts
-return'<div class="dv-sheet" onclick="if(event.target===this)dvClose()"><div class="dv-sh"><i class="grab"></i><div class="dv-sh-h">'+ava(s)+'<span><b>'+esc(nm(s))+'</b><small>место №'+(S.info+1)+' · '+st+'</small></span><button type="button" onclick="dvClose()">✕</button></div>'+'<div class="dv-is"><div class="dv-is-sum" style="--c:'+s.color+';--t:'+pct(s).toFixed(3)+'"><small>сумма</small><b>'+sumTxt(s)+'</b>'+bar(s)+'<small>'+(s.dice.length?s.sum>21?'перебор на '+(s.sum-21):'до 21 осталось '+(21-s.sum):'ещё не бросал')+'</small></div>'+'<div class="dv-is-st"><small>ставка · '+kindLbl(s.stake)+'</small><b>'+gram(n2(stakeVal(s.stake)),'big')+'</b><small>шанс на банк '+(100/Math.max(1,S.seats.filter(Boolean).length)).toFixed(0)+'%</small></div></div>'+(gl.length?'<div class="dv-is-gl">'+gl.map((function(g){
-return'<span class="dv-is-gi">'+gt(g,'l')+'<b>'+esc(g.title)+'</b><small>#'+g.number+'</small><em>'+gram(n2(g.value))+'</em></span>'
-})).join('')+(s.stake.gram?'<span class="dv-is-gi gr"><span class="dv-gt l gg">'+G()+'</span><b>GRAM</b><small>доплата</small><em>'+gram(n2(s.stake.gram))+'</em></span>':'')+'</div>':'')+'<div class="dv-mvs"><small>броски</small>'+(moves||'<div class="dv-w">Броски появятся после раздачи</div>')+'</div></div></div>'}function winWindow(){var B=bank(),w=S.win.map((function(i){return S.seats[i]}))
-if(!w.length)return
-var one=w.length===1,share=B.gram/w.length*.95,gifts=one?B.gifts.map((function(g){return{img:window.__FR&&window.__FR[g.slug]||'',title:g.title,number:g.number,value:g.value}})):[]
-var gv=gifts.reduce((function(a,g){return a+g.value}),0),stakeV=stakeVal(w[0].stake)
-WinWin.show({title:one?'Победитель':'Ничья — банк делится',name:w.map((function(x){return x.name})).join(' и '),color:w[0].color,avaHtml:function(){try{return getScannerPlayerAvatarHtml({name:w[0].name})}catch(e){return''}}(),line:'очки: <b style="color:#86efac">'+w[0].sum+'</b> из 21',total:share+gv,gram:share,gifts:gifts,stake:stakeV})}function resSheet(){var B=bank(),w=S.win.map((function(i){
-return S.seats[i]})),mine=w.some((function(s){return s.me})),share=w.length?B.gram/w.length*.95:0
-var conf=mine?'<div class="dv-conf">'+Array.apply(null,Array(22)).map((function(_,k){return'<i style="left:'+(k*4.6+2).toFixed(1)+'%;--d:'+(k%7*.13).toFixed(2)+'s;--x:'+(k*37%60-30)+'px;--c:'+['#5eead4','#f472b6','#fbbf24','#38bdf8','#a78bfa'][k%5]+'"></i>'})).join('')+'</div>':''
-return'<div class="dv-sheet res" onclick="if(event.target===this)dvClose()"><div class="dv-sh'+(mine?' win':'')+'"><i class="grab"></i>'+conf+'<small class="dv-r-k">'+(w.length>1?'ничья — банк делится':w.length?mine?'ты победил':'победитель':'все перебрали')+'</small>'+'<div class="dv-r-w">'+w.map((function(s){
-return'<span style="--c:'+s.color+'">'+ava(s)+'<b>'+esc(nm(s))+'</b><em>'+s.sum+'</em><span class="d">'+s.dice.map((function(v){return die(v,'sm')})).join('')+'</span></span>'
-})).join('')+'</div>'+(w.length?'<div class="dv-r-p"><small>'+(mine?'ты забираешь':'забирает')+'</small>'+gram('+'+n2(share),'big')+(B.gifts.length&&w.length===1?'<small>и подарки из банка</small><span class="dv-gs l">'+B.gifts.map((function(g){return gt(g,'l')
-})).join('')+'</span>':'')+'</div>':'<div class="dv-r-p"><small>ставки возвращены</small></div>')+'<div class="dv-r-t">'+S.seats.map((function(s,i){if(!s||s.st==='win')return''
-return'<span class="s-'+s.st+'" onclick="dvInfo('+i+')">'+ava(s)+'<b>'+esc(nm(s))+'</b><em>'+s.sum+'</em></span>'})).join('')+'</div>'+'<div class="dv-acts"><button type="button" class="dv-btn main" onclick="dvAgain()">Сыграть ещё</button><button type="button" class="dv-btn ghost" onclick="dvClose()">Закрыть</button></div></div></div>'}function render(){if(!root||!S)return
-var sc=root.scrollTop
-if(!root._in){root.innerHTML=''
-root._in=document.createElement('div')
-root.appendChild(root._in)
-layer=document.createElement('div')
-layer.className='dv-phys'
-root.appendChild(layer)}if(ROOMS_ON)roomHead()
-root._in.innerHTML='<div class="dv-in">'+R[V]()+'</div>'
-if(S.res&&window.WinWin&&!S.wwShown){S.wwShown=true
-S.res=false
-winWindow()}var sh=S.info!=null?infoSheet():S.res?resSheet():''
-if(sheetEl.dataset.k==='stake'&&!sh){}else if(sheetEl.dataset.k!==sh){var keep=!!sheetEl.innerHTML&&!!sh
-sheetEl.innerHTML=sh
-sheetEl.dataset.k=sh
-sheetEl.classList.toggle('keep',keep)}root.scrollTop=sc}window.__dcv={get S(){return S},render:render,newRound:newRound}
-function mount(){root=document.createElement('div')
-root.id='dcv'
-sheetEl=document.createElement('div')
-sheetEl.id='dcvSheet'
-document.body.appendChild(sheetEl);(document.getElementById('menu')||document.body).appendChild(root)
-H.classList.add('dz-open','dcv-open')
-try{setActiveBottomNav('pvp')}catch(x){}newRound()}if(!window.__DCV_APP)window.addEventListener('load',(function(){setTimeout(mount,3600)}))
-var LASTR=0
-window.dvOpenTable=function(entry,room){if(ROOMS_ON){var t=room!=null?room:LASTR
-if(!root){root=document.createElement('div')
-root.id='dcv'
-sheetEl=document.createElement('div')
-sheetEl.id='dcvSheet'
-document.body.appendChild(sheetEl);(document.getElementById('menu')||document.body).appendChild(root)}root.style.display=''
-root.scrollTop=0
-H.classList.add('dz-open','dcv-open')
-try{setActiveBottomNav('pvp')}catch(x){}ROOM=ROOMS[t].pk?0:t
-ENTRY=ROOMS[ROOM].min
-PICK=ROOMS[ROOM].chips[1]
-JOIN=null
-S=null
-roomsNewRound()
-if(ROOMS[t].pk)window.dvRoom(t)
-tgBack(true)
-return}ENTRY=entry||ENTRY
-if(!root){root=document.createElement('div')
-root.id='dcv'
-sheetEl=document.createElement('div')
-sheetEl.id='dcvSheet'
-document.body.appendChild(sheetEl);(document.getElementById('menu')||document.body).appendChild(root)}root.style.display=''
-root.scrollTop=0
-H.classList.add('dz-open','dcv-open')
-try{setActiveBottomNav('pvp')}catch(x){}newRound()
-tgBack(true)}
-/* стрелка «назад» в шапке Telegram: на столе ведёт со стола, после выхода — как обычно для экрана */
-function tgBack(on){try{if(on)syncAppBackButton({forceShow:true,onClick:function(){window.dvCloseTable()}})
-else syncAppBackButton()}catch(e){}}
-window.dvCloseTable=function(){if(!root)return
-clearT()
-physClear()
-if(window.WinWin)WinWin.hide()
-if(sheetEl){sheetEl.innerHTML=''
-sheetEl.dataset.k=''}if(ROOMS_ON){LASTR=ROOM
-JOIN=null
-if(ROOMS[ROOM].pk){if(window.pkStop)pkStop()
-root._pk.style.display='none'
-root._pk.innerHTML=''
-root._in.style.display=''
-root.classList.remove('pk-root')
-ROOM=0}}S=null
-root.style.display='none'
-H.classList.remove('dz-open','dcv-open')
-tgBack(false)}
-window.dvBack=function(){if(window.__DCV_APP&&ROOMS_ON){window.dvCloseTable()
-return}if(window.__DCV_APP){window.dvCloseTable()
-try{window.mxDiceOpen()}catch(e){}}else window.dvStake()}
-if(window.__DCV_APP){window.addEventListener('load',(function(){if(ROOMS_ON){window.mxDiceOpen=function(e){if(e&&e.stopPropagation)e.stopPropagation()
-try{window.mxDiceClose()}catch(x){}window.dvOpenTable()}
-window.mxDiceAt=function(amt,e){if(e&&e.stopPropagation)e.stopPropagation()
-window.dvOpenTable(null,Number(amt)>1?1:0)}}var go=window.mxDiceGo
-window.mxDiceGo=function(){var b=document.querySelector('#mxDice .dz-go'),m=b&&b.textContent.match(/(\d+(?:[.,]\d+)?)\s*GRAM/),n=m?parseFloat(m[1].replace(',','.')):5
-try{window.mxDiceClose()}catch(e){}window.dvOpenTable(Math.round(n))}
-var nav=window.handleBottomNav
-if(typeof nav==='function')window.handleBottomNav=function(){if(H.classList.contains('dcv-open'))window.dvCloseTable()
-return nav.apply(this,arguments)}
-/* профиль из верхней панели: сначала закрываем стол Костей 21, иначе он остаётся поверх профиля */
-var op=window.openProfileScreen
-var fromT=false
-if(typeof op==='function')window.openProfileScreen=function(){var t=H.classList.contains('dcv-open');if(t){window.dvCloseTable();fromT=true}else if(typeof currentMenuView==='undefined'||currentMenuView!=='profile')fromT=false
-return op.apply(this,arguments)}
-/* «назад» из профиля возвращает за тот же стол, с которого открыли профиль */
-var cp=window.closeProfileScreen
-if(typeof cp==='function')window.closeProfileScreen=function(){var r=cp.apply(this,arguments)
-if(fromT){fromT=false;window.dvOpenTable(null,LASTR)}return r}
-var bk=window.handleTelegramAppBack
-if(typeof bk==='function')window.handleTelegramAppBack=function(){if(H.classList.contains('dcv-open')){window.dvBack()
-return}return bk.apply(this,arguments)}}))}var sw=document.createElement('div')
-sw.id='dvSw'
-sw.innerHTML=Array.apply(null,Array(N_V)).map((function(_,i){return'<button type="button" data-v="'+(i+1)+'">'+(i+1)+'</button>'})).join('')
-function mark(){sw.querySelectorAll('button').forEach((function(b){b.classList.toggle('on',+b.dataset.v===V)}))}sw.addEventListener('click',(function(e){var b=e.target.closest('button')
-if(!b)return
-e.stopPropagation()
-V=+b.dataset.v
-H.setAttribute('data-dcv',V)
-try{localStorage.setItem('dcv',V)}catch(er){}mark()
-if(root)root.scrollTop=0
-render()}))
-function msw(){if(FIX)return
-document.body.appendChild(sw)
-mark()}if(document.body)msw()
-else document.addEventListener('DOMContentLoaded',msw)})();(function(){var H=document.documentElement,EMBED=!!window.__PK_EMBED
-var ENTRY=1,ANTE=.1,RAISES=[.1,.25,.5],MAXR=3,TURN=30
-function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,(function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]}))}function n2(v){return(Math.round(v*100)/100).toFixed(2)}function r2(v){return Math.round(v*100)/100}function rnd(n){return 1+Math.floor(Math.random()*n)}function G(){return typeof CASE_GRAM_ICON_SVG!=='undefined'?CASE_GRAM_ICON_SVG:''}function gram(v,cls){
-return'<span class="dv-g'+(cls?' '+cls:'')+'"><span class="dv-gi">'+G()+'</span>'+v+'</span>'}function ava(s){var a=''
-try{a=getScannerPlayerAvatarHtml({name:s.name})}catch(e){}return'<span class="dv-av" style="--c:'+s.color+'">'+(a||'<span class="scanner-player-avatar">'+esc(s.name[0])+'</span>')+'</span>'}var FACE={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]}
-function die(v,cls){var h=''
-for(var i=0;i<9;i++)h+='<i'+(FACE[v].indexOf(i)>=0?' class="on"':'')+'></i>'
-return'<span class="dv-die'+(cls?' '+cls:'')+'">'+h+'</span>'}function me(){try{var p=getCurrentPlayer()
-return p.name||p.username||'Ты'}catch(e){return'Ты'}}var BOTS=[['nightowl','#ff5d8f'],['Sasha_V','#ffb547'],['grammaster','#34d17f'],['lucky_bobr','#8b5cf6'],['dice_king','#38bdf8'],['Mira','#f472b6']]
-var EMO=['🔥','😂','😱','👏','🎲']
-var S=null,T=[],root=null,layer=null,W3=null
-function later(fn,ms){var t=setTimeout((function(){var k=T.indexOf(t)
-if(k>=0)T.splice(k,1)
-fn()}),ms)
-T.push(t)
-return t}function clearT(){T.forEach(clearTimeout)
-T=[]
-if(S&&S.tick){clearInterval(S.tick)
-S.tick=null}if(S&&S.tiv){clearInterval(S.tiv)
-S.tiv=null}}function sum(p){return p.hid+p.dice.reduce((function(a,b){return a+b}),0)}function open(p){return p.dice.reduce((function(a,b){return a+b}),0)}function live(p){return p&&(p.st==='in'||p.st==='allin')}function lives(){return S.seats.map((function(p,i){return live(p)?i:-1})).filter((function(i){return i>=0}))}function nm(p){return p.me?'Ты':p.name}function newRound(){clearT()
-physClear()
-if(window.WinWin)WinWin.hide()
-var seats=[null,null,null,null,null,null],used={},prev=S
-seats[4]=mk(me(),'#34d6ff',true)
-var pool=BOTS.slice().sort((function(){return Math.random()-.5}));[0,2,3,5].forEach((function(i,k){seats[i]=mk(pool[k][0],pool[k][1])}))
-if(Math.random()<.5)seats[1]=mk(pool[4][0],pool[4][1])
-S={rid:Math.random(),me:4,seats:seats,phase:'gather',cd:8,pot:0,cur:0,raises:0,turn:-1,timer:TURN,emo:{},round:(prev?prev.round:1180)+1,dealer:prev?nextSeat(prev.dealer,seats):0,betN:0,hist:prev?prev.hist:[]}
-render()
-S.tick=setInterval((function(){S.cd--
-if(S.cd<=0){clearInterval(S.tick)
-S.tick=null
-deal()
-return}render()}),1e3)}function mk(name,color,isMe){return{name:name,color:color,me:!!isMe,bot:!isMe,stack:ENTRY,inPot:0,rb:0,hid:0,dice:[],st:'in',act:'',acted:false}}function nextSeat(i,seats){seats=seats||S.seats
-for(var k=1;k<=6;k++){var j=(i+k)%6
-if(seats[j])return j}return i}function pay(p,a){a=r2(Math.min(a,p.stack))
-p.stack=r2(p.stack-a)
-p.rb=r2(p.rb+a)
-p.inPot=r2(p.inPot+a)
-S.pot=r2(S.pot+a)
-if(p.stack<=0&&p.st==='in')p.st='allin'
-return a}function deal(){S.phase='deal'
-render()
-var ord=[],i=S.dealer
-for(var k=0;k<6;k++){i=(i+1)%6
-if(S.seats[i])ord.push(i)}ord.forEach((function(j){var p=S.seats[j]
-pay(p,ANTE)
-p.rb=0}))
-var k2=0;(function nx(){if(k2>=ord.length*2)return later((function(){betRound(1)}),500)
-var p=S.seats[ord[k2%ord.length]]
-if(k2<ord.length)p.hid=rnd(6)
-else p.dice.push(rnd(6))
-k2++
-render()
-later(nx,260)})()}function betRound(n){S.phase='bet'
-S.betN=n
-S.cur=0
-S.raises=0
-S.seats.forEach((function(p){if(p){p.rb=0
-p.acted=false
-if(live(p))p.act=''}}))
-if(S.seats.filter((function(p){return p&&p.st==='in'})).length<2)return n===1?drawPhase():showdown()
-S.turn=S.dealer
-nextActor()}function nextActor(){if(lives().length<=1)return showdown()
-for(var k=1;k<=6;k++){var j=(S.turn+k)%6,p=S.seats[j]
-if(p&&p.st==='in'&&(!p.acted||p.rb<S.cur)){if(p.acted&&p.rb>=S.cur)continue
-S.turn=j
-S.timer=TURN
-render()
-bindTimer()
-if(p.bot)later((function(){botBet(p)}),900+Math.random()*900)
-return}}S.turn=-1
-if(S.tiv){clearInterval(S.tiv)
-S.tiv=null}render()
-later((function(){S.betN===1?drawPhase():showdown()}),600)}function act(p,kind,x){if(!S||S.phase!=='bet'||S.seats[S.turn]!==p)return
-var call=r2(S.cur-p.rb)
-if(kind==='fold'){p.st='fold'
-p.act='пас'}else if(kind==='check'){if(call>0)return
-p.act='чек'}else if(kind==='call'){pay(p,call)
-p.act=p.st==='allin'?'ва-банк':'колл'}else if(kind==='raise'||kind==='allin'){var add=kind==='allin'?p.stack:r2(call+x)
-if(add>=p.stack)add=p.stack
-pay(p,add)
-if(p.rb>S.cur){S.cur=p.rb
-S.raises++
-S.seats.forEach((function(q){if(q&&q!==p&&q.st==='in')q.acted=false}))}p.act=p.st==='allin'?'ва-банк':'рейз'}p.acted=true
-render()
-later(nextActor,350)}function botBet(p){if(!S||S.phase!=='bet'||S.seats[S.turn]!==p)return
-var s=sum(p),call=r2(S.cur-p.rb),r=Math.random(),canR=S.raises<MAXR&&p.stack>call
-if(Math.random()<.15)emo(S.seats.indexOf(p),EMO[rnd(EMO.length)-1])
-var str=S.betN===1?s>=9?.7:s>=6?.45:.25:s>=20?.95:s>=18?.75:s>=16?.45:.2
-if(canR&&r<str*.45){if(S.betN===2&&s>=20&&Math.random()<.3)return act(p,'allin')
-return act(p,'raise',RAISES[Math.floor(Math.random()*(str>.7?3:2))])}if(call<=0)return act(p,'check')
-if(call>.3&&r>str+.25)return act(p,'fold')
-if(r>str+.5)return act(p,'fold')
-act(p,'call')}window.pkAct=function(k,x){var p=S&&S.seats[S.me]
-if(p&&S.turn===S.me)act(p,k,x)}
-function drawPhase(){S.phase='draw'
-S.q=[]
-var i=S.dealer
-for(var k=0;k<6;k++){i=(i+1)%6
-if(live(S.seats[i]))S.q.push(i)}S.seats.forEach((function(p){if(live(p))p.act=''}))
-S.turn=-1
-drawNext()}function drawNext(){if(S.tiv){clearInterval(S.tiv)
-S.tiv=null}var i=S.q.shift()
-if(i==null){S.turn=-1
-physClear()
-render()
-return later((function(){betRound(2)}),600)}var p=S.seats[i]
-S.turn=i
-S.timer=TURN
-physClear()
-render()
-bindTimer()
-if(p.bot)later((function(){botDraw(p)}),900)}function botDraw(p){if(!S||S.phase!=='draw'||S.seats[S.turn]!==p)return
-var s=sum(p)
-if(s<15||s<17&&Math.random()<.35)return hit(p)
-stand(p)}function hit(p){S.rolling=true
-render()
-var i=S.seats.indexOf(p),card=root.querySelector('.kc[data-i="'+i+'"] .kca'),fe=root.querySelector('.kq1-felt'),rid=S.rid
-var done=function(v){if(!S||S.rid!==rid)return
-p.dice.push(v)
-S.rolling=false
-var s=sum(p)
-if(s>21&&!p.me){p.st='bust'
-p.act='перебор'
-render()
-return later(drawNext,900)}if(s>21){p.st='bust'
-p.act='перебор'
-render()
-return later(drawNext,900)}if(s===21){p.act='21!'
-render()
-return later(drawNext,800)}render()
-if(p.bot)later((function(){botDraw(p)}),800)}
-if(!(window.Dice3D&&layer&&card&&fe))return later((function(){done(rnd(6))}),600)
-var c=relOf(card),f=relOf(fe)
-world().throw(c.x,c.y,f.x+(Math.random()-.5)*f.w*.45,f.y+16+(Math.random()-.5)*f.h*.3).then(done)}function stand(p){p.act='хватит'
-render()
-later(drawNext,400)}window.pkHit=function(){var p=S&&S.seats[S.me]
-if(p&&S.phase==='draw'&&S.turn===S.me&&!S.rolling)hit(p)}
-window.pkStand=function(){var p=S&&S.seats[S.me]
-if(p&&S.phase==='draw'&&S.turn===S.me&&!S.rolling)stand(p)}
-function bindTimer(){if(S.tiv)clearInterval(S.tiv)
-S.tiv=setInterval((function(){if(!S||S.turn<0||S.rolling)return
-S.timer=Math.max(0,S.timer-1)
-root.querySelectorAll('[data-tm]').forEach((function(el){el.style.setProperty('--t',S.timer)
-var x=el.querySelector('[data-tmv]')
-if(x)x.textContent=S.timer}))
-if(S.timer<=0&&S.turn===S.me){clearInterval(S.tiv)
-S.tiv=null
-var p=S.seats[S.me]
-if(S.phase==='bet')act(p,S.cur-p.rb>0?'fold':'check')
-else if(S.phase==='draw')stand(p)}}),1e3)}function showdown(){if(S.tiv){clearInterval(S.tiv)
-S.tiv=null}S.turn=-1
-S.phase='result'
-S.show=true
-physClear()
-var L=lives(),best=-1
-L.forEach((function(i){var s=sum(S.seats[i])
-if(s<=21&&s>best)best=s}))
-var win=L.filter((function(i){return sum(S.seats[i])===best}))
-S.win=win
-S.ret=0
-S.refund=false
-if(!win.length){S.refund=true
-S.seats.forEach((function(p){if(p){p.stack=r2(p.stack+p.inPot)}}))}else{S.share=r2(S.pot*.95/win.length)
-win.forEach((function(i){var p=S.seats[i]
-p.st='win'
-p.won=S.share}))
-S.seats.forEach((function(p,i){if(p&&win.indexOf(i)<0&&p.st!=='fold'&&p.st!=='bust')p.st='lose'}))
-var w=S.seats[win[0]]
-S.hist.unshift({name:nm(w),color:w.color,sum:best,pot:S.share})
-if(S.hist.length>6)S.hist.length=6}var m=S.seats[S.me]
-S.ret=m?m.stack:0
-S.next=10
-render()
-if(win.length&&window.WinWin){var w0=S.seats[win[0]]
-WinWin.show({title:win.length>1?'Ничья — банк делится':'Победитель',name:win.length>2?win.length+' игрока':win.map((function(i){return S.seats[i].name})).join(' и '),color:w0.color,avaHtml:function(){try{return getScannerPlayerAvatarHtml({name:w0.name})}catch(e){return''}}(),line:'очки: <b style="color:#86efac">'+best+'</b> из 21',total:S.share+w0.stack,gram:S.share+w0.stack,gifts:[],stake:ENTRY})
-}S.tick=setInterval((function(){if(!S)return
-S.next--
-if(S.next<=0){clearInterval(S.tick)
-S.tick=null
-newRound()
-return}var b=root.querySelector('.dv-next b')
-if(b){b.textContent=S.next
-root.querySelector('.dv-next i').style.setProperty('--n',S.next)}}),1e3)}function relOf(el){var r=el.getBoundingClientRect(),R=root.getBoundingClientRect()
-return{x:r.left-R.left+r.width/2,y:r.top-R.top+root.scrollTop+r.height/2,w:r.width,h:r.height}}function world(){if(W3)return W3
-W3=Dice3D.world(layer,(function(){var fe=root.querySelector('.kq1-felt')
-if(!fe)return{cx:-999,cy:-999,w:10,h:10,R:5}
-var r=relOf(fe)
-return{cx:r.x,cy:r.y,w:r.w,h:r.h,R:parseFloat(getComputedStyle(fe).borderTopLeftRadius)||r.h/2}}),30)
-return W3}function physClear(){if(W3)W3.clear()}function emo(i,x){S.emo[i]=x
-render()
-later((function(){if(S){delete S.emo[i]
-render()}}),1800)}window.pkEmo=function(x){if(S)emo(S.me,x)}
-var ACT={'пас':'f','чек':'k','колл':'c','рейз':'r','ва-банк':'a','хватит':'s','перебор':'b','21!':'w'}
-function card(i){var p=S.seats[i]
-if(!p)return'<div class="kc kv4 free"><span class="kc0">+</span><small>свободно</small></div>'
-var on=S.turn===i,see=p.me||S.show,st=p.st==='allin'?'in':p.st
-var add=p.dice.length-(p._sh||0)
-p._sh=p.dice.length
-var dd=p.dice.slice().reverse().slice(0,5).map((function(v,k){return die(v,'sm'+(add>0&&k<add?' nw':''))})).join('')
-var hid=p.hid?see?die(p.hid,'sm pk-hd'+(p.me&&!S.show?' mine':'')):'<span class="dv-die sm pk-hd q">?</span>':''
-var sm=!p.hid?'—':see?sum(p):p.dice.length?open(p)+'+?':'?'
-var pill=p.act?'<em class="pk-a a-'+(ACT[p.act]||'k')+'">'+p.act+(p.rb>0&&S.phase==='bet'&&(p.act==='рейз'||p.act==='колл')?' '+n2(p.rb):'')+'</em>':''
-return'<div class="kc kv4 pk ks-'+st+(p.me?' me':'')+(on?' turn':'')+'" data-i="'+i+'" style="--c:'+p.color+'">'+(S.emo[i]?'<span class="dv-emo">'+S.emo[i]+'</span>':'')+'<span class="kca">'+ava(p)+(on?'<i class="kqt" data-tm style="--t:'+S.timer+'"></i>':'')+'</span><b class="nm kcn">'+esc(nm(p))+'</b>'+'<span class="kcv pk-v">'+gram(n2(p.stack))+pill+'</span>'+'<span class="k4n"><b>'+sm+'</b>'+hid+'<span class="k4d'+(add>0&&p.dice.length>add?' push':'')+'" style="--n:'+Math.max(0,add)+'">'+dd+'</span></span></div>'
-}function row(ix){return'<div class="kc-row">'+ix.map(card).join('')+'</div>'}function stage(){if(S.phase==='gather')return'<div class="kq-st wait"><b class="kqcd">'+Math.max(0,S.cd)+'</b><small>до раздачи</small></div>'
-if(S.phase==='deal')return'<div class="kq-st wait"><small>раздача…</small></div>'
-if(S.phase==='result'){if(S.refund)return'<div class="kq-st res"><small>все перебрали — вклады возвращены</small></div>'
-var w=S.seats[S.win[0]]
-return'<div class="kq-st res"><span class="kqwho">'+ava(w)+'<b>'+(S.win.length>1?'Ничья':esc(nm(w)))+'</b></span><div class="kqtray">'+die(w.hid,'kqd')+w.dice.map((function(v){return die(v,'kqd')})).join('')+'</div><span class="sm win">'+sum(w)+'</span></div>'}var c=S.turn>=0?S.seats[S.turn]:null
-var who=c?'<span class="kqwho" style="--c:'+c.color+'">'+ava(c)+'<b>'+esc(c.me?'Твой ход':c.name)+'</b></span>':''
-if(S.phase==='bet')return'<div class="kq-st ph pk-b">'+who+'<span class="pk-ph"><small>торги · круг '+S.betN+' из 2</small><b>'+(S.cur>0?'ставка '+n2(S.cur):'ставок нет')+'</b></span></div>'
-var see=c&&(c.me||S.show),s=c?see?sum(c):open(c)+'+?':''
-return'<div class="kq-st ph'+(c&&see&&sum(c)>21?' bust':'')+'" style="--c:'+(c?c.color:'#5eead4')+'">'+who+'<span class="sm">'+s+'<small>/21</small></span></div>'}function ctrl(){var m=S.seats[S.me],mine='<div class="pk-me"><span>Твои фишки '+gram(n2(m.stack),'w')+'</span><span>в банке '+gram(n2(m.inPot))+'</span></div>'
-if(S.phase==='gather')return'<div class="dv-ctrl"><div class="dv-info">Вход '+ENTRY+' GRAM · анте '+n2(ANTE)+' · старт через <b>'+Math.max(0,S.cd)+'</b> с</div></div>'
-if(S.phase==='result')return'<div class="dv-ctrl">'+(S.ret>0?'<div class="pk-ret">Неставленные фишки вернулись на баланс: '+gram(n2(S.ret),'w')+'</div>':'')+'<div class="dv-next"><i style="--n:'+S.next+'"></i><span>Новый раунд через <b>'+S.next+'</b> с</span></div></div>'
-var tm='<div class="dv-tm" data-tm style="--t:'+S.timer+'"><i></i><span><b data-tmv>'+S.timer+'</b> с на ход</span></div>'
-if(S.turn===S.me&&S.phase==='bet'){var call=r2(S.cur-m.rb),canR=S.raises<MAXR
-return'<div class="dv-ctrl pk-c">'+mine+'<div class="dv-acts"><button type="button" class="dv-btn ghost" onclick="pkAct(\'fold\')">Пас</button>'+(call>0?'<button type="button" class="dv-btn main" onclick="pkAct(\'call\')">'+(call>=m.stack?'Ва-банк '+n2(m.stack):'Колл '+n2(call))+'</button>':'<button type="button" class="dv-btn main" onclick="pkAct(\'check\')">Чек</button>')+'</div>'+'<div class="pk-rs">'+RAISES.map((function(x){
-var dis=!canR||call+x>=m.stack
-return'<button type="button"'+(dis?' disabled':'')+' onclick="pkAct(\'raise\','+x+')"><small>рейз</small>+'+n2(x)+'</button>'})).join('')+'<button type="button" class="ai" onclick="pkAct(\'allin\')"><small>ва-банк</small>'+n2(m.stack)+'</button></div>'+tm+'</div>'}
-if(S.turn===S.me&&S.phase==='draw'&&!S.rolling)return'<div class="dv-ctrl pk-c">'+mine+'<div class="dv-acts"><button type="button" class="dv-btn main" onclick="pkHit()">'+die(5,'xs')+'Ещё кубик</button><button type="button" class="dv-btn ghost" onclick="pkStand()">Хватит</button></div>'+tm+'</div>'
-var c=S.turn>=0?S.seats[S.turn]:null,ph=S.phase==='bet'?'Торги · ':S.phase==='draw'?'Добор · ':''
-return'<div class="dv-ctrl pk-c">'+mine+'<div class="dv-info">'+(c?ph+(c.me?'твой бросок':'ходит <b>'+esc(c.name)+'</b> · <span class="dv-tmi" data-tm style="--t:'+S.timer+'"><b data-tmv>'+S.timer+'</b> с</span>'):S.phase==='deal'?'Раздача: 1 закрытый + 1 открытый кубик':'…')+'</div></div>'}function hist(){
-return S.hist.length?'<div class="dv-hist"><small>История стола</small><div class="dv-hr">'+S.hist.map((function(h){return'<span class="dv-hi">'+ava(h)+'<b>'+esc(h.name)+'</b><em>'+h.sum+'</em>'+gram('+'+n2(h.pot))+'</span>'})).join('')+'</div></div>':''}function render(){if(!root||!S)return
-var sc=root.scrollTop
-if(!root._in){root.innerHTML=''
-root._in=document.createElement('div')
-root.appendChild(root._in)
-layer=document.createElement('div')
-layer.className='dv-phys'
-root.appendChild(layer)}if(EMBED&&window.dvHeadSub)dvHeadSub('Вход '+ENTRY+' GRAM · №'+S.round)
-var bank='<div class="kq-bank"><small>банк</small>'+gram(n2(S.pot),'b')+'</div>'
-root._in.innerHTML='<div class="dv-in">'+(EMBED?'':'<div class="dv-head"><div class="dv-ti"><span><b>Кости 21 · покер</b><i class="dv-q">?</i></span><small class="dv-rn2">Вход '+ENTRY+' GRAM · раунд №'+S.round+'</small></div></div>')+'<div class="kq1">'+row([0,1,2])+'<div class="kq-rail kq1-rail"><div class="kq-felt kq1-felt"><i class="kqlogo">21</i>'+bank+stage()+'</div></div>'+row([5,4,3])+'</div>'+ctrl()+'<div class="dv-emos">'+EMO.map((function(x){
-return'<button type="button" onclick="pkEmo(\''+x+'\')">'+x+'</button>'})).join('')+'</div>'+hist()+'</div>'
-root.scrollTop=sc}window.__pk={get S(){return S},newRound:newRound}
-function mount(){root=document.createElement('div')
-root.id='dcv'
-root.className='pk-root';(document.getElementById('menu')||document.body).appendChild(root)
-H.classList.add('dz-open','dcv-open')
-try{setActiveBottomNav('pvp')}catch(x){}newRound()}window.pkStart=function(el,entry){if(entry){ENTRY=entry
-ANTE=r2(entry*.1)
-RAISES=[.1,.25,.5].map((function(x){return r2(x*entry)}))}root=el
-root._in=null
-layer=null
-W3=null
-S=null
-newRound()}
-window.pkStop=function(){clearT()
-physClear()
-S=null
-if(root)root._in=null}
-if(!EMBED)window.addEventListener('load',(function(){setTimeout(mount,3600)}))})()
+else document.addEventListener('DOMContentLoaded',mount)})();
