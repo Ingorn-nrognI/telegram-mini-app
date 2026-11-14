@@ -2551,6 +2551,18 @@ return'<svg viewBox="-8 -8 116 126" aria-hidden="true">'+defs+'<path d="M-6 92 L
 /* луч и прицел превью рисуются один раз в заготовку и потом только переносятся с поворотом —
    размытие свечения (shadowBlur) больше не считается каждый кадр */
 var LZS={},LZN=0
+/* край арены со скруглёнными углами: точка по длине s (по часовой, от начала верхней стороны) */
+function rrPt(s,x0,y0,w,r){r=Math.max(0,Math.min(r,w/2))
+var L=w-2*r,A=Math.PI/2*r,P=4*(L+A)
+s=(s%P+P)%P
+var seg=[[x0+r,y0,1,0],[x0+w-r,y0+r,-Math.PI/2],[x0+w,y0+r,0,1],[x0+w-r,y0+w-r,0],[x0+w-r,y0+w,-1,0],[x0+r,y0+w-r,Math.PI/2],[x0,y0+w-r,0,-1],[x0+r,y0+r,Math.PI]]
+for(var i=0;i<8;i++){var g=seg[i]
+if(i%2===0){if(s<=L)return[g[0]+g[2]*s,g[1]+g[3]*s];s-=L}
+else{if(s<=A){var t=g[2]+(r?s/r:0);return[g[0]+r*Math.cos(t),g[1]+r*Math.sin(t)]}s-=A}}
+return[x0+r,y0]}
+function rrNearS(x,y,x0,y0,w,r){var P=4*(w-2*r+Math.PI/2*r),best=0,bd=1e18,st=Math.max(.5,P/600)
+for(var s=0;s<P;s+=st){var q=rrPt(s,x0,y0,w,r),d=(q[0]-x)*(q[0]-x)+(q[1]-y)*(q[1]-y);if(d<bd){bd=d;best=s}}
+return best}
 function lzSprite(kind,key,w,h,dpr,draw){var tier='';try{tier=getEffectiveQualityTier()}catch(e){}var k=kind+key.join('|')+tier,sp=LZS[k]
 if(sp)return sp
 if(++LZN>12){LZS={};LZN=1}
@@ -2625,23 +2637,28 @@ ctx.restore()}catch(e){}ctx.restore()
 ctx.save()
 ctx.globalCompositeOperation='lighter'
 st.hits=st.hits.filter((function(h){return now-h.t<800}))
+/* вспышка от удара идёт по краю арены: у угла — по его скруглению, а не прямой полосой */
+var cr=board?4*kx:7*kx
 st.hits.forEach((function(h){var a=1-(now-h.t)/800,R=(board?9:6)*kx
-var g=ctx.createRadialGradient(h.x,h.y,0,h.x,h.y,R)
+if(h.s==null||h.fs!==fs||h.fx!==fx){h.s=rrNearS(h.x,h.y,fx,fy,fs,cr);h.fs=fs;h.fx=fx}
+var q=rrPt(h.s,fx,fy,fs,cr)
+var g=ctx.createRadialGradient(q[0],q[1],0,q[0],q[1],R)
 g.addColorStop(0,'rgba(255,255,255,'+(a*.95).toFixed(3)+')')
 g.addColorStop(.3,'rgba(45,225,255,'+(a*.85).toFixed(3)+')')
 g.addColorStop(1,'rgba(45,225,255,0)')
 ctx.fillStyle=g
-ctx.fillRect(h.x-R,h.y-R,R*2,R*2)
-var Ln=R*1.6,lg=h.h?ctx.createLinearGradient(h.x-Ln,h.y,h.x+Ln,h.y):ctx.createLinearGradient(h.x,h.y-Ln,h.x,h.y+Ln)
-lg.addColorStop(0,'rgba(255,255,255,0)')
-lg.addColorStop(.5,'rgba(255,255,255,'+a.toFixed(3)+')')
-lg.addColorStop(1,'rgba(255,255,255,0)')
-ctx.strokeStyle=lg
+ctx.fillRect(q[0]-R,q[1]-R,R*2,R*2)
+var Ln=R*1.6,stp=Math.max(1,Ln/14)
 ctx.lineWidth=1.6
+ctx.lineCap='butt'
+for(var d=-Ln;d<Ln;d+=stp){var m=d+stp/2,al=a*Math.max(0,1-Math.abs(m)/Ln)
+if(al<.01)continue
+var p1=rrPt(h.s+d,fx,fy,fs,cr),p2=rrPt(h.s+Math.min(Ln,d+stp),fx,fy,fs,cr)
+ctx.strokeStyle='rgba(255,255,255,'+al.toFixed(3)+')'
 ctx.beginPath()
-if(h.h){ctx.moveTo(h.x-Ln,h.y)
-ctx.lineTo(h.x+Ln,h.y)}else{ctx.moveTo(h.x,h.y-Ln)
-ctx.lineTo(h.x,h.y+Ln)}ctx.stroke()}))
+ctx.moveTo(p1[0],p1[1])
+ctx.lineTo(p2[0],p2[1])
+ctx.stroke()}}))
 ctx.restore()}requestAnimationFrame(lzFrame)
 }requestAnimationFrame(lzFrame)
 /* ВАЖНО: раньше этот блок по ошибке сидел ВНУТРИ кадра лазера и каждый кадр запускал ещё один
