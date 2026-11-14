@@ -4992,33 +4992,8 @@ html[data-app] .au-lv{background:radial-gradient(circle calc(var(--orb,68px) * 1
 .mx-m.is-ref .mx-res{background:rgba(148,163,184,.16);color:#cbd5e1}
 .mx-pay.ref b,.mx-pay.ref .mx-g{color:#cbd5e1}
 
-/* ===== Кости 21 / Покер 21: все раунды стола ===== */
-.dv-hh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 2px 6px}
-.dv-hist .dv-hh small{margin:0}
-.dv-hall{flex:none;height:28px;padding:0 12px;border-radius:10px;border:0;background:rgba(94,234,212,.14);color:#5eead4;font:800 12px/1 Onest,system-ui,sans-serif;cursor:pointer}
-.dh-sub{display:block;margin-top:4px;color:#7fb3ab;font:600 12.5px/1.2 Onest,system-ui,sans-serif}
-.dh-row{padding:10px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(94,234,212,.1)}
-.dh-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.dh-top>b{font:800 14px/1 Onest,system-ui,sans-serif}
-.dh-top>small{flex:1;color:#7fb3ab;font:600 12px/1 Onest,system-ui,sans-serif}
-.dh-bank{display:flex;align-items:center;gap:5px}
-.dh-bank small{color:#7fb3ab;font:600 11px/1 Onest,system-ui,sans-serif}
-.dh-note{margin:-2px 0 8px;color:#cbd5e1;font:600 12px/1.3 Onest,system-ui,sans-serif}
-.dh-pl{display:flex;flex-direction:column;gap:5px}
-.dh-p{display:flex;align-items:center;gap:7px;min-width:0;padding:5px 7px;border-radius:12px;background:rgba(3,20,23,.5)}
-.dh-p.w{background:rgba(74,222,128,.1);box-shadow:inset 0 0 0 1px rgba(74,222,128,.3)}
-.dh-p.me b{color:#5eead4}
-.dh-p .dv-av{width:24px;height:24px}
-.dh-p .dv-av .scanner-player-avatar{font-size:11px!important}
-.dh-p>b{flex:1;min-width:0;font:700 12.5px/1.2 Onest,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dh-p>b i{font-style:normal;font-weight:600;font-size:11px;color:#7fb3ab}
-.dh-d{flex:none;display:flex;gap:2px;flex-wrap:wrap;justify-content:flex-end;max-width:46%}
-.dh-p>em{flex:none;min-width:20px;text-align:right;font:800 14px/1 Onest,system-ui,sans-serif;font-style:normal;font-variant-numeric:tabular-nums}
-.dh-p.x>em{color:#fb923c}
-.dh-p.w>em{color:#4ade80}
-.dh-v{flex:none;min-width:54px;display:flex;justify-content:flex-end}
-.dh-v .dv-g{color:#86efac}
-.dh-v small{color:#7fb3ab;font:600 11px/1 Onest,system-ui,sans-serif}
-.dh-more{display:flex;justify-content:center;padding:10px 0 calc(16px + env(safe-area-inset-bottom,0px))}
-.dh-btn{height:42px;padding:0 22px;border-radius:14px;border:0;background:rgba(94,234,212,.15);color:#5eead4;font:800 13.5px/1 Onest,system-ui,sans-serif;cursor:pointer}
-.dh-load,.dh-end{color:#7fb3ab;font:600 12.5px/1.3 Onest,system-ui,sans-serif}
+/* ===== Кости 21 / Покер 21: кнопка «История раундов» в верхней панели — раунды открытого стола ===== */
+html.dcv-open body:not(.history-mode):not(.rating-mode):not(.games-mode):not(.referrals-mode) #scannerRoundsPanelBtn,
+html.dcv-open body.history-mode #scannerRoundsPanelBtn.is-active{display:flex!important}
+.rounds-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 4px 10px;color:rgba(232,251,248,.6);font:700 12.5px/1.2 Onest,system-ui,sans-serif}
+.rounds-sub b{color:#e8fbf8;font-weight:800}

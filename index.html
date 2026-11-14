@@ -10790,8 +10790,17 @@ function toggleScannerRoundsPanel(event) {
   const willOpen = !panel.classList.contains("open");
   panel.classList.toggle("open");
 
+  // За столом Костей 21 / Покера 21 эта же кнопка показывает все раунды
+  // открытого стола, в Сканере — раунды Сканера.
+  const table = willOpen && typeof window.dvTableNow === "function" ? window.dvTableNow() : null;
+  window.__roundsMode = table ? { tableId: table.id, title: table.title, entry: table.entry } : null;
+  scannerUiRenderCache.recentSignature = "";
+
   if (willOpen) {
     scannerGridState.recentRoundsExpanded = true;
+    const area = panel.querySelector(".history-scroll-area");
+    if (area) area.scrollTop = 0;
+    if (table) loadTableRounds(true);
     renderScannerRecentList();
   }
   syncPanelBackdrop();
@@ -10800,6 +10809,10 @@ function toggleScannerRoundsPanel(event) {
 function closeScannerRoundsPanel() {
   const panel = document.getElementById("scannerRoundsPanel");
   if (panel) panel.classList.remove("open");
+  if (window.__roundsMode) {
+    window.__roundsMode = null;
+    scannerUiRenderCache.recentSignature = "";
+  }
   syncPanelBackdrop();
 }
 
@@ -20614,6 +20627,15 @@ function renderScannerRecentList() {
   const toggleButton = document.getElementById("scannerRecentToggle");
   if (!container) return;
 
+  if (window.__roundsMode) {
+    if (document.getElementById("scannerRoundsPanel")?.classList.contains("open")) {
+      renderTableRoundsList(container);
+      return;
+    }
+    window.__roundsMode = null;
+    scannerUiRenderCache.recentSignature = "";
+  }
+
   const items = getAllScannerRounds();
   const expanded = !!scannerGridState.recentRoundsExpanded;
   const canExpand = items.length > 1;
@@ -20682,11 +20704,74 @@ function getScannerRoundsMoreState() {
   return more ? "more" : "end";
 }
 
-function getScannerRoundsMoreHtml(state) {
+function getScannerRoundsMoreHtml(state, fn = "loadOlderScannerRounds", hasItems = (scannerGridState.recentRounds || []).length > 0) {
   if (state === "load") return `<div class="history-more history-more-load">${L("Загрузка...", "Loading...")}</div>`;
-  if (state === "err") return `<div class="history-more"><button type="button" class="history-more-btn" onclick="event.stopPropagation(); loadOlderScannerRounds()">${L("Не удалось загрузить. Повторить", "Failed to load. Retry")}</button></div>`;
-  if (state === "more") return `<div class="history-more"><button type="button" class="history-more-btn" onclick="event.stopPropagation(); loadOlderScannerRounds()">${L("Показать ещё", "Show more")}</button></div>`;
-  return (scannerGridState.recentRounds || []).length ? `<div class="history-more history-more-end">${L("Это все раунды", "That's all rounds")}</div>` : "";
+  if (state === "err") return `<div class="history-more"><button type="button" class="history-more-btn" onclick="event.stopPropagation(); ${fn}()">${L("Не удалось загрузить. Повторить", "Failed to load. Retry")}</button></div>`;
+  if (state === "more") return `<div class="history-more"><button type="button" class="history-more-btn" onclick="event.stopPropagation(); ${fn}()">${L("Показать ещё", "Show more")}</button></div>`;
+  return hasItems ? `<div class="history-more history-more-end">${L("Это все раунды", "That's all rounds")}</div>` : "";
+}
+
+// ---------- Кости 21 / Покер 21: все раунды открытого стола ----------
+const tableRoundsState = { items: [], more: false, next: null, loading: false, error: false, seq: 0 };
+
+function getTableRoundsMoreState() {
+  if (tableRoundsState.loading) return "load";
+  if (tableRoundsState.error) return "err";
+  return tableRoundsState.more ? "more" : "end";
+}
+
+function loadTableRounds(reset) {
+  const mode = window.__roundsMode;
+  if (!mode) return;
+  if (reset) {
+    tableRoundsState.items = [];
+    tableRoundsState.more = false;
+    tableRoundsState.next = null;
+    tableRoundsState.loading = false;
+  }
+  if (tableRoundsState.loading) return;
+  if (!(_socket && _socket.connected)) {
+    tableRoundsState.error = true;
+    renderScannerRecentList();
+    return;
+  }
+  const seq = ++tableRoundsState.seq;
+  tableRoundsState.loading = true;
+  tableRoundsState.error = false;
+  if (!reset) renderScannerRecentList();
+  _socket.timeout(15000).emit("dice:history", { tableId: mode.tableId, before: tableRoundsState.next, limit: 30 }, (err, res) => {
+    if (seq !== tableRoundsState.seq) return;
+    tableRoundsState.loading = false;
+    if (err || !res || !res.ok || !Array.isArray(res.items)) {
+      tableRoundsState.error = true;
+    } else {
+      const seen = new Set(tableRoundsState.items.map((x) => String(x.roundId)));
+      res.items.forEach((x) => { if (x && !seen.has(String(x.roundId))) { seen.add(String(x.roundId)); tableRoundsState.items.push(x); } });
+      tableRoundsState.more = !!res.more;
+      if (res.next != null) tableRoundsState.next = res.next;
+    }
+    renderScannerRecentList();
+  });
+}
+
+function loadMoreTableRounds() { loadTableRounds(false); }
+
+function renderTableRoundsList(container) {
+  const mode = window.__roundsMode || {};
+  const items = tableRoundsState.items;
+  const first = items[0];
+  const title = (first && first.tableTitle) || mode.title || L("Стол игрока", "Player table");
+  const entry = first ? first.entry : mode.entry;
+  const state = getTableRoundsMoreState();
+  const sub = `<div class="rounds-sub"><span><b>${escapeHtml(title)}</b>${entry != null ? ` · ${L("вход", "entry")} ${normalizeMoneyValue(entry).toFixed(2)} GRAM` : ""}</span></div>`;
+  let body = "";
+  if (items.length) {
+    body = items.map((it, i) => (typeof window.mxDiceRoundCard === "function" ? window.mxDiceRoundCard(it, i) : "")).join("");
+  } else if (state === "end") {
+    body = `<div class="scanner-empty">${L("За этим столом ещё не сыграно ни одного раунда.", "No rounds have been played at this table yet.")}</div>`;
+  }
+  setInnerHtmlIfChanged(container, sub + body + getScannerRoundsMoreHtml(state, "loadMoreTableRounds", items.length > 0));
+  bindScannerRoundsScroll();
 }
 
 function loadOlderScannerRounds() {
@@ -20714,8 +20799,13 @@ function bindScannerRoundsScroll() {
   if (!area || area.__moreBound) return;
   area.__moreBound = true;
   area.addEventListener("scroll", () => {
+    if (area.scrollTop + area.clientHeight < area.scrollHeight - 400) return;
+    if (window.__roundsMode) {
+      if (getTableRoundsMoreState() === "more") loadMoreTableRounds();
+      return;
+    }
     if (getScannerRoundsMoreState() !== "more" || !scannerGridState.recentRoundsExpanded) return;
-    if (area.scrollTop + area.clientHeight >= area.scrollHeight - 400) loadOlderScannerRounds();
+    loadOlderScannerRounds();
   }, { passive: true });
 }
 
