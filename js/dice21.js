@@ -370,7 +370,7 @@
     var w = S.win.map(function (i) { return S.seats[i]; }), w0 = w[0];
     WinWin.show({
       title: w.length > 1 ? 'Ничья — банк делится' : 'Победитель',
-      name: w.length > 2 ? w.length + ' игрока' : w.map(function (x) { return x.name; }).join(' и '),
+      name: w.length > 2 ? w.length + ' игрока' : w.map(function (x) { return x.name; }).join(', '),
       color: w0.color,
       avaHtml: avaInner(w0),
       line: 'очки: <b style="color:#86efac">' + S.best + '</b> из 21',
@@ -634,8 +634,9 @@
   function ownAmtOk() { return OWN.ce >= 0.1 && OWN.ce <= 1000; }
   function ownNote() {
     var e = OWN.ce;
-    return 'Победитель забирает банк. Комиссия — как в сканере: от 20% до 2% в зависимости от банка, только с выигрыша сверх своей ставки. ' +
-      (OWN.cg === 'p' ? 'Анте ' + n2(e * 0.1) + ' · рейзы ' + n2(e * 0.1) + ' / ' + n2(e * 0.25) + ' / ' + n2(e * 0.5) + ' GRAM. ' : '') + 'Стол закрывается, если 10 минут за ним никого нет.';
+    // каждое предложение — отдельный кусок текста, чтобы его нашёл переводчик
+    return '<span>Победитель забирает банк.</span> <span>Комиссия — как в сканере: от 20% до 2% в зависимости от банка, только с выигрыша сверх своей ставки.</span> ' +
+      (OWN.cg === 'p' ? '<span>Анте ' + n2(e * 0.1) + ' · рейзы ' + n2(e * 0.1) + ' / ' + n2(e * 0.25) + ' / ' + n2(e * 0.5) + ' GRAM.</span> ' : '') + '<span>Стол закрывается, если 10 минут за ним никого нет.</span>';
   }
   function ownUpd() {
     var sh = document.querySelector('#rmOwn .ro-sh');
@@ -669,8 +670,9 @@
           var full = r.p >= 6, here = r.id === TID;
           return '<div class="ro-row' + (full ? ' full' : '') + (r.mine ? ' mine' : '') + '"><span class="ro-av" style="--c:' + (r.mine ? MECOL : COLORS[r.id.charCodeAt(1) % 6]) + '">' + esc(String(r.h || '?').charAt(0).toUpperCase()) + '</span>' +
             '<span class="ro-rt"><b>' + (r.lock ? '<i class="ro-lk">' + LOCK + '</i>' : '') + esc(r.t) + '</b><small>' + (r.mine ? 'твой стол' : esc(r.h)) + ' · ' + r.p + ' из 6</small></span><span class="ro-en"><small>вход</small>' + gram(n2(r.e)) + '</span>' +
-            (r.mine && r.lock ? '<button type="button" class="ro-go" onclick="dvOwnLink(\'' + r.id + '\')">Ссылка</button>' : '') +
-            '<button type="button" class="ro-go"' + (full && !here ? ' disabled' : '') + ' onclick="dvOwnJoin(\'' + r.id + '\')">' + (here ? 'Ты здесь' : full ? 'Мест нет' : 'Войти') + '</button></div>';
+            // свой стол «по ссылке», за которым сидишь, — кнопка копирует приглашение
+            (here && r.mine && r.lock ? '<button type="button" class="ro-go" onclick="dvOwnLink(\'' + r.id + '\')">Ссылка</button>' :
+              '<button type="button" class="ro-go"' + (full && !here ? ' disabled' : '') + ' onclick="dvOwnJoin(\'' + r.id + '\')">' + (here ? 'Ты здесь' : full ? 'Мест нет' : 'Войти') + '</button>') + '</div>';
         }).join('') : '<div class="ro-empty">Пока никто не создал стол — будь первым</div>') +
         '</div><div class="ro-ft"><button type="button" class="ro-new" onclick="dvOwnV(\'new\')"><b>+</b> Создать свой стол</button></div>';
       return;
