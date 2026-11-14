@@ -9833,8 +9833,11 @@ function createReferralGiftPlayer(el, file, index) {
         loop: true,
         autoplay: false,
         workerId: "referral-gifts-" + (index % 2),     // 5 фигурок на 2 потока
+        // кадры только в родной частоте анимации (60), а не под частоту экрана 90/120 Гц
+        useFrameInterpolation: false,
         renderConfig: {
-          devicePixelRatio: Math.min(referralFxIsLite() ? 2 : 3, window.devicePixelRatio || 1),   // статуэтки — чёткие и на слабых
+          // чёткость ×2 вместо ×3: на глаз не отличить, а пикселей в каждом кадре в 2,25 раза меньше
+          devicePixelRatio: Math.min(2, window.devicePixelRatio || 1),
           autoResize: true
         }
       }, preloaded ? { data: preloaded } : { src: new URL(file, location.href).href }));
@@ -25980,7 +25983,7 @@ if (document.readyState === "loading") {
 </script>
 <div id="scannerNameTooltip" class="scanner-name-tooltip"></div>
 <script src="js/nav-icons.js?v=1"></script>
-<script src="js/aurora-ui.js?v=11"></script>
+<script src="js/aurora-ui.js?v=12"></script>
 <script src="js/aurora-games.js?v=11"></script>
 <script src="js/dice21.js?v=1"></script>
 </body>

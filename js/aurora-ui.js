@@ -3666,7 +3666,7 @@ try{if(typeof REFERRAL_GIFT_DATA!=='undefined'&&REFERRAL_GIFT_DATA[FILES[name]])
 if(!D.obj&&window.__DotLottieWorker){try{var cv=document.createElement('canvas')
 cv.style.cssText='width:100%;height:100%;display:block'
 el.appendChild(cv)
-return new window.__DotLottieWorker(Object.assign({canvas:cv,loop:true,autoplay:false,workerId:'referral-gifts-'+i%2,renderConfig:{devicePixelRatio:window.__mdpr(),autoResize:true}},D.text?{data:D.text}:{src:new URL(D.file,location.href).href}))}catch(e){el.innerHTML=''}}var LT=window.__RF_LOT||window.lottie
+return new window.__DotLottieWorker(Object.assign({canvas:cv,loop:true,autoplay:false,workerId:'referral-gifts-'+i%2,useFrameInterpolation:false,renderConfig:{devicePixelRatio:Math.min(2,window.__mdpr()),autoResize:true}},D.text?{data:D.text}:{src:new URL(D.file,location.href).href}))}catch(e){el.innerHTML=''}}var LT=window.__RF_LOT||window.lottie
 if(!LT||!LT.loadAnimation)return null
 try{var a=LT.loadAnimation(Object.assign({container:el,renderer:'svg',loop:true,autoplay:false},D.obj?{animationData:JSON.parse(JSON.stringify(D.obj))}:D.text?{animationData:JSON.parse(D.text)}:{path:D.file}))
 if(a.setSubframe)a.setSubframe(false)
