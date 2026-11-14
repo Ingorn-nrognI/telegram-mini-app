@@ -751,15 +751,26 @@ A.w=[A.w[0]-ny2*4,A.w[1]+nx2*4,A.w[2]]
 C.w=[C.w[0]+ny2*4,C.w[1]-nx2*4,C.w[2]]}}}}
 function still(D){return D.every((function(p){return p.rest&&p.h===0&&p.vh===0}))}
 /* физика спит, когда все кубики лежат */
-function step(now){if(!alive||!layer.isConnected||!D.length||still(D)){run=false
+/* отрисовка между двумя шагами физики (a от 0 до 1): кадры экрана идут неровно,
+   и без этого кубик двигался бы рывками — то один шаг за кадр, то два, то ни одного */
+function draw(a){D.forEach((function(p){var q=p.pv
+if(!q||a>=1){p.d.setM(p.M)
+p.d.pos(p.x,p.y,p.h)
+return}var M=p.M.map((function(r,i){return r.map((function(v,j){return q.M[i][j]+(v-q.M[i][j])*a}))}))
+p.d.setM(ortho(M))
+p.d.pos(q.x+(p.x-q.x)*a,q.y+(p.y-q.y)*a,q.h+(p.h-q.h)*a)}))}
+function step(now){if(!alive||!layer.isConnected||!D.length){run=false
+BF=null
+return}if(still(D)){draw(1)
+run=false
 BF=null
 return}requestAnimationFrame(step)
 acc+=Math.min(.1,(now-last)/1e3)
 last=now
 var B=BF||getB()
-while(acc>=FX){sim(D,B,FX,RG)
-acc-=FX}D.forEach((function(p){p.d.setM(p.M)
-p.d.pos(p.x,p.y,p.h)}))}
+while(acc>=FX){D.forEach((function(p){p.pv={x:p.x,y:p.y,h:p.h,M:p.M}}))
+sim(D,B,FX,RG)
+acc-=FX}draw(acc/FX)}
 function wake(){if(!run){run=true
 acc=0
 last=performance.now()
