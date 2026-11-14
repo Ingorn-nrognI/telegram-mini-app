@@ -10790,10 +10790,10 @@ function toggleScannerRoundsPanel(event) {
   const willOpen = !panel.classList.contains("open");
   panel.classList.toggle("open");
 
-  // За столом Костей 21 / Покера 21 эта же кнопка показывает все раунды
-  // открытого стола, в Сканере — раунды Сканера.
+  // За столами Костей 21 / Покера 21 эта же кнопка показывает все раунды
+  // всех столов этих игр, в Сканере — раунды Сканера.
   const table = willOpen && typeof window.dvTableNow === "function" ? window.dvTableNow() : null;
-  window.__roundsMode = table ? { tableId: table.id, title: table.title, entry: table.entry } : null;
+  window.__roundsMode = table ? { tableId: "all" } : null;
   scannerUiRenderCache.recentSignature = "";
 
   if (willOpen) {
@@ -20711,7 +20711,7 @@ function getScannerRoundsMoreHtml(state, fn = "loadOlderScannerRounds", hasItems
   return hasItems ? `<div class="history-more history-more-end">${L("Это все раунды", "That's all rounds")}</div>` : "";
 }
 
-// ---------- Кости 21 / Покер 21: все раунды открытого стола ----------
+// ---------- Кости 21 / Покер 21: все раунды всех столов ----------
 const tableRoundsState = { items: [], more: false, next: null, loading: false, error: false, seq: 0 };
 
 function getTableRoundsMoreState() {
@@ -20757,18 +20757,14 @@ function loadTableRounds(reset) {
 function loadMoreTableRounds() { loadTableRounds(false); }
 
 function renderTableRoundsList(container) {
-  const mode = window.__roundsMode || {};
   const items = tableRoundsState.items;
-  const first = items[0];
-  const title = (first && first.tableTitle) || mode.title || L("Стол игрока", "Player table");
-  const entry = first ? first.entry : mode.entry;
   const state = getTableRoundsMoreState();
-  const sub = `<div class="rounds-sub"><span><b>${escapeHtml(title)}</b>${entry != null ? ` · ${L("вход", "entry")} ${normalizeMoneyValue(entry).toFixed(2)} GRAM` : ""}</span></div>`;
+  const sub = `<div class="rounds-sub"><span><b>${L("Кости 21 и Покер 21", "Dice 21 and Poker 21")}</b> · ${L("все столы", "all tables")}</span></div>`;
   let body = "";
   if (items.length) {
     body = items.map((it, i) => (typeof window.mxDiceRoundCard === "function" ? window.mxDiceRoundCard(it, i) : "")).join("");
   } else if (state === "end") {
-    body = `<div class="scanner-empty">${L("За этим столом ещё не сыграно ни одного раунда.", "No rounds have been played at this table yet.")}</div>`;
+    body = `<div class="scanner-empty">${L("Раундов пока нет.", "No rounds yet.")}</div>`;
   }
   setInnerHtmlIfChanged(container, sub + body + getScannerRoundsMoreHtml(state, "loadMoreTableRounds", items.length > 0));
   bindScannerRoundsScroll();

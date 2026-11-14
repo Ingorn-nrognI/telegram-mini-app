@@ -4997,3 +4997,9 @@ html.dcv-open body:not(.history-mode):not(.rating-mode):not(.games-mode):not(.re
 html.dcv-open body.history-mode #scannerRoundsPanelBtn.is-active{display:flex!important}
 .rounds-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 4px 10px;color:rgba(232,251,248,.6);font:700 12.5px/1.2 Onest,system-ui,sans-serif}
 .rounds-sub b{color:#e8fbf8;font-weight:800}
+/* лента «История столов» под столом: все раунды всех столов строкой */
+.dv-hi{cursor:pointer}
+.dv-hist .dv-hs{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.dv-hist .dv-hs small{display:inline;margin:0;text-transform:none;letter-spacing:0;font:700 10.5px/1 Onest,system-ui,sans-serif;color:#7fb3ab}
+.dv-hi.ref b{color:#cbd5e1}
+.dv-hi.dv-hl{display:grid;place-items:center;min-width:44px;color:#7fb3ab;font-weight:800}
