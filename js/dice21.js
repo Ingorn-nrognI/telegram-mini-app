@@ -96,6 +96,8 @@
       if (window.WinWin && st.rid) WinWin.hide();
     }
     if (prev && prev.me >= 0 && st.me < 0) INFO = null;
+    // раунд за этим столом закончился — лента истории обновляется
+    if (st.phase === 'result' && (!prev || prev.phase !== 'result' || prev.rid !== st.rid)) later(function () { ghLoad(true); }, 600);
     pump();
     render();
   }
@@ -281,8 +283,47 @@
   }
   function emos() { return '<div class="dv-emos">' + EMO.map(function (x) { return '<button type="button" onclick="dvEmo(\'' + x + '\')">' + x + '</button>'; }).join('') + '</div>'; }
   function hist() {
-    return S.hist.length ? '<div class="dv-hist"><small>История стола</small><div class="dv-hr">' + S.hist.map(function (h) { return '<span class="dv-hi">' + ava(h) + '<b>' + esc(h.name) + '</b><em>' + h.sum + '</em>' + gram('+' + n2(h.pot)) + '</span>'; }).join('') + '</div></div>' : '';
+    if (!GH.items.length) return '';
+    var lab = window.mxDiceTableLabel || function (it) { return it.tableTitle || ''; };
+    return '<div class="dv-hist"><small>История столов</small><div class="dv-hr">' + GH.items.map(function (it) {
+      var res = it.results || [], w = res.filter(function (r) { return r.status === 'win'; })[0];
+      var who = it.refunded || !w ? { name: '↩', color: '#94a3b8' } : { name: w.name, avatar: w.avatar, color: w.isMe ? MECOL : w.color };
+      return '<span class="dv-hi' + (it.refunded || !w ? ' ref' : '') + '" onclick="dvRoundsAll(event)">' + ava(who) + '<b>' + (it.refunded || !w ? 'Все перебрали' : esc(w.name)) + '</b>' +
+        '<span class="dv-hs">' + (it.refunded || !w ? '<small>возврат</small>' : gram('+' + n2(w.payout))) + '<small>' + esc(lab(it)) + '</small></span></span>';
+    }).join('') + (GH.loading && GH.items.length ? '<span class="dv-hi dv-hl">…</span>' : '') + '</div></div>';
   }
+  /* последние раунды всех столов Костей и Покера — подгружаются с сервера,
+     при прокрутке ленты вправо догружаются более старые */
+  var GH = { items: [], more: false, next: null, loading: false, seq: 0, at: 0 };
+  function ghLoad(fresh) {
+    if (GH.loading && !fresh) return;
+    var seq = ++GH.seq;
+    GH.loading = true;
+    GH.at = Date.now();
+    emit('dice:history', { tableId: 'all', before: fresh ? null : GH.next, limit: 20 }, function (r) {
+      if (seq !== GH.seq) return;
+      GH.loading = false;
+      if (!r || !r.ok || !Array.isArray(r.items)) { render(); return; }
+      if (fresh) {
+        // свежие сверху; уже подгруженные старые не теряем
+        var have = {};
+        r.items.forEach(function (x) { have[x.roundId] = 1; });
+        var old = GH.items.filter(function (x) { return !have[x.roundId]; });
+        // старые оставляем, только если новая страница с ними стыкуется (без пропуска раундов)
+        var keepOld = old.length > 0 && old.length < GH.items.length;
+        GH.items = r.items.concat(keepOld ? old : []);
+        if (!keepOld) { GH.more = !!r.more; GH.next = r.next; }
+      } else {
+        var seen = {};
+        GH.items.forEach(function (x) { seen[x.roundId] = 1; });
+        r.items.forEach(function (x) { if (!seen[x.roundId]) GH.items.push(x); });
+        GH.more = !!r.more;
+        if (r.next != null) GH.next = r.next;
+      }
+      render();
+    }, true);
+  }
+  window.dvRoundsAll = function (e) { if (e && e.stopPropagation) e.stopPropagation(); try { if (typeof toggleScannerRoundsPanel === 'function') toggleScannerRoundsPanel(e); } catch (x) {} };
   function diceHtml() {
     function row(ix) { return '<div class="kc-row">' + ix.map(function (i) { return seatC(S.seats[i], i); }).join('') + '</div>'; }
     return '<div class="kq1">' + row([0, 1, 2]) + '<div class="kq-rail kq1-rail"><div class="kq-felt kq1-felt"><i class="kqlogo">21</i>' + bankChip() + stage() + '</div></div>' + row([5, 4, 3]) + '</div>' + ctrl() + emos() + hist();
@@ -430,6 +471,11 @@
     layer = document.createElement('div');
     layer.className = 'dv-phys';
     root.appendChild(layer);
+    root.addEventListener('scroll', function (e) {
+      var t = e.target;
+      if (!t || !t.classList || !t.classList.contains('dv-hr')) return;
+      if (GH.more && !GH.loading && t.scrollLeft + t.clientWidth >= t.scrollWidth - 200) { ghLoad(false); render(); }
+    }, true);
     roomHead();
   }
   function render() {
@@ -449,7 +495,9 @@
     other.style.display = 'none';
     if (other.innerHTML) other.innerHTML = '';
     box.style.display = '';
+    var hr = root.querySelector('.dv-hr'), hx = hr ? hr.scrollLeft : 0;
     box.innerHTML = '<div class="dv-in">' + (pk ? pokerHtml() : diceHtml()) + '</div>';
+    if (hx) { hr = box.querySelector('.dv-hr'); if (hr) hr.scrollLeft = hx; }
     if (S.phase === 'result') {
       // итог: кубики со стола убираем (как раньше), окно победителя — один раз за раунд
       if (A.cl !== S.rid) { A.cl = S.rid; physClear(); }
@@ -468,6 +516,7 @@
   // раз в 250 мс: секунды таймера хода и обратные отсчёты
   function onTick() {
     if (!isOpen() || !SV) return;
+    if (!document.hidden && !GH.loading && Date.now() - GH.at > 30000) ghLoad(true);
     var ph = S ? S.phase : '';
     var k = ph + '|' + (ph === 'gather' || ph === 'result' ? secs(SV.pe) : '');
     if (k !== uiKey) { render(); return; }
@@ -553,6 +602,7 @@
     LASTT = id;
     render();
     watch(id);
+    ghLoad(true);
   }
   window.dvRoom = function (k) { if (ROOMS[k] && ROOMS[k].id !== TID) { open(ROOMS[k].id); if (root) root.scrollTop = 0; } };
   window.dvHeadSub = function () {};
@@ -586,6 +636,8 @@
     if (sheetEl) { sheetEl.innerHTML = ''; sheetEl.dataset.k = ''; }
     if (tick) { clearInterval(tick); tick = null; }
     window.dvOwnClose();
+    // окно «История раундов» стола закрываем вместе со столом
+    try { if (typeof closeScannerRoundsPanel === 'function' && window.__roundsMode && window.__roundsMode.tableId) closeScannerRoundsPanel(); } catch (e) {}
     SV = null; S = null; INFO = null; A.rid = null;
     root.style.display = 'none';
     root.classList.remove('pk-root');
@@ -593,6 +645,12 @@
     tgBack(false);
   };
   window.dvBack = function () { window.dvCloseTable(); };
+  // для кнопки «История раундов» в верхней панели: какой стол сейчас открыт
+  window.dvTableNow = function () {
+    if (!isOpen()) return null;
+    var r = ROOMS.filter(function (x) { return x.id === TID; })[0];
+    return { id: TID, g: SV ? SV.g : (r && r.pk ? 'p' : 'd'), entry: SV ? SV.e : null, title: r ? (r.pk ? r.n : r.n + ' ' + r.ic) : null };
+  };
 
   /* ---------- «Столы игроков»: список с сервера и создание своего ---------- */
   var OWN = { g: 'd', v: 'list', cg: 'd', ce: 1, ct: '', cl: 0, list: [], loading: false };

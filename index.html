@@ -8042,7 +8042,7 @@ html.no-animations *::after {
 }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@500;600;700;800&family=Manrope:wght@600;700;800&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@600;800&family=Playfair+Display:wght@600;700;800&family=Inter+Tight:wght@200;300;500;700&family=Nunito:wght@600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@700&family=Comfortaa:wght@600;700&family=Rubik:wght@500;700;800;900&family=Russo+One&display=swap">
-<link rel="stylesheet" href="css/aurora.css?v=14">
+<link rel="stylesheet" href="css/aurora.css?v=15">
 <link rel="stylesheet" href="css/nav-icons.css?v=3">
 </head>
 <body>
@@ -10790,8 +10790,17 @@ function toggleScannerRoundsPanel(event) {
   const willOpen = !panel.classList.contains("open");
   panel.classList.toggle("open");
 
+  // За столами Костей 21 / Покера 21 эта же кнопка показывает все раунды
+  // всех столов этих игр, в Сканере — раунды Сканера.
+  const table = willOpen && typeof window.dvTableNow === "function" ? window.dvTableNow() : null;
+  window.__roundsMode = table ? { tableId: "all" } : null;
+  scannerUiRenderCache.recentSignature = "";
+
   if (willOpen) {
     scannerGridState.recentRoundsExpanded = true;
+    const area = panel.querySelector(".history-scroll-area");
+    if (area) area.scrollTop = 0;
+    if (table) loadTableRounds(true);
     renderScannerRecentList();
   }
   syncPanelBackdrop();
@@ -10800,6 +10809,10 @@ function toggleScannerRoundsPanel(event) {
 function closeScannerRoundsPanel() {
   const panel = document.getElementById("scannerRoundsPanel");
   if (panel) panel.classList.remove("open");
+  if (window.__roundsMode) {
+    window.__roundsMode = null;
+    scannerUiRenderCache.recentSignature = "";
+  }
   syncPanelBackdrop();
 }
 
@@ -10906,6 +10919,7 @@ function switchHistoryTab(tab, event) {
   if (arenaArea) arenaArea.classList.toggle("is-hidden", tab !== "arena");
   if (marketArea) marketArea.classList.toggle("is-hidden", tab !== "market");
   if (tab === "market") loadMarketHistory();
+  else if (myHistoryState.dirty) renderMyHistory();
 }
 
 let marketHistoryTab = "deals";
@@ -11027,7 +11041,7 @@ function toggleHistoryMatchDetails(matchId, event) {
   }
 
   expandedHistoryMatchId = expandedHistoryMatchId === matchId ? null : matchId;
-  loadGameHistory();
+  renderMyHistory();
 }
 
 function getHistoryDetailsDomId(matchId) {
@@ -11246,9 +11260,14 @@ function renderHistoryEntries(entries) {
   if (!panel) return;
 
   const header = getHistoryPanelHeaderHtml();
+  // при догрузке следующей страницы список перерисовывается — место прокрутки
+  // сохраняем, чтобы лента не прыгала к началу
+  const _prevArea = panel.querySelector(".history-scroll-area-arena");
+  const _keepScroll = window.__histKeepScroll = _prevArea && !_prevArea.querySelector(".history-panel-text") ? _prevArea.scrollTop : 0;
 
   if (!Array.isArray(entries) || entries.length === 0) {
-    panel.innerHTML = `${header}<div class="history-scroll-area history-scroll-area-arena"><div class="history-panel-empty">${L("Пока нет сыгранных матчей.", "No matches played yet.")}</div></div>`;
+    panel.innerHTML = `${header}<div class="history-scroll-area history-scroll-area-arena"><div class="history-panel-empty">${L("Пока нет сыгранных матчей.", "No matches played yet.")}</div>${getMyHistoryFooterHtml(false)}</div>`;
+    bindMyHistoryScroll(panel);
     return;
   }
 
@@ -11319,7 +11338,119 @@ function renderHistoryEntries(entries) {
       `;
     }).join("");
 
-  panel.innerHTML = `${header}<div class="history-scroll-area history-scroll-area-arena">${items || `<div class="history-panel-empty">${L("Пока нет сыгранных матчей.", "No matches played yet.")}</div>`}</div>`;
+  panel.innerHTML = `${header}<div class="history-scroll-area history-scroll-area-arena">${items || `<div class="history-panel-empty">${L("Пока нет сыгранных матчей.", "No matches played yet.")}</div>`}${getMyHistoryFooterHtml(!!items)}</div>`;
+  const _area = bindMyHistoryScroll(panel);
+  if (_area && _keepScroll > 0) _area.scrollTop = _keepScroll;
+}
+
+// ---------- История игрока: все раунды всех игр, страницами с сервера ----------
+// Сервер хранит все раунды (Сканер, Кости 21, Покер 21) и отдаёт их порциями
+// событием history:mine. Раунды Сканера лежат в window.__myHistScan, раунды
+// Костей и Покера — в window.__mxDiceHist (их рисует aurora-ui.js).
+const myHistoryState = { loaded: false, loading: false, more: false, next: null, error: false, dirty: false, seq: 0 };
+window.__myHist = myHistoryState;
+
+function getMyHistoryFooterHtml(hasItems) {
+  if (!myHistoryState.loaded && !myHistoryState.error) return "";
+  if (myHistoryState.loading) {
+    return `<div class="history-more history-more-load">${L("Загрузка...", "Loading...")}</div>`;
+  }
+  if (myHistoryState.error) {
+    return `<div class="history-more"><button type="button" class="history-more-btn" onclick="event.stopPropagation(); loadMoreMyHistory()">${L("Не удалось загрузить. Повторить", "Failed to load. Retry")}</button></div>`;
+  }
+  if (myHistoryState.more) {
+    return `<div class="history-more"><button type="button" class="history-more-btn" onclick="event.stopPropagation(); loadMoreMyHistory()">${L("Показать ещё", "Show more")}</button></div>`;
+  }
+  return hasItems ? `<div class="history-more history-more-end">${L("Это все ваши раунды", "That's all your rounds")}</div>` : "";
+}
+
+function bindMyHistoryScroll(panel) {
+  const area = panel && panel.querySelector(".history-scroll-area-arena");
+  if (!area) return null;
+  area.addEventListener("scroll", () => {
+    if (!myHistoryState.more || myHistoryState.loading || myHistoryState.error) return;
+    if (area.scrollTop + area.clientHeight >= area.scrollHeight - 400) loadMoreMyHistory();
+  }, { passive: true });
+  return area;
+}
+
+function isMyHistoryArenaVisible() {
+  const panel = document.getElementById("historyPanel");
+  if (!panel || !panel.classList.contains("open")) return false;
+  return !panel.querySelector(".history-tabs")?.classList.contains("is-market");
+}
+
+function mergeMyHistoryItems(items, replace) {
+  const keyOf = (x) => String(x?.roundId || x?.id || "");
+  const timeOf = (x) => Number(x?.kind === "dice" ? x.playedAt : (x?.finishedAt || x?.playedAt)) || 0;
+  const scan = replace ? [] : (Array.isArray(window.__myHistScan) ? window.__myHistScan.slice() : []);
+  const dice = replace ? [] : (Array.isArray(window.__mxDiceHist) ? window.__mxDiceHist.filter((x) => x && x.kind === "dice") : []);
+  const seenScan = new Set(scan.map(keyOf));
+  const seenDice = new Set(dice.map(keyOf));
+  (items || []).forEach((it) => {
+    if (!it) return;
+    const k = keyOf(it);
+    if (it.kind === "dice") {
+      if (!seenDice.has(k)) { seenDice.add(k); dice.push(it); }
+    } else if (!seenScan.has(k)) {
+      seenScan.add(k); scan.push(it);
+    }
+  });
+  scan.sort((a, b) => timeOf(b) - timeOf(a));
+  dice.sort((a, b) => timeOf(b) - timeOf(a));
+  window.__myHistScan = scan;
+  window.__mxDiceHist = dice;
+}
+
+function renderMyHistory() {
+  if (!isMyHistoryArenaVisible()) {
+    myHistoryState.dirty = true;
+    return;
+  }
+  myHistoryState.dirty = false;
+  renderHistoryEntries(Array.isArray(window.__myHistScan) ? window.__myHistScan : []);
+}
+
+// одна страница: before = null — самая свежая; mode: "reset" | "more" | "fresh"
+function requestMyHistoryPage(mode) {
+  if (!(_socket && _socket.connected)) return false;
+  const seq = ++myHistoryState.seq;
+  const before = mode === "more" ? myHistoryState.next : null;
+  myHistoryState.loading = true;
+  myHistoryState.error = false;
+  _socket.timeout(15000).emit("history:mine", { before, limit: 30 }, (err, res) => {
+    if (seq !== myHistoryState.seq) return;
+    myHistoryState.loading = false;
+    if (err || !res || !res.ok || !Array.isArray(res.items)) {
+      // свежие раунды не пришли — ничего страшного, остаётся то, что уже показано
+      if (mode !== "fresh") myHistoryState.error = true;
+      renderMyHistory();
+      return;
+    }
+    mergeMyHistoryItems(res.items, mode === "reset");
+    if (mode !== "fresh") {
+      myHistoryState.more = !!res.more;
+      myHistoryState.next = res.next != null ? res.next : myHistoryState.next;
+    }
+    myHistoryState.loaded = true;
+    renderMyHistory();
+  });
+  return true;
+}
+
+function loadMoreMyHistory() {
+  if (myHistoryState.loading) return;
+  if (!requestMyHistoryPage(myHistoryState.error && !myHistoryState.loaded ? "reset" : "more")) return;
+  if (isMyHistoryArenaVisible()) {
+    const area = document.querySelector("#historyPanel .history-scroll-area-arena .history-more");
+    if (area) area.outerHTML = `<div class="history-more history-more-load">${L("Загрузка...", "Loading...")}</div>`;
+  }
+}
+
+// новый раунд закончился: подтягиваем свежие раунды, не трогая уже загруженные страницы
+function refreshMyHistoryTop() {
+  if (!myHistoryState.loaded || myHistoryState.loading) return;
+  requestMyHistoryPage("fresh");
 }
 
 async function loadGameHistory() {
@@ -11335,14 +11466,20 @@ async function loadGameHistory() {
   `;
 
   try {
-    // Данные приходят по сокету событием history:list и уже лежат в
-    // scannerGridState.recentRounds (см. requestScannerHistoryFromServer).
-    // Прежний запрос в Firestore читал users/{id}/history — единственным
-    // писателем туда был клиент, и мы отключили эту запись при переезде
-    // на SQLite, из-за чего вкладка навсегда замерла бы на старых записях.
-    requestScannerHistoryFromServer();
-    const entries = Array.isArray(scannerGridState.recentRounds) ? scannerGridState.recentRounds : [];
-    renderHistoryEntries(entries);
+    // Все раунды игрока (Сканер, Кости 21, Покер 21) сервер отдаёт страницами
+    // событием history:mine. Уже загруженное показываем сразу, пока идёт запрос.
+    if (myHistoryState.loaded) {
+      renderHistoryEntries(Array.isArray(window.__myHistScan) ? window.__myHistScan : []);
+    }
+    myHistoryState.loading = false;
+    if (!requestMyHistoryPage("reset")) {
+      // нет соединения — показываем то, что уже есть
+      requestScannerHistoryFromServer();
+      const entries = myHistoryState.loaded && Array.isArray(window.__myHistScan)
+        ? window.__myHistScan
+        : (Array.isArray(scannerGridState.recentRounds) ? scannerGridState.recentRounds : []);
+      renderHistoryEntries(entries);
+    }
   } catch (error) {
     console.error("Ошибка загрузки истории игр:", error);
     panel.innerHTML = `
@@ -18804,8 +18941,21 @@ function initSocketConnection() {
       renderProfileBestWinValue();
     }
     if (!Array.isArray(data?.items)) return;
+    // раунды, которые вышли из «последних 100», не теряем — они остаются
+    // в уже подгруженной части общей истории
+    if (Array.isArray(scannerGridState.olderRounds) && scannerGridState.olderRounds.length) {
+      const _k = (x) => String(x?.roundId || x?.id || "");
+      const _fresh = new Set(data.items.map(_k));
+      scannerGridState.olderRounds = (scannerGridState.recentRounds || [])
+        .filter((x) => !_fresh.has(_k(x)))
+        .concat(scannerGridState.olderRounds);
+    }
     scannerGridState.recentRounds = data.items;
     renderScannerRecentList();
+    // история игрока: при первом списке загружаем её (для ленты на главной),
+    // а пока окно истории открыто — подтягиваем свежие раунды
+    if (!myHistoryState.loaded && !myHistoryState.loading) requestMyHistoryPage("reset");
+    else if (isMyHistoryArenaVisible()) refreshMyHistoryTop();
   });
 
   _socket.on('pong_time', (data) => {
@@ -20477,10 +20627,19 @@ function renderScannerRecentList() {
   const toggleButton = document.getElementById("scannerRecentToggle");
   if (!container) return;
 
-  const items = scannerGridState.recentRounds || [];
+  if (window.__roundsMode) {
+    if (document.getElementById("scannerRoundsPanel")?.classList.contains("open")) {
+      renderTableRoundsList(container);
+      return;
+    }
+    window.__roundsMode = null;
+    scannerUiRenderCache.recentSignature = "";
+  }
+
+  const items = getAllScannerRounds();
   const expanded = !!scannerGridState.recentRoundsExpanded;
   const canExpand = items.length > 1;
-  const visibleItems = items.slice(0, expanded ? 100 : 1);
+  const visibleItems = expanded ? items : items.slice(0, 1);
   const itemsSignature = visibleItems.map((item) => [
     String(item.roundId || item.id || item.finishedAt || ""),
     String(item.winnerPlayerId || item.winnerName || ""),
@@ -20488,7 +20647,8 @@ function renderScannerRecentList() {
     normalizeMoneyValue(item.winnerStake || 0).toFixed(2),
     String(item.participantCount || 0)
   ].join("~")).join("||");
-  const renderSignature = [items.length, expanded ? "1" : "0", itemsSignature].join("::");
+  const moreState = getScannerRoundsMoreState();
+  const renderSignature = [items.length, expanded ? "1" : "0", moreState, itemsSignature].join("::");
 
   if (scannerUiRenderCache.recentSignature === renderSignature) {
     return;
@@ -20508,7 +20668,141 @@ function renderScannerRecentList() {
     return;
   }
 
-  setInnerHtmlIfChanged(container, visibleItems.map((item, index) => getScannerRecentRoundCardHtml(item, index)).join(""));
+  setInnerHtmlIfChanged(container, visibleItems.map((item, index) => getScannerRecentRoundCardHtml(item, index)).join("") + (expanded ? getScannerRoundsMoreHtml(moreState) : ""));
+  bindScannerRoundsScroll();
+}
+
+// Все раунды Сканера: последние 100 приходят событием history:list,
+// более старые подгружаются страницами событием history:all.
+const scannerOlderState = { loading: false, more: null, error: false };
+
+function getAllScannerRounds() {
+  const recent = Array.isArray(scannerGridState.recentRounds) ? scannerGridState.recentRounds : [];
+  const older = Array.isArray(scannerGridState.olderRounds) ? scannerGridState.olderRounds : [];
+  if (!older.length) return recent;
+  const seen = new Set();
+  const all = [];
+  recent.concat(older).forEach((it) => {
+    const k = String(it?.roundId || it?.id || "");
+    if (!it || seen.has(k)) return;
+    seen.add(k);
+    all.push(it);
+  });
+  const t = (x) => Number(x?.finishedAt || x?.playedAt) || 0;
+  all.sort((a, b) => t(b) - t(a));
+  return all;
+}
+
+function getScannerRoundsMoreState() {
+  if (scannerOlderState.loading) return "load";
+  if (scannerOlderState.error) return "err";
+  // пока старые страницы не грузили: есть ли что-то старше — видно по тому,
+  // заполнены ли «последние 100»
+  const more = scannerOlderState.more == null
+    ? (scannerGridState.recentRounds || []).length >= 100
+    : scannerOlderState.more;
+  return more ? "more" : "end";
+}
+
+function getScannerRoundsMoreHtml(state, fn = "loadOlderScannerRounds", hasItems = (scannerGridState.recentRounds || []).length > 0) {
+  if (state === "load") return `<div class="history-more history-more-load">${L("Загрузка...", "Loading...")}</div>`;
+  if (state === "err") return `<div class="history-more"><button type="button" class="history-more-btn" onclick="event.stopPropagation(); ${fn}()">${L("Не удалось загрузить. Повторить", "Failed to load. Retry")}</button></div>`;
+  if (state === "more") return `<div class="history-more"><button type="button" class="history-more-btn" onclick="event.stopPropagation(); ${fn}()">${L("Показать ещё", "Show more")}</button></div>`;
+  return hasItems ? `<div class="history-more history-more-end">${L("Это все раунды", "That's all rounds")}</div>` : "";
+}
+
+// ---------- Кости 21 / Покер 21: все раунды всех столов ----------
+const tableRoundsState = { items: [], more: false, next: null, loading: false, error: false, seq: 0 };
+
+function getTableRoundsMoreState() {
+  if (tableRoundsState.loading) return "load";
+  if (tableRoundsState.error) return "err";
+  return tableRoundsState.more ? "more" : "end";
+}
+
+function loadTableRounds(reset) {
+  const mode = window.__roundsMode;
+  if (!mode) return;
+  if (reset) {
+    tableRoundsState.items = [];
+    tableRoundsState.more = false;
+    tableRoundsState.next = null;
+    tableRoundsState.loading = false;
+  }
+  if (tableRoundsState.loading) return;
+  if (!(_socket && _socket.connected)) {
+    tableRoundsState.error = true;
+    renderScannerRecentList();
+    return;
+  }
+  const seq = ++tableRoundsState.seq;
+  tableRoundsState.loading = true;
+  tableRoundsState.error = false;
+  if (!reset) renderScannerRecentList();
+  _socket.timeout(15000).emit("dice:history", { tableId: mode.tableId, before: tableRoundsState.next, limit: 30 }, (err, res) => {
+    if (seq !== tableRoundsState.seq) return;
+    tableRoundsState.loading = false;
+    if (err || !res || !res.ok || !Array.isArray(res.items)) {
+      tableRoundsState.error = true;
+    } else {
+      const seen = new Set(tableRoundsState.items.map((x) => String(x.roundId)));
+      res.items.forEach((x) => { if (x && !seen.has(String(x.roundId))) { seen.add(String(x.roundId)); tableRoundsState.items.push(x); } });
+      tableRoundsState.more = !!res.more;
+      if (res.next != null) tableRoundsState.next = res.next;
+    }
+    renderScannerRecentList();
+  });
+}
+
+function loadMoreTableRounds() { loadTableRounds(false); }
+
+function renderTableRoundsList(container) {
+  const items = tableRoundsState.items;
+  const state = getTableRoundsMoreState();
+  const sub = `<div class="rounds-sub"><span><b>${L("Кости 21 и Покер 21", "Dice 21 and Poker 21")}</b> · ${L("все столы", "all tables")}</span></div>`;
+  let body = "";
+  if (items.length) {
+    body = items.map((it, i) => (typeof window.mxDiceRoundCard === "function" ? window.mxDiceRoundCard(it, i) : "")).join("");
+  } else if (state === "end") {
+    body = `<div class="scanner-empty">${L("Раундов пока нет.", "No rounds yet.")}</div>`;
+  }
+  setInnerHtmlIfChanged(container, sub + body + getScannerRoundsMoreHtml(state, "loadMoreTableRounds", items.length > 0));
+  bindScannerRoundsScroll();
+}
+
+function loadOlderScannerRounds() {
+  if (scannerOlderState.loading || !(_socket && _socket.connected)) return;
+  const all = getAllScannerRounds();
+  const last = all[all.length - 1];
+  const before = Number(last?.finishedAt || last?.playedAt) || null;
+  scannerOlderState.loading = true;
+  scannerOlderState.error = false;
+  renderScannerRecentList();
+  _socket.timeout(15000).emit("history:all", { before, limit: 50 }, (err, res) => {
+    scannerOlderState.loading = false;
+    if (err || !res || !res.ok || !Array.isArray(res.items)) {
+      scannerOlderState.error = true;
+    } else {
+      scannerGridState.olderRounds = (scannerGridState.olderRounds || []).concat(res.items);
+      scannerOlderState.more = !!res.more;
+    }
+    renderScannerRecentList();
+  });
+}
+
+function bindScannerRoundsScroll() {
+  const area = document.querySelector("#scannerRoundsPanel .history-scroll-area");
+  if (!area || area.__moreBound) return;
+  area.__moreBound = true;
+  area.addEventListener("scroll", () => {
+    if (area.scrollTop + area.clientHeight < area.scrollHeight - 400) return;
+    if (window.__roundsMode) {
+      if (getTableRoundsMoreState() === "more") loadMoreTableRounds();
+      return;
+    }
+    if (getScannerRoundsMoreState() !== "more" || !scannerGridState.recentRoundsExpanded) return;
+    loadOlderScannerRounds();
+  }, { passive: true });
 }
 
 let expandedRecentRoundId = null;
@@ -26077,8 +26371,8 @@ if (document.readyState === "loading") {
 </script>
 <div id="scannerNameTooltip" class="scanner-name-tooltip"></div>
 <script src="js/nav-icons.js?v=1"></script>
-<script src="js/aurora-ui.js?v=13"></script>
+<script src="js/aurora-ui.js?v=14"></script>
 <script src="js/aurora-games.js?v=11"></script>
-<script src="js/dice21.js?v=1"></script>
+<script src="js/dice21.js?v=2"></script>
 </body>
 </html>

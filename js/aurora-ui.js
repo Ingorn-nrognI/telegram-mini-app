@@ -1255,7 +1255,7 @@ window.__mxDiceHist=window.__mxDiceHist||[]
 var FACE={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]}
 function dd(v){var h=''
 for(var i=0;i<9;i++)h+='<i'+(FACE[v]&&FACE[v].indexOf(i)>=0?' class="on"':'')+'></i>'
-return'<span class="mx-dd">'+h+'</span>'}var DST={win:'победа',bust:'перебор',lose:'проиграл',stand:'хватит'}
+return'<span class="mx-dd">'+h+'</span>'}var DST={win:'победа',bust:'перебор',lose:'проиграл',stand:'хватит',refund:'возврат'}
 function diceRows(item){var me=String(getCurrentPlayer().id)
 return(item.results||[]).map((function(r){var gifts=Array.isArray(r.gifts)?r.gifts:[],gv=gifts.reduce((function(a,g){return a+Number(g.value||0)}),0)
 var gr=r.gramStake!=null?Number(r.gramStake):Math.max(0,Number(r.stake||0)-gv)
@@ -1263,43 +1263,53 @@ var sum=Number(r.sum||0)
 return{id:String(r.playerId||''),name:r.name||'Игрок',color:r.color||'#34d6ff',sum:sum,dice:r.dice||[],st:r.status||(sum>21?'bust':'lose'),gram:gr,gifts:gifts,stake:Number(r.stake||gr+gv),isMe:String(r.playerId||'')===me}}))}function diceEntry(item,index,matchId){var safe=String(matchId||'dice_'+index)
 var open=typeof expandedHistoryMatchId!=='undefined'&&expandedHistoryMatchId===safe
 var list=diceRows(item),mine=list.filter((function(r){return r.isMe}))[0]||{sum:0,dice:[],st:'lose',gram:0,gifts:[],stake:0}
-var won=mine.st==='win',bust=mine.sum>21,t=item.playedAt||item.finishedAt
-var res=won?'Победа':bust?'Перебор':'Поражение'
-var pay=won?'+'+n2(item.payout):'−'+n2(mine.stake)
+var won=mine.st==='win',ref=mine.st==='refund'||item.refunded===true,bust=!ref&&mine.sum>21,t=item.playedAt||item.finishedAt
+var res=ref?'Возврат':won?'Победа':bust?'Перебор':'Поражение'
+var pay=ref?n2(mine.stake):won?'+'+n2(item.payout):'−'+n2(mine.stake)
+var gname=item.game==='p'?'Покер 21':'Кости 21',ttl=item.tableTitle||('Стол '+(item.entry||''))
 var sorted=list.slice().sort((function(a,b){var x=a.sum>21?-1:a.sum,y=b.sum>21?-1:b.sum
 return y-x}))
-var det2='<div class="mx-det-h"><span>Стол '+esc(item.entry||'')+' GRAM</span><b>банк '+gram(n2(item.totalPot))+'</b></div>'+sorted.map((function(r){return'<div class="mx-dpl'+(r.isMe?' me':'')+' '+r.st+'"><span class="mx-pl-dot" style="background:'+esc(r.color)+'"></span>'+getScannerPlayerAvatarHtml({name:r.name
+var det2='<div class="mx-det-h"><span>'+esc(ttl)+' · вход '+esc(n2(item.entry))+' GRAM</span><b>банк '+gram(n2(item.totalPot))+'</b></div>'+sorted.map((function(r){return'<div class="mx-dpl'+(r.isMe?' me':'')+' '+r.st+'"><span class="mx-pl-dot" style="background:'+esc(r.color)+'"></span>'+getScannerPlayerAvatarHtml({name:r.name
 })+'<b>'+esc(r.name)+(r.isMe?' <em>вы</em>':'')+'</b><span class="mx-dpl-d">'+r.dice.map(dd).join('')+'</span><span class="mx-dpl-s"><b>'+r.sum+'</b><small>'+(DST[r.st]||'')+'</small></span></div>'})).join('')
-return'<div class="history-match-card scanner-history-card lx-round mx-r mx-k mx-m mx-dice '+(won?'is-win':'is-lose')+(open?' is-expanded':'')+'" data-day="'+esc(day(t))+'" onclick="toggleScannerHistoryDetails(\''+esc(safe).replace(/'/g,'&#39;')+'\', event)">'+'<span class="mx-dot '+(won?'win':'lose')+'"></span><div class="mx-card">'+'<div class="mx-r1"><span class="mx-res'+(bust?' bust':'')+'">'+res+'</span><span class="mx-who"><small><span class="mx-gtag">Кости 21</span> №'+esc(item.roundNumber||'—')+' · '+when(t)+'</small></span>'+'<span class="mx-pay '+(won?'win':'lose')+'"><b>'+gram(pay)+'</b></span></div>'+'<div class="mx-r2"><span class="mx-stk"><small class="mx-lbl">ставка</small>'+stake(mine)+'</span><span class="mx-cnt mx-dsum">'+mine.dice.map(dd).join('')+'<b>'+mine.sum+'</b> · '+list.length+' игр.</span><span class="mx-tog">'+CHEV+'</span></div>'+det(getHistoryDetailsDomId(safe),open,'data-scanner-history-details',det2)+'</div></div>'
-}var _isScan=window.isScannerHistoryEntry
+return'<div class="history-match-card scanner-history-card lx-round mx-r mx-k mx-m mx-dice '+(won?'is-win':'is-lose')+(ref?' is-ref':'')+(open?' is-expanded':'')+'" data-day="'+esc(day(t))+'" onclick="toggleScannerHistoryDetails(\''+esc(safe).replace(/'/g,'&#39;')+'\', event)">'+'<span class="mx-dot '+(ref?'ref':won?'win':'lose')+'"></span><div class="mx-card">'+'<div class="mx-r1"><span class="mx-res'+(bust?' bust':'')+(ref?' ref':'')+'">'+res+'</span><span class="mx-who"><small><span class="mx-gtag">'+gname+'</span> №'+esc(item.roundNumber||'—')+' · '+when(t)+'</small></span>'+'<span class="mx-pay '+(ref?'ref':won?'win':'lose')+'"><b>'+gram(pay)+'</b></span></div>'+'<div class="mx-r2"><span class="mx-stk"><small class="mx-lbl">ставка</small>'+stake(mine)+'</span><span class="mx-cnt mx-dsum">'+mine.dice.map(dd).join('')+'<b>'+mine.sum+'</b> · '+list.length+' игр.</span><span class="mx-tog">'+CHEV+'</span></div>'+det(getHistoryDetailsDomId(safe),open,'data-scanner-history-details',det2)+'</div></div>'
+}window.mxDiceTableLabel=function(it){var t=String(it&&it.tableTitle||'')
+if(it&&it.game==='p')return!t||t==='Покер 21'?'Покер 21':'Покер · '+t
+return'Кости · '+(t||'стол')}
+window.mxDiceRoundCard=function(item,index){var safe=String(item.roundId||item.id||'dice_'+index)
+var open=typeof expandedRecentRoundId!=='undefined'&&expandedRecentRoundId===safe
+var list=diceRows(item),ref=item.refunded===true,ws=list.filter((function(r){return r.st==='win'})),w=ws[0]||null
+var t=item.playedAt||item.finishedAt,raw=(item.results||[]).filter((function(r){return w&&String(r.playerId)===w.id}))[0]
+var pay=raw?Number(raw.payout||0):Number(item.payout||0),col=ref||!w?'#94a3b8':w.color
+var sorted=list.slice().sort((function(a,b){var x=a.sum>21?-1:a.sum,y=b.sum>21?-1:b.sum
+return y-x}))
+var det2='<div class="mx-det-h"><span>'+esc(item.tableTitle||'Стол')+' · вход '+esc(n2(item.entry))+' GRAM</span><b>банк '+gram(n2(item.totalPot))+'</b></div>'+sorted.map((function(r){return'<div class="mx-dpl'+(r.isMe?' me':'')+' '+r.st+'"><span class="mx-pl-dot" style="background:'+esc(r.color)+'"></span>'+getScannerPlayerAvatarHtml({name:r.name
+})+'<b>'+esc(r.name)+(r.isMe?' <em>вы</em>':'')+'</b><span class="mx-dpl-d">'+r.dice.map(dd).join('')+'</span><span class="mx-dpl-s"><b>'+r.sum+'</b><small>'+(DST[r.st]||'')+'</small></span></div>'})).join('')
+var ava=getScannerPlayerAvatarHtml(w&&!ref?{name:w.name}:{name:'↩'})
+return'<div class="history-match-card scanner-history-card lx-round mx-r mx-k mx-dice'+(open?' is-expanded':'')+'" data-day="'+esc(day(t))+'" onclick="toggleScannerRecentRoundDetails(\''+esc(safe).replace(/'/g,'&#39;')+'\', event)">'+'<span class="mx-dot'+(ref||!w?' ref':'')+'" style="--c:'+esc(col)+'"></span><div class="mx-card">'+'<div class="mx-r1"><span class="mx-ava" style="--c:'+esc(col)+'">'+ava+(w&&!ref?'<i>'+CROWN+'</i>':'')+'</span>'+'<span class="mx-who"><b>'+(ref||!w?'Все перебрали':esc(w.name)+(w.isMe?' <em>вы</em>':''))+'</b><small><span class="mx-gtag">'+esc(window.mxDiceTableLabel(item))+'</span> №'+esc(item.roundNumber||'—')+' · '+when(t)+'</small></span>'+'<span class="mx-pay"><b>'+gram(n2(ref||!w?item.totalPot:pay))+'</b><small>'+(ref||!w?'ставки вернулись':ws.length>1?'ничья · '+ws.length+' побед.':'победитель')+'</small></span></div>'+'<div class="mx-r2"><span class="mx-stk"><small class="mx-lbl">банк</small>'+gram(n2(item.totalPot))+'</span><span class="mx-cnt mx-dsum">'+(w&&!ref?w.dice.map(dd).join('')+'<b>'+w.sum+'</b> · ':'')+list.length+' игр.</span><span class="mx-tog">'+CHEV+'</span></div>'+det(getRecentRoundDetailsDomId(safe),open,'data-scanner-recent-details',det2)+'</div></div>'
+};var _isScan=window.isScannerHistoryEntry
 if(typeof _isScan==='function')window.isScannerHistoryEntry=function(item){return item&&item.mode==='dice'||_isScan.apply(this,arguments)}
 var _gsh=window.getScannerHistoryEntryHtml
 window.getScannerHistoryEntryHtml=function(item,index,matchId){return item&&item.mode==='dice'?diceEntry(item,index,matchId):_gsh.apply(this,arguments)}
 window.__mxHG=window.__mxHG||'all'
 window.mxHistGame=function(g,e){if(e)e.stopPropagation()
 window.__mxHG=g
-try{renderHistoryEntries(Array.isArray(scannerGridState.recentRounds)?scannerGridState.recentRounds:[])}catch(x){}}
+window.__histKeepScroll=0
+try{renderHistoryEntries(Array.isArray(window.__myHistScan)?window.__myHistScan:(Array.isArray(scannerGridState.recentRounds)?scannerGridState.recentRounds:[]))}catch(x){}}
 var _rhe=window.renderHistoryEntries
 if(typeof _rhe==='function')window.renderHistoryEntries=function(entries){var tm=function(x){return ms(x.playedAt||x.finishedAt)||0}
 var all=(entries||[]).filter((function(x){return x&&x.mode!=='dice'})).concat(window.__mxDiceHist||[])
-var G2=window.__mxHG,nD=(window.__mxDiceHist||[]).length
+var G2=window.__mxHG
 if(G2==='scan')all=all.filter((function(x){return x.mode!=='dice'}))
-else if(G2==='dice')all=all.filter((function(x){return x.mode==='dice'}))
+else if(G2==='dice')all=all.filter((function(x){return x.mode==='dice'&&x.game!=='p'}))
+else if(G2==='poker')all=all.filter((function(x){return x.mode==='dice'&&x.game==='p'}))
 all.sort((function(a,b){return tm(b)-tm(a)}))
-var r=_rhe.call(this,all)
+var r=_rhe.call(this,all),keep=window.__histKeepScroll
 var panel=document.getElementById('historyPanel'),area=panel&&(panel.querySelector('.history-scroll-area-arena')||panel.querySelector('.history-scroll-area'))
-if(area&&!area.querySelector('.mx-hg'))area.insertAdjacentHTML('afterbegin','<div class="mx-hg" role="tablist">'+[['all','Все игры'],['scan','Сканер'],['dice','Кости 21']].map((function(x){return'<button type="button" class="'+(G2===x[0]?'on':'')+'" onclick="mxHistGame(\''+x[0]+'\', event)">'+x[1]+(x[0]==='dice'&&nD?' <i>'+nD+'</i>':'')+'</button>'})).join('')+'</div>')
+if(area&&!area.querySelector('.mx-hg'))area.insertAdjacentHTML('afterbegin','<div class="mx-hg" role="tablist">'+[['all','Все игры'],['scan','Сканер'],['dice','Кости 21'],['poker','Покер 21']].map((function(x){return'<button type="button" class="'+(G2===x[0]?'on':'')+'" onclick="mxHistGame(\''+x[0]+'\', event)">'+x[1]+'</button>'})).join('')+'</div>')
+if(area&&keep>0)area.scrollTop=keep
 return r}
-function diceLoad(){try{_socket.emit('dice:history:request',{limit:50},(function(res){if(!res||!Array.isArray(res.items))return
-var have={};(window.__mxDiceHist||[]).forEach((function(x){have[x.roundId]=1}))
-res.items.forEach((function(x){if(!have[x.roundId])window.__mxDiceHist.push(x)}))
-var p=document.getElementById('historyPanel')
-if(p&&p.classList.contains('open')&&!(p.querySelector('.history-tabs')||{}).classList.contains('is-market'))window.mxHistGame(window.__mxHG)}))}catch(e){}}setTimeout(diceLoad,1500)
-var _orh=window.openRecentHistory
-if(typeof _orh==='function')window.openRecentHistory=function(){var r=_orh.apply(this,arguments)
-diceLoad()
-return r}
-window.mxDiceRecord=function(S,B){try{var nw=(S.win||[]).length,pay=nw?B.gram/nw*.95:0
+window.mxDiceRecord=function(){}
+function __oldDiceRecord(S,B){try{var nw=(S.win||[]).length,pay=nw?B.gram/nw*.95:0
 var res=S.seats.filter(Boolean).map((function(s){return{playerId:s.me?String(getCurrentPlayer().id):String(s.id||s.name),name:s.me?getCurrentPlayer().name||getCurrentPlayer().username||'Ты':s.name,color:s.color,sum:s.sum,dice:s.dice.slice(),status:s.st==='win'?'win':s.sum>21?'bust':'lose',gramStake:s.stake.gram||0,gifts:(s.stake.gifts||[]).slice(),
 stake:(s.stake.gram||0)+(s.stake.gifts||[]).reduce((function(a,g){return a+Number(g.value||0)}),0)}}))
 var tot=res.reduce((function(a,r){return a+r.stake}),0)
@@ -2777,8 +2787,10 @@ E.push({k:'scan',at:t,c:w.color,ic:esc(String(w.name||'?').charAt(0).toUpperCase
 var part=(r.results||[]).filter((function(x){return String(x.playerId)===me}))[0]
 if(part)M.push({k:mine?'win':'lose',at:t,c:mine?'#86efac':'#f472b6',ic:mine?'★':'·',t:mine?'Победа в Сканере':'Сканер — не повезло',s:'раунд №'+esc(r.roundNumber),v:mine?'+'+n2(w.payout):'−'+n2(part.stake),neg:!mine,on:'openRecentHistory()'})}));(window.__mxDiceHist||[]).slice(0,6).forEach((function(d){var res=d.results||[],wn=res.filter((function(x){return x.status==='win'
 }))[0],my2=res.filter((function(x){return String(x.playerId)===me}))[0]
-if(wn)E.push({k:'dice',at:ms(d.playedAt),c:wn.color,ic:ICD,t:(String(wn.playerId)===me?'Ты':esc(wn.name))+' собрал '+wn.sum+' в Костях 21',s:'стол '+esc(d.entry)+' GRAM',v:'+'+n2(d.payout),on:'mxDiceOpen(event)'})
-if(my2)M.push({k:my2.status==='win'?'win':'lose',at:ms(d.playedAt),c:my2.status==='win'?'#86efac':'#fb923c',ic:ICD,t:my2.status==='win'?'Кости 21 — победа':my2.sum>21?'Кости 21 — перебор':'Кости 21 — поражение',s:'сумма '+my2.sum+' · стол '+esc(d.entry),v:my2.status==='win'?'+'+n2(d.payout):'−'+n2(my2.stake),neg:my2.status!=='win',on:'openRecentHistory()'})}))
+var gn=d.game==='p'?'Покер 21':'Кости 21'
+if(wn)E.push({k:'dice',at:ms(d.playedAt),c:wn.color,ic:ICD,t:(String(wn.playerId)===me?'Ты':esc(wn.name))+' собрал '+wn.sum+(d.game==='p'?' в Покере 21':' в Костях 21'),s:'стол '+esc(d.entry)+' GRAM',v:'+'+n2(d.payout),on:'mxDiceOpen(event)'})
+if(my2){var rf=my2.status==='refund'
+M.push({k:my2.status==='win'?'win':'lose',at:ms(d.playedAt),c:my2.status==='win'?'#86efac':rf?'#94a3b8':'#fb923c',ic:ICD,t:rf?gn+' — возврат':my2.status==='win'?gn+' — победа':my2.sum>21?gn+' — перебор':gn+' — поражение',s:'сумма '+my2.sum+' · стол '+esc(d.entry),v:rf?n2(my2.stake):my2.status==='win'?'+'+n2(d.payout):'−'+n2(my2.stake),neg:my2.status!=='win'&&!rf,on:'openRecentHistory()'})}}))
 var LL=[]
 try{LL=MARKET_LISTINGS.slice(-3)}catch(e){}LL.forEach((function(it,i){E.push({k:'lot',at:Date.now()-(i+1)*73e4,c:it.backdropCenterColor||'#7dd3fc',ic:ICG,t:'Новый лот: '+nm(it)+' #'+esc(it.number),s:'маркет',v:n2(it.price),on:'openMarketGiftDetail('+Number(it.listingId)+')'})}))
 if(RAT&&RAT[0])E.push({k:'tour',at:Date.now()-24e5,c:'#fbbf24',ic:'🏆',t:esc(RAT[0].name)+' лидирует в турнире',s:'чистая прибыль',v:'+'+compact(RAT[0].netProfit),on:'openLeaderboard()'})
