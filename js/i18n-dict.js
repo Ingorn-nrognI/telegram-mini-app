@@ -331,3 +331,41 @@ I18N.addPatterns([
   [/^Никого не нашли по запросу «(.*)»$/, function (m, a) { return "Nobody found for «" + a + "»"; }],
   [/^Игрок (\S+)$/, function (m, a) { return "Player " + a; }]
 ]);
+
+/* ===== Кости 21 и Покер 21 на сервере ===== */
+I18N.add({
+  "место №{0}": "seat {0}", "Загрузка стола": "Loading table", "Ожидание игроков": "Waiting for players", "Стол закрыт": "Table closed",
+  "Меньше": "Less", "Больше": "More", "Ссылка": "Link", "ссылка": "link", "Ты здесь": "You're here",
+  "Ссылка-приглашение скопирована": "Invite link copied", "Не удалось создать стол": "Couldn't create the table",
+  "Нет соединения с сервером": "No connection to the server",
+  "Победитель забирает банк.": "The winner takes the pot.",
+  "Комиссия — как в сканере: от {0}% до {1}% в зависимости от банка, только с выигрыша сверх своей ставки.": "Fee works like in the Scanner: from {0}% to {1}% depending on the pot, only on winnings above your own stake.",
+  "Анте {0} · рейзы {1} / {2} / {3} GRAM.": "Ante {0} · raises {1} / {2} / {3} GRAM.",
+  "Анте {0} · старт через": "Ante {0} · starts in",
+  "Создать стол · вход {0} GRAM": "Create table · entry {0} GRAM",
+  "Сесть на следующий раунд": "Sit in for the next round", "Ты сядешь в следующем раунде": "You'll join the next round",
+  "Ты выйдешь через": "You'll leave in", "Ты выйдешь после раунда": "You'll leave after the round",
+  "сядет в следующем раунде": "joins the next round", "след. раунд": "next round",
+  "за столом {0} из 6": "{0} of 6 at the table", "риск": "risk", "Добор": "Draw",
+  "все перебрали — вход возвращён": "everyone bust — entry refunded",
+  "Вклад вернулся на баланс:": "Your stake was returned to your balance:",
+  "Колл {0}": "Call {0}", "Ва-банк {0}": "All-in {0}",
+  "Недостаточно GRAM для входа за стол": "Not enough GRAM to join the table", "ты встал из-за стола": "you left the table",
+  "За столом нет свободных мест": "No free seats at the table",
+  "Ты уже играешь за другим столом — дождись конца раунда": "You're already playing at another table — wait for the round to end",
+  "Игра доступна только при входе через Telegram": "The game is only available when signed in via Telegram",
+  "Создать стол можно только при входе через Telegram": "You can create a table only when signed in via Telegram",
+  "Нет входа через Telegram": "Not signed in via Telegram",
+  "Предыдущая операция ещё обрабатывается": "The previous operation is still in progress",
+  "Ошибка сервера": "Server error", "Сейчас не твой ход": "It's not your turn", "Ты не за столом": "You're not at a table",
+  "Неизвестное действие": "Unknown action", "Нужно уравнять ставку или сбросить": "You need to call or fold",
+  "Уравнивать нечего — можно чек": "Nothing to call — you can check", "Лимит повышений в этом круге": "Raise limit reached for this round",
+  "Неверный размер рейза": "Invalid raise size", "Нет фишек для ставки": "No chips left to bet",
+  "У тебя уже есть открытый стол": "You already have an open table",
+  "Сейчас слишком много столов — попробуй позже": "Too many tables right now — try later"
+});
+I18N.addPatterns([
+  [/^Стол (\S.{0,30})$/, function (m, a) { return "Table " + a; }],
+  [/^Стол создан · ссылка: (.+)$/, function (m, a) { return "Table created · link: " + a; }]
+]);
+
