@@ -448,7 +448,9 @@
     var ob = ownBtn();
     if (root._ow._h !== ob) { root._ow.innerHTML = ob; root._ow._h = ob; }
     root._ow.classList.toggle('on', !!(SV && !SV.fixed));
-    var sub = SV ? 'Вход ' + nE(SV.e) + ' GRAM · №' + (SV.phase === 'wait' || SV.phase === 'gather' ? SV.round + 1 : SV.round) : '';
+    // номер раунда общий на все столы игры и выдаётся сервером только при старте раунда,
+    // поэтому пока раунд не начался, номер не показываем (заранее он неизвестен)
+    var sub = SV ? 'Вход ' + nE(SV.e) + ' GRAM' + (SV.phase !== 'wait' && SV.phase !== 'gather' && SV.round > 0 ? ' · №' + SV.round : '') : '';
     var e = root._hd.querySelector('.dv-rn2');
     if (e && e.textContent !== sub) e.textContent = sub;
   }
