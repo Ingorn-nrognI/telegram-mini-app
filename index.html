@@ -8042,7 +8042,7 @@ html.no-animations *::after {
 }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@500;600;700;800&family=Manrope:wght@600;700;800&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@600;800&family=Playfair+Display:wght@600;700;800&family=Inter+Tight:wght@200;300;500;700&family=Nunito:wght@600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@700&family=Comfortaa:wght@600;700&family=Rubik:wght@500;700;800;900&family=Russo+One&display=swap">
-<link rel="stylesheet" href="css/aurora.css?v=13">
+<link rel="stylesheet" href="css/aurora.css?v=14">
 <link rel="stylesheet" href="css/nav-icons.css?v=3">
 </head>
 <body>
@@ -9821,6 +9821,46 @@ function canUseDotLottieWorker() {
     && "transferControlToOffscreen" in HTMLCanvasElement.prototype;
 }
 
+// Статуэтки на слабых и средних телефонах играют 30 кадров в секунду вместо 60:
+// движок сам показывает каждый кадр анимации, а здесь мы сами выставляем кадр
+// через раз — работы вдвое меньше. На мощных телефонах плеер остаётся как есть.
+const _giftFpsSet = new Set();
+let _giftFpsRaf = 0, _giftFpsLast = 0;
+function giftFpsLimit() {
+  return getEffectiveQualityTier() === "high" ? 0 : 30;
+}
+function _giftFpsTick(now) {
+  _giftFpsRaf = 0;
+  if (!_giftFpsSet.size) return;
+  _giftFpsRaf = requestAnimationFrame(_giftFpsTick);
+  const step = 1000 / 30;
+  if (now - _giftFpsLast < step - 2) return;
+  const dt = Math.min(200, now - (_giftFpsLast || now));
+  _giftFpsLast = now;
+  _giftFpsSet.forEach((w) => {
+    const p = w._p, total = Number(p.totalFrames) || 0;
+    if (!p.isLoaded || !total) return;
+    w._f = (w._f + dt * 60 / 1000) % total;   // анимация сделана на 60 кадров — время идёт как обычно
+    try { p.setFrame(Math.floor(w._f)); } catch (e) {}
+  });
+}
+function wrapGiftPlayerFps(player) {
+  if (!giftFpsLimit() || !player || typeof player.setFrame !== "function") return player;
+  const w = { _p: player, _f: 0 };
+  w.play = () => {
+    if (_giftFpsSet.has(w)) return;
+    _giftFpsSet.add(w);
+    if (!_giftFpsRaf) { _giftFpsLast = 0; _giftFpsRaf = requestAnimationFrame(_giftFpsTick); }
+  };
+  w.pause = () => { _giftFpsSet.delete(w); };
+  w.setFrame = (f) => { w._f = Number(f) || 0; try { player.setFrame(w._f); } catch (e) {} };
+  w.goToAndStop = (f) => w.setFrame(f);
+  w.destroy = () => { w.pause(); try { player.destroy(); } catch (e) {} };
+  w.addEventListener = function () { return player.addEventListener.apply(player, arguments); };
+  return w;
+}
+window.__giftFps = wrapGiftPlayerFps;
+
 function createReferralGiftPlayer(el, file, index) {
   const preloaded = REFERRAL_GIFT_DATA[file];
   if (canUseDotLottieWorker()) {
@@ -9842,7 +9882,7 @@ function createReferralGiftPlayer(el, file, index) {
         }
       }, preloaded ? { data: preloaded } : { src: new URL(file, location.href).href }));
       player.addEventListener("load", () => syncReferralGiftPlayback());
-      return player;
+      return wrapGiftPlayerFps(player);
     } catch (e) {
       console.warn("[referral gifts] поток dotLottie недоступен, рисуем через lottie-web:", e);
       el.innerHTML = "";
@@ -21139,7 +21179,13 @@ function getScannerCanvasMetrics() {
 
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const tier = getEffectiveQualityTier();
-  const dprCap = tier === "low" ? 1 : tier === "mid" ? (isMobile ? 1 : 1.5) : (window.devicePixelRatio > 2 ? 1.5 : 2);
+  // Маленькое превью арены (плитка на экране PvP / главной) рисуем чётко: оно небольшое,
+  // и даже ×2 там — меньше пикселей, чем полноразмерная арена в игре с ×1.
+  // Заниженная чёткость остаётся только для самой арены в игре, ради плавности.
+  const inGame = !!canvas.closest("#scannerScreenCanvasShell");
+  const dprCap = !inGame
+    ? (tier === "low" ? 1.5 : 2)
+    : tier === "low" ? 1 : tier === "mid" ? (isMobile ? 1 : 1.5) : (window.devicePixelRatio > 2 ? 1.5 : 2);
   const baseDpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1));
 
   // При зуме канвас растягивается CSS-ом, и без запаса пикселей картинка мылится.
@@ -25983,7 +26029,7 @@ if (document.readyState === "loading") {
 </script>
 <div id="scannerNameTooltip" class="scanner-name-tooltip"></div>
 <script src="js/nav-icons.js?v=1"></script>
-<script src="js/aurora-ui.js?v=12"></script>
+<script src="js/aurora-ui.js?v=13"></script>
 <script src="js/aurora-games.js?v=11"></script>
 <script src="js/dice21.js?v=1"></script>
 </body>

@@ -2662,6 +2662,34 @@ el.classList.add('ap-ss')
 return el.__ss={w:w,h:h}}
 window.addEventListener('resize',function(){[].forEach.call(document.querySelectorAll('.ap-ss'),function(el){var st=el.style;['width','height','maxWidth','aspectRatio','marginLeft','marginRight','marginTop','marginBottom','transformOrigin'].forEach(function(q){st[q]=''});el.classList.remove('ap-ss');el.__ss=null})})
 function still(){return document.documentElement.classList.contains('no-animations')}
+/* Наклонённую в 3D арену браузер растрирует с низким разрешением: SVG выходит мыльным, с «лесенкой».
+   Холст в том же наклоне остаётся чётким (это видно по лучу), поэтому поле арены один раз рисуется
+   из SVG в холст нужного размера — заново только когда меняются игроки или размер. Сам SVG остаётся
+   на месте ради тени и скругления, но его содержимое прячется. */
+function arBake(el){var sv=el.querySelector('svg')
+if(!sv)return
+var w=el.offsetWidth,h=el.offsetHeight
+if(!w||!h)return
+var key=(el.__s||'')+'|'+w+'x'+h+'|'+sv.childElementCount
+if(el.__bk===key)return
+el.__bk=key
+var cv=null
+for(var i=0;i<el.children.length;i++)if(el.children[i].classList.contains('ar-bg'))cv=el.children[i]
+if(!cv){el.classList.remove('ar-baked')
+cv=document.createElement('canvas')
+cv.className='ar-bg'
+sv.parentNode.insertBefore(cv,sv.nextSibling)}
+var k=(el.classList.contains('ap-ss')?.5:1)*Math.min(3,window.devicePixelRatio||1)*1.25
+var src=sv.outerHTML.replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" font-family="Onest,Arial,sans-serif" ').replace('</defs>','</defs><style>.ar-av.me circle:first-child{stroke:#fff;stroke-width:1.8}</style>')
+var im=new Image()
+im.onload=function(){if(el.__bk!==key)return
+cv.width=Math.round(w*k)
+cv.height=Math.round(h*k)
+var g=cv.getContext('2d')
+g.imageSmoothingQuality='high'
+g.drawImage(im,0,0,cv.width,cv.height)
+el.classList.add('ar-baked')}
+im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(src)}
 function tilt(now){requestAnimationFrame(tilt)
 if(document.hidden||(window.__lq()&&now-(TL.lt||0)<32))return
 TL.lt=now
@@ -2669,6 +2697,7 @@ tiltScan(now)
 var t=now/1e3
 TL.list.forEach(function(it){var el=it[0],c=it[1],o=it[2]*1.7
 if(!ssPrep(el))return
+arBake(el)
 if(still()){el.style.transform='rotateX('+c.x+'deg) rotateY('+c.y+'deg) rotateZ('+c.z+'deg) scale(.5)';return}
 var rx=c.x+c.ax*(.62*Math.sin(t*.83+o)+.38*Math.sin(t*1.37+1.1+o))
 var ry=c.y+c.ay*(.6*Math.sin(t*.61+2+o)+.4*Math.sin(t*1.13+o))
@@ -3666,7 +3695,8 @@ try{if(typeof REFERRAL_GIFT_DATA!=='undefined'&&REFERRAL_GIFT_DATA[FILES[name]])
 if(!D.obj&&window.__DotLottieWorker){try{var cv=document.createElement('canvas')
 cv.style.cssText='width:100%;height:100%;display:block'
 el.appendChild(cv)
-return new window.__DotLottieWorker(Object.assign({canvas:cv,loop:true,autoplay:false,workerId:'referral-gifts-'+i%2,useFrameInterpolation:false,renderConfig:{devicePixelRatio:Math.min(2,window.__mdpr()),autoResize:true}},D.text?{data:D.text}:{src:new URL(D.file,location.href).href}))}catch(e){el.innerHTML=''}}var LT=window.__RF_LOT||window.lottie
+var pl=new window.__DotLottieWorker(Object.assign({canvas:cv,loop:true,autoplay:false,workerId:'referral-gifts-'+i%2,useFrameInterpolation:false,renderConfig:{devicePixelRatio:Math.min(2,window.__mdpr()),autoResize:true}},D.text?{data:D.text}:{src:new URL(D.file,location.href).href}))
+return window.__giftFps?window.__giftFps(pl):pl}catch(e){el.innerHTML=''}}var LT=window.__RF_LOT||window.lottie
 if(!LT||!LT.loadAnimation)return null
 try{var a=LT.loadAnimation(Object.assign({container:el,renderer:'svg',loop:true,autoplay:false},D.obj?{animationData:JSON.parse(JSON.stringify(D.obj))}:D.text?{animationData:JSON.parse(D.text)}:{path:D.file}))
 if(a.setSubframe)a.setSubframe(false)
