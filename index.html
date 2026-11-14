@@ -8060,8 +8060,9 @@ html body #appBootLoader.lmb.boot-loader-hidden{opacity:0;pointer-events:none}
 .lmb-c img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .lmb-t{position:absolute;left:7px;bottom:7px;display:flex;align-items:center;gap:4px;height:20px;padding:0 7px 0 4px;border-radius:7px;background:rgba(2,16,18,.5)}
 .lmb-t .dia{width:13px;height:13px;display:block}
-.lmb-t i{width:26px;height:6px;border-radius:3px;background:linear-gradient(90deg,rgba(255,255,255,.18),rgba(255,255,255,.45),rgba(255,255,255,.18));background-size:200% 100%;animation:lmbShim 1.2s linear infinite}
-@keyframes lmbShim{to{background-position:-200% 0}}
+.lmb-t i{position:relative;overflow:hidden;width:26px;height:6px;border-radius:3px;background:rgba(255,255,255,.18)}
+.lmb-t i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transform:translateX(-100%);animation:lmbShim 1.2s linear infinite}
+@keyframes lmbShim{to{transform:translateX(100%)}}
 .lmb-vig{position:absolute;inset:0;z-index:1;background:radial-gradient(70% 45% at 50% 44%,rgba(2,16,18,.92) 30%,rgba(2,16,18,.55) 70%,rgba(2,16,18,.25)),linear-gradient(0deg,rgba(1,8,9,.95),transparent 30%)}
 .lmb-ring{position:relative;z-index:2;width:212px;height:212px;margin-top:-20px;flex:none}
 .lmb-ring svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
@@ -8071,8 +8072,9 @@ html body #appBootLoader.lmb.boot-loader-hidden{opacity:0;pointer-events:none}
 .lmb-ar canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .lmb-pct{position:relative;z-index:2;margin-top:24px;font-size:38px;font-weight:900;letter-spacing:-.02em;line-height:1;background:linear-gradient(90deg,#86efac,#5eead4,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
 .lmb-wm{position:relative;z-index:2;margin-top:10px;font-weight:900;font-size:17px;letter-spacing:.16em;white-space:nowrap}
-.lmb-wm span{display:inline-block;color:rgba(190,240,232,.38);animation:lmbWave 2s ease-out infinite}.lmb-wm b span{color:rgba(134,239,172,.45)}
-@keyframes lmbWave{6%{color:#fff;text-shadow:0 0 10px rgba(94,234,212,.95),0 0 22px rgba(94,234,212,.55)}20%{color:rgba(220,255,248,.8);text-shadow:0 0 6px rgba(94,234,212,.4)}45%,100%{text-shadow:none}}
+.lmb-wm span{position:relative;display:inline-block;color:rgba(190,240,232,.38)}.lmb-wm b span{color:rgba(134,239,172,.45)}
+.lmb-wm span::after{content:attr(data-c);position:absolute;left:0;top:0;color:#fff;text-shadow:0 0 10px rgba(94,234,212,.95),0 0 22px rgba(94,234,212,.55);opacity:0;animation:lmbWave 2s ease-out infinite;animation-delay:inherit}
+@keyframes lmbWave{6%{opacity:1}20%{opacity:.5}45%,100%{opacity:0}}
 .lmb-st{position:absolute;left:0;right:0;bottom:calc(40px + env(safe-area-inset-bottom,0px));z-index:2;text-align:center;font-size:12.5px;font-weight:700;color:#7fb3ab;letter-spacing:.02em}
 #bootProgressFill,#bootProgressDot{display:none}
 </style>
@@ -8091,13 +8093,17 @@ alt=""><span class="lmb-t"><svg viewBox="0 0 24 24" class="dia"><circle cx="12" 
 <div class="lmb-ring"><svg viewBox="0 0 200 200"><defs><linearGradient id="lmbG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86efac"/><stop offset=".5" stop-color="#5eead4"/><stop offset="1" stop-color="#67e8f9"/></linearGradient></defs>
 <circle cx="100" cy="100" r="94" class="tr"/><circle cx="100" cy="100" r="94" class="fl" pathLength="100" transform="rotate(-90 100 100)" id="lmbRing"/></svg>
 <div class="lmb-ar"><canvas id="lmbCv"></canvas></div></div>
-<div class="lmb-pct" id="lmbPct">0%</div><div class="lmb-wm"><span style="animation-delay:0.00s">L</span><span style="animation-delay:0.11s">A</span><span style="animation-delay:0.22s">S</span><span style="animation-delay:0.33s">E</span><span style="animation-delay:0.44s">R</span><span style="animation-delay:0.55s">&nbsp;</span><b><span style="animation-delay:0.66s">M</span><span style="animation-delay:0.77s">A</span><span style="animation-delay:0.88s">R</span><span style="animation-delay:0.99s">K</span><span style="animation-delay:1.10s">E</span><span style="animation-delay:1.21s">T</span></b></div><div class="lmb-st" id="lmbSt">Подключаемся к арене</div>
+<div class="lmb-pct" id="lmbPct">0%</div><div class="lmb-wm"><span style="animation-delay:0.00s" data-c="L">L</span><span style="animation-delay:0.11s" data-c="A">A</span><span style="animation-delay:0.22s" data-c="S">S</span><span style="animation-delay:0.33s" data-c="E">E</span><span style="animation-delay:0.44s" data-c="R">R</span><span style="animation-delay:0.55s" data-c=" ">&nbsp;</span><b><span style="animation-delay:0.66s" data-c="M">M</span><span style="animation-delay:0.77s" data-c="A">A</span><span style="animation-delay:0.88s" data-c="R">R</span><span style="animation-delay:0.99s" data-c="K">K</span><span style="animation-delay:1.10s" data-c="E">E</span><span style="animation-delay:1.21s" data-c="T">T</span></b></div><div class="lmb-st" id="lmbSt">Подключаемся к арене</div>
 <div id="bootProgressFill"></div><div id="bootProgressDot"></div>
 </div>
 <script>
+/* Загрузочный экран. Лазер в круге рисуется в ОТДЕЛЬНОМ потоке (OffscreenCanvas + Worker):
+   пока приложение грузится, основной поток телефона занят разбором кода, и анимация в нём
+   замирала рывками. В отдельном потоке ей ничто не мешает. Если поток недоступен
+   (старый браузер), всё рисуется как раньше, в основном потоке. */
 (function(){var root=document.getElementById('appBootLoader'),cv=document.getElementById('lmbCv')
 if(!root||!cv)return
-var cx=cv.getContext('2d'),ring=document.getElementById('lmbRing'),pctEl=document.getElementById('lmbPct'),stEl=document.getElementById('lmbSt'),fillEl=document.getElementById('bootProgressFill')
+var ring=document.getElementById('lmbRing'),pctEl=document.getElementById('lmbPct'),stEl=document.getElementById('lmbSt'),fillEl=document.getElementById('bootProgressFill')
 function img(s){var i=new Image
 i.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s)
 return i}
@@ -8106,7 +8112,9 @@ var GIFT=img("<svg width=\"375\" height=\"420\" viewBox=\"0 0 375 420\" xmlns=\"
 "8C324.7 102.6 319.7 105.8 299.3 115.2C293.4 118.0 288.6 120.7 288.4 121.3C288.2 122.3 290.3 122.5 304.8 122.5C318.8 122.5 322.4 122.2 327.8 120.9C339.6 118.1 348.1 111.5 353.2 101.2C362.5 82.3 354.4 60.6 334.7 51.1C329.3 48.6 328.4 48.4 320.2 48.1C309.7 47.8 304.6 49.2 296.5 54.6C284.6 62.5 275.5 76.1 261.3 107.5C258.9 112.8 256.5 117.2 256.0 117.2C255.4 117.2 253.4 113.3 251.4 108.6C240.0 81.2 229.3 64.2 218.8 56.4C210.3 50.1 204.0 48.0 193.5 48.0C188.1 48.0 185.4 48.4 181.6 49.8C171.3 53.5 163.9 60.2 159.2 70.0C156.5 75.7 156.4 75.9 156.4 85.3C156.4 94.8 156.5 94.9 159.3 100.6C164.6 111.3 174.2 118.7 186.5 121.3C193.4 122.8 225.2 122.9 225.2 121.5Z\"/>\n      </g>\n    </svg>"),DOLL=img("<svg width=\"375\" height=\"420\" viewBox=\"0 0 375 420\" xmlns=\"http://www.w3.org/2000/svg\">\n      <defs>\n        <linearGradient id=\"bootGiftG\" gradientUnits=\"userSpaceOnUse\" x1=\"125\" y1=\"4"+
 "8\" x2=\"387\" y2=\"331\">\n          <stop offset=\"0\" stop-color=\"#6FDCFF\"/>\n          <stop offset=\"1\" stop-color=\"#3559EE\"/>\n        </linearGradient>\n        <linearGradient id=\"bootDollarG\" gradientUnits=\"userSpaceOnUse\" x1=\"141\" y1=\"108\" x2=\"372\" y2=\"482\">\n          <stop offset=\"0\" stop-color=\"#5CEB93\"/>\n          <stop offset=\"1\" stop-color=\"#0F8A48\"/>\n        </linearGradient>\n        <pattern id=\"bootMiniDollars\" width=\"62\" height=\"62\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(-22) scale(1.02)\">\n          <g fill=\"none\" stroke=\"#0A5A30\" stroke-opacity=\"0.5\" stroke-width=\"4.8\" stroke-linecap=\"round\">\n            <path d=\"M38.5 23 C38.5 18 33.5 14.8 28.3 14.8 C23.1 14.8 18.7 18 18.7 23 C18.7 28.3 23.8 30.3 28.3 31.7 C33.5 33.2 38.5 35.4 38.5 40.5 C38.5 45.8 33.5 48.9 28.3 48.9 C23.1 48.9 18.7 45.8 18.7 40.5\"/>\n"+
 "            <path stroke-width=\"3.2\" d=\"M24.9 7.7 V55.5\"/><path stroke-width=\"3.2\" d=\"M31.7 7.7 V55.5\"/>\n          </g>\n        </pattern>\n        <mask id=\"bootDollarMask\">\n          <g fill=\"none\" stroke=\"#FFFFFF\" stroke-linecap=\"round\" transform=\"matrix(1.359 0 0 1.359 -91.9 -101.7)\">\n            <path stroke-width=\"42\" d=\"M320 244 C320 212 294 198 256 198 C220 198 194 214 194 242 C194 272 226 282 256 290 C290 299 322 310 322 342 C322 372 292 388 256 388 C220 388 192 372 192 340\"/>\n            <path stroke-width=\"24\" d=\"M237 168 V416\"/>\n            <path stroke-width=\"24\" d=\"M275 168 V416\"/>\n          </g>\n        </mask>\n        <filter id=\"bootBlurBig\" x=\"-60%\" y=\"-60%\" width=\"220%\" height=\"220%\"><feGaussianBlur stdDeviation=\"16\"/></filter>\n        <filter id=\"bootBlurSmall\" x=\"-60%\" y=\"-60%\" width=\"220%\" height=\"220%\"><f"+
-"eGaussianBlur stdDeviation=\"5\"/></filter>\n      </defs>\n\n      <g transform=\"translate(-21.37 -29.52) scale(0.8116)\">\n        <g mask=\"url(#bootDollarMask)\">\n          <rect x=\"130\" y=\"97\" width=\"255\" height=\"400\" fill=\"url(#bootDollarG)\"/>\n          <rect x=\"130\" y=\"97\" width=\"255\" height=\"400\" fill=\"url(#bootMiniDollars)\"/>\n        </g>\n      </g>\n    </svg>"),CY='45,225,255'
+"eGaussianBlur stdDeviation=\"5\"/></filter>\n      </defs>\n\n      <g transform=\"translate(-21.37 -29.52) scale(0.8116)\">\n        <g mask=\"url(#bootDollarMask)\">\n          <rect x=\"130\" y=\"97\" width=\"255\" height=\"400\" fill=\"url(#bootDollarG)\"/>\n          <rect x=\"130\" y=\"97\" width=\"255\" height=\"400\" fill=\"url(#bootMiniDollars)\"/>\n        </g>\n      </g>\n    </svg>")
+/* рисование лазера — одна функция и для потока, и для основного потока */
+function LASER(S,cv){var cx=null,GIFT=null,DOLL=null,CY='45,225,255',run=true,last=0,n=0
 function beam(len,gap){var h=len/2,segs=[[-h,-gap],[gap,h]];[[10,'rgba('+CY+',.78)',22,.36],[2.8,'rgba('+CY+',.78)',10,.96],[.9,'rgba(255,255,255,.95)',0,.98]].forEach((function(L){cx.save()
 cx.lineCap='round'
 cx.lineWidth=L[0]
@@ -8150,12 +8158,12 @@ cx.lineTo(p,0)
 cx.moveTo(0,-p)
 cx.lineTo(0,p)
 cx.stroke()
-cx.restore()}var W=0,R=0,rr=0,sp=Math.random()*6.28,st={x:12,y:-8,vx:Math.cos(sp),vy:Math.sin(sp),ang:Math.random()*6.28,a:0,hits:[]},v=0,last=0,lastSt=''
-function size(){var d=Math.min(2,window.devicePixelRatio||1)
-W=cv.clientWidth
+cx.restore()}var W=0,R=0,rr=0,sp=Math.random()*6.28,st={x:12,y:-8,vx:Math.cos(sp),vy:Math.sin(sp),ang:Math.random()*6.28,a:0,hits:[]}
+function size(w,d){W=w
 if(!W)return
 cv.width=Math.round(W*d)
 cv.height=Math.round(W*d)
+cx=cv.getContext('2d')
 cx.setTransform(d,0,0,d,0,0)
 R=W/2
 rr=R*.068}function step(dt){var lim=R-rr-3,SPD=1.48*R
@@ -8189,7 +8197,7 @@ cx.lineTo(px+dx*L+s*nx*L,py+dy*L+s*ny*L)
 cx.lineTo(px-dx*L+s*nx*L,py-dy*L+s*ny*L)
 cx.closePath()
 cx.clip()
-if(im.complete&&im.naturalWidth)cx.drawImage(im,ix,iy,iw,ih)
+if(im)cx.drawImage(im,ix,iy,iw,ih)
 cx.restore()}half(-1,GIFT)
 half(1,DOLL)
 st.hits.forEach((function(h){var k=1-h.t/.5,g=cx.createRadialGradient(R+h.x,R+h.y,0,R+h.x,R+h.y,30)
@@ -8208,14 +8216,55 @@ cx.save()
 cx.translate(px,py)
 reticle(rr,st.a*1.14)
 cx.restore()
-cx.restore()}function frame(ms){if(!root.isConnected)return
-requestAnimationFrame(frame)
-if(root.classList.contains('boot-loader-hidden')&&v>=99.5)return
+cx.restore()}var raf=S.requestAnimationFrame?function(f){S.requestAnimationFrame(f)}:function(f){setTimeout(function(){f(performance.now())},16)}
+function frame(ms){if(!run)return
+raf(frame)
 var dt=last?Math.min(.05,(ms-last)/1e3):.016
 last=ms
-if(!W||cv.width!==Math.round(cv.clientWidth*Math.min(2,window.devicePixelRatio||1)))size()
-if(W){step(dt)
-draw()}var target=parseFloat(fillEl&&fillEl.style.width)||0
+if(W&&cx){step(dt)
+draw()
+n++}}raf(frame)
+return{size:size,img:function(g,d){GIFT=g
+DOLL=d},stop:function(){run=false},n:function(){return n}}}
+var A=null,wk=null,cw=0,cd=0
+function fallback(){/* поток не завёлся — рисуем в основном потоке на новом холсте */
+if(A)return
+if(wk){try{wk.terminate()}catch(e){}wk=null
+var nc=document.createElement('canvas')
+nc.id='lmbCv'
+cv.parentNode.replaceChild(nc,cv)
+cv=nc
+cw=0}A=LASER(window,cv)
+cw=0
+whenImgs(function(){A.img(GIFT,DOLL)})}
+function whenImgs(cb){var k=0
+function one(){if(++k===2)cb()}[GIFT,DOLL].forEach(function(im){if(im.complete&&im.naturalWidth)one()
+else im.addEventListener('load',one)})}
+try{if(cv.transferControlToOffscreen&&window.Worker&&window.OffscreenCanvas&&window.createImageBitmap){var src='var LASER='+LASER.toString()+';var A=null,t=0;onmessage=function(e){var m=e.data;if(m.t==="init"){A=LASER(self,m.cv);t=setInterval(function(){postMessage({t:"n",n:A.n()})},1000)}else if(m.t==="size")A.size(m.w,m.d);else if(m.t==="img")A.img(m.g,m.dl);else if(m.t==="stop"){A.stop();clearInterval(t);close()}}'
+wk=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})))
+wk.onerror=function(){fallback()}
+wk.onmessage=function(e){if(e.data&&e.data.t==='n')window.__bootFrames=e.data.n}
+var off=cv.transferControlToOffscreen()
+wk.postMessage({t:'init',cv:off},[off])
+whenImgs(function(){if(!wk)return
+Promise.all([createImageBitmap(GIFT),createImageBitmap(DOLL)]).then(function(b){if(wk)wk.postMessage({t:'img',g:b[0],dl:b[1]},b)},function(){/* картинки в поток не передались — лазер без них лучше, чем пустой круг */})})}}catch(e){wk=null}
+if(!wk)fallback()
+var v=0,last=0,lastSt='',stopped=false
+function stop(){if(stopped)return
+stopped=true
+if(wk)wk.postMessage({t:'stop'})
+else if(A)A.stop()}
+function frame(ms){if(!root.isConnected){stop()
+return}requestAnimationFrame(frame)
+if(root.classList.contains('boot-loader-hidden')&&v>=99.5){stop()
+return}
+var dt=last?Math.min(.05,(ms-last)/1e3):.016
+last=ms
+var d=Math.min(2,window.devicePixelRatio||1),w=cv.clientWidth
+if(w&&(w!==cw||d!==cd)){cw=w
+cd=d
+if(wk)wk.postMessage({t:'size',w:w,d:d})
+else if(A)A.size(w,d)}var target=parseFloat(fillEl&&fillEl.style.width)||0
 v+=(target-v)*Math.min(1,dt*4)
 if(Math.abs(target-v)<.05)v=target
 ring.style.strokeDashoffset=(100-v).toFixed(2)
@@ -8224,7 +8273,6 @@ if(pctEl.textContent!==pc)pctEl.textContent=pc
 var s=v<55?'Подключаемся к арене':v<92?'Загружаем подарки':v<99?'Готовим маркет':'Почти готово'
 if(s!==lastSt){lastSt=s
 stEl.textContent=s}}requestAnimationFrame(frame)})()
-
 </script>
 <div id="menu" onclick="handleMenuBackgroundClick(event)">
   <div id="panelBackdrop" class="panel-backdrop"></div>
